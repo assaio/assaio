@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & ideas
+    url: https://github.com/assaio/assaio/discussions
+    about: Ask questions, share ideas, or show what you built — Discussions, not issues.
+  - name: Security vulnerability
+    url: https://github.com/assaio/assaio/security/advisories/new
+    about: Report privately via GitHub Security Advisories. Never open a public issue.

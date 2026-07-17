@@ -1,0 +1,17 @@
+# Optional. Install with `make hooks`; never auto-installed.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: gofumpt
+      glob: "*.go"
+      run: sh -c 'out=$(gofumpt -l {staged_files}); [ -z "$out" ] && exit 0; echo "$out"; exit 1'
+      fail_text: "gofumpt would reformat the files above — run `make fmt`"
+    - name: go vet
+      run: go vet ./...
+    - name: golangci-lint (new issues)
+      run: golangci-lint run --new-from-rev HEAD
+
+commit-msg:
+  jobs:
+    - name: conventional commit + DCO
+      run: .lefthook/commit-msg/check.sh {1}

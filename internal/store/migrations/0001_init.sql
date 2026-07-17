@@ -1,0 +1,28 @@
+CREATE TABLE IF NOT EXISTS usage_record (
+    id                 INTEGER PRIMARY KEY,
+    tool               TEXT    NOT NULL,
+    session_id         TEXT    NOT NULL,
+    ts                 TEXT    NOT NULL,
+    model              TEXT    NOT NULL,
+    input_tokens       INTEGER NOT NULL,
+    output_tokens      INTEGER NOT NULL,
+    cache_read_tokens  INTEGER NOT NULL,
+    cache_write_tokens INTEGER NOT NULL,
+    reasoning_tokens   INTEGER NOT NULL,
+    dedupe_key         TEXT    NOT NULL,
+    project            TEXT    NOT NULL DEFAULT '',
+    subpath            TEXT    NOT NULL DEFAULT '',
+    git_branch         TEXT    NOT NULL DEFAULT '',
+    entrypoint         TEXT    NOT NULL DEFAULT '',
+    granularity        TEXT    NOT NULL DEFAULT 'turn',
+    lines_added        INTEGER NOT NULL DEFAULT 0,
+    lines_removed      INTEGER NOT NULL DEFAULT 0,
+    edits              INTEGER NOT NULL DEFAULT 0,
+    tool_calls         INTEGER NOT NULL DEFAULT 0,
+    rejected           INTEGER NOT NULL DEFAULT 0,
+    compactions        INTEGER NOT NULL DEFAULT 0,
+    rework_lines       INTEGER NOT NULL DEFAULT 0,
+    member             TEXT    NOT NULL DEFAULT '',
+    UNIQUE(tool, dedupe_key)
+);
+CREATE INDEX IF NOT EXISTS idx_usage_ts ON usage_record(ts);

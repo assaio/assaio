@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+title: assaio
+abstract: >-
+  Open-source, self-hosted platform for measuring organizational use of AI
+  coding tools: cost/tokens, how much AI-written code reaches production,
+  quality/bug impact, and developer experience.
+authors:
+  - name: The assaio Authors
+license: Apache-2.0
+repository-code: https://github.com/assaio/assaio
+url: https://github.com/assaio/assaio
+date-released: 2026-07-11

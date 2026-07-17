@@ -1,0 +1,97 @@
+# assaio-agent configuration (example)
+#
+# Copy to ~/.config/assaio/config.yaml (honors XDG_CONFIG_HOME).
+# Every key here is optional; the values shown are the defaults.
+#
+# Precedence, lowest to highest:
+#   built-in defaults  <  this file  <  ASSAIO_ env vars  <  command-line flags
+
+# Default report lookback window (e.g. 7d, 30d, 90d).
+# Override with ASSAIO_SINCE.
+since: 30d
+
+# Default report output format: table | json | csv.
+# Override with ASSAIO_FORMAT.
+format: table
+
+# Override where assaio looks for each tool's session logs — for a custom install
+# location, an OS-variant path the built-in defaults don't cover, or a synced/mounted
+# home directory.
+#
+# Resolution rule: a non-empty list for a tool replaces its built-in default roots
+# ENTIRELY (never merged with them); an empty or omitted list keeps the default.
+# `assaio-agent doctor` reports which roots are in effect, whether each is "default" or
+# "config-overridden", and flags a configured path that doesn't exist on disk.
+#
+# Override with ASSAIO_SOURCES_CLAUDE etc. — one root per env var (not comma-split);
+# use the YAML list form for more than one root.
+# sources:
+#   claude: []          # default: ~/.claude/projects
+#   codex: []           # default: ~/.codex/sessions, ~/.codex/archived_sessions
+#   gemini: []          # default: ~/.gemini
+#   cline: []           # default: VS Code global storage, and ~/.cline/data
+#
+# Example: a Claude Code install that logs to an external volume.
+# sources:
+#   claude:
+#     - /Volumes/work/.claude/projects
+
+# Out-of-tree exec parser plugins (opt-in only; never discovered from PATH).
+# Each plugin is an executable speaking the assaio plugin protocol —
+# see docs/extending.md#write-a-plugin-any-language.
+# plugins:
+#   - name: mytool            # [a-z0-9-]+; records are stored as tool "plugin:mytool"
+#     command: /path/to/assaio-parser-mytool
+#     timeout: 60s            # optional, default 60s
+
+# Out-of-tree exec metric plugins: your own analyzers, in any language, without forking
+# assaio — see docs/extending.md#write-a-metric-plugin-any-language. Same entry shape as
+# plugins:. Run by `analyze` and `dashboard`; the team server never executes them. The
+# plugin receives usage METADATA (project names, models, member pseudonyms, token/line
+# counts — never prompts or code) as JSON on stdin, and its result appears as
+# "plugin:<name>" beside the built-in validators.
+# metrics:
+#   - name: weekend-usage     # [a-z0-9-]+; appears as validator "plugin:weekend-usage"
+#     command: /path/to/assaio-metric-weekend
+#     timeout: 30s            # optional, default 60s
+
+# Privacy settings for shareable exports (today: `assaio-agent dashboard` and the team
+# server's served dashboard both read this). The interactive CLI tables
+# (status/report/effectiveness) always show real project/member names regardless of this
+# setting.
+# privacy:
+#   anonymize: true          # pseudonymize project names in the dashboard HTML; also
+#                             # governs member names in the dashboard's Team section
+#                             # (see server: below) -- override per run with
+#                             # --anonymize/--no-anonymize
+
+# Team server (`assaio-agent serve`): a self-hosted HTTP endpoint that collects usage
+# pushed by `assaio-agent sync` from every teammate's machine and serves it back as one
+# aggregated, pseudonymized-by-default Assay dashboard. This is the one non-offline
+# exception in assaio -- you run and control this server yourself, on your own network.
+# MVP security model: a single shared bearer token, no TLS (put a reverse proxy in front
+# for TLS; see internal/server's package doc). Not production-hardened.
+# server:
+#   addr: 127.0.0.1:8787      # listen address (loopback by default; widen deliberately);
+#                              # override with ASSAIO_SERVER_ADDR
+#   token: ""                 # required to start `serve`; override with
+#                              # ASSAIO_SERVER_TOKEN -- do not commit a real token here
+
+# Sync (`assaio-agent sync`): pushes this machine's local usage to a team server.
+# member identifies the sender on the server. By default sync derives a stable
+# pseudonym from hostname+OS-user (e.g. "member-a1b2"), so a push is anonymous unless
+# you opt in to a real name below (pseudonymized is assaio's default privacy mode).
+# sync:
+#   server: ""                # team server base URL, e.g. http://assaio.internal:8787
+#   token: ""                 # override with ASSAIO_SYNC_TOKEN
+#   member: ""                # opt-in self-identification; default: auto pseudonym
+
+# Pricing basis: by default every "$" assaio prints is an ESTIMATE at public pay-as-you-go
+# API rates (the vendored LiteLLM table) -- not your actual spend. If you pay a flat
+# subscription (Claude Pro/Max, ChatGPT Plus/Pro) or a negotiated rate, your effective cost
+# per token differs; set this so assaio shows your real basis alongside the estimate.
+# Leaving it unset keeps the honest default: API-equivalent estimate, disclosed as such.
+# pricing:
+#   mode: subscription              # "api" (default) or "subscription"; override ASSAIO_PRICING_MODE
+#   effective_per_token: 0.0        # your blended $/token (e.g. monthly cost / tokens used)
+#   monthly_subscription_cost: 0.0  # flat plan price per month, to compare vs API-equivalent spend

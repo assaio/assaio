@@ -1,0 +1,50 @@
+name: Bug report
+description: Something in assaio is broken or behaving incorrectly.
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: assaio version
+      description: Output of `assaio-agent version`.
+      placeholder: v0.1.0 or commit SHA
+    validations:
+      required: true
+  - type: input
+    id: tool
+    attributes:
+      label: AI tool being parsed
+      description: Which AI coding tool/vendor was involved, if applicable (e.g. Claude Code, Copilot, Cursor).
+      placeholder: Claude Code
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that trigger the bug.
+      placeholder: |
+        1. Run `assaio-agent report ...`
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste any relevant log output. Redact secrets and proprietary source code.
+      render: shell
+    validations:
+      required: false

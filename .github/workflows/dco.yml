@@ -1,0 +1,27 @@
+name: dco
+on: { pull_request: {} }
+permissions:
+  contents: read
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with: { fetch-depth: 0 }
+      - name: Check Signed-off-by trailer on every commit
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          range="origin/$BASE_REF..HEAD"
+          missing=0
+          while read -r sha; do
+            trailer=$(git log -1 --format='%(trailers:key=Signed-off-by,valueonly)' "$sha")
+            if [ -z "$trailer" ]; then
+              echo "::error::commit $sha is missing a 'Signed-off-by' trailer (run: git commit --amend -s)"
+              missing=1
+            fi
+          done < <(git log --format='%H' "$range")
+          if [ "$missing" -ne 0 ]; then
+            echo "DCO check failed: every commit must be signed off. See CONTRIBUTING.md."
+            exit 1
+          fi

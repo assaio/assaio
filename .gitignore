@@ -1,0 +1,13 @@
+.claude/
+.superpowers/
+
+/bin/
+/dist/
+assaio-dashboard.html
+*.db
+*.db-wal
+*.db-shm
+coverage.out
+docs/superpowers/
+.idea/
+.vscode/

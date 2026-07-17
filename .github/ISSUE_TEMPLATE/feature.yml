@@ -1,0 +1,32 @@
+name: Feature request
+description: Propose a new capability or improvement for assaio.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, skim [BACKLOG.md](https://github.com/assaio/assaio/blob/main/BACKLOG.md) —
+        many candidates are already tracked with an id (e.g. `B17`). If yours is there,
+        reference the id: an "I need this" with a real use case moves a tracked item up
+        just as much as a new proposal.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and why doesn't assaio support it today?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like assaio to do instead?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches or workarounds you've tried or considered.
+    validations:
+      required: false

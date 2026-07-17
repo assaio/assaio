@@ -1,0 +1,26 @@
+[
+  {
+    "type": "say",
+    "say": "task",
+    "text": "build a login form",
+    "ts": 1751360400000
+  },
+  {
+    "type": "say",
+    "say": "api_req_started",
+    "text": "{\"request\":\"<task>build a login form</task>\",\"tokensIn\":1200,\"tokensOut\":340,\"cacheWrites\":600,\"cacheReads\":0,\"cost\":0.0421}",
+    "ts": 1751360401000
+  },
+  {
+    "type": "say",
+    "say": "text",
+    "text": "I'll scaffold the form component.",
+    "ts": 1751360402500
+  },
+  {
+    "type": "say",
+    "say": "api_req_started",
+    "text": "{\"request\":\"<task>continue</task>\",\"tokensIn\":900,\"tokensOut\":210,\"cacheWrites\":0,\"cacheReads\":1200,\"cost\":0.0198}",
+    "ts": 1751360410000
+  }
+]

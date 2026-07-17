@@ -1,0 +1,54 @@
+version: "2"
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - copyloopvar
+    - depguard
+    - errorlint
+    - gocritic
+    - gosec
+    - intrange
+    - misspell
+    - nolintlint
+    - noctx
+    - perfsprint
+    - revive
+    - unconvert
+    - unparam
+    - usestdlibvars
+  settings:
+    depguard:
+      rules:
+        core:
+          files:
+            - "**/internal/**/*.go"
+          deny:
+            - pkg: "github.com/assaio/assaio/plugin"
+              desc: "core must not depend on plugin/ee — see AGENTS.md"
+            - pkg: "github.com/assaio/assaio/ee"
+              desc: "core must not depend on plugin/ee — see AGENTS.md"
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    revive:
+      rules:
+        - name: exported
+        - name: context-as-argument
+        - name: error-strings
+        - name: indent-error-flow
+        - name: superfluous-else
+        - name: var-naming
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/assaio/assaio

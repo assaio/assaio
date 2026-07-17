@@ -1,0 +1,12 @@
+assaio
+Copyright 2026 The assaio Authors
+
+This product includes software developed by the assaio project.
+
+---
+Third-party data
+
+This product embeds a snapshot of the model price table
+(model_prices_and_context_window.json) from the LiteLLM project
+(https://github.com/BerriAI/litellm), Copyright (c) BerriAI Inc.,
+licensed under the MIT License. Snapshot date: 2026-07-11.

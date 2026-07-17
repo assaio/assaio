@@ -1,0 +1,67 @@
+version: 2
+
+project_name: assaio
+
+builds:
+  - id: assaio-agent
+    main: ./cmd/assaio-agent
+    binary: assaio-agent
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X github.com/assaio/assaio/internal/version.Version={{.Version}}
+
+archives:
+  - id: assaio-agent-archive
+    ids: [assaio-agent]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - NOTICE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: git
+  filters:
+    exclude:
+      - "^docs"
+      - "^chore"
+      - "^test"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+# Homebrew formula pushed to the assaio/homebrew-tap repo on each release, so
+# `brew install assaio/tap/assaio-agent` works on macOS and Linux. A formula (not a cask)
+# is deliberate: it covers Linuxbrew too, where casks do not apply.
+# PREREQUISITE (maintainer, before the first tagged release): create the public repo
+# github.com/assaio/homebrew-tap and add a HOMEBREW_TAP_GITHUB_TOKEN secret (a PAT with
+# contents:write on that tap repo) to this repo's Actions secrets -- the default
+# GITHUB_TOKEN cannot push to another repository. Until both exist, comment this block out.
+brews:
+  - name: assaio-agent
+    ids: [assaio-agent-archive]
+    repository:
+      owner: assaio
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://github.com/assaio/assaio"
+    description: "Offline token/cost reports for local AI-coding session logs"
+    license: "Apache-2.0"
+    install: |
+      bin.install "assaio-agent"
+    test: |
+      system "#{bin}/assaio-agent", "--version"

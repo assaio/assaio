@@ -1,0 +1,29 @@
+name: Connector request
+description: Request support for a new AI coding tool or data source.
+labels: [connector]
+body:
+  - type: input
+    id: tool
+    attributes:
+      label: AI tool
+      description: Which AI coding tool or vendor should assaio connect to?
+      placeholder: e.g. Cursor, Windsurf, GitHub Copilot
+    validations:
+      required: true
+  - type: checkboxes
+    id: channels
+    attributes:
+      label: Data channels available
+      description: How can assaio get data from this tool?
+      options:
+        - label: OTLP (OpenTelemetry)
+        - label: Vendor API
+        - label: Local logs
+        - label: Editor/CLI hooks
+  - type: textarea
+    id: sample-data
+    attributes:
+      label: Sample data availability
+      description: Can you share a redacted sample of the log/API output this connector would parse?
+    validations:
+      required: false
