@@ -4,6 +4,9 @@ permissions:
   contents: read
 jobs:
   dco:
+    # DCO is a human attestation; bot PRs (Dependabot) are exempt. A skipped job
+    # satisfies the required status check.
+    if: ${{ !endsWith(github.actor, '[bot]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -15,6 +18,10 @@ jobs:
           range="origin/$BASE_REF..HEAD"
           missing=0
           while read -r sha; do
+            author=$(git log -1 --format='%an' "$sha")
+            case "$author" in
+              *"[bot]") echo "skipping bot commit $sha ($author)"; continue ;;
+            esac
             trailer=$(git log -1 --format='%(trailers:key=Signed-off-by,valueonly)' "$sha")
             if [ -z "$trailer" ]; then
               echo "::error::commit $sha is missing a 'Signed-off-by' trailer (run: git commit --amend -s)"
