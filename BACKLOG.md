@@ -53,6 +53,11 @@ existing store columns; none needs a migration.
   "how to read this metric, and what to do about it" page in the terminal.
 - [ ] **B08 · dashboard PL locale** — S · both — a second language through the
   existing `localeStrings` seam, proving the i18n scaffolding with a real locale.
+- [ ] **B58 · format-drift heuristics** — S/M · both — per-source canary metrics after
+  every `backfill` (files vs last run, records/file vs history, zero-token share,
+  skipped ratio) → `warning: possible format drift in <tool>` + a `doctor` section.
+  Closes the silent-underreporting gap described in
+  [docs/format-resilience.md](docs/format-resilience.md).
 
 ## v0.3 — "Team & ecosystem"
 
@@ -149,6 +154,12 @@ existing store columns; none needs a migration.
 - [ ] **B39 · Gemini CLI + Cline activity extraction** — M/L · both — close the
   "cost but no lines" gap (also on ROADMAP); multiplies every activity validator.
 
+## Pool — robustness
+
+- [ ] **B59 · doctor --strict** — S · both — non-zero exit when B58's drift heuristics
+  fire (or a configured source discovers zero files), so a cron/CI job can alert on
+  vendor format drift instead of a human noticing shrunk numbers.
+
 ## Pool — team
 
 - [ ] **B40 · onboarding-curve** — M · team — usage growth vs weeks-since-first-sync,
@@ -199,6 +210,22 @@ a tool used by one organization is usually better served by an out-of-tree
 - [ ] **B57 · community plugin registry page** — S — a docs page listing community
   exec plugins (parsers and metrics) once a few exist, seeded with the weekend-usage
   example.
+- [ ] **B60 · Roo Code + Kilo Code (Cline family)** — S/M — both are Cline forks with
+  the same task-directory storage under their own VS Code `globalStorage` publisher
+  ids; parameterize the existing Cline parser over publisher roots instead of writing
+  new parsers. Needs a verified sample per fork (connector issue).
+- [ ] **B61 · Qwen Code (Gemini family)** — S — a Gemini CLI fork; likely the existing
+  Gemini parser pointed at `~/.qwen`. Needs a verified sample.
+- [ ] **B62 · Continue** — M — `~/.continue` dev-data event logs reportedly carry
+  token counts; verify shape via a connector issue before building.
+- [ ] **B63 · Goose** — M — local session JSONL reportedly carries usage; verify.
+- [ ] **B64 · Amp / Crush** — M — local thread/session storage; token presence
+  unverified for both; research first (connector issues).
+- [ ] **B65 · Cursor local activity source** — M — `~/.cursor/ai-tracking/`'s
+  AI-code-tracking database is a potential **activity-only** source (AI-attributed
+  code, no token counts — Cursor's local storage is verified to lack them). Would ship
+  as lines/activity with `granularity`/provenance honestly tagged, complementing the
+  Admin-API cost path (B55). Research item.
 
 ## Refusals (will not build, regardless of demand)
 

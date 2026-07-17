@@ -37,6 +37,9 @@ all in the shipping PR.
 - [`SECURITY.md`](../SECURITY.md) — private vulnerability disclosure.
 - [`RELEASING.md`](../RELEASING.md) — maintainers only: versioning, the immutable-
   migrations rule, cutting a release.
+- [`format-resilience.md`](format-resilience.md) — how vendor log-format drift is
+  detected and fixed: current defenses, known gaps, and the report → fixture → patch
+  release loop (`format-drift` label).
 
 ## Architecture Decision Records
 
