@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+**How to read this file.** `[Unreleased]` means merged to `main` but not yet part of
+any tagged release — installing the latest release does *not* give you those entries.
+At release time the whole `[Unreleased]` section becomes the new version's section
+(enforced by `make release`, see [RELEASING.md](RELEASING.md)), so a version heading
+always describes exactly what its tag contains. The headings link to the tag or diff.
+
 This file records only what has actually shipped. What's *coming* is tracked in
 [BACKLOG.md](BACKLOG.md) — ranked **proposals and effort estimates, not commitments**:
 the actual order follows real-world feedback, pull requests, and bug reports, so items
@@ -51,3 +57,6 @@ Discussion.
   `backfill`, `clear`, and `config`.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
+
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/assaio/assaio/releases/tag/v0.1.0

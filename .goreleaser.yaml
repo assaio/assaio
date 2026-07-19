@@ -41,6 +41,12 @@ changelog:
       - "^chore"
       - "^test"
 
+release:
+  header: |
+    The curated story of this release lives in
+    [CHANGELOG.md](https://github.com/assaio/assaio/blob/{{ .Tag }}/CHANGELOG.md);
+    below is the raw commit list.
+
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
 

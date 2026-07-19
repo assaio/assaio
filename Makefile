@@ -50,6 +50,12 @@ ifneq ($(CONFIRM),yes)
 	@echo "Would tag $(VERSION) (latest: $(LATEST_TAG)). Re-run with CONFIRM=yes."
 else
 	@test -z "$$(git status --porcelain)" || { echo "working tree not clean"; exit 1; }
+	@grep -q "^\#\# \[$(patsubst v%,%,$(VERSION))\]" CHANGELOG.md || { \
+		echo "CHANGELOG.md has no '## [$(patsubst v%,%,$(VERSION))]' section."; \
+		echo "Move the [Unreleased] entries under it first -- see RELEASING.md."; exit 1; }
+	@awk '/^\#\# \[Unreleased\]/{f=1;next} /^\#\# \[/{f=0} f && /^- /{found=1} END{exit found}' CHANGELOG.md || { \
+		echo "CHANGELOG.md [Unreleased] still holds entries; they would be lost from $(VERSION)'s notes."; \
+		echo "Move them under '## [$(patsubst v%,%,$(VERSION))]' first -- see RELEASING.md."; exit 1; }
 	$(MAKE) test lint
 	CGO_ENABLED=0 go build ./...
 	git tag -a $(VERSION) -m "release $(VERSION)"

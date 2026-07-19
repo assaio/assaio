@@ -40,6 +40,27 @@ invisible in your own testing. A new `0002_*.sql` has a name the runner has neve
 so it runs exactly once on every database, new and old alike. A shipped migration is
 immutable — the same discipline as an immutable release tag.
 
+## The changelog flow (exact, tag-coupled)
+
+`CHANGELOG.md` and the version tag move in lockstep; `make release` enforces it, so
+none of this relies on memory:
+
+1. **During development**, every user-facing change lands under `## [Unreleased]` in
+   the same PR that ships it (the PR template's checklist item). `[Unreleased]` always
+   means: merged to `main`, **in no tagged release yet**.
+2. **Before tagging `vX.Y.Z`**, in one `chore(release): prepare vX.Y.Z changelog`
+   commit: retitle the `[Unreleased]` section to `## [X.Y.Z] - YYYY-MM-DD`, recreate
+   an empty `## [Unreleased]` above it, and update the link references at the bottom
+   of the file (`[Unreleased]: …/compare/vX.Y.Z...HEAD`, plus the new
+   `[X.Y.Z]: …/releases/tag/vX.Y.Z`).
+3. **`make release` refuses to tag** unless both hold: `CHANGELOG.md` has a
+   `## [X.Y.Z]` section, and `[Unreleased]` carries no leftover entries (they would
+   be silently missing from the release's story). A version heading therefore always
+   describes exactly what its tag contains.
+4. The GitHub Release's generated notes (Conventional Commit subjects) link back to
+   the tag's `CHANGELOG.md` — the changelog is the curated story, the notes are the
+   raw commit list.
+
 ## Cutting a release
 
 Everything happens from a clean, up-to-date `main` with a green CI run.
@@ -48,12 +69,14 @@ Everything happens from a clean, up-to-date `main` with a green CI run.
 # 1. Verify locally (same gate as CI):
 make test lint && CGO_ENABLED=0 go build ./...
 
-# 2. Tag (annotated). Pick ONE:
+# 2. Prepare the changelog (step 2 of the flow above) and push it.
+
+# 3. Tag (annotated; refuses to run without the changelog prepared). Pick ONE:
 make release-patch CONFIRM=yes    # v0.1.2 -> v0.1.3
 make release-minor CONFIRM=yes    # v0.1.3 -> v0.2.0
 make release VERSION=v0.2.0 CONFIRM=yes   # explicit version
 
-# 3. Push the tag — this triggers the release workflow:
+# 4. Push the tag — this triggers the release workflow:
 git push origin <tag>
 ```
 
@@ -70,8 +93,6 @@ build-provenance attestations.
    user-facing highlights; put any breaking change under a **Breaking** heading first.
 3. Verify provenance of one artifact:
    `gh attestation verify <artifact> -o assaio`.
-4. Update `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md) — move shipped entries
-   under the new version heading (next PR is fine).
 
 ## Rules
 
