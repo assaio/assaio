@@ -15,6 +15,12 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+- CI now runs the test suite on macOS and Windows alongside Linux; POSIX-only
+  plugin-script tests are skipped on Windows.
+- Per-platform install instructions in the README: Windows (PowerShell), Linux/macOS
+  tarball, Homebrew/Linuxbrew, `go install`, and attestation verification.
+
 ## [0.1.0] - 2026-07-19
 
 ### Added

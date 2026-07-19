@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -183,6 +184,9 @@ func TestRunUsesConfiguredClaudeRootInsteadOfDefault(t *testing.T) {
 }
 
 func TestRunIngestsConfiguredPlugin(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("plugin test fixtures are POSIX shell scripts")
+	}
 	home := t.TempDir()
 	pluginScript, err := filepath.Abs(filepath.Join("..", "plugin", "testdata", "good.sh"))
 	if err != nil {
@@ -218,6 +222,9 @@ func TestRunIngestsConfiguredPlugin(t *testing.T) {
 }
 
 func TestRunPluginFailureCountsAsFailedAndContinues(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("plugin test fixtures are POSIX shell scripts")
+	}
 	home := t.TempDir()
 	badScript, err := filepath.Abs(filepath.Join("..", "plugin", "testdata", "handshake_mismatch.sh"))
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -25,6 +26,9 @@ exit 3
 // it under configHome (the test's XDG_CONFIG_HOME), returning the script path.
 func writeMetricPluginConfig(t *testing.T, configHome, script string) string {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("metric plugin test fixtures are POSIX shell scripts")
+	}
 	dir := filepath.Join(configHome, "assaio")
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatal(err)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +13,9 @@ import (
 
 func script(t *testing.T, name string) string {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("plugin test fixtures are POSIX shell scripts")
+	}
 	abs, err := filepath.Abs(filepath.Join("testdata", name))
 	if err != nil {
 		t.Fatal(err)

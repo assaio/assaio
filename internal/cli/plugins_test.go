@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -20,6 +21,9 @@ func writePluginConfig(t *testing.T, script string) string {
 
 func pluginScript(t *testing.T, name string) string {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("plugin test fixtures are POSIX shell scripts")
+	}
 	abs, err := filepath.Abs(filepath.Join("..", "plugin", "testdata", name))
 	if err != nil {
 		t.Fatal(err)

@@ -62,26 +62,53 @@ documents cover this in full: [PRIVACY.md](PRIVACY.md), [ROADMAP.md](ROADMAP.md)
 
 ## Install
 
-Homebrew (macOS and Linux):
+`assaio-agent` is a single static binary — no CGO, no runtime dependencies — built for
+macOS, Linux, and Windows (amd64/arm64), and the test suite runs in CI on all three.
+
+**Homebrew** (macOS, and Linux via Linuxbrew):
 
 ```sh
 brew install assaio/tap/assaio-agent
 ```
 
-Or with Go 1.25+:
+**Linux / macOS, manual** — grab your platform's archive from
+[Releases](https://github.com/assaio/assaio/releases) and put the binary on your
+`PATH`, e.g.:
+
+```sh
+curl -LO https://github.com/assaio/assaio/releases/download/v0.1.0/assaio_0.1.0_linux_amd64.tar.gz
+tar xzf assaio_0.1.0_linux_amd64.tar.gz assaio-agent
+sudo install assaio-agent /usr/local/bin/
+```
+
+**Windows** (PowerShell) — download the zip, unpack, add to `PATH`:
+
+```powershell
+Invoke-WebRequest https://github.com/assaio/assaio/releases/download/v0.1.0/assaio_0.1.0_windows_amd64.zip -OutFile assaio.zip
+Expand-Archive assaio.zip -DestinationPath "$env:LOCALAPPDATA\assaio"
+[Environment]::SetEnvironmentVariable("Path", "$([Environment]::GetEnvironmentVariable('Path','User'));$env:LOCALAPPDATA\assaio", "User")
+```
+
+(New terminal after the `PATH` change; on ARM replace `amd64` with `arm64`. Scoop and
+winget packages are on the [backlog](BACKLOG.md).)
+
+**Any platform, with Go 1.25+:**
 
 ```sh
 go install github.com/assaio/assaio/cmd/assaio-agent@latest
 ```
 
-Prebuilt binaries for macOS, Linux, and Windows (amd64/arm64) are on the
-[Releases](https://github.com/assaio/assaio/releases) page — download, `chmod +x`, and
-run. `assaio-agent` is a single static binary with no CGO and no runtime dependencies.
+Every release artifact ships with checksums and a build-provenance attestation —
+verify one with `gh attestation verify <archive> -o assaio`.
 
 New here? `assaio-agent demo` prints the full reports on bundled sample data — no logs
 needed — so you can see the value before importing your own history.
 
 ## Quick start
+
+The commands below are identical on macOS, Linux, and Windows (PowerShell or cmd) —
+each tool's log location is auto-detected per OS, and `assaio-agent doctor` shows
+exactly what was found on your machine.
 
 Import your local history, then report on it. The first `backfill` reads every session
 log your AI coding tools have written — often months of data.

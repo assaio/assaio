@@ -183,6 +183,13 @@ existing store columns; none needs a migration.
   goreleaser.
 - [ ] **B47 · exports** — M · team — OpenMetrics endpoint on `serve` for Grafana;
   ndjson/parquet dump for data teams.
+- [ ] **B66 · Scoop bucket (Windows)** — S · both — `scoops:` block in goreleaser
+  publishing to a new `assaio/scoop-bucket` repo. Prerequisite: extend the release
+  PAT's repository access to that bucket, or the next tag's release fails at the
+  publish step.
+- [ ] **B67 · winget manifest** — M · both — automated manifest PR to
+  `microsoft/winget-pkgs` on release (goreleaser supports it); a heavier review loop
+  than Scoop, so Scoop first.
 
 ## Pool — dashboard
 
