@@ -15,6 +15,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-19
+
 ### Added
 - Four tool parsers — Claude Code, OpenAI Codex CLI, Gemini CLI, Cline — with activity
   extraction (AI lines, edits, rejections, compactions, within-session rework) for

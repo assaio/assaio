@@ -5,8 +5,8 @@ is the current-state counterpart to the other two lifecycle documents: candidate
 in [BACKLOG.md](BACKLOG.md), the per-release delta lives in [CHANGELOG.md](CHANGELOG.md),
 and every shipped user-facing capability gets (or updates) a row here in the same PR.
 
-Pre-release note: `v0.1` below means the upcoming first public release; the column
-starts mattering the moment a second release exists.
+`v0.1` below means the v0.1.0 line — the first public release; the column starts
+mattering the moment a second release exists.
 
 ## Commands
 
