@@ -41,7 +41,7 @@ func TestDataDir(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("XDG_DATA_HOME", tt.xdgDataHome)
-			t.Setenv("HOME", tt.home)
+			setHome(t, tt.home)
 			got, err := DataDir()
 			if err != nil {
 				t.Fatal(err)
@@ -78,7 +78,7 @@ func TestDBPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("XDG_DATA_HOME", tt.xdgDataHome)
-			t.Setenv("HOME", tt.home)
+			setHome(t, tt.home)
 			got, err := DBPath()
 			if err != nil {
 				t.Fatal(err)
@@ -115,7 +115,7 @@ func TestConfigPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("XDG_CONFIG_HOME", tt.xdgConfigHome)
-			t.Setenv("HOME", tt.home)
+			setHome(t, tt.home)
 			got, err := ConfigPath()
 			if err != nil {
 				t.Fatal(err)
@@ -236,4 +236,12 @@ func TestClineRootsFor(t *testing.T) {
 			}
 		})
 	}
+}
+
+// setHome points os.UserHomeDir at dir on every OS: HOME for unix, USERPROFILE for
+// windows.
+func setHome(t *testing.T, dir string) {
+	t.Helper()
+	t.Setenv("HOME", dir)
+	t.Setenv("USERPROFILE", dir)
 }

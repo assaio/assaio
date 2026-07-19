@@ -1,0 +1,3 @@
+# Golden files and fixtures are compared byte-for-byte; keep every text file LF on
+# every OS so a Windows checkout parses and diffs identically to CI and macOS/Linux.
+* text=auto eol=lf
