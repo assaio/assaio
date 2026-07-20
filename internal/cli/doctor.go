@@ -65,6 +65,12 @@ func newDoctorCmd() *cobra.Command {
 			cmd.Println("  - Codex reasoning tokens are reported but assumed included in output for cost.")
 			cmd.Println("  - Gemini tool-use tokens are folded into output tokens; ~/.gemini may be shared with other tools.")
 			cmd.Println("  - Cline stores its own request cost; assaio recomputes cost from tokens for cross-tool consistency.")
+			cmd.Println("  - The price table is flat per model; long-context (e.g. [1m]) and 1h-cache premiums are not")
+			cmd.Println("    modeled yet, so cost for very long-context or heavy-caching sessions is an under-estimate.")
+			cmd.Println("  - Days and week-over-week windows are bucketed in UTC; late local-evening work may land on the")
+			cmd.Println("    next UTC day.")
+			cmd.Println("  - Activity counts (lines/edits/rework), not tokens or cost, can be off if you ingest a session")
+			cmd.Println("    while it is still being written; re-running backfill after it ends does not restate that turn.")
 			cmd.Println("  - All on-disk log formats are internal and may change between tool versions.")
 			return nil
 		},

@@ -64,6 +64,49 @@ func TestRunIngestsAllTools(t *testing.T) {
 	}
 }
 
+// TestRunCountsSubagentsWithoutDoubleCounting guards the sub-agent accounting fix. A
+// background/async sub-agent's usage lives only in its own subagents/agent-<id>.jsonl file
+// and must be counted; a completed sub-agent appears both there (in full) and in the parent
+// as a last-turn aggregate, and must be counted once (from the file), never twice.
+func TestRunCountsSubagentsWithoutDoubleCounting(t *testing.T) {
+	home := t.TempDir()
+	sess := filepath.Join(home, ".claude", "projects", "-home-dev-app")
+	write(t, filepath.Join(sess, "s1.jsonl"),
+		`{"type":"assistant","uuid":"p1","timestamp":"2026-07-01T10:00:00Z","sessionId":"s1","message":{"model":"claude-x","usage":{"input_tokens":10,"output_tokens":20}}}`+"\n"+
+			`{"type":"user","uuid":"p2","timestamp":"2026-07-01T10:01:00Z","sessionId":"s1","toolUseResult":{"agentId":"cov","resolvedModel":"claude-x","usage":{"input_tokens":5,"output_tokens":5}}}`+"\n"+
+			`{"type":"user","uuid":"p3","timestamp":"2026-07-01T10:02:00Z","sessionId":"s1","toolUseResult":{"agentId":"nofile","resolvedModel":"claude-x","usage":{"input_tokens":7,"output_tokens":7}}}`+"\n"+
+			`{"type":"user","uuid":"p4","timestamp":"2026-07-01T10:03:00Z","sessionId":"s1","toolUseResult":{"agentId":"async1","status":"async_launched"}}`+"\n")
+	write(t, filepath.Join(sess, "s1", "subagents", "agent-cov.jsonl"),
+		`{"type":"assistant","uuid":"covturn","timestamp":"2026-07-01T10:01:30Z","sessionId":"s1","message":{"model":"claude-x","usage":{"input_tokens":50,"output_tokens":60}}}`+"\n")
+	write(t, filepath.Join(sess, "s1", "subagents", "agent-async1.jsonl"),
+		`{"type":"assistant","uuid":"asyncturn","timestamp":"2026-07-01T10:03:30Z","sessionId":"s1","message":{"model":"claude-x","usage":{"input_tokens":80,"output_tokens":90}}}`+"\n")
+
+	st, err := store.Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = st.Close() }()
+
+	results, err := Run(context.Background(), home, st, config.Sources{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byTool := map[string]Result{}
+	for _, r := range results {
+		byTool[r.Tool] = r
+	}
+	claudeResult := byTool["claude-code"]
+	if claudeResult.Files != 3 {
+		t.Fatalf("Files = %d, want 3 (1 transcript + 2 sub-agent files)", claudeResult.Files)
+	}
+	// p1 + nofile-aggregate + cov-from-file + async1-from-file = 4. The parent's "cov"
+	// aggregate is suppressed (its file supersedes it); a 5th row would be a double-count.
+	n, _ := st.Count(context.Background())
+	if n != 4 {
+		t.Fatalf("Count = %d, want 4 (async sub-agent counted, covered aggregate suppressed)", n)
+	}
+}
+
 func TestRunContinuesPastUnreadableFile(t *testing.T) {
 	home := t.TempDir()
 	badDir := filepath.Join(home, ".claude", "projects", "-home-dev-bad")

@@ -44,7 +44,7 @@ func RenderTable(w io.Writer, rows []Row, by string) error {
 		"", "", "", "", "TOTAL", strconv.FormatFloat(total, 'f', 4, 64)))
 	tw.Render()
 	if anyUnpriced {
-		if _, err := fmt.Fprintln(w, "* group contains unpriced usage excluded from cost"); err != nil {
+		if _, err := fmt.Fprintln(w, unpricedFootnote); err != nil {
 			return err
 		}
 	}

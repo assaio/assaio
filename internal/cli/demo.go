@@ -13,11 +13,11 @@ import (
 	"github.com/assaio/assaio/internal/store"
 )
 
-const demoIntro = "assaio demo -- the reports you'd get on your own data, shown on bundled sample usage.\n" +
+const demoIntro = "assaio-agent demo -- the reports you'd get on your own data, shown on bundled sample usage.\n" +
 	"No logs were read; the sample lives in a throwaway store, discarded on exit."
 
-const demoOutro = "That's the demo. On your machine: 'assaio backfill' imports your local session logs,\n" +
-	"then 'assaio status', 'assaio analyze', and 'assaio dashboard' show the real thing."
+const demoOutro = "That's the demo. On your machine: 'assaio-agent backfill' imports your local session logs,\n" +
+	"then 'assaio-agent status', 'assaio-agent analyze', and 'assaio-agent dashboard' show the real thing."
 
 func newDemoCmd() *cobra.Command {
 	var dash bool
@@ -118,7 +118,14 @@ func writeDemoDashboard(cmd *cobra.Command, st *store.Store, start time.Time) er
 	}
 	// No exec metric plugins on demo: the sample walkthrough stays deterministic.
 	data := dashboard.Build(in, "last 30 days (sample)", true, subpaths, nil)
-	path := filepath.Join(os.TempDir(), "assaio-demo-dashboard.html")
+	// A private per-invocation temp dir, not a fixed name in the shared temp root: the
+	// latter lets another local user pre-plant or symlink-hijack the path (CWE-377). Kept
+	// (not cleaned up) so the user can open it after the command exits.
+	dir, err := os.MkdirTemp("", "assaio-demo-dashboard")
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(dir, "assaio-demo-dashboard.html")
 	if err := writeDashboardFile(path, &data); err != nil {
 		return err
 	}

@@ -1,6 +1,28 @@
 package report
 
-import "testing"
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
+
+// TestRenderMoversMarksUnpricedGroups guards the honesty rule: a group whose cost excludes
+// unpriced usage must carry the "*" marker and footnote, not present a bare number a reader
+// would take for the whole cost.
+func TestRenderMoversMarksUnpricedGroups(t *testing.T) {
+	c := func(f float64) *float64 { return &f }
+	recent := []EffRow{{Group: "web", Cost: c(10), LinesAdded: 100, HasUnpriced: true}}
+	prior := []EffRow{{Group: "web", Cost: c(3), LinesAdded: 40}}
+
+	var buf bytes.Buffer
+	if err := RenderMovers(&buf, Movers(recent, prior), "project"); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "*") || !strings.Contains(out, "unpriced usage excluded") {
+		t.Fatalf("unpriced mover must be marked with * and a footnote, got:\n%s", out)
+	}
+}
 
 func TestMoversDiffsAndSortsByCostDelta(t *testing.T) {
 	c := func(f float64) *float64 { return &f }

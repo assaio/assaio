@@ -159,6 +159,23 @@ existing store columns; none needs a migration.
 - [ ] **B59 · doctor --strict** — S · both — non-zero exit when B58's drift heuristics
   fire (or a configured source discovers zero files), so a cron/CI job can alert on
   vendor format drift instead of a human noticing shrunk numbers.
+- [ ] **B68 · live-session ingest consistency** — M · both — activity counts (lines /
+  edits / rework, not tokens or cost) can double-count (Codex trailing-flush) or
+  under-count (Claude post-hoc attribution) when a session is ingested while still being
+  written, because inserts are idempotent (first-write-wins) and activity is attributed
+  after the fact. Needs upsert-on-activity semantics (`ON CONFLICT ... DO UPDATE` for the
+  derived columns only) with care around the sync dedupe contract. Disclosed as a `doctor`
+  caveat until fixed.
+- [ ] **B69 · usage-granularity provenance in reports** — S/M · both — `Store.Usage`
+  blends session-granularity plugin rows with per-turn rows without surfacing
+  `granularity`; carry it into `UsageRow` and mark mixed-granularity totals so session
+  data never silently reads as per-turn (honesty rule).
+- [ ] **B70 · subpaths composite index** — S · both — add `(project, ts)` index for the
+  dashboard drill query (`WHERE project = ? AND ts >= ?`); today it range-scans `idx_usage_ts`.
+  Perf only at local scale; ship with the next schema migration.
+- [ ] **B71 · Cline editor-variant discovery** — S · both — also discover Cline task dirs
+  under VS Code Insiders / VSCodium / Cursor `globalStorage` publisher roots, not just
+  stable VS Code + the Cline CLI. Needs a verified sample per editor.
 
 ## Pool — team
 

@@ -2,8 +2,6 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
-
-	"github.com/assaio/assaio/internal/paths"
 )
 
 func newConfigCmd() *cobra.Command {
@@ -16,7 +14,7 @@ func newConfigCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			path, _ := paths.ConfigPath()
+			path, _, _ := configPath(cmd)
 			cmd.Printf("config file: %s\nsince:  %s\nformat: %s\n", path, cfg.Since, cfg.Format)
 			if cfg.Pricing.Configured() {
 				cmd.Printf("pricing: mode=%q effective_per_token=%g monthly_subscription_cost=%g\n",

@@ -25,9 +25,7 @@ func runCompare(cmd *cobra.Command, st *store.Store, since, by string) error {
 	if err != nil {
 		return err
 	}
-	now := time.Now()
-	priorStart := now.AddDate(0, 0, -2*days)
-	cutoff := now.AddDate(0, 0, -days).UTC().Format("2006-01-02")
+	priorStart, cutoff := compareWindow(time.Now(), days)
 
 	rows, err := st.Usage(cmd.Context(), priorStart)
 	if err != nil {
@@ -55,6 +53,20 @@ func runCompare(cmd *cobra.Command, st *store.Store, since, by string) error {
 		return err
 	}
 	return report.RenderMovers(cmd.OutOrStdout(), movers, by)
+}
+
+// compareWindow returns the store fetch floor and the recent/prior split cutoff for a
+// period-over-period comparison of two adjacent N-day windows ending today (UTC). Both
+// windows span exactly N day-buckets -- recent is today-(N-1)..today, prior is
+// today-(2N-1)..today-N -- so a mover's Δ is not biased by the recent side silently
+// covering one extra bucket. The floor is the midnight of prior's first bucket, so that
+// bucket is whole rather than a partial slice from the current time of day.
+func compareWindow(now time.Time, days int) (priorStart time.Time, cutoff string) {
+	u := now.UTC()
+	midnight := time.Date(u.Year(), u.Month(), u.Day(), 0, 0, 0, 0, time.UTC)
+	priorStart = midnight.AddDate(0, 0, -(2*days - 1))
+	cutoff = midnight.AddDate(0, 0, -(days - 1)).Format("2006-01-02")
+	return priorStart, cutoff
 }
 
 // splitByDay partitions rows into the recent window (Day >= cutoff) and the prior one. Day

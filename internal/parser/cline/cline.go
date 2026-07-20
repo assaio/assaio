@@ -15,6 +15,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/usage"
 )
 
@@ -80,10 +81,10 @@ func ParseTask(uiMessages io.Reader, taskID string, meta taskMetadata) ([]usage.
 			SessionID:        taskID,
 			Timestamp:        millisToTime(m.TS),
 			Model:            modelAt(models, m.TS),
-			InputTokens:      info.TokensIn,
-			OutputTokens:     info.TokensOut,
-			CacheWriteTokens: info.CacheWrites,
-			CacheReadTokens:  info.CacheReads,
+			InputTokens:      parser.NonNeg(info.TokensIn),
+			OutputTokens:     parser.NonNeg(info.TokensOut),
+			CacheWriteTokens: parser.NonNeg(info.CacheWrites),
+			CacheReadTokens:  parser.NonNeg(info.CacheReads),
 			DedupeKey:        fmt.Sprintf("%s:%d", taskID, index),
 			Granularity:      "turn",
 		})

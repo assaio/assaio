@@ -65,8 +65,8 @@ func TestSyncPushesRecordsAndDerivesPseudonymMember(t *testing.T) {
 	if len(captured.body.Records) != 1 {
 		t.Fatalf("pushed %d records, want 1", len(captured.body.Records))
 	}
-	if !regexp.MustCompile(`^member-[0-9a-f]{4}$`).MatchString(captured.body.Member) {
-		t.Fatalf("member = %q, want an auto-derived pseudonym member-xxxx", captured.body.Member)
+	if !regexp.MustCompile(`^member-[0-9a-f]{10}$`).MatchString(captured.body.Member) {
+		t.Fatalf("member = %q, want an auto-derived 40-bit pseudonym member-xxxxxxxxxx", captured.body.Member)
 	}
 	if !strings.Contains(out.String(), "sent 1") || !strings.Contains(out.String(), "inserted 1") {
 		t.Fatalf("stdout = %q, want mention of sent/inserted counts", out.String())

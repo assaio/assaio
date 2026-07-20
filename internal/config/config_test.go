@@ -271,6 +271,24 @@ func TestPricingModeFromEnv(t *testing.T) {
 	}
 }
 
+// TestPricingEffectivePerTokenFromEnv guards that an env var whose leaf key itself contains
+// underscores stays reachable: a blind "_"->"." split would mis-map it to a phantom nested
+// path and drop the user's cost basis silently.
+func TestPricingEffectivePerTokenFromEnv(t *testing.T) {
+	t.Setenv("ASSAIO_PRICING_EFFECTIVE_PER_TOKEN", "0.0000008")
+	t.Setenv("ASSAIO_PRICING_MONTHLY_SUBSCRIPTION_COST", "200")
+	c, err := Load(filepath.Join(t.TempDir(), "absent.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Pricing.EffectivePerToken != 0.0000008 {
+		t.Fatalf("EffectivePerToken = %g, want 0.0000008 from env", c.Pricing.EffectivePerToken)
+	}
+	if c.Pricing.MonthlySubscriptionCost != 200 {
+		t.Fatalf("MonthlySubscriptionCost = %g, want 200 from env", c.Pricing.MonthlySubscriptionCost)
+	}
+}
+
 func TestPricingValidate(t *testing.T) {
 	base := Config{Format: "table", Since: "30d"}
 	tests := []struct {

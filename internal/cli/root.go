@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -42,13 +43,29 @@ func ensureParent(path string) error {
 }
 
 func loadConfig(cmd *cobra.Command) (config.Config, error) {
-	path, _ := cmd.Flags().GetString("config")
-	if path == "" {
-		p, err := paths.ConfigPath()
-		if err != nil {
-			return config.Config{}, err
+	path, explicit, err := configPath(cmd)
+	if err != nil {
+		return config.Config{}, err
+	}
+	// A missing default path is fine (built-in defaults apply); an explicitly passed
+	// --config that does not exist is a user error, not something to silently ignore.
+	if explicit {
+		if _, err := os.Stat(path); err != nil {
+			return config.Config{}, fmt.Errorf("config file %s: %w", path, err)
 		}
-		path = p
 	}
 	return config.Load(path)
+}
+
+// configPath returns the config path in effect and whether it was set explicitly via
+// --config. An explicit path is taken verbatim; otherwise the default location is used.
+func configPath(cmd *cobra.Command) (path string, explicit bool, err error) {
+	if p, _ := cmd.Flags().GetString("config"); p != "" {
+		return p, true, nil
+	}
+	p, err := paths.ConfigPath()
+	if err != nil {
+		return "", false, err
+	}
+	return p, false, nil
 }

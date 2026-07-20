@@ -37,6 +37,32 @@ func TestValidateRecordRejectsUnknownTool(t *testing.T) {
 	}
 }
 
+func TestValidateRecordRejectsOutOfRangeTimestamps(t *testing.T) {
+	now := time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)
+	cases := map[string]time.Time{
+		"zero value":   {},
+		"before floor": time.Date(2019, 12, 31, 0, 0, 0, 0, time.UTC),
+		"far future":   time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC),
+		"beyond skew":  now.Add(72 * time.Hour),
+	}
+	for name, ts := range cases {
+		r := newValidRecord()
+		r.Timestamp = ts
+		if err := validateRecordAt(&r, now); err == nil {
+			t.Errorf("%s: want error, got nil", name)
+		}
+	}
+}
+
+func TestValidateRecordAcceptsInSkewTimestamp(t *testing.T) {
+	now := time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)
+	r := newValidRecord()
+	r.Timestamp = now.Add(1 * time.Hour) // mild clock skew, within tolerance
+	if err := validateRecordAt(&r, now); err != nil {
+		t.Errorf("in-skew timestamp: unexpected error %v", err)
+	}
+}
+
 func TestValidateRecordAcceptsKnownGranularities(t *testing.T) {
 	for _, g := range []string{"turn", "session"} {
 		r := newValidRecord()

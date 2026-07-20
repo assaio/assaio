@@ -44,12 +44,23 @@ type source struct {
 //
 //nolint:gocritic // sources is a small value bundle read once per backfill run, not a hot path.
 func Run(ctx context.Context, home string, st *store.Store, sources config.Sources, plugins []config.PluginConfig) ([]Result, error) {
-	discovered, err := discoverSources(home, sources)
+	cache := make(projectCache)
+	var results []Result
+
+	claudeMain, claudeSub, err := discoverClaude(home, sources)
 	if err != nil {
 		return nil, err
 	}
-	cache := make(projectCache)
-	var results []Result
+	claudeResult, err := ingestClaude(ctx, st, claudeMain, claudeSub, cache)
+	if err != nil {
+		return results, err
+	}
+	results = append(results, claudeResult)
+
+	discovered, err := discoverSources(home, sources)
+	if err != nil {
+		return results, err
+	}
 	for _, s := range discovered {
 		res, err := ingestSource(ctx, st, s, cache)
 		if err != nil {
@@ -82,14 +93,6 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 //
 //nolint:gocritic // sources is a small value bundle read once per backfill run, not a hot path.
 func discoverSources(home string, sources config.Sources) ([]source, error) {
-	var claudeFiles []string
-	for _, root := range paths.Resolve(sources.Claude, paths.ClaudeRoot(home)) {
-		found, err := claude.Discover(root)
-		if err != nil {
-			return nil, err
-		}
-		claudeFiles = append(claudeFiles, found...)
-	}
 	var codexFiles []string
 	for _, root := range paths.Resolve(sources.Codex, paths.CodexRoots(home)...) {
 		found, err := codex.Discover(root)
@@ -107,10 +110,52 @@ func discoverSources(home string, sources config.Sources) ([]source, error) {
 		geminiFiles = append(geminiFiles, found...)
 	}
 	return []source{
-		{tool: "claude-code", files: claudeFiles, parse: claude.Parse},
 		{tool: "codex", files: codexFiles, parse: codex.Parse},
 		{tool: "gemini-cli", files: geminiFiles, parse: gemini.Parse},
 	}, nil
+}
+
+// discoverClaude resolves the Claude roots and returns both the top-level session
+// transcripts and the sub-agent transcripts found beneath them. They are discovered
+// together so ingestClaude can reconcile the two — a completed sub-agent appears in both
+// the parent (as a last-turn summary) and its own file (in full).
+//
+//nolint:gocritic // sources is a small value bundle read once per backfill run, not a hot path.
+func discoverClaude(home string, sources config.Sources) (main, sub []string, err error) {
+	for _, root := range paths.Resolve(sources.Claude, paths.ClaudeRoot(home)) {
+		m, err := claude.Discover(root)
+		if err != nil {
+			return nil, nil, err
+		}
+		main = append(main, m...)
+		s, err := claude.DiscoverSubagents(root)
+		if err != nil {
+			return nil, nil, err
+		}
+		sub = append(sub, s...)
+	}
+	return main, sub, nil
+}
+
+// ingestClaude parses and inserts every Claude transcript, both top-level and sub-agent.
+// A sub-agent's own file is the authoritative record of its per-turn usage; the parent
+// transcript's completed-sub-agent aggregate is only a last-turn summary (and is missing
+// entirely for background/async Tasks), so any parent aggregate whose sub-agent has a file
+// is suppressed to avoid double-counting. cache memoizes project resolution across files.
+func ingestClaude(ctx context.Context, st *store.Store, mainFiles, subFiles []string, cache projectCache) (Result, error) {
+	covered := claude.CoveredAgents(subFiles)
+	res := Result{Tool: "claude-code", Files: len(mainFiles) + len(subFiles)}
+	files := make([]string, 0, len(mainFiles)+len(subFiles))
+	files = append(files, subFiles...)
+	files = append(files, mainFiles...)
+	for _, path := range files {
+		recs, skipped, err := parseFile(path, claude.Parse)
+		recs = claude.SuppressCovered(recs, covered)
+		if insErr := ingestParsed(ctx, st, cache, &res, recs, skipped, err); insErr != nil {
+			return res, insErr
+		}
+	}
+	return res, nil
 }
 
 // discoverClineDirs resolves the Cline roots — sources.cline if configured, else the
@@ -174,12 +219,12 @@ func ingestParsed(ctx context.Context, st *store.Store, cache projectCache, res 
 	if parseErr != nil {
 		res.Failed++
 	}
+	res.Skipped += skipped
 	if len(recs) == 0 {
 		return nil
 	}
 	resolveProjects(recs, cache)
 	res.Records += len(recs)
-	res.Skipped += skipped
 	n, err := st.Insert(ctx, recs)
 	if err != nil {
 		return err

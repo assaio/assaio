@@ -96,6 +96,9 @@ func writeGroupCostLine(w io.Writer, g GroupStat) error {
 	if g.Cost != nil {
 		cost = "$" + strconv.FormatFloat(*g.Cost, 'f', 4, 64)
 	}
+	if g.HasUnpriced {
+		cost += "*"
+	}
 	ratio := "—"
 	if g.CostPer100Lines != nil {
 		ratio = "$" + strconv.FormatFloat(*g.CostPer100Lines, 'f', 4, 64)

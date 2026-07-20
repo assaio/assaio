@@ -2,12 +2,15 @@ cff-version: 1.2.0
 message: If you use this software, please cite it as below.
 title: assaio
 abstract: >-
-  Open-source, self-hosted platform for measuring organizational use of AI
-  coding tools: cost/tokens, how much AI-written code reaches production,
-  quality/bug impact, and developer experience.
+  Open-source, offline-first CLI for measuring how an organization uses AI
+  coding tools: token and cost accounting, and AI-output-versus-cost
+  effectiveness per project, across Claude Code, Codex CLI, Gemini CLI, and
+  Cline. Survival, bug-impact, and quality correlation are future server-stage
+  roadmap, not current scope.
 authors:
   - name: The assaio Authors
 license: Apache-2.0
+version: 0.1.1
 repository-code: https://github.com/assaio/assaio
 url: https://github.com/assaio/assaio
-date-released: 2026-07-11
+date-released: 2026-07-20
