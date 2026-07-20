@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/fs"
 	"regexp"
-	"strings"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
@@ -109,10 +108,7 @@ func Load(path string) (Config, error) {
 			return Config{}, err
 		}
 	}
-	envProvider := env.Provider("ASSAIO_", ".", func(s string) string {
-		trimmed := strings.ToLower(strings.TrimPrefix(s, "ASSAIO_"))
-		return strings.ReplaceAll(trimmed, "_", ".")
-	})
+	envProvider := env.Provider("ASSAIO_", ".", envKeyResolver())
 	if err := k.Load(envProvider, nil); err != nil {
 		return Config{}, err
 	}

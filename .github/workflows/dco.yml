@@ -27,7 +27,7 @@ jobs:
               echo "::error::commit $sha is missing a 'Signed-off-by' trailer (run: git commit --amend -s)"
               missing=1
             fi
-          done < <(git log --format='%H' "$range")
+          done < <(git log --no-merges --format='%H' "$range")
           if [ "$missing" -ne 0 ]; then
             echo "DCO check failed: every commit must be signed off. See CONTRIBUTING.md."
             exit 1

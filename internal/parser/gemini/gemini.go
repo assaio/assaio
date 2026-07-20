@@ -58,7 +58,7 @@ func Parse(r io.Reader) ([]usage.Record, int, error) {
 			skipped++
 			continue
 		}
-		if m.Tokens.Total == 0 {
+		if m.Tokens.Total == 0 && m.Tokens.Input == 0 && m.Tokens.Output == 0 {
 			continue
 		}
 		out = append(out, usage.Record{

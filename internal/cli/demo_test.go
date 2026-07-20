@@ -48,9 +48,6 @@ func TestDemoRecordsDeterministicAndSeeded(t *testing.T) {
 func TestDemoDashboardWritesFile(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	path := filepath.Join(os.TempDir(), "assaio-demo-dashboard.html")
-	_ = os.Remove(path)
-	t.Cleanup(func() { _ = os.Remove(path) })
 
 	root := NewRootCmd()
 	var out bytes.Buffer
@@ -60,10 +57,27 @@ func TestDemoDashboardWritesFile(t *testing.T) {
 	if err := root.Execute(); err != nil {
 		t.Fatal(err)
 	}
+	// The path is unpredictable by design (a per-invocation temp dir, not a fixed name in
+	// the shared temp root); read it back from the announcement the command prints.
+	path := dashboardPathFromOutput(t, out.String())
+	t.Cleanup(func() { _ = os.RemoveAll(filepath.Dir(path)) })
 	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("demo --dashboard must write %s: %v", path, err)
+		t.Fatalf("demo --dashboard must write the announced file %s: %v", path, err)
 	}
-	if !strings.Contains(out.String(), "sample dashboard") {
-		t.Fatalf("demo --dashboard must announce the file: %q", out.String())
+}
+
+// dashboardPathFromOutput extracts the "Wrote sample dashboard to <path>" path from demo
+// --dashboard's output.
+func dashboardPathFromOutput(t *testing.T, out string) string {
+	t.Helper()
+	const marker = "sample dashboard to "
+	i := strings.Index(out, marker)
+	if i < 0 {
+		t.Fatalf("demo --dashboard must announce the file: %q", out)
 	}
+	rest := out[i+len(marker):]
+	if end := strings.Index(rest, " --"); end >= 0 {
+		return rest[:end]
+	}
+	return strings.TrimSpace(rest)
 }

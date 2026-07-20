@@ -288,6 +288,14 @@ can and cannot measure — `assaio-agent doctor` prints these caveats every run:
   against more real traces.
 - Cline stores its own per-request cost, but `assaio` recomputes cost from tokens for
   cross-tool consistency.
+- The price table is flat per model: long-context premiums (e.g. a 1M-context `[1m]`
+  rate) and the distinct 5-minute vs 1-hour cache-write rates are not modeled yet, so
+  cost for very long-context or heavy-caching sessions is an under-estimate.
+- Days and week-over-week windows are bucketed in UTC, so late local-evening work can
+  land on the next UTC day.
+- Activity counts (AI lines, edits, rework) — not tokens or cost — can be slightly off
+  if you back-fill a session while it is still being written; re-running `backfill` after
+  it ends does not restate an already-imported turn.
 - All on-disk log formats are vendor-internal and may change between tool versions.
 
 When a model is missing from the price table, `assaio` never fakes a `$0` cost: the

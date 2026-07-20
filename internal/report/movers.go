@@ -11,16 +11,24 @@ import (
 )
 
 // MoverRow is one group's change in cost and AI lines between two adjacent equal windows:
-// the recent window vs. the prior one of the same length.
+// the recent window vs. the prior one of the same length. HasUnpricedNow/Prior mark a
+// window in which some of the group's usage had no price, so its cost (and the delta) is a
+// floor, not a full figure -- surfaced with a "*" and a footnote rather than a bare number
+// a reader would mistake for the whole cost.
 type MoverRow struct {
-	Group      string
-	CostNow    float64
-	CostPrior  float64
-	DeltaCost  float64
-	LinesNow   int64
-	LinesPrior int64
-	DeltaLines int64
+	Group            string
+	CostNow          float64
+	CostPrior        float64
+	DeltaCost        float64
+	LinesNow         int64
+	LinesPrior       int64
+	DeltaLines       int64
+	HasUnpricedNow   bool
+	HasUnpricedPrior bool
 }
+
+// hasUnpriced reports whether either window excluded some of the group's cost.
+func (m *MoverRow) hasUnpriced() bool { return m.HasUnpricedNow || m.HasUnpricedPrior }
 
 // Movers diffs two windows' per-group effectiveness rows into MoverRows, sorted by the
 // magnitude of the cost change (largest movers first) so "what changed" leads. A group
@@ -37,11 +45,13 @@ func Movers(recent, prior []EffRow) []MoverRow {
 		m := at(recent[i].Group)
 		m.CostNow = costOrZero(recent[i].Cost)
 		m.LinesNow = recent[i].LinesAdded
+		m.HasUnpricedNow = recent[i].HasUnpriced
 	}
 	for i := range prior {
 		m := at(prior[i].Group)
 		m.CostPrior = costOrZero(prior[i].Cost)
 		m.LinesPrior = prior[i].LinesAdded
+		m.HasUnpricedPrior = prior[i].HasUnpriced
 	}
 	out := make([]MoverRow, 0, len(byGroup))
 	for _, m := range byGroup {
@@ -60,18 +70,28 @@ func RenderMovers(w io.Writer, movers []MoverRow, by string) error {
 	tw.SetOutputMirror(w)
 	tw.AppendHeader(prettytable.Row{strings.ToUpper(by), "Δ COST $", "COST $ NOW", "Δ AI LINES", "AI LINES NOW"})
 	tw.SetColumnConfigs(rightAlignFrom(1, 4))
+	anyUnpriced := false
 	for i := range movers {
 		m := &movers[i]
 		label := m.Group
 		if label == "" {
 			label = emptyDimLabel(by)
 		}
+		mark := ""
+		if m.hasUnpriced() {
+			mark, anyUnpriced = "*", true
+		}
 		tw.AppendRow(prettytable.Row{
-			label, signedFloat(m.DeltaCost), strconv.FormatFloat(m.CostNow, 'f', 4, 64),
+			label, signedFloat(m.DeltaCost) + mark, strconv.FormatFloat(m.CostNow, 'f', 4, 64) + mark,
 			signedInt(m.DeltaLines), m.LinesNow,
 		})
 	}
 	tw.Render()
+	if anyUnpriced {
+		if _, err := fmt.Fprintln(w, unpricedFootnote); err != nil {
+			return err
+		}
+	}
 	_, err := fmt.Fprintln(w, CostEstimateDisclosure)
 	return err
 }

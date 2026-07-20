@@ -11,7 +11,7 @@ credit; contributors are encouraged to review open PRs.
 ## How decisions are made
 
 Day-to-day technical decisions (bug fixes, small features, connector additions) are
-made by whichever maintainer reviews the PR, using the code philosophy in `CLAUDE.md`
+made by whichever maintainer reviews the PR, using the code philosophy in `AGENTS.md`
 and the rules in `CONTRIBUTING.md` as the standard.
 
 Decisions with lasting architectural impact (new core interfaces, storage or data model
@@ -33,7 +33,11 @@ All contributions go through the process in `CONTRIBUTING.md`:
 
 - One commit per pull request (squashed before review).
 - Every commit signed off per the [Developer Certificate of Origin](https://developercertificate.org/) (DCO).
-- `main` is protected: PR required, ≥1 review, all CI checks green.
+- `main` is protected: a pull request and green CI are required for every change.
+  External contributions additionally require an approving review from a maintainer.
+  While the project has a single maintainer, that maintainer self-merges their own
+  changes after green CI (GitHub does not permit self-approval); the review requirement
+  takes effect for everyone as soon as there is a second maintainer.
 
 ## Code of conduct
 

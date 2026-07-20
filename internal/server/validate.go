@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/assaio/assaio/internal/usage"
 )
@@ -13,6 +14,16 @@ import (
 // cap is generous headroom while still rejecting overflow-magnitude garbage that would
 // distort the shared dashboard's SUM() aggregates.
 const maxFieldValue = 1_000_000_000
+
+// tsFloor is the earliest plausible record timestamp; anything before it (including the
+// zero value, year 1) is garbage. No AI-coding tool predates it.
+var tsFloor = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+
+// tsFutureSkew is how far past "now" a record may be timestamped before it is rejected --
+// generous headroom for clock skew across a team, while still blocking a far-future
+// timestamp that would sit permanently in every recent window and never age out of the
+// shared dashboard.
+const tsFutureSkew = 48 * time.Hour
 
 // knownTools is the exact set of Tool values assaio's built-in parsers emit (see
 // internal/ingest.discoverSources and internal/parser/*).
@@ -34,14 +45,21 @@ var knownGranularities = map[string]bool{"turn": true, "session": true}
 
 // validateRecord rejects a pushed record that could poison the shared dashboard: an
 // unrecognized Tool or Granularity (including a forged "plugin:x" namespace or a
-// mislabeled granularity), or any numeric field that is negative or an
-// overflow-magnitude outlier.
+// mislabeled granularity), a timestamp that is zero or out of plausible range, or any
+// numeric field that is negative or an overflow-magnitude outlier.
 func validateRecord(r *usage.Record) error {
+	return validateRecordAt(r, time.Now())
+}
+
+func validateRecordAt(r *usage.Record, now time.Time) error {
 	if !knownTools[r.Tool] && !pluginToolPattern.MatchString(r.Tool) {
 		return fmt.Errorf("unknown tool %q", r.Tool)
 	}
 	if !knownGranularities[r.Granularity] {
 		return fmt.Errorf("unknown granularity %q", r.Granularity)
+	}
+	if r.Timestamp.Before(tsFloor) || r.Timestamp.After(now.Add(tsFutureSkew)) {
+		return fmt.Errorf("timestamp %s out of range", r.Timestamp.UTC().Format(time.RFC3339))
 	}
 	fields := [...]int64{
 		r.InputTokens, r.OutputTokens, r.CacheReadTokens, r.CacheWriteTokens, r.ReasoningTokens,

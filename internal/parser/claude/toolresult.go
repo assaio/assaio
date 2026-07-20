@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/usage"
 )
 
@@ -99,11 +100,11 @@ func subAgentRecord(l *line, t *toolResult, cf *carryForward) usage.Record {
 		SessionID:        l.SessionID,
 		Timestamp:        l.Timestamp,
 		Model:            t.ResolvedModel,
-		InputTokens:      t.Usage.Input,
-		OutputTokens:     t.Usage.Output,
-		CacheReadTokens:  t.Usage.CacheRead,
-		CacheWriteTokens: t.Usage.CacheWrite,
-		DedupeKey:        "agent:" + t.AgentID,
+		InputTokens:      parser.NonNeg(t.Usage.Input),
+		OutputTokens:     parser.NonNeg(t.Usage.Output),
+		CacheReadTokens:  parser.NonNeg(t.Usage.CacheRead),
+		CacheWriteTokens: parser.NonNeg(t.Usage.CacheWrite),
+		DedupeKey:        agentDedupePrefix + t.AgentID,
 		Cwd:              cf.cwd,
 		Project:          cf.project(),
 		GitBranch:        cf.gitBranch,
@@ -111,8 +112,8 @@ func subAgentRecord(l *line, t *toolResult, cf *carryForward) usage.Record {
 		Granularity:      "turn",
 	}
 	if t.ToolStats != nil {
-		r.LinesAdded = t.ToolStats.LinesAdded
-		r.LinesRemoved = t.ToolStats.LinesRemoved
+		r.LinesAdded = parser.NonNeg(t.ToolStats.LinesAdded)
+		r.LinesRemoved = parser.NonNeg(t.ToolStats.LinesRemoved)
 	}
 	return r
 }

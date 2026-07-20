@@ -18,9 +18,10 @@ import (
 	"github.com/assaio/assaio/internal/server"
 )
 
-// memberHexLen is the sync-member pseudonym's hex length ("member-a1b2"): a short sender
-// label, distinct from internal/report.Pseudonym's 10-hex report id.
-const memberHexLen = 4
+// memberHexLen is the sync-member pseudonym's hex length ("member-a1b2c3d4e5"): 40 bits,
+// matching internal/report.Pseudonym. A shorter label collided at team scale by the
+// birthday bound, silently merging two members' usage under one id on the shared store.
+const memberHexLen = 10
 
 func newSyncCmd() *cobra.Command {
 	var serverURL, token, member, since string

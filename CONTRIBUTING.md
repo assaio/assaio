@@ -4,7 +4,9 @@ Thanks for helping build assaio. This document is the authoritative set of rules
 contributions — code style, git workflow, and pull requests. It is shared by humans and
 by AI assistants working in this repo (see `AGENTS.md`, which defers to this file).
 
-Read the design first: `docs/superpowers/specs/2026-07-11-assaio-design.md`.
+Get oriented first: `README.md` for what assaio does, `AGENTS.md` for the code
+philosophy and layout, the Architecture Decision Records under `docs/adr/`, and
+`ROADMAP.md` + `BACKLOG.md` for direction and open work.
 
 ---
 
@@ -112,7 +114,11 @@ Every commit needs `Signed-off-by:` (`git commit -s`). By signing you certify th
 CLA.
 
 **4. `main` is protected.**
-PR required; at least one review; all CI checks green. No direct pushes.
+A PR and green CI are required for every change. A contributor PR also needs an
+approving review from a maintainer. (While there is a single maintainer, they self-merge
+their own changes after green CI — GitHub does not allow self-approval — and the review
+requirement applies to everyone else and takes full effect once there is a second
+maintainer.)
 
 ---
 

@@ -55,13 +55,30 @@ func TestPluginsListShowsConfiguredPlugin(t *testing.T) {
 }
 
 func TestPluginsListEmpty(t *testing.T) {
-	cfgPath := filepath.Join(t.TempDir(), "absent.yaml")
+	cfgPath := filepath.Join(t.TempDir(), "empty.yaml")
+	if err := os.WriteFile(cfgPath, []byte("since: 30d\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	out, err := runCommand(t, "plugins", "list", "--config", cfgPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out, "no plugins configured") {
 		t.Fatalf("plugins list output = %q", out)
+	}
+}
+
+// TestExplicitMissingConfigErrors guards that a --config path the user typed but that does
+// not exist fails loudly, instead of silently falling back to built-in defaults (which hid
+// typo'd paths and made the wrong config look applied).
+func TestExplicitMissingConfigErrors(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "nope.yaml")
+	_, err := runCommand(t, "config", "--config", missing)
+	if err == nil {
+		t.Fatal("an explicit --config that does not exist must error, not fall back to defaults")
+	}
+	if !strings.Contains(err.Error(), "config file") {
+		t.Fatalf("error = %v, want it to name the missing config file", err)
 	}
 }
 

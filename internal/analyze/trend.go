@@ -13,10 +13,17 @@ import (
 const weekOverWeekLabel = "week-over-week AI lines"
 
 // recentCutoff is the "YYYY-MM-DD" day string marking the start of the window ending at
-// now: a row's Day >= recentCutoff falls inside it. Rows compare Day as a string, so no
-// per-row time parsing is needed.
+// now: a row's Day >= recentCutoff falls inside it. A window of N days spans exactly N
+// day-buckets ending today (today-(N-1) .. today), so the cutoff is today-(N-1), not
+// today-N -- the latter admits N+1 buckets and made the recent window one day wider than
+// the prior one it is compared against. Rows compare Day as a string, so no per-row time
+// parsing is needed.
 func recentCutoff(now time.Time, window time.Duration) string {
-	return now.UTC().Add(-window).Format("2006-01-02")
+	days := int(window.Hours() / 24)
+	if days < 1 {
+		days = 1
+	}
+	return now.UTC().AddDate(0, 0, -(days - 1)).Format("2006-01-02")
 }
 
 // weekOverWeek splits rows into two equal, adjacent windows ending at now -- recent is

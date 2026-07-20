@@ -35,7 +35,11 @@ type turnContext struct {
 
 type tokenCount struct {
 	Type string `json:"type"`
-	Info struct {
+	// Info is a pointer so a rate-limit-only update -- which codex-rs sends as
+	// {"type":"token_count","info":null} -- is distinguishable from one reporting zero
+	// totals. A nil Info must never reset the running cumulative baseline (st.prev), or
+	// the next real token_count would re-count the whole session as one delta.
+	Info *struct {
 		Total struct {
 			Input     int64 `json:"input_tokens"`
 			Cached    int64 `json:"cached_input_tokens"`
@@ -180,7 +184,7 @@ func (st *parseState) tokenCountRecord(payload json.RawMessage) (usage.Record, b
 	if err := json.Unmarshal(payload, &tk); err != nil {
 		return usage.Record{}, false, err
 	}
-	if tk.Type != "token_count" {
+	if tk.Type != "token_count" || tk.Info == nil {
 		return usage.Record{}, false, nil
 	}
 	cur := totals{tk.Info.Total.Input, tk.Info.Total.Cached, tk.Info.Total.Output, tk.Info.Total.Reasoning}
