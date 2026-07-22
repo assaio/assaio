@@ -38,7 +38,7 @@ func buildTeam(usageRows []store.UsageRow, sessionRows []store.SessionRow, price
 		return nil
 	}
 
-	lines, cost, hasCost := memberTotals(usageRows, prices)
+	lines, cost, hasCost, unpriced := memberTotals(usageRows, prices)
 	sessions, members := memberSessionCounts(sessionRows)
 	for m := range lines {
 		members[m] = struct{}{}
@@ -58,7 +58,7 @@ func buildTeam(usageRows []store.UsageRow, sessionRows []store.SessionRow, price
 			Member:      memberLabel(m, anonymize),
 			Sessions:    sessions[m],
 			LinesAdded:  lines[m],
-			CostDisplay: costDisplay(cost[m], hasCost[m]),
+			CostDisplay: costDisplay(cost[m], hasCost[m], unpriced[m]),
 			Frac:        fraction(sessions[m], maxSessions),
 		})
 	}
@@ -78,19 +78,24 @@ func hasMemberData(rows []store.UsageRow) bool {
 }
 
 // memberTotals sums each member's AI lines and (when priced) cost across usageRows.
-func memberTotals(rows []store.UsageRow, prices pricing.Table) (lines map[string]int64, cost map[string]float64, hasCost map[string]bool) {
+// unpriced[m] marks a member whose cost excludes at least one unpriced-model row, so
+// costDisplay can flag their figure as a floor rather than the full spend.
+func memberTotals(rows []store.UsageRow, prices pricing.Table) (lines map[string]int64, cost map[string]float64, hasCost, unpriced map[string]bool) {
 	lines = make(map[string]int64)
 	cost = make(map[string]float64)
 	hasCost = make(map[string]bool)
+	unpriced = make(map[string]bool)
 	for i := range rows {
 		m := rows[i].Member
 		lines[m] += rows[i].LinesAdded
 		if c, ok := prices.CostTokens(rows[i].Model, rows[i].In, rows[i].Out, rows[i].CacheWrite, rows[i].CacheRead); ok {
 			cost[m] += c
 			hasCost[m] = true
+		} else {
+			unpriced[m] = true
 		}
 	}
-	return lines, cost, hasCost
+	return lines, cost, hasCost, unpriced
 }
 
 // memberSessionCounts counts sessions per member and returns the set of members seen.
@@ -134,12 +139,17 @@ func memberLabel(m string, anonymize bool) string {
 }
 
 // costDisplay renders a member's summed cost compactly, or "—" when none of their usage
-// was priced -- never a fabricated zero.
-func costDisplay(cost float64, hasCost bool) string {
+// was priced -- never a fabricated zero. A "*" marks a cost that excludes some unpriced
+// usage, so it reads as a floor rather than the member's full spend.
+func costDisplay(cost float64, hasCost, unpriced bool) string {
 	if !hasCost {
 		return "—"
 	}
-	return formatCompactUSD(cost)
+	s := formatCompactUSD(cost)
+	if unpriced {
+		s += "*"
+	}
+	return s
 }
 
 // fraction is v/max, 0 when max is 0 -- never a divide-by-zero.

@@ -67,7 +67,7 @@ func Build(in analyze.Input, window string, anonymize bool, subpaths []store.Sub
 		Team:       team,
 		Inventory:  Inventory{Projects: inv.Projects, Sessions: len(in.Sessions), ActiveDays: inv.Days},
 		CostBasis:  costBasis(inv, window),
-		Caveats:    caveats(anonymize),
+		Caveats:    caveats(anonymize, inv.HasUnpriced),
 	}
 }
 
@@ -102,10 +102,13 @@ func anonymizeVerdicts(verdicts []analyze.Result) {
 // caveats returns the colophon's honesty notes: the locale's directional/coverage/quality
 // lines plus the shared cost-estimate disclosure, adding the pseudonymization note only
 // when anonymize is true.
-func caveats(anonymize bool) []string {
+func caveats(anonymize, hasUnpriced bool) []string {
 	// report.CostEstimateDisclosure is sourced from internal/report so the cost-basis
 	// wording is identical here and on the CLI cost tables -- one canonical string.
 	out := []string{en.DirectionalCaveat, en.LineCoverageCaveat, en.QualityCaveat, report.CostEstimateDisclosure}
+	if hasUnpriced {
+		out = append(out, en.UnpricedCaveat)
+	}
 	if anonymize {
 		out = append(out, en.AnonymizedCaveat)
 	}

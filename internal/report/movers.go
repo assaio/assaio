@@ -59,7 +59,15 @@ func Movers(recent, prior []EffRow) []MoverRow {
 		m.DeltaLines = m.LinesNow - m.LinesPrior
 		out = append(out, *m)
 	}
-	sort.Slice(out, func(i, j int) bool { return absFloat(out[i].DeltaCost) > absFloat(out[j].DeltaCost) })
+	// Stable + name tiebreak so tied cost deltas (common when groups are all unpriced,
+	// making every delta 0) keep a deterministic, diffable order across runs.
+	sort.SliceStable(out, func(i, j int) bool {
+		di, dj := absFloat(out[i].DeltaCost), absFloat(out[j].DeltaCost)
+		if di != dj {
+			return di > dj
+		}
+		return out[i].Group < out[j].Group
+	})
 	return out
 }
 

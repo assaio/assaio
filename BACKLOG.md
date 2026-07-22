@@ -27,21 +27,10 @@ from people running `assaio` reorders them, and any item can be reshaped or drop
 Theme: a solo user sees their own curve within two weeks of installing. All items read
 existing store columns; none needs a migration.
 
-- [ ] **B01 · turn-efficiency** — S · solo — new validator: one-shot rate (sessions
-  ≤2 turns that still produced edits), median turns per code-producing session,
-  output-tokens-per-turn trend. The most direct "am I getting more per prompt?"
-  signal. Caveat: task size is invisible — directional only.
-- [ ] **B02 · cache-hygiene** — S · both — new validator: cache-read share trend plus
-  cache-write waste (days with high cache writes but little subsequent reading — money
-  spent caching what is never reused). Caveat: vendor cache TTLs are invisible;
-  day-grain approximation.
-- [ ] **B03 · subscription-fit** — S · solo — new validator on top of the existing
-  `config.pricing`: plan utilization, API-equivalent spend vs flat plan cost, the
-  breakeven line ("is Max/Pro paying off, or would API — or the reverse?").
-- [ ] **B04 · coverage-meter** — S · both — new validator: how much of the window is
-  high-confidence data — share of records with activity capture (Claude Code/Codex) vs
-  cost-only (Gemini/Cline/plugins), share priced. The honesty backbone the other
-  metrics lean on.
+- [ ] **B02 · cache-hygiene trend** — S · both — add the day-over-day cache-read-share
+  trend to the shipped `cache-hygiene` validator, which already reports the current-window
+  share and the cache-write-waste flag. Caveat: vendor cache TTLs are invisible; day-grain
+  approximation.
 - [ ] **B05 · statusline** — S · solo — `assaio-agent statusline`: one line (today's
   estimated `$`, tokens, budget remaining) plus a Claude Code statusline integration
   recipe. The daily-visibility habit loop.
@@ -76,8 +65,11 @@ existing store columns; none needs a migration.
   totals as JSON on stdin) and emits alerts with severity; assaio prints, sets exit
   code, or forwards. Config `rules:`, same opt-in and boundary-validation posture as
   ADR 0003/0004.
-- [ ] **B14 · Aider connector** — M · both — in-tree parser (strong local logs);
-  likely the best next source after the current four.
+- [ ] **B14 · Aider connector** — M · both — in-tree parser. The parseable token source is
+  the opt-in `~/.aider/analytics.jsonl` (`message_send` events with `properties.{main_model,
+  prompt_tokens,completion_tokens,total_tokens,cost}`, `time` in epoch seconds, no session
+  id or cache split); `.aider.chat.history.md` is markdown-only. No structured per-edit field
+  — Aider auto-commits, so lines +/- come from git, not the logs.
 - [ ] **B15 · explore-vs-produce** — M · both — first schema extension (migration
   `0002_*.sql` — shipped migrations are immutable): split `tool_calls` into
   read/search/command/write counts → a validator explaining *why* `$`/100 lines
@@ -92,10 +84,12 @@ existing store columns; none needs a migration.
 
 ## v0.4 — "Outcome & truth"
 
-- [ ] **B18 · local survival MVP** — L · both — `assaio-agent survival`: correlate
-  AI-heavy days per project with `git log --numstat`/blame after N days in the same
-  local repo. Heavy error bars, age-matched comparisons only, explicitly directional —
-  the stepping stone toward server-side git/issue-tracker correlation.
+- [ ] **B18 · survival: per-day correlation + age-matching** — M · both — the shipped
+  `survival` command reports window-level survival of a repo's commits beside the store's
+  AI lines. Still to add: per-day AI-heavy vs quiet-day survival comparison (does code from
+  AI-heavy days survive at a different rate?), an age/settle threshold so recent commits
+  aren't counted as "survived", and rename-following in blame. Server-side git/issue-tracker
+  correlation across the team remains the larger "Outcome & quality" stage.
 - [ ] **B19 · vendor billing reconciliation** — M/L · both — opt-in pull of
   Anthropic/OpenAI usage/cost APIs; estimate-vs-actual delta with a confidence band.
   Network- and credential-gated; pulls vendor aggregates only, never uploads logs.
@@ -126,8 +120,9 @@ existing store columns; none needs a migration.
   (project-level only, never people).
 - [ ] **B28 · rhythm** — S · both — day-of-week × hour heatmap plus after-hours
   share; explicitly never an attendance view.
-- [ ] **B29 · session-taxonomy** — M · both — conversational / light-edit /
-  heavy-edit / thrash buckets and their trend; conversational is real work, says so.
+- [ ] **B29 · session-taxonomy: thrash + trend** — M · both — the shipped `session-taxonomy`
+  validator buckets conversational / light-edit / heavy-edit; still to add a thrash bucket
+  (needs per-session rework, not stored yet) and the mix's week-over-week trend.
 - [ ] **B30 · delegation** — M · solo — sub-agent economics: delegation share trend,
   tokens per delegated vs main-loop session, lines-per-token with vs without
   delegation. Task difficulty is invisible — a prompt to look, not a verdict.
@@ -135,9 +130,9 @@ existing store columns; none needs a migration.
   (ActiveMinutes); labeled an activity rate, never a productivity score.
 - [ ] **B32 · rework-bursts** — S/M · both — rework clustered over time and per-session
   p90; healthy iteration churns too.
-- [ ] **B33 · reasoning-share** — S · solo — reasoning-token share by model/project
-  with trend; flags paying for deep reasoning on shallow tasks. Only for tools that
-  report it (coverage-meter discloses which).
+- [ ] **B33 · reasoning-share: per-project + trend** — S · solo — the shipped
+  `reasoning-share` validator reports the overall reasoning share of reporting-tool output
+  plus its coverage; still to add the per-model/project breakdown and a week-over-week trend.
 - [ ] **B34 · model-freshness / lock-in** — S · both — single-model dependence and
   share of usage on unknown/legacy-priced models.
 - [ ] **B35 · entrypoint-mix** — S · both — CLI vs IDE vs hook usage and where
@@ -151,8 +146,17 @@ existing store columns; none needs a migration.
 
 - [ ] **B38 · friction-events** — M · both — tool errors / API errors / retries
   extracted from logs → an error-rate trend; needs per-tool log research.
-- [ ] **B39 · Gemini CLI + Cline activity extraction** — M/L · both — close the
-  "cost but no lines" gap (also on ROADMAP); multiplies every activity validator.
+- [ ] **B39 · Cline activity extraction** — M · both — close the "cost but no lines" gap
+  for Cline: `ui_messages.json` `say:"tool"` payloads (`newFileCreated` /
+  `editedExistingFile` / `appliedDiff`) and `api_conversation_history.json` tool_use blocks
+  carry the paths and diffs, so lines added/removed are derivable. Multiplies every activity
+  validator. Gemini CLI's default recording carries only tool-call *names*, not diffs — its
+  edit activity needs the opt-in telemetry export (B72), so it is split out.
+- [ ] **B72 · Gemini activity via OpenTelemetry** — M · both — Gemini CLI's structured edit
+  data (`ToolCallEvent.model_added_lines`/`model_removed_lines`, `FileOperationEvent`) lives
+  only in its **opt-in** OTel export, not the default session JSONL. An optional connector
+  could read a user-configured OTLP file export where enabled; strictly opt-in and clearly
+  labeled, since most installs won't have it on.
 
 ## Pool — robustness
 
@@ -173,9 +177,6 @@ existing store columns; none needs a migration.
 - [ ] **B70 · subpaths composite index** — S · both — add `(project, ts)` index for the
   dashboard drill query (`WHERE project = ? AND ts >= ?`); today it range-scans `idx_usage_ts`.
   Perf only at local scale; ship with the next schema migration.
-- [ ] **B71 · Cline editor-variant discovery** — S · both — also discover Cline task dirs
-  under VS Code Insiders / VSCodium / Cursor `globalStorage` publisher roots, not just
-  stable VS Code + the Cline CLI. Needs a verified sample per editor.
 
 ## Pool — team
 
@@ -225,8 +226,15 @@ Each follows the [connector intake flow](docs/extending.md#the-intake-path-open-
 a tool used by one organization is usually better served by an out-of-tree
 [exec plugin](docs/extending.md#write-a-plugin-any-language).
 
-- [ ] **B52 · opencode** — M — session-granularity local logs (per ROADMAP).
-- [ ] **B53 · Copilot CLI** — M — session-granularity local logs (per ROADMAP).
+- [ ] **B52 · opencode** — M — `~/.local/share/opencode/storage/message/**` JSON (plus a
+  newer relational `opencode.db`). Assistant messages carry `tokens{input,output,reasoning,
+  cache{read,write}}`, `cost`, `modelID`, and — richest of any candidate — the `edit` tool
+  persists a structured `filediff{additions,deletions,patch}`, so lines +/- are stored
+  directly, no diff parsing. The best activity target after the current four.
+- [ ] **B53 · Copilot CLI** — M — `~/.copilot/session-state/<id>/events.jsonl` (+ a
+  `session-store.db`). Dir layout is solid, but per-turn token counts and edit-diff fields
+  are not in the public schema; tokens appear only in an opt-in OTel export
+  (`~/.copilot/otel/*.jsonl`). Verify field shapes on a real session before building.
 - [ ] **B54 · Factory droid** — M — session-granularity local logs (per ROADMAP).
 - [ ] **B55 · Cursor (Admin API)** — M — local storage verified to lack token counts;
   vendor-aggregate granularity, tagged as such.
@@ -234,12 +242,18 @@ a tool used by one organization is usually better served by an out-of-tree
 - [ ] **B57 · community plugin registry page** — S — a docs page listing community
   exec plugins (parsers and metrics) once a few exist, seeded with the weekend-usage
   example.
-- [ ] **B60 · Roo Code + Kilo Code (Cline family)** — S/M — both are Cline forks with
-  the same task-directory storage under their own VS Code `globalStorage` publisher
-  ids; parameterize the existing Cline parser over publisher roots instead of writing
-  new parsers. Needs a verified sample per fork (connector issue).
-- [ ] **B61 · Qwen Code (Gemini family)** — S — a Gemini CLI fork; likely the existing
-  Gemini parser pointed at `~/.qwen`. Needs a verified sample.
+- [ ] **B60 · Roo Code + Kilo Code (Cline family)** — S/M — both are Cline forks with the
+  same task-directory storage under their own VS Code `globalStorage` publisher ids: Roo is
+  `rooveterinaryinc.roo-cline` (format confirmed identical to Cline's `api_req_started`
+  shape, plus an ignored `apiProtocol` field); Kilo is `kilocode.kilo-code` (inferred from
+  lineage, token shape not yet source-verified). Parameterize the existing Cline parser over
+  publisher roots **and a per-fork tool name** — so Roo/Kilo attribute distinctly, not as
+  `cline` — instead of writing new parsers. Still needs a verified sample per fork.
+- [ ] **B61 · Qwen Code (Gemini family)** — M — a Gemini CLI fork, but **not** the same
+  on-disk shape: chats live at `~/.qwen/projects/<hash>/chats/<id>.jsonl` (not
+  `tmp/*/chats`), and tokens are in a raw-API `usageMetadata` object, not Gemini's
+  normalized `tokens{…}`. It also persists tool-call args, so unlike Gemini it carries edit
+  activity. Needs its own parser, not the Gemini one; verify a real sample first.
 - [ ] **B62 · Continue** — M — `~/.continue` dev-data event logs reportedly carry
   token counts; verify shape via a connector issue before building.
 - [ ] **B63 · Goose** — M — local session JSONL reportedly carries usage; verify.
@@ -250,6 +264,28 @@ a tool used by one organization is usually better served by an out-of-tree
   code, no token counts — Cursor's local storage is verified to lack them). Would ship
   as lines/activity with `granularity`/provenance honestly tagged, complementing the
   Admin-API cost path (B55). Research item.
+
+## Pool — code health (0.3 candidates, from the pre-0.2 review)
+
+Deferred cleanups surfaced by the max-effort review of the 0.2 work; no behavior change, so
+they wait behind features but keep the growing metric surface maintainable.
+
+- [ ] **B73 · validator meta** — S · both — embed a `meta{name,title,describe,howToRead}`
+  value in each validator so the twelve metrics stop repeating the three trivial interface
+  methods and the duplicated `Result` header; one source of truth per metric.
+- [ ] **B74 · member aggregate** — S · team — collapse `dashboard/team.go`'s four parallel
+  per-member maps (`lines`/`cost`/`hasCost`/`unpriced`) into one `map[string]memberAgg`, so a
+  member's totals travel as a unit.
+- [ ] **B75 · humanize helpers** — S · both — unify the four K/M/B number formatters
+  (`compactCount`, `money`, `formatCompactUSD`, `formatCompactTokens`) behind one shared core
+  so token and USD glance-figures read consistently across CLI and dashboard.
+- [ ] **B76 · cli/common.go** — S · both — split the shared cross-command helpers
+  (`addDBFlag`, `resolveDBPath`, `openReportStore`, `emptyStoreHint`, `emptyStatusHint`,
+  `compareFormatConflict`, `parseSinceAt`) out of the single-command `report.go` (now past the
+  ~200-line budget) into a `cli/common.go`.
+- [ ] **B77 · readWhenEnough** — S · both — factor the "gate the favorable read behind a
+  minimum-sample floor, else neutral" block shared verbatim by session-taxonomy,
+  turn-efficiency, and model-right-sizing into one helper beside `readFor`.
 
 ## Refusals (will not build, regardless of demand)
 

@@ -43,6 +43,9 @@ func runEffectiveness(cmd *cobra.Command, since, format *string, by string) erro
 	}
 	defer func() { _ = st.Close() }()
 	if compare, _ := cmd.Flags().GetBool("compare"); compare {
+		if err := compareFormatConflict(cmd); err != nil {
+			return err
+		}
 		return runCompare(cmd, st, *since, by)
 	}
 	built, err := buildEffectiveness(cmd, st, start, by)
@@ -68,7 +71,7 @@ func renderEffectiveness(cmd *cobra.Command, built []report.EffRow, format, by s
 	switch format {
 	case "table":
 		if len(built) == 0 {
-			cmd.Println("No usage found. Run 'assaio-agent backfill' to import your local session logs.")
+			cmd.Println(emptyStoreHint(cmd, "No usage found."))
 			return nil
 		}
 		return report.RenderEffectivenessTable(cmd.OutOrStdout(), built, by)

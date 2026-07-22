@@ -88,13 +88,14 @@ func runAnalyze(cmd *cobra.Command, names []string, since *string, format string
 		return err
 	}
 	if n == 0 && format == "text" {
-		return report.RenderEmptyStatusHint(cmd.OutOrStdout())
+		return emptyStatusHint(cmd)
 	}
 
 	in, err := buildAnalyzeInput(cmd, st, start)
 	if err != nil {
 		return err
 	}
+	in.PlanMonthlyCost = cfg.Pricing.MonthlySubscriptionCost
 	results, err := collectAnalysisResults(cmd, names, cfg.Metrics, &in)
 	if err != nil {
 		return err
@@ -119,7 +120,13 @@ func buildAnalyzeInput(cmd *cobra.Command, st *store.Store, start time.Time) (an
 	if err != nil {
 		return analyze.Input{}, err
 	}
-	return analyze.BuildInput(usageRows, sessionRows, table, time.Now(), analyzeRecentWindow, analyze.Delegation{Sub: sub, Total: total}), nil
+	turns, err := st.TurnSizing(cmd.Context(), start, analyze.RightSizeSmallOutput)
+	if err != nil {
+		return analyze.Input{}, err
+	}
+	in := analyze.BuildInput(usageRows, sessionRows, table, time.Now(), analyzeRecentWindow, analyze.Delegation{Sub: sub, Total: total})
+	in.TurnSizing = turns
+	return in, nil
 }
 
 func renderAnalyzeResults(cmd *cobra.Command, results []analyze.Result, format string) error {

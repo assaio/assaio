@@ -43,7 +43,12 @@ func BuildDashboard(ctx context.Context, st *store.Store) (dashboard.Data, error
 	if err != nil {
 		return dashboard.Data{}, err
 	}
+	turns, err := st.TurnSizing(ctx, since, analyze.RightSizeSmallOutput)
+	if err != nil {
+		return dashboard.Data{}, err
+	}
 	in := analyze.BuildInput(usageRows, sessionRows, table, time.Now(), dashboardRecentWindow, analyze.Delegation{})
+	in.TurnSizing = turns
 	const anonymize = true
 	// Exec metric plugins are deliberately nil here: GET / is unauthenticated and
 	// rebuilds per request, and spawning config-declared subprocesses per request would

@@ -144,7 +144,13 @@ func (st *parseState) applySessionMeta(payload json.RawMessage) {
 		st.skipped++
 		return
 	}
-	st.session, st.ts = m.ID, m.Timestamp
+	st.session = m.ID
+	// Parse already advanced st.ts from this line's envelope timestamp; only let the
+	// payload override it when the payload actually carries one, so a session_meta whose
+	// payload omits the timestamp does not reset st.ts to the zero time.
+	if !m.Timestamp.IsZero() {
+		st.ts = m.Timestamp
+	}
 	if st.model == "" {
 		st.model = m.Model
 	}

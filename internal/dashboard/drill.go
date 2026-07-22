@@ -74,11 +74,28 @@ func buildDrill(in analyze.Input, subpaths []store.SubpathRow, anonymize bool) *
 
 	if anonymize {
 		name = report.Pseudonym("project", name)
+		subpaths = pseudonymizeSubpaths(subpaths)
 	}
 	return &ProjectDrill{
 		Name: name, Lines: scoped.Totals.Lines, Sessions: len(scoped.Sessions),
 		Verdicts: verdicts, Subpaths: subpaths,
 	}
+}
+
+// pseudonymizeSubpaths returns a copy of rows with each non-empty Subpath replaced by a
+// stable pseudonym, so an anonymized dashboard's drill table never leaks a real
+// repository path (e.g. "apps/mobile", or an internal product/client name) beside a
+// pseudonymized project. The empty (repository-root) subpath is left as-is: it carries no
+// name to leak and renders as the "(root)" row.
+func pseudonymizeSubpaths(rows []store.SubpathRow) []store.SubpathRow {
+	out := make([]store.SubpathRow, len(rows))
+	for i := range rows {
+		out[i] = rows[i]
+		if rows[i].Subpath != "" {
+			out[i].Subpath = report.Pseudonym("subpath", rows[i].Subpath)
+		}
+	}
+	return out
 }
 
 func filterUsageByProject(rows []store.UsageRow, project string) []store.UsageRow {

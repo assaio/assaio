@@ -78,3 +78,40 @@ func TestClearRequiresYes(t *testing.T) {
 		t.Fatalf("error = %q", err)
 	}
 }
+
+// TestClearRejectsUnknownTool guards against a typo silently deleting nothing while
+// reporting success: "claude" is not the stored tool name "claude-code".
+func TestClearRejectsUnknownTool(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	root := NewRootCmd()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetErr(&out)
+	root.SetArgs([]string{"clear", "--tool", "claude", "--yes"})
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error for an unknown --tool value")
+	}
+	if !strings.Contains(err.Error(), "unknown tool") {
+		t.Fatalf("error = %q, want an unknown-tool error", err)
+	}
+}
+
+// TestClearRejectsAllCombinedWithScope guards the contradictory invocation where --all
+// (delete everything) is silently narrowed by --older-than/--tool, leaving data the user
+// believed was purged.
+func TestClearRejectsAllCombinedWithScope(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	root := NewRootCmd()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetErr(&out)
+	root.SetArgs([]string{"clear", "--all", "--tool", "codex", "--yes"})
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error when --all is combined with --tool")
+	}
+	if !strings.Contains(err.Error(), "cannot be combined") {
+		t.Fatalf("error = %q, want a contradiction error", err)
+	}
+}

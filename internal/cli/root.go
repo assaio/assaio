@@ -34,7 +34,7 @@ are never read. The optional team server (serve/sync) is self-hosted and opt-in.
 	root.PersistentFlags().String("config", "", "config file path")
 	root.AddCommand(newVersionCmd(), newDemoCmd(), newReportCmd(), newEffectivenessCmd(), newAnalyzeCmd(), newCheckCmd(),
 		newDashboardCmd(), newBackfillCmd(), newDoctorCmd(), newStatusCmd(), newClearCmd(), newConfigCmd(), newPluginsCmd(),
-		newMetricsCmd(), newServeCmd(), newSyncCmd())
+		newMetricsCmd(), newServeCmd(), newSyncCmd(), newSurvivalCmd())
 	return root
 }
 
@@ -42,7 +42,8 @@ func ensureParent(path string) error {
 	return os.MkdirAll(filepath.Dir(path), 0o750)
 }
 
-func loadConfig(cmd *cobra.Command) (config.Config, error) {
+// loadConfigRaw resolves the config path and loads the merged config WITHOUT validating it.
+func loadConfigRaw(cmd *cobra.Command) (config.Config, error) {
 	path, explicit, err := configPath(cmd)
 	if err != nil {
 		return config.Config{}, err
@@ -55,6 +56,35 @@ func loadConfig(cmd *cobra.Command) (config.Config, error) {
 		}
 	}
 	return config.Load(path)
+}
+
+// loadConfig loads the merged config and REJECTS an invalid one, so a typo in an
+// honesty-relevant setting (a misspelled pricing.mode, a duplicate plugin name) can't
+// silently apply to a report. Used by every reporting and serving command.
+func loadConfig(cmd *cobra.Command) (config.Config, error) {
+	cfg, err := loadConfigRaw(cmd)
+	if err != nil {
+		return config.Config{}, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return config.Config{}, err
+	}
+	return cfg, nil
+}
+
+// loadConfigLenient loads the merged config but only WARNS on an invalid one, returning it
+// anyway. The diagnostic and import commands (doctor, backfill) use it: they do not consume
+// the validated report settings and must keep working on a broken config so the user can
+// diagnose it and still import data. The config command loads raw and warns itself.
+func loadConfigLenient(cmd *cobra.Command) (config.Config, error) {
+	cfg, err := loadConfigRaw(cmd)
+	if err != nil {
+		return config.Config{}, err
+	}
+	if verr := cfg.Validate(); verr != nil {
+		cmd.PrintErrf("warning: %v (ignored for this command)\n", verr)
+	}
+	return cfg, nil
 }
 
 // configPath returns the config path in effect and whether it was set explicitly via

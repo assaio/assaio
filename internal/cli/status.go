@@ -55,7 +55,7 @@ func runStatus(cmd *cobra.Command, since *string) error {
 	}
 	cmd.Printf("store: %s\n%d record(s)\n\n", dbPath, n)
 	if n == 0 {
-		return report.RenderEmptyStatusHint(cmd.OutOrStdout())
+		return emptyStatusHint(cmd)
 	}
 
 	start, err := parseSinceAt(*since, time.Now())

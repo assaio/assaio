@@ -39,6 +39,7 @@ type localeStrings struct {
 	TotalRow           string // subpath table's footer row label
 	CostBasisPrefix    string // footnote, before the computed cost-basis value
 	CostBasisSuffix    string // footnote's fixed tagline, after the value
+	UnpricedCaveat     string // colophon line, shown only when some cost was excluded as unpriced
 	DirectionalCaveat  string // colophon line: the directional/privacy-posture note
 	LineCoverageCaveat string // colophon line: which tools contribute AI-line counts
 	QualityCaveat      string // colophon line: quality signals need the server stage
@@ -72,6 +73,7 @@ var en = localeStrings{
 	TotalRow:           "Total",
 	CostBasisPrefix:    "Cost basis",
 	CostBasisSuffix:    "the denominator, not the grade.",
+	UnpricedCaveat:     "Cost figures marked * exclude usage on unpriced models -- a floor, not the full total.",
 	DirectionalCaveat:  "Directional assay -- aggregate and pseudonymized by default; per-person requires an explicit opt-in (team mode).",
 	LineCoverageCaveat: "AI-line signals: Claude Code and Codex today -- Gemini CLI and Cline contribute cost but not line counts (see ROADMAP).",
 	QualityCaveat:      "Quality signals (survival in main, bug impact) need git/issue correlation -- server stage.",

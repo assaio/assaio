@@ -1,13 +1,9 @@
 package analyze
 
 import (
-	"sort"
 	"strconv"
-	"time"
 
-	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/report"
-	"github.com/assaio/assaio/internal/store"
 )
 
 const (
@@ -57,7 +53,7 @@ func (throughputValidator) Analyze(in Input) Result {
 		{Label: "lines/active-day", Value: perActiveDay(in.Totals.Lines, int64(inv.Days))},
 		trendFigure(recent, prior, changePct, trendOK),
 	}
-	r.Bars = topProjectsByLines(in.Usage, in.Prices, in.Now, in.Recent, throughputTopN)
+	r.Bars = topProjectBars(in.ByProject, throughputTopN)
 	r.BarsAreProjects = true
 	r.Takeaway = throughputTakeaway(ramping, growthSignal && !sufficientVolume)
 	return r
@@ -74,25 +70,31 @@ func throughputTakeaway(ramping, trendUpButTrivial bool) string {
 	}
 }
 
-// topProjectsByLines ranks the recent-window projects by AI-added lines descending, not
-// cost, so the bars' visual order matches the lines each one shows -- a project with
-// fewer lines never outranks one with more just because it cost more. topN <= 0 is
-// unlimited.
-func topProjectsByLines(rows []store.UsageRow, prices pricing.Table, now time.Time, window time.Duration, topN int) []Bar {
-	// "project" is a hardcoded valid dimension; the error return is unreachable here.
-	projects, _ := report.BuildEffectiveness(recentRows(rows, now, window), prices, "project")
-	sort.SliceStable(projects, func(i, j int) bool { return projects[i].LinesAdded > projects[j].LinesAdded })
-	if topN > 0 && len(projects) > topN {
-		projects = projects[:topN]
+// topProjectBars renders the whole-window top projects by AI-added lines, so the bars
+// break down the same window as the "AI lines total" figure above them rather than a
+// recent-only sub-window. in.ByProject is already sorted by Lines descending, so its
+// first entry is the max used to scale Frac. topN <= 0 is unlimited.
+func topProjectBars(projects []ProjectStat, topN int) []Bar {
+	kept := make([]ProjectStat, 0, len(projects))
+	for i := range projects {
+		if projects[i].Lines > 0 { // a "top projects by lines" list shouldn't pad with 0-line rows
+			kept = append(kept, projects[i])
+		}
 	}
-
+	if topN > 0 && len(kept) > topN {
+		kept = kept[:topN]
+	}
 	var maxLines int64
-	if len(projects) > 0 {
-		maxLines = projects[0].LinesAdded
+	if len(kept) > 0 {
+		maxLines = kept[0].Lines
 	}
-	bars := make([]Bar, len(projects))
-	for i, p := range projects {
-		bars[i] = Bar{Label: groupLabel(p.Group), Value: strconv.FormatInt(p.LinesAdded, 10) + " lines", Frac: fracOf(p.LinesAdded, maxLines)}
+	bars := make([]Bar, len(kept))
+	for i := range kept {
+		bars[i] = Bar{
+			Label: groupLabel(kept[i].Project),
+			Value: strconv.FormatInt(kept[i].Lines, 10) + " lines",
+			Frac:  fracOf(kept[i].Lines, maxLines),
+		}
 	}
 	return bars
 }

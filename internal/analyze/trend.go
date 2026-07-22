@@ -47,20 +47,6 @@ func weekOverWeek(rows []store.UsageRow, now time.Time, window time.Duration) (r
 	return recent, prior, float64(recent-prior) / float64(prior), true
 }
 
-// recentRows returns the rows on or after now-window -- the same recent sub-window
-// weekOverWeek sums -- for a validator that needs the recent rows themselves, not just
-// their LinesAdded total.
-func recentRows(rows []store.UsageRow, now time.Time, window time.Duration) []store.UsageRow {
-	cutoff := recentCutoff(now, window)
-	out := make([]store.UsageRow, 0, len(rows))
-	for i := range rows {
-		if rows[i].Day >= cutoff {
-			out = append(out, rows[i])
-		}
-	}
-	return out
-}
-
 // trendLabel renders a week-over-week change as "+35%", "-12%", or "—" when undefined.
 func trendLabel(changePct float64, ok bool) string {
 	if !ok {
