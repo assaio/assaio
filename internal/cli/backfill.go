@@ -36,7 +36,7 @@ func runBackfill(cmd *cobra.Command) error {
 		return err
 	}
 	defer func() { _ = st.Close() }()
-	cfg, err := loadConfig(cmd)
+	cfg, err := loadConfigLenient(cmd)
 	if err != nil {
 		return err
 	}

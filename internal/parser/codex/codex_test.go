@@ -209,6 +209,27 @@ func TestPerLineTimestampFallsBackToLastKnownWhenLineLacksOne(t *testing.T) {
 	}
 }
 
+// TestSessionMetaEnvelopeTimestampSurvivesEmptyPayloadTimestamp guards the applySessionMeta
+// fix: when session_meta carries an envelope timestamp but its payload omits one, a later
+// line that also lacks its own timestamp must inherit the envelope's timestamp, not be
+// stamped with the zero time (the old code overwrote st.ts with the empty payload value).
+func TestSessionMetaEnvelopeTimestampSurvivesEmptyPayloadTimestamp(t *testing.T) {
+	const rollout = `{"type":"session_meta","timestamp":"2026-07-01T09:00:00Z","payload":{"id":"c12","cwd":"/home/dev/app12"}}
+{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":0,"output_tokens":50,"reasoning_output_tokens":0,"total_tokens":150}}}}
+`
+	recs, _, err := Parse(strings.NewReader(rollout))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recs) != 1 {
+		t.Fatalf("got %d records, want 1: %+v", len(recs), recs)
+	}
+	want := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+	if !recs[0].Timestamp.Equal(want) {
+		t.Fatalf("recs[0].Timestamp = %v, want %v (envelope ts must survive an empty payload ts)", recs[0].Timestamp, want)
+	}
+}
+
 // TestDedupeKeyScopedToFileAcrossResumedSession covers the collision this parser used to
 // have: two different files (e.g. an original and a resumed-session rollout) that reuse
 // the same session id must not produce the same DedupeKey, or the second file's records

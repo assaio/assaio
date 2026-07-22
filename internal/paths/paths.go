@@ -60,29 +60,37 @@ func GeminiRoot(home string) string {
 }
 
 // ClineRoots returns the root directories that may contain Cline task data under home:
-// the VS Code extension's global storage, and the Cline CLI data directory. Each root's
-// tasks live under a "tasks" subdirectory.
+// the Cline extension's global storage in each supported VS Code-family editor, and the
+// Cline CLI data directory. Each root's tasks live under a "tasks" subdirectory.
 func ClineRoots(home string) []string {
 	return clineRootsFor(runtime.GOOS, home, os.Getenv("APPDATA"))
 }
 
-// clineRootsFor is the pure, OS-parameterized implementation behind ClineRoots.
+// clineEditorDirs are the VS Code-family user-data directory names that can host the Cline
+// extension's globalStorage: stable VS Code, Insiders, VSCodium, and Cursor. The same
+// publisher id lives under each, so Cline data is found wherever the user runs it.
+var clineEditorDirs = []string{"Code", "Code - Insiders", "VSCodium", "Cursor"}
+
+// clineRootsFor is the pure, OS-parameterized implementation behind ClineRoots: one
+// globalStorage root per editor in clineEditorDirs order, then the Cline CLI data
+// directory. Non-existent roots are skipped harmlessly at discovery time.
 func clineRootsFor(goos, home, appdata string) []string {
 	const extensionID = "saoudrizwan.claude-dev"
-	var vscodeGlobalStorage string
+	var userData string
 	switch goos {
 	case "darwin":
-		vscodeGlobalStorage = filepath.Join(home, "Library", "Application Support", "Code", "User", "globalStorage")
+		userData = filepath.Join(home, "Library", "Application Support")
 	case "windows":
 		if appdata == "" {
 			appdata = filepath.Join(home, "AppData", "Roaming")
 		}
-		vscodeGlobalStorage = filepath.Join(appdata, "Code", "User", "globalStorage")
+		userData = appdata
 	default:
-		vscodeGlobalStorage = filepath.Join(home, ".config", "Code", "User", "globalStorage")
+		userData = filepath.Join(home, ".config")
 	}
-	return []string{
-		filepath.Join(vscodeGlobalStorage, extensionID),
-		filepath.Join(home, ".cline", "data"),
+	roots := make([]string, 0, len(clineEditorDirs)+1)
+	for _, editor := range clineEditorDirs {
+		roots = append(roots, filepath.Join(userData, editor, "User", "globalStorage", extensionID))
 	}
+	return append(roots, filepath.Join(home, ".cline", "data"))
 }

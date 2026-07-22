@@ -23,7 +23,8 @@ type EffRow struct {
 	ToolCalls int64 `json:"tool_calls"`
 	// Rejected is tool-use proposals the human declined: a friction signal.
 	Rejected int64 `json:"rejected"`
-	// TokensTotal sums input, output, cache-read, cache-write, and reasoning tokens.
+	// TokensTotal sums input, output, cache-read, and cache-write tokens. Reasoning
+	// tokens are a subset of output (usage.Record) and are never added again here.
 	TokensTotal int64 `json:"tokens_total"`
 	// Cost is USD cost summed from priced usage only; nil when nothing in the group priced.
 	Cost *float64 `json:"cost"`
@@ -82,7 +83,7 @@ func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table) {
 	g.Edits += u.Edits
 	g.ToolCalls += u.ToolCalls
 	g.Rejected += u.Rejected
-	g.TokensTotal += u.In + u.Out + u.CacheRead + u.CacheWrite + u.Reasoning
+	g.TokensTotal += u.In + u.Out + u.CacheRead + u.CacheWrite
 
 	cost, ok := t.CostTokens(u.Model, u.In, u.Out, u.CacheWrite, u.CacheRead)
 	if !ok {

@@ -463,12 +463,12 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   </header>
 
   <div class="panel-label">
-    <span><strong>Assay verdict</strong> · 5 reads</span>
+    <span><strong>Assay verdict</strong> · 12 reads</span>
     <span>2 projects · last 30 days</span>
   </div>
 
   
-  <section class="faceplate" aria-label="Assay verdict, 5 dimensions">
+  <section class="faceplate" aria-label="Assay verdict, 12 dimensions">
     
 <div class="cell">
   <span class="cell__label">01 · Adoption &amp; Usage Breadth</span>
@@ -483,7 +483,19 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">02 · Context Health</span>
+  <span class="cell__label">02 · Cache Hygiene</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--watch">WATCH</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+    <span class="cell__ratio tnum">0.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">03 · Context Health</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--watch">WATCH</span>
     
@@ -495,7 +507,19 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">03 · Model Fit</span>
+  <span class="cell__label">04 · Coverage &amp; Confidence</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--good">SOLID</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
+    <span class="cell__ratio tnum">1.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">05 · Model Fit</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--watch">WATCH</span>
     <span class="prov">Prov.</span>
@@ -507,7 +531,31 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">04 · Rework &amp; Rejection</span>
+  <span class="cell__label">06 · Model Right-Sizing</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--neutral">—</span>
+    
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+    <span class="cell__ratio tnum">0.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">07 · Reasoning Share</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--good">LEAN</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
+    <span class="cell__ratio tnum">1.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">08 · Rework &amp; Rejection</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--good">LOW</span>
     <span class="prov">Prov.</span>
@@ -519,7 +567,31 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">05 · Throughput</span>
+  <span class="cell__label">09 · Session Taxonomy</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--neutral">—</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
+    <span class="cell__ratio tnum">1.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">10 · Subscription Fit</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--neutral">SET PLAN</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+    <span class="cell__ratio tnum">0.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">11 · Throughput</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--good">RAMPING</span>
     
@@ -527,6 +599,18 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   <div class="cell__foot">
     <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
     <span class="cell__ratio tnum">1.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">12 · Turn Efficiency</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--neutral">—</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+    <span class="cell__ratio tnum">0.00</span>
   </div>
 </div>
 
@@ -600,6 +684,46 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 <article class="entry">
   <div class="entry__gutter">
     <span class="entry__num">02</span>
+    <span class="entry__label">Cache Hygiene</span>
+    <div class="cell__read-row">
+      <span class="entry__read entry__read--watch">WATCH</span>
+      <span class="prov">Prov.</span>
+    </div>
+  </div>
+  <div>
+    <p class="entry__howto">High cache reuse means repeated context is served cheaply from cache instead of re-billed as fresh input. It is a cost signal, not a quality one -- a big one-shot task legitimately shows low reuse, and vendor cache lifetimes are invisible here.</p>
+    
+    <div class="entry__stats">
+      
+      <div class="stat">
+        <span class="stat__value stat__value--accent">0%</span>
+        <span class="stat__label">cache-read share</span>
+        <span class="stat__note">of billed input</span>
+      </div>
+      
+      <div class="stat">
+        <span class="stat__value">0</span>
+        <span class="stat__label">cache reads</span>
+        
+      </div>
+      
+      <div class="stat">
+        <span class="stat__value">0</span>
+        <span class="stat__label">cache writes</span>
+        
+      </div>
+      
+    </div>
+    
+    
+    <p class="entry__caveat">High reuse is cheaper, not better work -- a large one-shot task legitimately shows low reuse.</p><p class="entry__caveat">Vendor cache lifetimes (TTLs) are invisible, so this is a day-grain approximation.</p>
+    <p class="entry__takeaway">Little input is served from cache this window -- expected for one-shot or exploratory work.</p>
+  </div>
+</article>
+
+<article class="entry">
+  <div class="entry__gutter">
+    <span class="entry__num">03</span>
     <span class="entry__label">Context Health</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--watch">WATCH</span>
@@ -657,7 +781,67 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">03</span>
+    <span class="entry__num">04</span>
+    <span class="entry__label">Coverage &amp; Confidence</span>
+    <div class="cell__read-row">
+      <span class="entry__read entry__read--good">SOLID</span>
+      <span class="prov">Prov.</span>
+    </div>
+  </div>
+  <div>
+    <p class="entry__howto">Coverage is the honesty backbone -- it says how much of every other figure rests on complete data. Low activity coverage means line and edit signals cover only part of your usage; low priced coverage means some cost is excluded, never a real zero.</p>
+    
+    <div class="entry__stats">
+      
+      <div class="stat">
+        <span class="stat__value stat__value--accent">100%</span>
+        <span class="stat__label">activity coverage</span>
+        <span class="stat__note">lines/edits captured</span>
+      </div>
+      
+      <div class="stat">
+        <span class="stat__value">100%</span>
+        <span class="stat__label">priced coverage</span>
+        <span class="stat__note">cost known</span>
+      </div>
+      
+      <div class="stat">
+        <span class="stat__value">0%</span>
+        <span class="stat__label">cost-only tokens</span>
+        <span class="stat__note">no line signals</span>
+      </div>
+      
+    </div>
+    
+    
+    <div class="entry__viz">
+      
+      <ul class="projectbars">
+        
+        <li>
+          <span class="projectbars__name">claude-code</span>
+          <span class="projectbars__bar"><span style="width:100.0%"></span></span>
+          <span class="projectbars__value tnum">&gt;99%</span>
+        </li>
+        
+        <li>
+          <span class="projectbars__name">codex</span>
+          <span class="projectbars__bar"><span style="width:0.2%"></span></span>
+          <span class="projectbars__value tnum">&lt;1%</span>
+        </li>
+        
+      </ul>
+      
+    </div>
+    
+    <p class="entry__caveat">Cost-only tools (Gemini CLI, Cline, plugins) contribute tokens and cost but no line or edit signals -- see ROADMAP.</p><p class="entry__caveat">Per-record granularity (turn vs session) is not yet surfaced, so a mix isn&#39;t flagged here.</p>
+    <p class="entry__takeaway">Most usage carries full activity and price data -- the other figures rest on solid coverage.</p>
+  </div>
+</article>
+
+<article class="entry">
+  <div class="entry__gutter">
+    <span class="entry__num">05</span>
     <span class="entry__label">Model Fit</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--watch">WATCH</span>
@@ -723,7 +907,65 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">04</span>
+    <span class="entry__num">06</span>
+    <span class="entry__label">Model Right-Sizing</span>
+    <div class="cell__read-row">
+      <span class="entry__read entry__read--neutral">—</span>
+      
+    </div>
+  </div>
+  <div>
+    <p class="entry__howto">A premium-model turn that emits only a handful of output tokens is often boilerplate or a quick answer a cheaper model handles as well. On a flat plan this is about speed and rate limits, not dollars. Task difficulty is invisible, so this is a prompt to look at a few, never a verdict.</p>
+    
+    
+    
+    <p class="entry__takeaway">No premium-model turns in this window.</p>
+  </div>
+</article>
+
+<article class="entry">
+  <div class="entry__gutter">
+    <span class="entry__num">07</span>
+    <span class="entry__label">Reasoning Share</span>
+    <div class="cell__read-row">
+      <span class="entry__read entry__read--good">LEAN</span>
+      <span class="prov">Prov.</span>
+    </div>
+  </div>
+  <div>
+    <p class="entry__howto">Reasoning tokens are billed as output. A high share means much of the model&#39;s work is internal deliberation, which can be overkill on routine tasks. Only some tools report reasoning (Codex and Gemini CLI today), so the coverage figure says how much of your output this even covers.</p>
+    
+    <div class="entry__stats">
+      
+      <div class="stat">
+        <span class="stat__value stat__value--accent">0%</span>
+        <span class="stat__label">reasoning share</span>
+        <span class="stat__note">of reporting output</span>
+      </div>
+      
+      <div class="stat">
+        <span class="stat__value">0</span>
+        <span class="stat__label">reasoning tokens</span>
+        
+      </div>
+      
+      <div class="stat">
+        <span class="stat__value">&lt;1%</span>
+        <span class="stat__label">reporting coverage</span>
+        <span class="stat__note">output from tools that report it</span>
+      </div>
+      
+    </div>
+    
+    
+    <p class="entry__caveat">Only Codex and Gemini CLI report reasoning tokens; Claude Code doesn&#39;t, so this covers part of your output.</p><p class="entry__caveat">Reasoning is a subset of output (already billed there); this is a composition signal, not extra cost.</p>
+    <p class="entry__takeaway">Reasoning is a modest share of reported output -- the thinking budget looks proportionate.</p>
+  </div>
+</article>
+
+<article class="entry">
+  <div class="entry__gutter">
+    <span class="entry__num">08</span>
     <span class="entry__label">Rework &amp; Rejection</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--good">LOW</span>
@@ -757,7 +999,101 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">05</span>
+    <span class="entry__num">09</span>
+    <span class="entry__label">Session Taxonomy</span>
+    <div class="cell__read-row">
+      <span class="entry__read entry__read--neutral">—</span>
+      <span class="prov">Prov.</span>
+    </div>
+  </div>
+  <div>
+    <p class="entry__howto">Conversational sessions are real work -- design, debugging, and planning rarely touch files -- so a high conversational share is not waste. This is a mix, not a scorecard: read it to understand how you use AI, not to push every session toward edits.</p>
+    
+    <div class="entry__stats">
+      
+      <div class="stat">
+        <span class="stat__value stat__value--accent">0%</span>
+        <span class="stat__label">conversational</span>
+        <span class="stat__note">no file edits</span>
+      </div>
+      
+      <div class="stat">
+        <span class="stat__value">100%</span>
+        <span class="stat__label">light-edit</span>
+        <span class="stat__note">1-10 edits</span>
+      </div>
+      
+      <div class="stat">
+        <span class="stat__value">0%</span>
+        <span class="stat__label">heavy-edit</span>
+        <span class="stat__note">&gt;10 edits</span>
+      </div>
+      
+    </div>
+    
+    
+    <div class="entry__viz">
+      
+      <ul class="projectbars">
+        
+        <li>
+          <span class="projectbars__name">conversational</span>
+          <span class="projectbars__bar"><span style="width:0.0%"></span></span>
+          <span class="projectbars__value tnum">0 (0%)</span>
+        </li>
+        
+        <li>
+          <span class="projectbars__name">light-edit</span>
+          <span class="projectbars__bar"><span style="width:100.0%"></span></span>
+          <span class="projectbars__value tnum">2 (100%)</span>
+        </li>
+        
+        <li>
+          <span class="projectbars__name">heavy-edit</span>
+          <span class="projectbars__bar"><span style="width:0.0%"></span></span>
+          <span class="projectbars__value tnum">0 (0%)</span>
+        </li>
+        
+      </ul>
+      
+    </div>
+    
+    <p class="entry__caveat">Conversational sessions are real work (design, debugging, planning) -- not idle time.</p><p class="entry__caveat">A thrash bucket needs per-session rework, which isn&#39;t stored yet, so it isn&#39;t split out here.</p>
+    <p class="entry__takeaway">Too few sessions this window to characterize the mix.</p>
+  </div>
+</article>
+
+<article class="entry">
+  <div class="entry__gutter">
+    <span class="entry__num">10</span>
+    <span class="entry__label">Subscription Fit</span>
+    <div class="cell__read-row">
+      <span class="entry__read entry__read--neutral">SET PLAN</span>
+      <span class="prov">Prov.</span>
+    </div>
+  </div>
+  <div>
+    <p class="entry__howto">This projects your window&#39;s API-equivalent cost to a month at your active-day pace, then compares it against the flat plan price you configured. A high multiple means the plan is a bargain at your volume; below 1x means API pay-as-you-go might be cheaper. The API figure is an estimate at public prices, not your actual bill.</p>
+    
+    <div class="entry__stats">
+      
+      <div class="stat">
+        <span class="stat__value stat__value--accent">~$165/mo</span>
+        <span class="stat__label">API-equivalent</span>
+        <span class="stat__note">projected estimate</span>
+      </div>
+      
+    </div>
+    
+    
+    <p class="entry__caveat">The API-equivalent $ is an estimate at public pay-as-you-go prices, not your actual bill.</p>
+    <p class="entry__takeaway">Set config.pricing.monthly_subscription_cost to see whether your flat plan beats API pricing at this volume.</p>
+  </div>
+</article>
+
+<article class="entry">
+  <div class="entry__gutter">
+    <span class="entry__num">11</span>
     <span class="entry__label">Throughput</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--good">RAMPING</span>
@@ -802,8 +1138,8 @@ table.subpath tbody tr:hover td{background:var(--bg);}
         
         <li>
           <span class="projectbars__name">project-39f19de764</span>
-          <span class="projectbars__bar"><span style="width:10.4%"></span></span>
-          <span class="projectbars__value tnum">1916 lines</span>
+          <span class="projectbars__bar"><span style="width:10.6%"></span></span>
+          <span class="projectbars__value tnum">1966 lines</span>
         </li>
         
       </ul>
@@ -812,6 +1148,46 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     <p class="entry__takeaway">AI-line output is ramping up week over week.</p>
+  </div>
+</article>
+
+<article class="entry">
+  <div class="entry__gutter">
+    <span class="entry__num">12</span>
+    <span class="entry__label">Turn Efficiency</span>
+    <div class="cell__read-row">
+      <span class="entry__read entry__read--neutral">—</span>
+      <span class="prov">Prov.</span>
+    </div>
+  </div>
+  <div>
+    <p class="entry__howto">These are prompting-efficiency signals, not quality. A session that lands an edit in a turn or two is efficient; a long session can be deliberate, careful work. Task size is invisible here, so read it directionally, never as a per-person score.</p>
+    
+    <div class="entry__stats">
+      
+      <div class="stat">
+        <span class="stat__value stat__value--accent">0%</span>
+        <span class="stat__label">one-shot rate</span>
+        <span class="stat__note">code sessions in &lt;=2 turns</span>
+      </div>
+      
+      <div class="stat">
+        <span class="stat__value">6</span>
+        <span class="stat__label">median turns</span>
+        <span class="stat__note">per code session</span>
+      </div>
+      
+      <div class="stat">
+        <span class="stat__value">12.8K</span>
+        <span class="stat__label">output/turn</span>
+        <span class="stat__note">median tokens</span>
+      </div>
+      
+    </div>
+    
+    
+    <p class="entry__caveat">Task size is invisible in logs, so a low one-shot rate can mean hard problems, not weak prompting -- directional only.</p>
+    <p class="entry__takeaway">Too few code-producing sessions this window to judge prompting efficiency.</p>
   </div>
 </article>
 
@@ -842,7 +1218,19 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">02 · Context Health</span>
+  <span class="cell__label">02 · Cache Hygiene</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--watch">WATCH</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+    <span class="cell__ratio tnum">0.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">03 · Context Health</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--watch">WATCH</span>
     
@@ -854,7 +1242,19 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">03 · Model Fit</span>
+  <span class="cell__label">04 · Coverage &amp; Confidence</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--good">SOLID</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
+    <span class="cell__ratio tnum">1.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">05 · Model Fit</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--good">HEALTHY</span>
     
@@ -866,7 +1266,31 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">04 · Rework &amp; Rejection</span>
+  <span class="cell__label">06 · Model Right-Sizing</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--neutral">—</span>
+    
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+    <span class="cell__ratio tnum">0.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">07 · Reasoning Share</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--neutral">—</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+    <span class="cell__ratio tnum">0.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">08 · Rework &amp; Rejection</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--good">LOW</span>
     <span class="prov">Prov.</span>
@@ -878,7 +1302,31 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">05 · Throughput</span>
+  <span class="cell__label">09 · Session Taxonomy</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--neutral">—</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
+    <span class="cell__ratio tnum">1.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">10 · Subscription Fit</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--neutral">SET PLAN</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+    <span class="cell__ratio tnum">0.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">11 · Throughput</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--watch">WATCH</span>
     
@@ -886,6 +1334,18 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   <div class="cell__foot">
     <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
     <span class="cell__ratio tnum">0.50</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">12 · Turn Efficiency</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--neutral">—</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+    <span class="cell__ratio tnum">0.00</span>
   </div>
 </div>
 
@@ -899,7 +1359,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
         </thead>
         <tbody>
           
-          <tr><td>apps/mobile</td><td class="tnum">12000</td><td class="tnum">1</td></tr>
+          <tr><td>subpath-30ff2c3799</td><td class="tnum">12000</td><td class="tnum">1</td></tr>
           
           <tr><td>. (root)</td><td class="tnum">6496</td><td class="tnum">1</td></tr>
           

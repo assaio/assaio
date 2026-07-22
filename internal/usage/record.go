@@ -14,8 +14,11 @@ type Record struct {
 	OutputTokens     int64
 	CacheReadTokens  int64
 	CacheWriteTokens int64
-	ReasoningTokens  int64
-	DedupeKey        string
+	// ReasoningTokens is the thinking/reasoning portion that is already included in
+	// OutputTokens (an informational subset, billed at the output rate). It is never
+	// added to a token total and never priced on its own -- doing either double-counts.
+	ReasoningTokens int64
+	DedupeKey       string
 	// Member is a pseudonymized author/agent id, set by the server from a sync push;
 	// "" for purely-local usage. Never set by a parser.
 	Member string

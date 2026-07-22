@@ -181,14 +181,14 @@ func TestRoots(t *testing.T) {
 func TestClineRoots(t *testing.T) {
 	home := "/home/dev"
 	roots := ClineRoots(home)
-	if len(roots) != 2 {
-		t.Fatalf("ClineRoots = %v, want 2 entries", roots)
+	if len(roots) != len(clineEditorDirs)+1 {
+		t.Fatalf("ClineRoots = %v, want %d entries", roots, len(clineEditorDirs)+1)
 	}
-	if roots[1] != filepath.Join(home, ".cline", "data") {
-		t.Fatalf("ClineRoots[1] = %q", roots[1])
+	if roots[len(roots)-1] != filepath.Join(home, ".cline", "data") {
+		t.Fatalf("ClineRoots last = %q, want the Cline CLI data dir", roots[len(roots)-1])
 	}
 	if filepath.Base(roots[0]) != "saoudrizwan.claude-dev" {
-		t.Fatalf("ClineRoots[0] = %q, want to end in extension id", roots[0])
+		t.Fatalf("ClineRoots[0] = %q, want to end in the extension id", roots[0])
 	}
 }
 
@@ -225,14 +225,23 @@ func TestClineRootsFor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			roots := clineRootsFor(tt.goos, home, tt.appdata)
-			if len(roots) != 2 {
-				t.Fatalf("clineRootsFor(%q) = %v, want 2 entries", tt.goos, roots)
+			if len(roots) != len(clineEditorDirs)+1 {
+				t.Fatalf("clineRootsFor(%q) = %v, want %d entries", tt.goos, roots, len(clineEditorDirs)+1)
 			}
 			if roots[0] != tt.want {
 				t.Fatalf("clineRootsFor(%q)[0] = %q, want %q", tt.goos, roots[0], tt.want)
 			}
-			if roots[1] != filepath.Join(home, ".cline", "data") {
-				t.Fatalf("clineRootsFor(%q)[1] = %q", tt.goos, roots[1])
+			if roots[len(roots)-1] != filepath.Join(home, ".cline", "data") {
+				t.Fatalf("clineRootsFor(%q) last = %q, want the Cline CLI data dir", tt.goos, roots[len(roots)-1])
+			}
+			for i, editor := range clineEditorDirs {
+				if filepath.Base(roots[i]) != "saoudrizwan.claude-dev" {
+					t.Fatalf("clineRootsFor(%q)[%d] = %q, want the extension id", tt.goos, i, roots[i])
+				}
+				// roots[i] = <userData>/<editor>/User/globalStorage/<extId>
+				if got := filepath.Base(filepath.Dir(filepath.Dir(filepath.Dir(roots[i])))); got != editor {
+					t.Fatalf("clineRootsFor(%q)[%d] editor segment = %q, want %q", tt.goos, i, got, editor)
+				}
 			}
 		})
 	}

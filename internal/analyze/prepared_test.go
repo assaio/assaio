@@ -32,7 +32,7 @@ func TestBuildInputByModelSumsClassifiesAndShares(t *testing.T) {
 	if len(in.ByModel) != 3 {
 		t.Fatalf("len(ByModel) = %d, want 3: %+v", len(in.ByModel), in.ByModel)
 	}
-	// Sorted by Tokens descending: cheap-model (6000) > premium-model (4160) > unknown-model (600).
+	// Sorted by Tokens descending: cheap-model (6000) > premium-model (4150) > unknown-model (600).
 	wantOrder := []string{"cheap-model", "premium-model", "unknown-model"}
 	for i, want := range wantOrder {
 		if got := in.ByModel[i].Model; got != want {
@@ -47,8 +47,8 @@ func TestBuildInputByModelSumsClassifiesAndShares(t *testing.T) {
 	if premium.Input != 1500 || premium.Output != 2500 || premium.CacheRead != 100 || premium.CacheWrite != 50 {
 		t.Fatalf("premium-model token breakdown = %+v, want In=1500 Out=2500 CacheRead=100 CacheWrite=50", premium)
 	}
-	if premium.Tokens != 4160 {
-		t.Fatalf("premium-model Tokens = %d, want 4160 (In+Out+CacheRead+CacheWrite+Reasoning)", premium.Tokens)
+	if premium.Tokens != 4150 {
+		t.Fatalf("premium-model Tokens = %d, want 4150 (In+Out+CacheRead+CacheWrite; reasoning is a subset of output)", premium.Tokens)
 	}
 	if premium.Lines != 50 {
 		t.Fatalf("premium-model Lines = %d, want 50", premium.Lines)
@@ -143,8 +143,8 @@ func TestBuildInputTotalsAndCacheEfficiency(t *testing.T) {
 	if tot.Input != 300 || tot.Output != 100 || tot.CacheRead != 300 || tot.CacheWrite != 20 {
 		t.Fatalf("Totals token breakdown = %+v, want In=300 Out=100 CacheRead=300 CacheWrite=20", tot)
 	}
-	if tot.Tokens != 725 {
-		t.Fatalf("Totals.Tokens = %d, want 725 (300+100+300+20+5 reasoning)", tot.Tokens)
+	if tot.Tokens != 720 {
+		t.Fatalf("Totals.Tokens = %d, want 720 (300+100+300+20; reasoning is a subset of output, not re-added)", tot.Tokens)
 	}
 	if tot.Lines != 14 {
 		t.Fatalf("Totals.Lines = %d, want 14", tot.Lines)

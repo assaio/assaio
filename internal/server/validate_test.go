@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -118,5 +119,41 @@ func TestValidateRecordAcceptsBoundaryMagnitude(t *testing.T) {
 	r.InputTokens = maxFieldValue
 	if err := validateRecord(&r); err != nil {
 		t.Fatalf("boundary value maxFieldValue should be accepted: %v", err)
+	}
+}
+
+// TestValidateRecordRejectsEmptyDedupeKey guards the honesty rule: an empty dedupe_key
+// collapses every such row into one under ON CONFLICT(tool, dedupe_key), silently
+// undercounting a member. An empty session_id is tolerated -- the Claude parser doesn't
+// guarantee it, and rejecting the whole push over one stale row would break a client's sync.
+func TestValidateRecordRejectsEmptyDedupeKey(t *testing.T) {
+	r := newValidRecord()
+	r.DedupeKey = ""
+	if err := validateRecord(&r); err == nil {
+		t.Fatal("empty dedupe_key: want error, got nil")
+	}
+
+	r = newValidRecord()
+	r.SessionID = ""
+	if err := validateRecord(&r); err != nil {
+		t.Fatalf("empty session_id should be tolerated, got %v", err)
+	}
+}
+
+// TestValidateRecordRejectsOversizedStringField guards the boundary cap: a token-holding
+// client cannot push a multi-megabyte string field into the shared store and the
+// unauthenticated dashboard it feeds -- including Tool, whose "plugin:<name>" regex is
+// otherwise length-unbounded.
+func TestValidateRecordRejectsOversizedStringField(t *testing.T) {
+	r := newValidRecord()
+	r.Model = strings.Repeat("x", maxStringField+1)
+	if err := validateRecord(&r); err == nil {
+		t.Fatal("want error for an oversized Model field, got nil")
+	}
+
+	r = newValidRecord()
+	r.Tool = "plugin:" + strings.Repeat("a", maxStringField)
+	if err := validateRecord(&r); err == nil {
+		t.Fatal("want error for an oversized Tool field, got nil")
 	}
 }

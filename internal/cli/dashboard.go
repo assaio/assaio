@@ -61,13 +61,14 @@ func runDashboard(cmd *cobra.Command, since, output *string) error {
 		return err
 	}
 	if n == 0 {
-		cmd.Println(emptyStoreHint(cmd, "No usage yet."))
+		cmd.Println(emptyStoreHint(cmd, "No usage yet; writing an empty dashboard."))
 	}
 
 	in, err := buildAnalyzeInput(cmd, st, start)
 	if err != nil {
 		return err
 	}
+	in.PlanMonthlyCost = cfg.Pricing.MonthlySubscriptionCost
 	subpaths, err := loadDrillSubpaths(cmd, st, &in, start)
 	if err != nil {
 		return err

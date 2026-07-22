@@ -8,6 +8,7 @@ package cline
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -55,16 +56,36 @@ type modelUsageEntry struct {
 // directory's basename, which Cline assigns once and never reuses for another directory,
 // so -- unlike a resumable session id -- it cannot collide across two different files.
 func ParseTask(uiMessages io.Reader, taskID string, meta taskMetadata) ([]usage.Record, int, error) {
-	var msgs []uiMessage
-	if err := json.NewDecoder(uiMessages).Decode(&msgs); err != nil {
+	models := sortedModelUsage(meta.ModelUsage)
+	dec := json.NewDecoder(uiMessages)
+	// Stream the array element-by-element rather than decoding it whole: ui_messages.json
+	// is a live file Cline rewrites and extends, so a read racing a write can see a
+	// truncated array. Streaming keeps every message decoded before the break instead of
+	// losing the whole task -- skip-and-count, per the parser contract.
+	tok, err := dec.Token()
+	if err != nil {
 		return nil, 0, err
 	}
-	models := sortedModelUsage(meta.ModelUsage)
+	if d, ok := tok.(json.Delim); !ok || d != '[' {
+		return nil, 0, fmt.Errorf("ui_messages.json is not a JSON array (got %v)", tok)
+	}
 
 	var out []usage.Record
 	var skipped int
 	index := 0
-	for _, m := range msgs {
+	for dec.More() {
+		var m uiMessage
+		if err := dec.Decode(&m); err != nil {
+			skipped++
+			// A type error (e.g. a float ts an int64 field rejects) consumed just this
+			// element, so keep reading; a syntax error or truncation leaves the decoder
+			// unusable, so stop and keep what was recovered before it.
+			var typeErr *json.UnmarshalTypeError
+			if !errors.As(err, &typeErr) {
+				break
+			}
+			continue
+		}
 		if m.Type != "say" || m.Say != "api_req_started" || m.Text == "" {
 			continue
 		}
@@ -133,7 +154,7 @@ func readTaskMetadata(taskDir string) (taskMetadata, error) {
 func sortedModelUsage(entries []modelUsageEntry) []modelUsageEntry {
 	sorted := make([]modelUsageEntry, len(entries))
 	copy(sorted, entries)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].TS < sorted[j].TS })
+	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].TS < sorted[j].TS })
 	return sorted
 }
 

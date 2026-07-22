@@ -9,6 +9,12 @@ import (
 	"github.com/assaio/assaio/internal/usage"
 )
 
+// maxWireStringLen bounds any single string field a plugin emits: these are identities
+// and labels, not free text. With the stdout line cap it stops a plugin from smuggling a
+// multi-megabyte field into the store (the metric-result boundary caps strings the same
+// way, see metric_result.go).
+const maxWireStringLen = 512
+
 // wireRecord is the JSONL record shape a plugin emits, snake_case per the protocol spec
 // in docs/extending.md.
 type wireRecord struct {
@@ -37,6 +43,11 @@ func (w *wireRecord) toRecord(pluginName string) (usage.Record, error) {
 	}
 	if w.DedupeKey == "" {
 		return usage.Record{}, errors.New("empty dedupe_key")
+	}
+	for _, s := range []string{w.SessionID, w.Model, w.DedupeKey, w.Project, w.GitBranch, w.Entrypoint} {
+		if len(s) > maxWireStringLen {
+			return usage.Record{}, fmt.Errorf("string field exceeds %d bytes", maxWireStringLen)
+		}
 	}
 	if w.Granularity != "turn" && w.Granularity != "session" {
 		return usage.Record{}, fmt.Errorf("invalid granularity %q (want turn|session)", w.Granularity)

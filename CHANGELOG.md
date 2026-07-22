@@ -21,6 +21,82 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-22
+
+### Added
+- **Three `analyze` validators.** `coverage` (Coverage & Confidence) — the provenance meter:
+  what share of a window's tokens come from tools with full activity capture vs cost-only
+  sources, and what share is priced. `cache-hygiene` (Cache Hygiene) — prompt-cache reuse
+  (cache-read share of billed input) with an honest cache-write-waste flag. And
+  `subscription-fit` (Subscription Fit) — for flat-plan users (Claude Max/Pro, ChatGPT
+  Plus/Pro): projects the window's API-equivalent estimate to a month and compares it against
+  your configured `pricing.monthly_subscription_cost`, so the estimate reads as plan value
+  (a "137x — paying off" verdict) instead of a meaningless spend figure.
+- **Four behavioral `analyze` validators** from session and per-turn data: `session-taxonomy`
+  (conversational / light-edit / heavy-edit session mix), `turn-efficiency` (one-shot rate,
+  median turns per code-producing session, output per turn), `model-right-sizing` (premium-model
+  turns that produced little output — downgrade candidates, reframed as speed/limits on a flat
+  plan), and `reasoning-share` (extended-thinking share of output, honest about which tools
+  report it). Twelve built-in validators in total.
+- **`survival` command** — the first local outcome signal: for a git repository, how much of
+  the window's commits still live in `HEAD` (via `git blame`), shown beside the AI lines the
+  store recorded for that project. Directional and honest — it never attributes specific lines
+  to AI (assaio counts lines, not code) — and the stepping stone toward server-stage git/issue
+  correlation. Plus [`docs/automation.md`](docs/automation.md): git-hook and scheduled recipes
+  to keep the store fresh, push it to a self-hosted team server, and run `survival` on a timer.
+- **Dashboard unpriced honesty.** Cost figures that exclude usage on unpriced models are
+  now marked `*` (main cost basis and per-member team costs), with a colophon note —
+  matching the CLI tables instead of showing a silent floor.
+- **Cline discovery across editors.** Cline task data is now found under VS Code Insiders,
+  VSCodium, and Cursor (not just stable VS Code), using the same `saoudrizwan.claude-dev`
+  global storage — so Cline usage in any of those editors is counted, not silently missed.
+
+### Fixed
+- **Coverage rounding.** In the `coverage` validator, a small but nonzero token share (e.g. a
+  few Codex sessions dwarfed by Claude's cache-read volume) now reads `<1%` instead of `0%`
+  (which looked absent), and a share just under whole reads `>99%` instead of a gap-hiding
+  `100%` — the honesty backbone must not round either edge away.
+- **Gemini session ids.** The real Gemini CLI recording carries the session id only on the
+  file's header line, not on every message, so message records were left with an empty
+  session id. The parser now carries the header's id forward (an older per-line shape still
+  works), and skips `$set`/`$rewindTo` control records without miscounting them.
+  **Compatibility:** this changes the dedupe key for header-only Gemini logs, so if you
+  ingested Gemini usage under v0.1.x, run `assaio-agent clear --tool gemini-cli --yes` then
+  `assaio-agent backfill` once after upgrading to avoid double-counting those records.
+- **Reasoning tokens no longer double-counted.** Codex and Gemini report reasoning as a
+  subset of output; the grand token totals added it a second time, inflating every token
+  count (cost was unaffected). Totals now count it once.
+- **Anonymized dashboard no longer leaks real subpath names.** The drill-down's
+  repository-subpath table was passed through verbatim under `--anonymize`, exposing paths
+  like `apps/mobile` beside a pseudonymized project; subpaths are now pseudonymized too.
+- **Team server rejects an empty `session_id`/`dedupe_key`.** An empty dedupe key collapsed
+  every such row into one under `ON CONFLICT DO NOTHING`, silently undercounting a member.
+- **Config validation is enforced on every command.** A typo'd honesty-relevant setting
+  (e.g. a misspelled `pricing.mode`) or a duplicate plugin name now errors instead of
+  silently reverting; `config` still validates-and-warns so it can display a broken file.
+- **Period-over-period movers are deterministic.** Tied cost deltas (common when groups are
+  all unpriced) kept a random order across runs; they now sort stably with a name tiebreak.
+- **Throughput top-project bars cover the whole window**, matching the "AI lines total"
+  headline instead of a recent-only sub-window with no label.
+- **Cline recovers a truncated `ui_messages.json`.** A read racing Cline's live rewrite
+  lost the whole task; the array is now streamed, keeping every message before the break
+  (skip-and-count, per the parser contract).
+- **Plugin I/O robustness.** A plugin's newline-free stderr flood is bounded instead of
+  growing memory unbounded; a stdout-cap breach is now reported as such and the child
+  killed promptly, instead of being misreported as a timeout. String fields on pushed and
+  plugin-emitted records are length-capped at the boundary.
+- **Codex timestamps.** A `session_meta` whose payload omits a timestamp no longer resets
+  the record timestamp to the zero time. Cline model resolution is now deterministic.
+- **Schema migrations apply atomically** with their bookkeeping row, so a crash mid-migration
+  can't leave a half-applied migration that re-runs next boot.
+- **`clear` guards.** An unknown `--tool` value (e.g. `claude` for `claude-code`) now errors
+  instead of silently deleting nothing, and `--all` combined with `--older-than`/`--tool`
+  is rejected as contradictory rather than silently narrowing the deletion.
+- **`--db`-aware empty-store hints.** `effectiveness`, `status`, and `analyze` no longer tell
+  a `--db` user to run `backfill` (which only writes the local store). `--compare` now errors
+  instead of silently ignoring `--format json|csv`. `doctor` reports a store-count error
+  instead of printing `ok`.
+
 ## [0.1.1] - 2026-07-20
 
 ### Fixed
@@ -96,6 +172,7 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/assaio/assaio/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/assaio/assaio/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/assaio/assaio/releases/tag/v0.1.0

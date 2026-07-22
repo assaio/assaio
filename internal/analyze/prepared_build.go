@@ -30,7 +30,6 @@ func BuildInput(usage []store.UsageRow, sessions []store.SessionRow, prices pric
 // row's model is unpriced.
 func buildTotals(rows []store.UsageRow, prices pricing.Table) Totals {
 	var t Totals
-	var reasoning int64
 	priced := len(rows) > 0
 	for i := range rows {
 		r := &rows[i]
@@ -39,7 +38,6 @@ func buildTotals(rows []store.UsageRow, prices pricing.Table) Totals {
 		t.CacheRead += r.CacheRead
 		t.CacheWrite += r.CacheWrite
 		t.Lines += r.LinesAdded
-		reasoning += r.Reasoning
 		if cost, ok := prices.CostTokens(r.Model, r.In, r.Out, r.CacheWrite, r.CacheRead); ok {
 			if t.Cost == nil {
 				zero := 0.0
@@ -50,7 +48,8 @@ func buildTotals(rows []store.UsageRow, prices pricing.Table) Totals {
 			priced = false
 		}
 	}
-	t.Tokens = t.Input + t.Output + t.CacheRead + t.CacheWrite + reasoning
+	// ReasoningTokens is a subset of OutputTokens (usage.Record); adding it double-counts.
+	t.Tokens = t.Input + t.Output + t.CacheRead + t.CacheWrite
 	t.Priced = priced
 	t.CacheEfficiency = fracOf(t.CacheRead, t.CacheRead+t.Input)
 	return t
@@ -76,7 +75,7 @@ func buildModelStats(rows []store.UsageRow, prices pricing.Table, totalTokens in
 		m.CacheRead += r.CacheRead
 		m.CacheWrite += r.CacheWrite
 		m.Lines += r.LinesAdded
-		m.Tokens += r.In + r.Out + r.CacheRead + r.CacheWrite + r.Reasoning
+		m.Tokens += r.In + r.Out + r.CacheRead + r.CacheWrite
 	}
 	sort.Strings(order)
 
@@ -119,7 +118,7 @@ func buildProjectStats(rows []store.UsageRow, prices pricing.Table, totalTokens 
 			order = append(order, r.Project)
 		}
 		a.stat.Lines += r.LinesAdded
-		a.tokens += r.In + r.Out + r.CacheRead + r.CacheWrite + r.Reasoning
+		a.tokens += r.In + r.Out + r.CacheRead + r.CacheWrite
 		if cost, ok := prices.CostTokens(r.Model, r.In, r.Out, r.CacheWrite, r.CacheRead); ok {
 			if a.stat.Cost == nil {
 				zero := 0.0

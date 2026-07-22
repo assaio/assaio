@@ -27,7 +27,7 @@ func newDoctorCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			cfg, err := loadConfig(cmd)
+			cfg, err := loadConfigLenient(cmd)
 			if err != nil {
 				return err
 			}
@@ -52,7 +52,11 @@ func newDoctorCmd() *cobra.Command {
 				return nil
 			}
 			defer func() { _ = st.Close() }()
-			n, _ := st.Count(cmd.Context())
+			n, err := st.Count(cmd.Context())
+			if err != nil {
+				cmd.Printf("store:        ERROR counting records: %v\n", err)
+				return nil
+			}
 			cmd.Printf("store:        ok, %d record(s) at %s\n", n, dbPath)
 			cmd.Printf("inventory:    %s\n", doctorInventoryLabel(cmd, st, n))
 

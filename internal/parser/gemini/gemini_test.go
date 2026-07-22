@@ -234,3 +234,34 @@ func TestThinkingTokensContributeToCost(t *testing.T) {
 		t.Fatalf("Cost = %.10f, want > %.10f (old formula undercounted by ignoring thinking tokens)", got, oldCost)
 	}
 }
+
+// TestHeaderSessionIDCarriesForwardToMessages covers the real Gemini recording shape: the
+// session id rides the file's header line only, message lines omit it, and $set/$rewindTo
+// control records carry no tokens. Every emitted record must inherit the header's session
+// id, and the control records must be skipped without being counted as parse failures.
+func TestHeaderSessionIDCarriesForwardToMessages(t *testing.T) {
+	const log = `{"sessionId":"hdr-1","projectHash":"abc","startTime":"2026-07-01T10:00:00Z","kind":"main"}
+{"$set":{"summary":"a summary update"}}
+{"id":"m1","type":"gemini","timestamp":"2026-07-01T10:00:05Z","model":"gemini-2.5-pro","tokens":{"input":100,"output":50,"cached":0,"thoughts":0,"tool":0,"total":150}}
+{"$rewindTo":"m0"}
+{"id":"m2","type":"gemini","timestamp":"2026-07-01T10:00:10Z","model":"gemini-2.5-flash","tokens":{"input":200,"output":80,"cached":0,"thoughts":0,"tool":0,"total":280}}
+`
+	recs, skipped, err := Parse(strings.NewReader(log))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if skipped != 0 {
+		t.Fatalf("skipped = %d, want 0 (header and control records are valid JSON, just token-less)", skipped)
+	}
+	if len(recs) != 2 {
+		t.Fatalf("got %d records, want 2 (only the two token-bearing message lines)", len(recs))
+	}
+	for i, rec := range recs {
+		if rec.SessionID != "hdr-1" {
+			t.Fatalf("recs[%d].SessionID = %q, want the header session id 'hdr-1'", i, rec.SessionID)
+		}
+		if !strings.Contains(rec.DedupeKey, ":hdr-1:") {
+			t.Fatalf("recs[%d].DedupeKey = %q, want the header session id in the key", i, rec.DedupeKey)
+		}
+	}
+}

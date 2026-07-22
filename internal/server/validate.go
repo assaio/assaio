@@ -15,6 +15,11 @@ import (
 // distort the shared dashboard's SUM() aggregates.
 const maxFieldValue = 1_000_000_000
 
+// maxStringField bounds any single string field on a pushed record: these are identities
+// and labels, not free text. It blocks a client from smuggling a multi-megabyte model or
+// dedupe_key into the shared store and the unauthenticated dashboard it feeds.
+const maxStringField = 512
+
 // tsFloor is the earliest plausible record timestamp; anything before it (including the
 // zero value, year 1) is garbage. No AI-coding tool predates it.
 var tsFloor = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -52,6 +57,19 @@ func validateRecord(r *usage.Record) error {
 }
 
 func validateRecordAt(r *usage.Record, now time.Time) error {
+	// Only an empty dedupe_key is fatal: it is the ON CONFLICT(tool, dedupe_key) key, so a
+	// blank one collapses rows. session_id can legitimately be empty (the Claude parser does
+	// not guarantee it), and rejecting the whole push over it would break a client's entire
+	// sync on one stale row. Member is not checked here -- it is overwritten server-side and
+	// bounded by ValidateMember.
+	if r.DedupeKey == "" {
+		return errors.New("empty dedupe_key")
+	}
+	for _, s := range []string{r.Tool, r.SessionID, r.Model, r.DedupeKey, r.Project, r.Subpath, r.GitBranch, r.Entrypoint} {
+		if len(s) > maxStringField {
+			return fmt.Errorf("string field exceeds %d bytes", maxStringField)
+		}
+	}
 	if !knownTools[r.Tool] && !pluginToolPattern.MatchString(r.Tool) {
 		return fmt.Errorf("unknown tool %q", r.Tool)
 	}

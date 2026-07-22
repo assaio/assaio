@@ -10,7 +10,7 @@ func newConfigCmd() *cobra.Command {
 		Short: "Show the effective configuration",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := loadConfig(cmd)
+			cfg, err := loadConfigRaw(cmd)
 			if err != nil {
 				return err
 			}

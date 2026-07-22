@@ -48,6 +48,9 @@ func runReport(cmd *cobra.Command, since, format *string, by string) error {
 	}
 	defer func() { _ = st.Close() }()
 	if compare, _ := cmd.Flags().GetBool("compare"); compare {
+		if err := compareFormatConflict(cmd); err != nil {
+			return err
+		}
 		return runCompare(cmd, st, *since, by)
 	}
 	built, err := buildReport(cmd, st, start, by)
@@ -128,6 +131,31 @@ func emptyStoreHint(cmd *cobra.Command, prefix string) string {
 		return prefix + " This store has no usage records."
 	}
 	return prefix + " Run 'assaio-agent backfill' to import your local session logs."
+}
+
+// compareFormatConflict errors when --compare is combined with an explicit machine format:
+// --compare only renders a human movers table, so a scripted `--format json|csv` consumer
+// would otherwise get a table with no error. A format inherited from config (not set on
+// the command line) is left alone, since --compare then just renders its table.
+func compareFormatConflict(cmd *cobra.Command) error {
+	if !cmd.Flags().Changed("format") {
+		return nil
+	}
+	if f, _ := cmd.Flags().GetString("format"); f == "json" || f == "csv" {
+		return errors.New("--compare renders a movers table and cannot be combined with --format json|csv")
+	}
+	return nil
+}
+
+// emptyStatusHint writes the store-empty message for status/analyze, db-aware like
+// emptyStoreHint: the rich backfill suggestion for the local store, or a terse "this store
+// has no records" when --db points at a central store backfill cannot populate.
+func emptyStatusHint(cmd *cobra.Command) error {
+	if cmd.Flags().Changed("db") {
+		cmd.Println(emptyStoreHint(cmd, "No usage found."))
+		return nil
+	}
+	return report.RenderEmptyStatusHint(cmd.OutOrStdout())
 }
 
 func openReportStore(cmd *cobra.Command) (*store.Store, error) {

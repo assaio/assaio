@@ -171,6 +171,56 @@ func TestParseTaskInvalidTextIsSkippedNotError(t *testing.T) {
 	}
 }
 
+// TestParseTaskTruncatedArrayKeepsRecordsBeforeTheBreak covers the skip-and-count fix for
+// a ui_messages.json truncated mid-write (Cline rewrites the file live, so a read can race
+// a write): every message decoded before the truncation is kept, and the broken tail is
+// counted rather than aborting the whole task.
+func TestParseTaskTruncatedArrayKeepsRecordsBeforeTheBreak(t *testing.T) {
+	const log = `[
+{"type":"say","say":"api_req_started","text":"{\"tokensIn\":10,\"tokensOut\":5}","ts":1751360400000},
+{"type":"say","say":"api_req_started","text":"{\"tokensIn\":20`
+	recs, skipped, err := ParseTask(strings.NewReader(log), "t4", taskMetadata{})
+	if err != nil {
+		t.Fatalf("a truncated array must not abort the whole task: %v", err)
+	}
+	if len(recs) != 1 {
+		t.Fatalf("got %d records want 1 (the message before the truncation is kept)", len(recs))
+	}
+	if skipped != 1 {
+		t.Fatalf("skipped = %d want 1 (the truncated tail is counted)", skipped)
+	}
+}
+
+// TestParseTaskRecoversAfterRecoverableElementError covers the skip-and-count fix for a
+// single malformed element mid-array (a float ts the int64 field rejects): the element is
+// skipped and counted, but every valid record after it is still parsed -- only a syntax
+// error or truncation stops the stream.
+func TestParseTaskRecoversAfterRecoverableElementError(t *testing.T) {
+	const log = `[
+{"type":"say","say":"api_req_started","text":"{\"tokensIn\":10,\"tokensOut\":5}","ts":1751360400000},
+{"type":"say","say":"api_req_started","text":"{\"tokensIn\":20,\"tokensOut\":7}","ts":1.7513604e12},
+{"type":"say","say":"api_req_started","text":"{\"tokensIn\":30,\"tokensOut\":9}","ts":1751360400002}]`
+	recs, skipped, err := ParseTask(strings.NewReader(log), "t5", taskMetadata{})
+	if err != nil {
+		t.Fatalf("a recoverable element error must not abort the parse: %v", err)
+	}
+	if skipped != 1 {
+		t.Fatalf("skipped = %d want 1 (the float-ts element)", skipped)
+	}
+	if len(recs) != 2 {
+		t.Fatalf("got %d records want 2 (the record after the bad element must survive)", len(recs))
+	}
+}
+
+// TestParseTaskRejectsNonArray covers the guard the streaming rewrite must keep: a
+// ui_messages.json that is not a JSON array (corrupt-to-an-object, wrong file) errors rather
+// than being counted as a clean, empty parse.
+func TestParseTaskRejectsNonArray(t *testing.T) {
+	if _, _, err := ParseTask(strings.NewReader(`{"foo":"bar"}`), "t6", taskMetadata{}); err == nil {
+		t.Fatal("a non-array ui_messages.json must be an error, not a silent empty parse")
+	}
+}
+
 func TestParseDirReadsBothFiles(t *testing.T) {
 	dir := t.TempDir()
 	taskDir := filepath.Join(dir, "task9")

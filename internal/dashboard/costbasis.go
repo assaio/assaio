@@ -13,6 +13,9 @@ func costBasis(inv report.Inventory, window string) string {
 	total := "—"
 	if inv.TotalCost != nil {
 		total = formatCompactUSD(*inv.TotalCost)
+		if inv.HasUnpriced {
+			total += "*"
+		}
 	}
 	perDay := "—"
 	if inv.TotalCost != nil && inv.Days > 0 {

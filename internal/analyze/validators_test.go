@@ -190,22 +190,22 @@ func TestAdoptionBroadButFlatTakeaway(t *testing.T) {
 	}
 }
 
-// TestThroughputEmptyBarsWhenNoRecentUsage covers the honest empty state when a window's
-// usage never lands in the recent sub-window: Bars must be present-but-empty, rendering
-// "(none in this window)" rather than silently showing nothing.
-func TestThroughputEmptyBarsWhenNoRecentUsage(t *testing.T) {
+// TestThroughputBarsCoverWholeWindowMatchingTotal locks in the window-consistency fix:
+// the top-project bars break down the whole-window "AI lines total" figure, so usage
+// outside the recent trend sub-window still shows in the bars instead of the total and
+// the bars silently covering different windows.
+func TestThroughputBarsCoverWholeWindowMatchingTotal(t *testing.T) {
 	usage := []store.UsageRow{
 		{Day: "2026-06-01", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "old", In: 10, Out: 10, LinesAdded: 5},
 	}
 	in := BuildInput(usage, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
 	v, _ := Get("throughput")
-	var buf bytes.Buffer
-	if err := RenderResultText(&buf, v.Analyze(in)); err != nil {
-		t.Fatal(err)
+	got := v.Analyze(in)
+	if len(got.Bars) != 1 || got.Bars[0].Label != "old" {
+		t.Fatalf("Bars = %+v, want one bar for the in-window project 'old'", got.Bars)
 	}
-	out := buf.String()
-	if !strings.Contains(out, "(none in this window)") {
-		t.Fatalf("throughput output with no recent usage = %q", out)
+	if !strings.Contains(got.Bars[0].Value, "5") {
+		t.Fatalf("Bars[0].Value = %q, want the 5 whole-window lines matching the total", got.Bars[0].Value)
 	}
 }
 

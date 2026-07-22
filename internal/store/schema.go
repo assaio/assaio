@@ -41,10 +41,21 @@ func migrate(ctx context.Context, db *sql.DB) error {
 		if err != nil {
 			return err
 		}
-		if _, err := db.ExecContext(ctx, string(body)); err != nil {
+		// Apply the body and record it in one transaction, so a crash between them can
+		// never leave a half-applied migration that re-runs (and possibly fails) next boot.
+		tx, err := db.BeginTx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, string(body)); err != nil {
+			_ = tx.Rollback()
 			return fmt.Errorf("migration %s: %w", name, err)
 		}
-		if _, err := db.ExecContext(ctx, `INSERT INTO schema_migration(name) VALUES (?)`, name); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migration(name) VALUES (?)`, name); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+		if err := tx.Commit(); err != nil {
 			return err
 		}
 	}

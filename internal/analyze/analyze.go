@@ -45,6 +45,15 @@ type Input struct {
 	ByProject []ProjectStat
 	// Totals is Usage's grand totals across every model and project. See Totals.
 	Totals Totals
+	// PlanMonthlyCost is the user's flat monthly subscription price (config.pricing), for
+	// comparing against the API-equivalent estimate. Zero (the default) means unset, and
+	// subscription-fit then prompts to configure it rather than comparing against nothing.
+	PlanMonthlyCost float64
+	// TurnSizing is per-model raw turn counts (output-producing turns, and how many were
+	// small) for model-right-sizing, which needs the per-turn grain the daily Usage
+	// aggregate hides. Populated by the CLI from store.TurnSizing; empty in the drill and
+	// in tests that don't set it, where model-right-sizing reads "no premium turns".
+	TurnSizing []store.ModelTurns
 }
 
 // Read is a validator's headline verdict. Key drives the dashboard's color: "good",

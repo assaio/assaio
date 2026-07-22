@@ -44,7 +44,7 @@ func Parse(r io.Reader) ([]usage.Record, int, error) {
 	var out []usage.Record
 	var skipped int
 	index := 0
-	var fileFP string
+	var fileFP, sessionID string
 	for sc.Scan() {
 		raw := sc.Bytes()
 		if len(raw) == 0 {
@@ -58,19 +58,26 @@ func Parse(r io.Reader) ([]usage.Record, int, error) {
 			skipped++
 			continue
 		}
+		// The session id rides the file's header line and is not repeated on message
+		// lines, so carry the last-seen value forward (this also accepts an older per-line
+		// shape). Header and control records ($set/$rewindTo) carry no tokens and fall
+		// through the zero-token skip below.
+		if m.SessionID != "" {
+			sessionID = m.SessionID
+		}
 		if m.Tokens.Total == 0 && m.Tokens.Input == 0 && m.Tokens.Output == 0 {
 			continue
 		}
 		out = append(out, usage.Record{
 			Tool:            tool,
-			SessionID:       m.SessionID,
+			SessionID:       sessionID,
 			Timestamp:       m.Timestamp,
 			Model:           m.Model,
 			InputTokens:     parser.NonNeg(m.Tokens.Input - m.Tokens.Cached),
 			CacheReadTokens: parser.NonNeg(m.Tokens.Cached),
 			OutputTokens:    parser.NonNeg(m.Tokens.Output + m.Tokens.Tool + m.Tokens.Thoughts),
 			ReasoningTokens: parser.NonNeg(m.Tokens.Thoughts),
-			DedupeKey:       fmt.Sprintf("%s:%s:%d", fileFP, m.SessionID, index),
+			DedupeKey:       fmt.Sprintf("%s:%s:%d", fileFP, sessionID, index),
 			Granularity:     "turn",
 		})
 		index++
