@@ -11,7 +11,7 @@ type ModelStat struct {
 	// below premiumOutputPriceFloor is "cheaper"; a model absent from Prices is
 	// "unknown", never guessed from its name.
 	Tier string
-	// Tokens is In+Output+CacheRead+CacheWrite+Reasoning summed across this model's usage.
+	// Tokens is In+Output+CacheRead+CacheWrite summed (reasoning is a subset of output, not re-added) across this model's usage.
 	Tokens int64
 	// Input, Output, CacheRead, CacheWrite are the same usage summed per token type.
 	Input, Output, CacheRead, CacheWrite int64
@@ -47,7 +47,7 @@ type ProjectStat struct {
 // Totals is the queried window's grand totals across every model and project, computed
 // once by BuildInput so no validator re-sums Usage itself.
 type Totals struct {
-	// Tokens is In+Output+CacheRead+CacheWrite+Reasoning summed across all Usage.
+	// Tokens is In+Output+CacheRead+CacheWrite summed (reasoning is a subset of output, not re-added) across all Usage.
 	Tokens int64
 	// Input, Output, CacheRead, CacheWrite are the same usage summed per token type.
 	Input, Output, CacheRead, CacheWrite int64

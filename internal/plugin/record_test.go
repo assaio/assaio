@@ -1,6 +1,9 @@
 package plugin
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseRecordLine(t *testing.T) {
 	tests := []struct {
@@ -25,6 +28,17 @@ func TestParseRecordLine(t *testing.T) {
 				t.Fatalf("parseRecordLine() err = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+// TestParseRecordLineRejectsOversizedStringField guards the boundary cap: a plugin cannot
+// smuggle a multi-kilobyte string field (here Model) past the record boundary into the
+// store, matching the metric-result boundary's own length caps.
+func TestParseRecordLineRejectsOversizedStringField(t *testing.T) {
+	big := strings.Repeat("x", maxWireStringLen+1)
+	line := `{"session_id":"s1","timestamp":"2026-07-01T10:00:00Z","model":"` + big + `","dedupe_key":"s1:0","granularity":"turn"}`
+	if _, err := parseRecordLine([]byte(line), "demo"); err == nil {
+		t.Fatal("want error for an oversized string field, got nil")
 	}
 }
 

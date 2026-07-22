@@ -23,6 +23,7 @@ mattering the moment a second release exists.
 | `sync` | v0.1 | Pushes local usage to a team server; pseudonymous by default, `--member` is an explicit opt-in. |
 | `doctor` | v0.1 | Detected tools, resolved log roots, store inventory, health, accuracy caveats. |
 | `status` | v0.1 | Terminal overview: inventory, headline `$`/100 lines, hot / going-stale projects, session stats. |
+| `survival` | Unreleased | Directional local outcome check: how much of a git repo's window survives in `HEAD` (`git blame`), beside the AI lines the store recorded. See [automation](docs/automation.md). |
 | `clear` | v0.1 | Deletes stored data; requires an explicit scope and `--yes`. |
 | `config` | v0.1 | Prints the effective merged configuration and its source path. |
 | `plugins` | v0.1 | `list` / `verify` for exec **parser** plugins (protocol conformance, nothing stored). |
@@ -37,10 +38,17 @@ generically by the CLI, JSON output, and the dashboard.
 | Validator | Since | Question it answers | Built-in caveat |
 |-----------|-------|--------------------|-----------------|
 | `adoption` | v0.1 | How broad is AI usage (sessions, active days, project/tool breadth) and is it growing? | Breadth, not quality. |
+| `cache-hygiene` | Unreleased | Prompt-cache reuse: cache-read share of billed input, and whether cache writes are reused. | Cost signal, not quality; a big one-shot task legitimately shows low reuse. |
 | `context` | v0.1 | Are sessions healthy: turns, peak context, focused minutes, compaction rate? | Neutral below 3 sessions — no verdict from thin data. |
+| `coverage` | Unreleased | How much of the window is high-confidence data: token share from tools with full activity capture, and share priced. | Per-record granularity (turn vs session) not yet surfaced. |
 | `model-fit` | v0.1 | Premium vs cheaper token share (by real price tier), lines-per-token contrast, sub-agent delegation share, upper-bound routing savings. | Savings figure is an upper bound, never a switch recommendation. |
+| `model-right-sizing` | Unreleased | Premium-model turns that produced little output — downgrade candidates a cheaper/faster model might handle. | Task difficulty is invisible; a prompt to review, not a verdict. On a flat plan it's about speed/limits, not $. |
+| `reasoning-share` | Unreleased | Extended-thinking (reasoning) share of output among tools that report it, and how much of your output that covers. | Only Codex/reasoning models report it today; Claude Code doesn't. |
 | `rework` | v0.1 | Within-session churn (AI lines undone in the same transcript) and human rejection rate. | Directional friction proxy; healthy iteration churns too. |
+| `session-taxonomy` | Unreleased | The mix of session kinds: conversational (no edits), light-edit, heavy-edit — how you actually use AI. | Descriptive, not a scorecard; conversational is real work. A thrash bucket needs per-session rework (not stored yet). |
+| `subscription-fit` | Unreleased | For flat-plan users: the window's API-equivalent projected to a month vs the configured plan cost — a value multiple and an "is it paying off?" verdict. | API-equivalent is an estimate at public prices, not your bill; needs `pricing.monthly_subscription_cost`. |
 | `throughput` | v0.1 | Total AI lines, lines per active day, top projects, week-over-week trend. | Activity rate, never a productivity score. |
+| `turn-efficiency` | Unreleased | Getting more per prompt: one-shot rate, median turns per code-producing session, output tokens per turn. | Task size is invisible; directional, never a per-person score. |
 
 Exec **metric plugins** (below) render beside these, namespaced `plugin:<name>`.
 
@@ -68,7 +76,8 @@ Exec **metric plugins** (below) render beside these, namespaced `plugin:<name>`.
 
 Shared parser guarantees: skip-and-count on corrupt lines, deterministic dedupe keys
 (re-runs never double-count), `Granularity` honesty (session-level data never
-masquerades as per-turn), fuzz tests with committed corpora.
+masquerades as per-turn), fuzz tests with committed corpora. Cline task data is
+discovered across VS Code, VS Code Insiders, VSCodium, and Cursor.
 
 ## The Assay dashboard
 

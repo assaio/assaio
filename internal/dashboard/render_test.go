@@ -76,6 +76,27 @@ func TestRenderHTMLGoldenRealNames(t *testing.T) {
 	renderAndCompareGolden(t, &d, "testdata/dashboard_real.golden.html")
 }
 
+// TestRenderHTMLAnonymizedHidesSubpaths guards the honesty rule that the shareable
+// (anonymized) dashboard must not leak a real repository subpath beside a pseudonymized
+// project -- the drill's subpath table was previously passed through verbatim, so a
+// distinctive path both de-anonymized the project and exposed internal names. The empty
+// root subpath carries no name and is exempt.
+func TestRenderHTMLAnonymizedHidesSubpaths(t *testing.T) {
+	var buf bytes.Buffer
+	if err := RenderHTML(&buf, Build(fixtureInput(), "last 30 days", true, fixtureSubpaths(), nil)); err != nil {
+		t.Fatal(err)
+	}
+	html := buf.String()
+	for _, row := range fixtureSubpaths() {
+		if row.Subpath != "" && strings.Contains(html, row.Subpath) {
+			t.Fatalf("anonymized dashboard leaks real subpath %q", row.Subpath)
+		}
+	}
+	if !strings.Contains(html, "subpath-") {
+		t.Fatal("anonymized dashboard must show a pseudonymized subpath label")
+	}
+}
+
 func renderAndCompareGolden(t *testing.T, d *Data, golden string) {
 	t.Helper()
 	var buf bytes.Buffer

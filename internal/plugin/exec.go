@@ -66,7 +66,7 @@ func run(ctx context.Context, cfg Config, collectViolations bool) ([]usage.Recor
 	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()
 
-	stdout := &cappedBuffer{cap: maxStdout}
+	stdout := &cappedBuffer{cap: maxStdout, cancel: cancel}
 	stderr := newPrefixWriter(os.Stderr, "[plugin/"+cfg.Name+"] ")
 	//nolint:gosec // the command is the user's own opt-in config entry, resolved via LookPath
 	cmd := exec.CommandContext(ctx, cfg.Command, "scan")
@@ -78,11 +78,13 @@ func run(ctx context.Context, cfg Config, collectViolations bool) ([]usage.Recor
 	runErr := cmd.Run()
 	stderr.Flush()
 
-	if ctx.Err() != nil {
-		return nil, nil, Stats{}, fmt.Errorf("plugin %s: timed out after %s", cfg.Name, cfg.Timeout)
-	}
+	// Check the cap breach before ctx.Err(): an overflow cancels the context itself, so
+	// testing ctx.Err() first would misreport a stdout flood as a timeout.
 	if stdout.exceeded {
 		return nil, nil, Stats{}, fmt.Errorf("plugin %s: stdout exceeded %d bytes", cfg.Name, maxStdout)
+	}
+	if ctx.Err() != nil {
+		return nil, nil, Stats{}, fmt.Errorf("plugin %s: timed out after %s", cfg.Name, cfg.Timeout)
 	}
 	if runErr != nil {
 		return nil, nil, Stats{}, fmt.Errorf("plugin %s: %w", cfg.Name, runErr)
