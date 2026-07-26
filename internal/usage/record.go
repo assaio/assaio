@@ -67,6 +67,32 @@ type Record struct {
 	// context-strain signal. Populated by the Claude Code and Codex parsers; 0 for tools
 	// without edit-log extraction.
 	Compactions int64
+	// ToolReads, ToolSearches, ToolCommands, ToolWrites, and ToolOther split this turn's
+	// ToolCalls by what each call was for -- reading a file, searching, running a command,
+	// writing code, or anything else. They sum to ToolCalls for tools whose logs name their
+	// tool calls (Claude Code, Codex); all zero for tools that don't, which is why any
+	// metric over them reports its own coverage. Only the category is derived: the tool
+	// name is classified during parsing and never stored.
+	ToolReads    int64
+	ToolSearches int64
+	ToolCommands int64
+	ToolWrites   int64
+	ToolOther    int64
+	// ToolErrors is the count of this turn's tool calls that returned an error -- a
+	// friction signal distinct from Rejected, which is a human declining a call. Populated
+	// by the Claude Code and Codex parsers; 0 for tools whose logs don't mark failures.
+	ToolErrors int64
+	// Sidechain is 1 when this turn ran inside a sub-agent, read from the log's own marker
+	// rather than inferred from DedupeKey; 0 for a main-loop turn or a tool that has no
+	// sub-agents. Claude Code only today.
+	Sidechain int64
+	// Skill is the skill the tool attributed this turn to (e.g. "code-review"), "" when
+	// none or unsupported. A category label the tool itself assigned -- never a prompt or
+	// any content. Claude Code only today.
+	Skill string
+	// Agent is the sub-agent type this turn ran as (e.g. "general-purpose"), "" for
+	// main-loop turns or tools without sub-agents. Category label only. Claude Code only.
+	Agent string
 	// ReworkLines is AI-added code lines later removed by a subsequent edit to the same
 	// file within this transcript -- a rework/thrash proxy for "AI wrote code that
 	// didn't stick." Populated by the Claude Code and Codex parsers (both share the

@@ -141,6 +141,25 @@ func fracOf(n, maxN int64) float64 {
 	return float64(n) / float64(maxN)
 }
 
+// percentileAt returns the p-quantile (p in 0..1) of sorted, ascending, by linear
+// interpolation between adjacent ranks -- the same method report.BuildSessionStats uses
+// for its medians, so a figure computed here stays directly comparable to its own.
+func percentileAt(sorted []float64, p float64) float64 {
+	n := len(sorted)
+	switch n {
+	case 0:
+		return 0
+	case 1:
+		return sorted[0]
+	}
+	rank := clamp01(p) * float64(n-1)
+	lo := int(rank)
+	if lo >= n-1 {
+		return sorted[n-1]
+	}
+	return sorted[lo] + (rank-float64(lo))*(sorted[lo+1]-sorted[lo])
+}
+
 // clamp01 constrains x to [0,1], the valid range for Result.Purity.
 func clamp01(x float64) float64 {
 	switch {

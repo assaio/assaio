@@ -33,6 +33,12 @@ type line struct {
 	Entrypoint     string          `json:"entrypoint"`
 	ToolUseResult  json.RawMessage `json:"toolUseResult"`
 	ToolDenialKind string          `json:"toolDenialKind"`
+	// IsSidechain marks a line written inside a sub-agent's own transcript.
+	IsSidechain bool `json:"isSidechain"`
+	// AttributionSkill and AttributionAgent are the skill and sub-agent-type labels Claude
+	// Code stamps on a turn; category labels only, never prompt or file content.
+	AttributionSkill string `json:"attributionSkill"`
+	AttributionAgent string `json:"attributionAgent"`
 	// IsCompactSummary and Subtype mark a context-compaction event: the transcript's
 	// context overflowed and was auto-summarized. Either discriminates it.
 	IsCompactSummary bool   `json:"isCompactSummary"`
@@ -76,11 +82,11 @@ func (c *carryForward) project() string {
 // from their content blocks, tool-call/edit activity counts. A completed sub-agent's
 // toolUseResult (Task tool) never overlaps its parent turn's usage and is emitted as its
 // own record, deduped by agentId; its async-launch stub (agentId with no usage yet) is
-// skipped. Edit-result, tool-denial, and compaction-boundary lines attribute line,
-// rework, rejection, and compaction counts to the most recently emitted assistant
-// record; rework tracking (reworkTracker) is scoped to this single Parse call, per
-// AGENTS.md's "parsers stay hermetic" -- it never touches the filesystem, and the file
-// paths it keys on live only for this call's duration. Assistant records are
+// skipped. Edit-result, tool-denial, failed-tool-result, and compaction-boundary lines
+// attribute line, rework, rejection, error, and compaction counts to the most recently
+// emitted assistant record; rework tracking (reworkTracker) is scoped to this single
+// Parse call, per AGENTS.md's "parsers stay hermetic" -- it never touches the filesystem,
+// and the file paths it keys on live only for this call's duration. Assistant records are
 // de-duplicated by uuid to avoid double-counting streamed retries. cwd, gitBranch, and
 // entrypoint are tracked across all line types and stamped onto each emitted record from
 // their latest seen value. skipped counts lines that failed to unmarshal as JSON or
@@ -123,13 +129,25 @@ func applyLine(l *line, cf *carryForward, seen map[string]struct{}, out []usage.
 	if markDenial(out, lastAssistant, l.ToolDenialKind) {
 		return out, lastAssistant, 0
 	}
+	act := countBlocks(l.Message.Content)
+	markToolErrors(out, lastAssistant, act.errors)
 	if markCompaction(out, lastAssistant, l.IsCompactSummary, l.Subtype) {
 		return out, lastAssistant, 0
 	}
 	if next, handled := applyToolResult(l, cf, out, lastAssistant, rt); handled {
 		return next, lastAssistant, 0
 	}
-	return appendAssistant(l, cf, seen, out, lastAssistant)
+	return appendAssistant(l, cf, seen, out, lastAssistant, &act)
+}
+
+// markToolErrors attributes failed tool results, which a later user line carries, to
+// out[lastAssistant] -- the turn that made the calls. A denied call never reaches here:
+// its line returns above, keeping the friction signal distinct from a human's refusal.
+func markToolErrors(out []usage.Record, lastAssistant int, errors int64) {
+	if lastAssistant < 0 {
+		return
+	}
+	out[lastAssistant].ToolErrors += errors
 }
 
 // markDenial attributes a tool-use denial to out[lastAssistant] and reports whether kind
@@ -142,42 +160,4 @@ func markDenial(out []usage.Record, lastAssistant int, kind string) bool {
 		out[lastAssistant].Rejected++
 	}
 	return true
-}
-
-// appendAssistant appends a new record for an assistant turn, deduping by uuid.
-func appendAssistant(l *line, cf *carryForward, seen map[string]struct{}, out []usage.Record, lastAssistant int) ([]usage.Record, int, int) {
-	if l.Type != "assistant" || l.Message.Model == "" {
-		return out, lastAssistant, 0
-	}
-	if l.UUID == "" {
-		return out, lastAssistant, 1
-	}
-	if _, dup := seen[l.UUID]; dup {
-		return out, lastAssistant, 0
-	}
-	seen[l.UUID] = struct{}{}
-	out = append(out, recordFromLine(l, cf))
-	return out, len(out) - 1, 0
-}
-
-func recordFromLine(l *line, cf *carryForward) usage.Record {
-	toolCalls, edits := countToolUse(l.Message.Content)
-	return usage.Record{
-		Tool:             tool,
-		SessionID:        l.SessionID,
-		Timestamp:        l.Timestamp,
-		Model:            l.Message.Model,
-		InputTokens:      parser.NonNeg(l.Message.Usage.Input),
-		OutputTokens:     parser.NonNeg(l.Message.Usage.Output),
-		CacheReadTokens:  parser.NonNeg(l.Message.Usage.CacheRead),
-		CacheWriteTokens: parser.NonNeg(l.Message.Usage.CacheWrite),
-		DedupeKey:        l.UUID,
-		Cwd:              cf.cwd,
-		Project:          cf.project(),
-		GitBranch:        cf.gitBranch,
-		Entrypoint:       cf.entrypoint,
-		Granularity:      "turn",
-		ToolCalls:        toolCalls,
-		Edits:            edits,
-	}
 }

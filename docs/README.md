@@ -9,8 +9,9 @@ Where everything lives, in one place.
 - [`FEATURES.md`](../FEATURES.md) — the maintained inventory of what exists today,
   with the release each capability arrived in.
 - [`extending.md`](extending.md) — the contract for every extension surface: in-tree
-  parsers and validators, exec parser plugins (any language), exec metric plugins
-  (any language), custom log paths, the team server, and direct SQL on the store.
+  parsers and validators, exec parser plugins (any language), exec metric plugins and
+  exec rule plugins (any language), custom log paths, the team server, and direct SQL on
+  the store.
 - [`config.example.yaml`](../config.example.yaml) — every config key, documented, with
   defaults.
 - [`PRIVACY.md`](../PRIVACY.md) — exactly what is read, extracted, stored, and never
@@ -52,3 +53,6 @@ all in the shipping PR.
 - [ADR 0004](adr/0004-exec-metric-plugin-protocol.md) — exec plugin protocol for
   out-of-tree **metrics** (Input on stdin → one Result), and why the team server never
   executes them.
+- [ADR 0005](adr/0005-exec-rule-plugin-protocol.md) — exec plugin protocol for
+  out-of-tree **rules** (verdicts on stdin → severity alerts), why `check` is their only
+  host, and why the gate fails closed.

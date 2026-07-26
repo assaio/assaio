@@ -59,7 +59,7 @@ Rejected alternatives:
 ## Consequences
 - A company writes one Python file, points `metrics:` at it, and its metric renders in
   `analyze`, `analyze --format json`, and the Assay dashboard (pseudonymization
-  included, via `barsAreProjects`) — no fork, no rebuild, no release wait.
+  included, via `barsPseudonym`) — no fork, no rebuild, no release wait.
 - The prepared-`Input` JSON becomes a versioned public surface; widening it is cheap,
   reshaping it is a breaking protocol change to be called out in release notes.
 - The in-tree validator path (docs/extending.md) remains the route for upstreamable

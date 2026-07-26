@@ -389,8 +389,50 @@ func TestValidateAllowsSameNameAcrossPluginsAndMetrics(t *testing.T) {
 		Since: "30d", Format: "table",
 		Plugins: []PluginConfig{{Name: "mytool", Command: "/x"}},
 		Metrics: []PluginConfig{{Name: "mytool", Command: "/x"}},
+		Rules:   []PluginConfig{{Name: "mytool", Command: "/x"}},
 	}
 	if err := c.Validate(); err != nil {
-		t.Fatalf("Validate() = %v, want nil: one binary may speak both protocols", err)
+		t.Fatalf("Validate() = %v, want nil: one binary may speak all three protocols", err)
+	}
+}
+
+func TestLoadRulesFromYAML(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "c.yaml")
+	yaml := "rules:\n  - name: budget-drift\n    command: /usr/local/bin/assaio-rule-budget\n    timeout: 15s\n"
+	if err := os.WriteFile(p, []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Rules) != 1 {
+		t.Fatalf("len(Rules) = %d, want 1", len(c.Rules))
+	}
+	r := c.Rules[0]
+	if r.Name != "budget-drift" || r.Command != "/usr/local/bin/assaio-rule-budget" {
+		t.Fatalf("rule entry wrong: %+v", r)
+	}
+	timeout, err := r.TimeoutOrDefault()
+	if err != nil || timeout != 15*time.Second {
+		t.Fatalf("TimeoutOrDefault() = %v, %v; want 15s", timeout, err)
+	}
+}
+
+func TestValidateRejectsInvalidRuleEntry(t *testing.T) {
+	c := Config{Since: "30d", Format: "table", Rules: []PluginConfig{{Name: "Bad_Name", Command: "/x"}}}
+	err := c.Validate()
+	if err == nil || !strings.Contains(err.Error(), "rule") {
+		t.Fatalf("Validate() = %v, want a rule-entry error", err)
+	}
+}
+
+func TestValidateRejectsDuplicateRuleNames(t *testing.T) {
+	c := Config{Since: "30d", Format: "table", Rules: []PluginConfig{
+		{Name: "a", Command: "/x"}, {Name: "a", Command: "/y"},
+	}}
+	err := c.Validate()
+	if err == nil || !strings.Contains(err.Error(), `duplicate rule name "a"`) {
+		t.Fatalf("Validate() = %v, want duplicate rule name error", err)
 	}
 }

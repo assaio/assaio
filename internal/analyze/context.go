@@ -119,19 +119,6 @@ func medianActiveMinutesForCodeSessions(sessions []store.SessionRow) (median flo
 	return medianAt50(actives), true
 }
 
-// medianAt50 returns the median of sorted (ascending), via the same linear-interpolation
-// method report.BuildSessionStats uses for its own medians, so this figure is directly
+// medianAt50 returns the median of sorted (ascending), so this figure is directly
 // comparable to SessionStats.MedianActiveMinutes.
-func medianAt50(sorted []float64) float64 {
-	n := len(sorted)
-	switch n {
-	case 0:
-		return 0
-	case 1:
-		return sorted[0]
-	}
-	mid := float64(n-1) / 2
-	lo := int(mid)
-	frac := mid - float64(lo)
-	return sorted[lo] + frac*(sorted[lo+1]-sorted[lo])
-}
+func medianAt50(sorted []float64) float64 { return percentileAt(sorted, 0.5) }

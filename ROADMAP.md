@@ -63,13 +63,12 @@ should be reconcilable against reality.
 ### 3. Richer local views
 
 A large shortlist of metrics can be honestly supported from data already stored — no git, no
-issue tracker, no schema change. These are the fast, frequent wins: turn-efficiency
-("am I getting more per prompt?"), subscription-fit (is Max/Pro paying off vs API?),
-cost concentration across projects, a workload rhythm heatmap (never an attendance view),
-session-outcome taxonomy, throughput per focused hour, rework/thrash bursts over time, and a
-self-relative "skill curve" progress panel (you vs you four weeks ago, never cross-person).
-Each is one self-registering file and each carries the caveat that keeps it honest — see the
-`B01`–`B37` cluster in the backlog.
+issue tracker, no schema change. These are the fast, frequent wins: throughput per focused
+hour, rework/thrash bursts over time, the full day × hour rhythm heatmap (never an attendance
+view), long- versus short-session efficiency, entrypoint mix, model freshness and lock-in,
+sub-agent delegation economics, and a self-relative "skill curve" progress panel (you vs you
+four weeks ago, never cross-person). Each is one self-registering file and each carries the
+caveat that keeps it honest — see the `B28`–`B37` cluster in the backlog.
 
 ### 4. Team & server hardening
 
@@ -87,8 +86,8 @@ cloud is where this theme's hardening (per-member auth, retention, TLS) ultimate
 ### 5. Ecosystem & extensibility
 
 `assaio` is built to be extended, and the extension surfaces should become dependable
-enough to build a community on. Directions: a third exec-plugin protocol for **rule** units
-(read a window's verdicts, emit alerts with severity — `B13`, ADR 0005 to come); an
+enough to build a community on. The third exec-plugin protocol, **rule** units gating
+`check` (ADR 0005), has landed; what remains: an
 in-process Go **plugin API** (`plugin/metric|rule|connector`, no subprocess, no rebuild —
 `B24`); a published, versioned freeze of the plugin protocols and the SQLite schema under
 semver (`B23`); JSON Schemas and a scaffolder for plugin authors; and a community registry

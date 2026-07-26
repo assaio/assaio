@@ -1,11 +1,13 @@
-// Package plugin runs out-of-tree parser plugins as subprocesses.
+// Package plugin runs out-of-tree plugins as subprocesses: parsers (ADR 0003, below),
+// metrics (ADR 0004, metric.go), and rules (ADR 0005, rule.go). All three are opt-in via
+// config only — never discovered from PATH — and everything they emit is validated at
+// the boundary.
 //
-// A plugin is any executable that, when invoked as `<command> scan` with
+// A parser plugin is any executable that, when invoked as `<command> scan` with
 // ASSAIO_PLUGIN_PROTOCOL=1 set, writes to stdout a one-line JSON handshake
 // (`{"assaio_plugin":1,"tool":"<name>"}`) followed by zero or more JSONL usage
 // records (snake_case, see record.go). The plugin owns its own discovery and parsing;
-// assaio owns validation, storage, and pricing. Plugins are opt-in via config only —
-// never discovered from PATH.
+// assaio owns validation, storage, and pricing.
 package plugin
 
 import (

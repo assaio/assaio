@@ -54,8 +54,8 @@ func TestParseDedupesAndFilters(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(recs) != 4 {
-		t.Fatalf("got %d records, want 4 (3 assistant turns deduped + 1 sub-agent record, non-assistant lines otherwise filtered)", len(recs))
+	if len(recs) != 5 {
+		t.Fatalf("got %d records, want 5 (4 assistant turns deduped + 1 sub-agent record, non-assistant lines otherwise filtered)", len(recs))
 	}
 	for _, r := range recs {
 		if r.Project != "app" || r.GitBranch != "main" || r.Entrypoint != "cli" || r.Granularity != "turn" {
@@ -142,6 +142,12 @@ func TestParseSubAgentAndActivity(t *testing.T) {
 	if assistant.Compactions != 1 {
 		t.Fatalf("a3 Compactions = %d, want 1 (from the following compact_boundary line)", assistant.Compactions)
 	}
+	if assistant.ToolErrors != 0 {
+		t.Fatalf("a3 ToolErrors = %d, want 0 (its only failed result is the denial already counted as Rejected)", assistant.ToolErrors)
+	}
+	if assistant.Sidechain != 0 || assistant.Skill != "" || assistant.Agent != "" {
+		t.Fatalf("a3 Sidechain/Skill/Agent = %d/%q/%q, want 0/\"\"/\"\" (a plain main-loop turn)", assistant.Sidechain, assistant.Skill, assistant.Agent)
+	}
 
 	if agCount != 1 {
 		t.Fatalf("records with DedupeKey=agent:ag1 = %d, want 1 (the async-launch stub must not itself emit a record)", agCount)
@@ -164,6 +170,9 @@ func TestParseSubAgentAndActivity(t *testing.T) {
 	}
 	if subAgent.Granularity != "turn" {
 		t.Fatalf("sub-agent Granularity = %q, want turn", subAgent.Granularity)
+	}
+	if subAgent.Sidechain != 1 || subAgent.Agent != "general-purpose" {
+		t.Fatalf("sub-agent Sidechain/Agent = %d/%q, want 1/general-purpose (the work it aggregates ran inside a sub-agent)", subAgent.Sidechain, subAgent.Agent)
 	}
 
 	recs2, _, err := Parse(bytes.NewReader(data))

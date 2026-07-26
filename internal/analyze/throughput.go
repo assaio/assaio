@@ -54,7 +54,7 @@ func (throughputValidator) Analyze(in Input) Result {
 		trendFigure(recent, prior, changePct, trendOK),
 	}
 	r.Bars = topProjectBars(in.ByProject, throughputTopN)
-	r.BarsAreProjects = true
+	r.BarsPseudonym = PseudonymProject
 	r.Takeaway = throughputTakeaway(ramping, growthSignal && !sufficientVolume)
 	return r
 }

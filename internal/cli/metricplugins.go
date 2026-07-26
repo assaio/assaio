@@ -26,7 +26,8 @@ func collectAnalysisResults(cmd *cobra.Command, names []string, metricCfgs []con
 		return collectNamedResults(cmd, names, metricCfgs, in)
 	}
 	results := runValidatorResults(analyze.Validators(), in)
-	return append(results, runMetricPlugins(cmd.Context(), metricCfgs, in, cmd.ErrOrStderr())...), nil
+	plugins, _ := runMetricPlugins(cmd.Context(), metricCfgs, in, cmd.ErrOrStderr())
+	return append(results, plugins...), nil
 }
 
 // collectNamedResults resolves explicitly requested names. Unlike the run-everything
@@ -67,19 +68,21 @@ func runValidatorResults(validators []analyze.Validator, in *analyze.Input) []an
 // runMetricPlugins runs every configured metric plugin over in, name-sorted for
 // deterministic output. A failing plugin is skipped with one warning line on errW --
 // mirroring backfill's plugin Failed handling -- so a broken metric never blocks the
-// built-in report.
-func runMetricPlugins(ctx context.Context, cfgs []config.PluginConfig, in *analyze.Input, errW io.Writer) []analyze.Result {
-	sorted := sortedMetricConfigs(cfgs)
-	out := make([]analyze.Result, 0, len(sorted))
+// built-in report, and its name is returned so a caller that gates on verdicts can refuse
+// to pass on a verdict set it knows is incomplete.
+func runMetricPlugins(ctx context.Context, cfgs []config.PluginConfig, in *analyze.Input, errW io.Writer) (results []analyze.Result, failed []string) {
+	sorted := sortedPluginConfigs(cfgs)
+	results = make([]analyze.Result, 0, len(sorted))
 	for _, pc := range sorted {
 		res, err := runOneMetricPlugin(ctx, pc, in)
 		if err != nil {
 			_, _ = fmt.Fprintf(errW, "warning: %v\n", err)
+			failed = append(failed, pc.Name)
 			continue
 		}
-		out = append(out, res)
+		results = append(results, res)
 	}
-	return out
+	return results, failed
 }
 
 func runOneMetricPlugin(ctx context.Context, pc config.PluginConfig, in *analyze.Input) (analyze.Result, error) {
@@ -90,7 +93,7 @@ func runOneMetricPlugin(ctx context.Context, pc config.PluginConfig, in *analyze
 	return plugin.RunMetric(ctx, resolved, in)
 }
 
-func sortedMetricConfigs(cfgs []config.PluginConfig) []config.PluginConfig {
+func sortedPluginConfigs(cfgs []config.PluginConfig) []config.PluginConfig {
 	out := make([]config.PluginConfig, len(cfgs))
 	copy(out, cfgs)
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
@@ -135,7 +138,7 @@ func validAnalysisNames(metricCfgs []config.PluginConfig) string {
 	for _, v := range all {
 		names = append(names, v.Name())
 	}
-	for _, pc := range sortedMetricConfigs(metricCfgs) {
+	for _, pc := range sortedPluginConfigs(metricCfgs) {
 		names = append(names, metricPluginPrefix+pc.Name)
 	}
 	return strings.Join(names, ", ")

@@ -1,0 +1,4 @@
+#!/bin/sh
+cat >/dev/null
+echo '{"assaio_rule":1,"name":"demo"}'
+echo '{"alerts":[{"rule":"budget-drift","severity":"error","message":"Spend outran the plan."}]}'

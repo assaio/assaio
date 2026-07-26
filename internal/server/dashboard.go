@@ -47,8 +47,17 @@ func BuildDashboard(ctx context.Context, st *store.Store) (dashboard.Data, error
 	if err != nil {
 		return dashboard.Data{}, err
 	}
-	in := analyze.BuildInput(usageRows, sessionRows, table, time.Now(), dashboardRecentWindow, analyze.Delegation{})
+	sub, total, err := st.Delegation(ctx, since)
+	if err != nil {
+		return dashboard.Data{}, err
+	}
+	skills, agents, err := st.Attribution(ctx, since)
+	if err != nil {
+		return dashboard.Data{}, err
+	}
+	in := analyze.BuildInput(usageRows, sessionRows, table, time.Now(), dashboardRecentWindow, analyze.Delegation{Sub: sub, Total: total})
 	in.TurnSizing = turns
+	in.Skills, in.Agents = skills, agents
 	const anonymize = true
 	// Exec metric plugins are deliberately nil here: GET / is unauthenticated and
 	// rebuilds per request, and spawning config-declared subprocesses per request would

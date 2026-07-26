@@ -4,7 +4,8 @@
 use is a documented, working extension point today: your own **metric and dashboard
 section** (in-tree, one file — or **out-of-tree in any language**, no fork), your own
 **log-source location** (a config change, no code), an entirely new **tool as an
-out-of-tree plugin** (any language, no Go), and **direct SQL** against your own data.
+out-of-tree plugin** (any language, no Go), your own **CI gate** (a rule plugin, any
+language), and **direct SQL** against your own data.
 This document is the contract for all of them — what's available, how to use it, and a
 complete worked example for the one most contributors reach for first: a custom metric.
 
@@ -29,6 +30,8 @@ validator](#adding-a-metric-validator) below, including what happens if your met
 - [Write a metric plugin (any language)](#write-a-metric-plugin-any-language) — an
   out-of-tree **metric**: your own analyzer on `analyze` and the dashboard, no fork, no
   Go required.
+- [Write a rule plugin (any language)](#write-a-rule-plugin-any-language) — an
+  out-of-tree **gate**: read the window's verdicts, emit alerts, fail `check` in CI.
 - [The team server](#the-team-server) — your compiled-in validators run there too,
   automatically.
 - [Query your own data](#query-your-own-data) — the SQLite store as a documented surface.
@@ -45,6 +48,7 @@ validator](#adding-a-metric-validator) below, including what happens if your met
 | Custom log-source paths | today | `sources.<tool>` in `config.yaml`, no code. See [Custom log-source paths](#custom-log-source-paths). |
 | Out-of-tree exec plugin (any language) | today | An executable speaking the [plugin protocol](#write-a-plugin-any-language), declared in `config.yaml`. |
 | Out-of-tree exec **metric** plugin (any language) | today | An executable speaking the [metric plugin protocol](#write-a-metric-plugin-any-language), declared under `metrics:` in `config.yaml` — your own analyzer in `analyze` and the dashboard without forking. |
+| Out-of-tree exec **rule** plugin (any language) | today | An executable speaking the [rule plugin protocol](#write-a-rule-plugin-any-language), declared under `rules:` in `config.yaml` — your own thresholds gating `assaio-agent check` in CI. |
 | Team server | today (MVP) | `assaio-agent serve` + `sync`; the served dashboard runs the same validator registry as the local CLI. See [The team server](#the-team-server). |
 | SQL queries against the schema | today | Point any SQLite client at the documented `usage_record` table. |
 | JSON/CSV pipes | today | `report --format json\|csv` into your own tooling or BI. |
@@ -78,7 +82,8 @@ validator file. Concretely:
   `Input` carries no user identity today — it groups by project, tool, model, and
   entrypoint, never by person, so a validator that ranks something ranks *those*
   dimensions, the same way `throughput` ranks projects, never individuals. If your
-  `Bars` rank by **project name**, set `Result.BarsAreProjects = true` so the dashboard's
+  `Bars` rank by a name a person chose, set `Result.BarsPseudonym` (`"project"` or
+  `"skill"`) so the dashboard's
   `--anonymize` (on by default) pseudonymizes those labels exactly like it does for the
   built-in `throughput` validator — this is enforced generically by
   `internal/dashboard.anonymizeVerdicts`, not hardcoded to any one validator's name, so it
@@ -132,15 +137,19 @@ metric is yours alone.
 
 ```go
 type Input struct {
-	Usage      []store.UsageRow
-	Sessions   []store.SessionRow
-	Prices     pricing.Table
-	Now        time.Time
-	Recent     time.Duration
-	Delegation Delegation
-	ByModel    []ModelStat
-	ByProject  []ProjectStat
-	Totals     Totals
+	Usage           []store.UsageRow
+	Sessions        []store.SessionRow
+	Prices          pricing.Table
+	Now             time.Time
+	Recent          time.Duration
+	Delegation      Delegation
+	ByModel         []ModelStat
+	ByProject       []ProjectStat
+	Totals          Totals
+	PlanMonthlyCost float64
+	Skills          []store.AttributionRow
+	Agents          []store.AttributionRow
+	TurnSizing      []store.ModelTurns
 }
 ```
 
@@ -152,7 +161,7 @@ server](#the-team-server)) the served endpoint.
 
 | Field | Type | What it is |
 |-------|------|------------|
-| `Usage` | `[]store.UsageRow` | The window's usage, **pre-aggregated** by `(day, tool, model, project, entrypoint, member)` — one row per combination, tokens and activity counts summed (`internal/store/store.go`'s `Usage` query). Not one row per raw event: there is no per-record or per-file detail left at this point (see the [say-so-when-approximating](#honesty-constraints-for-every-extension) rule). Each row carries `Day` (`"YYYY-MM-DD"`), `Tool`, `Model`, `Project`, `Entrypoint`, `Member`; token fields `In, Out, CacheRead, CacheWrite, Reasoning`; and activity fields `LinesAdded, LinesRemoved, Edits, ToolCalls, Rejected, Compactions, ReworkLines` (see the [`usage.Record` contract](#the-usagerecord-contract) for what each counts). |
+| `Usage` | `[]store.UsageRow` | The window's usage, **pre-aggregated** by `(day, tool, model, project, entrypoint, member)` — one row per combination, tokens and activity counts summed (`internal/store/store.go`'s `Usage` query). Not one row per raw event: there is no per-record or per-file detail left at this point (see the [say-so-when-approximating](#honesty-constraints-for-every-extension) rule). Each row carries `Day` (`"YYYY-MM-DD"`), `Tool`, `Model`, `Project`, `Entrypoint`, `Member`; token fields `In, Out, CacheRead, CacheWrite, Reasoning`; and activity fields `LinesAdded, LinesRemoved, Edits, ToolCalls, Rejected, Compactions, ReworkLines` (see the [`usage.Record` contract](#the-usagerecord-contract) for what each counts). It also carries the tool-call purpose split `ToolReads, ToolSearches, ToolCommands, ToolWrites, ToolOther` — which sums to `ToolCalls` for tools that name their tool calls and is all-zero for tools that do not — and `ToolErrors`, calls that came back an error. Because that split is populated by only some tools, a metric reading it must report its own coverage rather than treating zero as "nothing happened". |
 | `Sessions` | `[]store.SessionRow` | One row per `(session_id, member)` in the window: `Project`, `Tool`, `Model`, `FirstTs`/`LastTs`, `Turns`, `OutputTokens`, `PeakContextTokens`, `Edits`, `Compactions`, and `ActiveMinutes` (focused time — inter-turn gaps over 30 minutes are excluded, so a resumed session's idle time never counts as work; `internal/store/sessions.go`). |
 | `Prices` | `pricing.Table` | `map[string]pricing.Price{Input, Output, CacheWrite, CacheRead float64}`, USD per token, the vendored LiteLLM snapshot. Indexing a model absent from the table returns a zero-value `Price` with **no error** — check the map's `ok` return if an unpriced model must be excluded from a cost figure rather than silently priced at $0. |
 | `Now` | `time.Time` | Wall-clock at CLI invocation. Use this, never call `time.Now()` yourself. |
@@ -161,6 +170,24 @@ server](#the-team-server)) the served endpoint.
 | `ByModel` | `[]ModelStat` | `Usage` aggregated per model, already tier-classified and priced. **Read this instead of grouping `Usage` by model yourself.** See the table below. |
 | `ByProject` | `[]ProjectStat` | `Usage` aggregated per project. **Read this instead of grouping `Usage` by project yourself.** See the table below. |
 | `Totals` | `Totals` | `Usage`'s grand totals across every model and project. See the table below. |
+| `PlanMonthlyCost` | `float64` | The user's configured flat monthly plan price (`pricing.monthly_subscription_cost`); `0` means unset — prompt to configure it rather than comparing against nothing. |
+| `Skills` / `Agents` | `[]store.AttributionRow` | The window's per-skill and per-sub-agent totals (`Name`, `Tokens`, `Lines`, `Records`, `Sessions`), each sorted by `Tokens` descending. `Name` is a category label the tool assigned — never a prompt or any content. Empty when no tool in the window reports attribution (only Claude Code does today), so a metric over them must state its own coverage. |
+| `TurnSizing` | `[]store.ModelTurns` | Per-model raw turn counts (`Turns`, `SmallTurns`) for metrics that need the per-turn grain the daily `Usage` aggregate hides. Empty in the drill and in tests that do not set it. |
+
+#### Opting a metric out of the project drill
+
+The dashboard re-runs every validator over the top project's rows alone. A metric whose
+answer belongs to the whole window — a flat plan price, attribution pooled across projects,
+per-model turn counts — cannot honestly be narrowed that way: re-run against a slice it
+compares a window-wide constant with part of the usage and prints a verdict that contradicts
+the window-level one on the same page. Declare it window-scoped and the drill skips it:
+
+```go
+// WindowScoped: the plan price covers the whole window, not one project's share of it.
+func (myValidator) WindowScoped() {}
+```
+
+Nothing else changes — the metric still renders normally at window level.
 
 #### Read these first: `ByModel`, `ByProject`, `Totals`
 
@@ -258,7 +285,7 @@ type Result struct {
 	HowToRead       string
 	Figures         []Figure
 	Bars            []Bar
-	BarsAreProjects bool
+	BarsPseudonym   string
 	Takeaway        string
 	Caveats         []string
 }
@@ -282,7 +309,7 @@ section for free" claim.
 | `HowToRead` | One-sentence explainer of what the metric means and what to do about it. Must be non-empty on **every** code path, including the no-data one. | The `"  ? …"` line under the header. | The ledger entry's muted "How to read — …" line. |
 | `Figures` | The headline numbers: `{Label, Value, Note}`. | One `"  label: value (note)"` line each. | One stat tile per figure in `.entry__stats`; **the first figure gets an accent color** — order your most important number first. Not shown in the faceplate. |
 | `Bars` | Optional ranked list: `{Label, Value, Frac 0..1}`. Three states matter: `nil` → no Bars section anywhere; non-nil empty → an honest "none in this window" line; non-nil non-empty → a ranked bar list. | ASCII bar `label: value  [####----]` (20 chars wide, scaled by `Frac`). | `.projectbars` list, bar width from `Frac`. Scale `Frac` against that list's own max (`fracOf`), not a global scale. |
-| `BarsAreProjects` | Whether `Bars`' labels are **project names**. | Not rendered. | Tells `--anonymize` whether to pseudonymize `Bars` labels — see [Honesty constraints](#honesty-constraints-for-every-extension). Get this wrong in the "true" direction and you scramble a label that was never PII (e.g. a model name); get it wrong in the "false" direction and a real project name leaks into a report meant to be shared. |
+| `BarsPseudonym` | What kind of user-authored name `Bars`' labels carry: `"project"`, `"skill"`, or `""` for none. | Not rendered. | Tells `--anonymize` whether to pseudonymize `Bars` labels, and under which prefix — see [Honesty constraints](#honesty-constraints-for-every-extension). Set it for anything a person named (a repository, a skill, a sub-agent); leave it empty for a fixed vocabulary the tool defines (models, tools, time bands). Set it wrongly and you either scramble a label that was never PII, or leak a real name into a report meant to be shared. |
 | `Takeaway` | One-line plain-language conclusion. Always populated, even on "no data". | Last line: `"  Takeaway: …"`. | `.entry__takeaway`, prefixed with an em dash. |
 | `Caveats` | Honesty notes (directional, contested, approximate, …). | Each on its own `"  …"` line. | Each becomes a muted "Note — …" paragraph, **and** any non-empty `Caveats` adds a small "Prov." (provenance) badge next to the Read label on both the faceplate cell and the ledger entry. |
 
@@ -398,7 +425,7 @@ generic over `analyze.Validators()`'s registration order, on purpose.
 One gap *was* found and fixed while verifying this: `Bars` pseudonymization used to be
 hardcoded to the validator named `"throughput"`, which meant a **custom** validator
 ranking `Bars` by project would leak real project names under `--anonymize`. It is now
-driven by the `Result.BarsAreProjects` field described above, applied generically by
+driven by the `Result.BarsPseudonym` field described above, applied generically by
 `internal/dashboard.anonymizeVerdicts` to any validator — see [Honesty
 constraints](#honesty-constraints-for-every-extension).
 
@@ -608,7 +635,7 @@ func TestWeekendUsageEmptyInputSafe(t *testing.T) {
 ```
 
 `go test ./internal/analyze/... -run Weekend -v` passes all three cases. This validator
-does not set `BarsAreProjects` (it has no `Bars` at all) and does not need `Delegation`,
+does not set `BarsPseudonym` (it has no `Bars` at all) and does not need `Delegation`,
 `Sessions`, or `Prices` — a validator only touches the `Input` fields its metric needs.
 
 ---
@@ -879,10 +906,13 @@ hard error.
   is separate and automatic).
 - `purity` and every `bars[].frac` are clamped to `[0,1]`.
 - Stdout is capped at 1 MiB; the run is killed after `timeout` (default 60s).
-- `barsAreProjects` works exactly as for built-ins: set it `true` when your `Bars` rank
-  project names and the dashboard's `--anonymize` pseudonymizes them; the [honesty
-  constraints](#honesty-constraints-for-every-extension) bind a metric plugin the same
-  as any in-tree validator.
+- `barsPseudonym` works exactly as for built-ins: set it when your `Bars` rank
+  by a name a person chose. The pre-rename key `barsAreProjects: true` is still accepted
+  and maps to `"project"`, so a plugin released against it keeps being pseudonymized
+  rather than silently publishing real project names. Any *other* unknown field is
+  rejected outright — a misspelled key must not quietly disarm a setting. The
+  [honesty constraints](#honesty-constraints-for-every-extension) bind a metric plugin the
+  same as any in-tree validator.
 
 ### A complete example (Python)
 
@@ -955,7 +985,149 @@ ledger entry like any built-in's.
 dashboard (`GET /` is unauthenticated and rebuilds per request — spawning
 config-declared subprocesses per request would be a denial-of-service vector), the
 dashboard's per-project drill-down (built-ins only), and `demo` (deterministic sample).
+It *does* run in `assaio-agent check` when you have configured [rule
+plugins](#write-a-rule-plugin-any-language), so a rule can gate on your own metric.
 See [ADR 0004](adr/0004-exec-metric-plugin-protocol.md) for the full rationale.
+
+---
+
+## Write a rule plugin (any language)
+
+**When to reach for this instead of a metric.** A rule plugin is your own **gate**: an
+executable that reads the verdicts assaio just computed and answers one question — is
+this window acceptable? It runs inside `assaio-agent check`, so an `error` alert exits
+non-zero and reddens CI or blocks a push. Reach for a [metric
+plugin](#write-a-metric-plugin-any-language) when you want to *measure* something new;
+reach for a rule when the measurement exists and what you need is *your* threshold on it.
+Thresholds are exactly what assaio refuses to ship built-in — the right number is
+organizational, and a number we picked would be a claim about your team we cannot honestly
+make.
+
+Rule plugins are **opt-in only**, declared under `rules:` in
+`~/.config/assaio/config.yaml` — never discovered from `PATH`, never downloaded. The
+entry shape is the same as `plugins:` and `metrics:`, and one binary may appear in all
+three lists, serving all three protocols (`scan`, `analyze`, and `evaluate` argv):
+
+```yaml
+rules:
+  - name: budget-drift       # required, [a-z0-9-]+; stamped on every alert it raises
+    command: /path/to/assaio-rule-budget      # required; PATH lookup if not absolute
+    timeout: 15s             # optional, default 60s
+```
+
+A rule sees **less than a metric does**: no usage rows, no sessions, no prices — only the
+verdict array `analyze --format json` already prints. Nothing crosses the process boundary
+that you could not print yourself with one command.
+
+### The protocol
+
+`assaio` invokes `<command> evaluate` with `ASSAIO_RULE_PROTOCOL=1` in the environment,
+writes one JSON envelope to the plugin's **stdin**, closes it, and reads stdout.
+
+**stdin** — this window's verdicts, versioned:
+
+```json
+{
+  "assaio_rule_input": 1,
+  "verdicts": [
+    {"name":"adoption","title":"Adoption","describe":"...","read":{"key":"watch","label":"WATCH"},
+     "purity":0.42,"howToRead":"...","figures":[{"label":"AI lines","value":"1,204"}],
+     "bars":[{"label":"web","value":"800","frac":1}],"takeaway":"...","caveats":["..."]}
+  ]
+}
+```
+
+Each entry is one [`Result`](#what-a-validator-returns-result) — every registered
+validator, plus every configured [metric plugin](#write-a-metric-plugin-any-language)
+(named `plugin:<name>`), in the order `analyze` renders them. Like the metric envelope, it
+is **versioned but pre-1.0 unstable** — a release that reshapes it says so explicitly (see
+`RELEASING.md`).
+
+**stdout** — a one-line handshake, then exactly **one** JSON alerts document
+(pretty-printed is fine; anything after it is a violation):
+
+1. `{"assaio_rule": 1, "name": "<name>"}` — version must be `1`, `name` must equal the
+   configured name.
+2. `{"alerts": [...]}`, each alert:
+
+| Field | Required | Meaning |
+|-------|----------|---------|
+| `rule` | yes | Stable id of the check that fired, e.g. `premium-share`. |
+| `severity` | yes | `info`, `warn`, or `error`. **Only `error` fails the gate.** |
+| `message` | yes | One line a human reads on a red build. |
+| `validator` | no | The verdict this alert is about, echoed back for the reader. |
+
+An empty `alerts` array is a normal, passing answer. Anything written to stderr passes
+through prefixed `[rule/<name>] `.
+
+### What the boundary enforces
+
+A document that fails **any** check is rejected whole — assaio never applies a
+partially-sanitized alert set, because a silently dropped alert would weaken a gate you
+believe is running.
+
+- `severity` must be exactly `info`, `warn`, or `error` (lower-case).
+- `rule` (≤ 64 chars) and `message` (≤ 400) are required; `validator` (≤ 64) is optional.
+- Max 50 alerts per plugin; no control characters anywhere (terminal-escape guard).
+- Unknown JSON fields are rejected: a misspelled `alerts` or `severity` key must fail
+  loudly rather than quietly disarm the gate.
+- Stdout is capped at 1 MiB; the run is killed after `timeout` (default 60s).
+- The emitting plugin's name is stamped onto every alert at the boundary, so an alert is
+  always attributable and a plugin cannot claim to be another.
+
+**Failure is fail-closed.** A rule that could not be evaluated — bad handshake, timeout,
+non-zero exit, contract violation — is reported on stderr *and* fails `check`, while the
+remaining rules still run. A gate that did not run is not a gate that passed.
+
+### A complete example (Python)
+
+```python
+#!/usr/bin/env python3
+"""assaio-rule-premium: gate on how much of the window runs on premium models."""
+import json, sys
+
+verdicts = {v["name"]: v for v in json.load(sys.stdin)["verdicts"]}
+print(json.dumps({"assaio_rule": 1, "name": "premium"}))
+
+fit = verdicts.get("model-fit")
+if fit is None:
+    print(json.dumps({"alerts": [{"rule": "model-fit-missing", "severity": "warn",
+                                  "message": "model-fit did not report this window."}]}))
+    sys.exit(0)
+
+alerts = []
+if fit["read"]["key"] == "watch":
+    alerts.append({"rule": "premium-share", "severity": "error", "validator": "model-fit",
+                   "message": fit["takeaway"][:400]})
+print(json.dumps({"alerts": alerts}))
+```
+
+Make it executable, declare it under `rules:` as above, and run the gate:
+
+```console
+$ assaio-agent check --since 30d
+budget check · last 30d
+  total tokens: 4812004
+  total cost:   $61.20 (API-equivalent estimate)
+
+  no budget set -- pass --max-tokens or --max-cost to gate.
+
+rules
+  [error] premium/premium-share: Nearly all tokens run on premium models -- consider
+  delegating routine work to cheaper models or sub-agents. (model-fit)
+
+Cost is an estimate at public pay-as-you-go API prices -- not your actual spend; ...
+error: rule gate failed: premium/premium-share
+$ echo $?
+1
+```
+
+**Where it deliberately does not run:** `analyze` (a per-validator report, and its
+`--format json` array is the metric-plugin contract — alerts would either reshape that
+public surface or print in text what JSON omits), the dashboard, and the team server
+(unauthenticated `GET /`, same reasoning as metric plugins). `check` is the gate, and the
+gate is where rules live. See [ADR 0005](adr/0005-exec-rule-plugin-protocol.md) for the
+full rationale.
 
 ---
 
@@ -977,11 +1149,14 @@ The extension mechanism does not change at that boundary. `server.BuildDashboard
 separate server-side validator list. That means a custom validator compiled into your
 team's `assaio-agent` build (see [Adding a metric validator](#adding-a-metric-validator))
 shows up on the team server's dashboard automatically: same faceplate cell, same ledger
-entry, same anonymization rules, with nothing to configure on the server side. The one
-deliberate exception is [exec metric plugins](#write-a-metric-plugin-any-language):
-`serve` never executes them, because its dashboard endpoint is unauthenticated and
-rebuilt per request — they are a local-CLI surface (`analyze`, `dashboard`,
-`metrics verify`; see [ADR 0004](adr/0004-exec-metric-plugin-protocol.md)). The one
+entry, same anonymization rules, with nothing to configure on the server side. The
+deliberate exception is **exec plugins**: `serve` executes neither [metric
+plugins](#write-a-metric-plugin-any-language) nor [rule
+plugins](#write-a-rule-plugin-any-language), because its dashboard endpoint is
+unauthenticated and rebuilt per request — they are local-CLI surfaces (`analyze`,
+`dashboard`, `metrics verify`, and `check` for rules; see [ADR
+0004](adr/0004-exec-metric-plugin-protocol.md) and [ADR
+0005](adr/0005-exec-rule-plugin-protocol.md)). The one
 difference from the local CLI is that the served dashboard's anonymization is not
 optional — `BuildDashboard` hardcodes `anonymize = true`, so a real-name view is only
 ever available locally, as an explicit `--no-anonymize` run against a copy of the store
@@ -1337,7 +1512,8 @@ Custom metrics ship **two ways today**: the in-tree, one-file-per-metric validat
 ([Adding a metric validator](#adding-a-metric-validator) — compiled in, runs everywhere
 including [the team server](#the-team-server)), and the out-of-tree [metric
 plugin](#write-a-metric-plugin-any-language) — any language, no fork, declared in
-config, running in `analyze` and the local dashboard.
+config, running in `analyze` and the local dashboard. Thresholds *on* those metrics ship
+as [rule plugins](#write-a-rule-plugin-any-language), out-of-tree for the same reason.
 
 What remains roadmap is a *dynamically loaded, in-process Go API* — the `plugin/metric/`
 and `plugin/rule/` tree sketched in [`CONTRIBUTING.md`](../CONTRIBUTING.md): a metric or

@@ -26,6 +26,9 @@ func (rightSizeValidator) Name() string     { return rightSizeName }
 func (rightSizeValidator) Title() string    { return rightSizeTitle }
 func (rightSizeValidator) Describe() string { return rightSizeDescribe }
 
+// WindowScoped: TurnSizing is per-model across the window, with no project dimension.
+func (rightSizeValidator) WindowScoped() {}
+
 //nolint:gocritic // Input is required by the Validator interface; analyzed once per run, not a hot path.
 func (rightSizeValidator) Analyze(in Input) Result {
 	r := Result{Name: rightSizeName, Title: rightSizeTitle, Describe: rightSizeDescribe, HowToRead: rightSizeHowToRead}

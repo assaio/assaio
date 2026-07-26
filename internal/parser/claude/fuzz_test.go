@@ -24,7 +24,9 @@ func FuzzParse(f *testing.F) {
 {"type":"assistant","uuid":"a1","timestamp":"2026-07-01T10:00:05Z","sessionId":"s1","message":{"model":"claude-opus-4-5","usage":{"input_tokens":1,"output_tokens":1}}}
 {"type":"user","uuid":"tr3","toolUseResult":{"filePath":"/x","structuredPatch":[{"lines":["+a","+b"]}]}}
 {"type":"user","uuid":"tr4","toolUseResult":{"filePath":"/x","structuredPatch":[{"lines":["-a","-b","-c"]}]}}`))
-	f.Add([]byte(`{"type":"user","uuid":"d1","toolDenialKind":"user-rejected"}`))
+	f.Add([]byte(`{"type":"user","uuid":"d1","toolDenialKind":"user-rejected","message":{"content":[{"type":"tool_result","is_error":true}]}}`))
+	f.Add([]byte(`{"type":"assistant","uuid":"a4","isSidechain":true,"attributionSkill":"code-review","attributionAgent":"general-purpose","message":{"model":"claude-opus-4-5","content":[{"type":"tool_use","name":"Read"},{"type":"tool_use","name":"mcp__srv__tool"},{"type":"tool_use","name":9},{"type":"text"}],"usage":{"input_tokens":1,"output_tokens":1}}}`))
+	f.Add([]byte(`{"type":"user","uuid":"tr5","message":{"content":[{"type":"tool_result","is_error":true},{"type":"tool_result","is_error":false}]}}`))
 	f.Add([]byte(`{"type":"user","uuid":"u1","cwd":"/x","message":{"role":"user","content":"plain text"}}`))
 	f.Add([]byte(`{"type":"system","uuid":"cb1","subtype":"compact_boundary"}`))
 	f.Add([]byte(`{"type":"user","uuid":"cs1","isCompactSummary":true}`))
@@ -48,6 +50,18 @@ func FuzzParse(f *testing.F) {
 			}
 			if r.ReworkLines < 0 {
 				t.Fatalf("ReworkLines = %d, want >= 0: %+v", r.ReworkLines, r)
+			}
+			if r.ToolReads < 0 || r.ToolSearches < 0 || r.ToolCommands < 0 || r.ToolWrites < 0 || r.ToolOther < 0 || r.ToolErrors < 0 {
+				t.Fatalf("negative tool-split field: %+v", r)
+			}
+			if sum := r.ToolReads + r.ToolSearches + r.ToolCommands + r.ToolWrites + r.ToolOther; sum != r.ToolCalls {
+				t.Fatalf("tool split sums to %d, want ToolCalls=%d: %+v", sum, r.ToolCalls, r)
+			}
+			if r.Sidechain != 0 && r.Sidechain != 1 {
+				t.Fatalf("Sidechain = %d, want 0 or 1: %+v", r.Sidechain, r)
+			}
+			if !utf8.ValidString(r.Skill) || !utf8.ValidString(r.Agent) {
+				t.Fatalf("Skill/Agent not valid UTF-8: %+v", r)
 			}
 			if r.Tool != tool {
 				t.Fatalf("Tool = %q, want %q", r.Tool, tool)

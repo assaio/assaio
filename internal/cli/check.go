@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
@@ -19,11 +18,15 @@ func newCheckCmd() *cobra.Command {
 	var maxCost float64
 	c := &cobra.Command{
 		Use:   "check",
-		Short: "Exit non-zero when usage exceeds a token or API-equivalent cost budget (CI/pre-push gate)",
+		Short: "Exit non-zero when usage exceeds a budget or a rule plugin raises an error (CI/pre-push gate)",
 		Long: `Roll the window's usage up and compare it against optional budgets, exiting non-zero
 when one is exceeded -- a CI gate or pre-push hook. Token budgets are the honest default:
 tokens are physical and plan-independent. A --max-cost budget is allowed but gates on the
-API-equivalent estimate, not your actual spend (subscriptions bill a flat rate).`,
+API-equivalent estimate, not your actual spend (subscriptions bill a flat rate).
+
+Configured rule plugins (rules: in config.yaml) run here too: each reads this window's
+validator verdicts and emits alerts. An "error" alert fails the gate, and so does a rule
+that could not be evaluated -- a gate that did not run is not a gate that passed.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runCheck(cmd, &since, budget{MaxTokens: maxTokens, MaxCost: maxCost})
@@ -82,19 +85,31 @@ func runCheck(cmd *cobra.Command, since *string, b budget) error {
 	if err := renderCheck(cmd, *since, totals, b, cfg.Pricing); err != nil {
 		return err
 	}
+	ruleFailures, err := gateOnRules(cmd, &cfg, st, start)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(cmd.OutOrStdout(), report.CostEstimateDisclosure); err != nil {
+		return err
+	}
 	if len(breaches) > 0 {
 		return fmt.Errorf("budget exceeded: %s", strings.Join(breaches, "; "))
+	}
+	if len(ruleFailures) > 0 {
+		return fmt.Errorf("rule gate failed: %s", strings.Join(ruleFailures, "; "))
 	}
 	return nil
 }
 
-// sumCheckTotals adds every priced row's cost and every row's tokens (all token types)
-// into the window totals; HasUnpriced carries the usual "cost excludes unpriced usage".
+// sumCheckTotals adds every priced row's cost and every row's tokens into the window
+// totals; HasUnpriced carries the usual "cost excludes unpriced usage". Reasoning tokens
+// are a subset of output (usage.Record) and are never added again -- the budget this gates
+// on must be the same total report and effectiveness show.
 func sumCheckTotals(rows []report.Row) checkTotals {
 	var t checkTotals
 	for i := range rows {
 		r := &rows[i]
-		t.Tokens += r.In + r.Out + r.CacheRead + r.CacheWrite + r.Reasoning
+		t.Tokens += r.In + r.Out + r.CacheRead + r.CacheWrite
 		if r.Priced {
 			t.Cost += *r.Cost
 		}
@@ -115,28 +130,6 @@ func evaluateBudget(t checkTotals, b budget) []string {
 		breaches = append(breaches, fmt.Sprintf("API-equivalent cost $%.2f > $%.2f", t.Cost, b.MaxCost))
 	}
 	return breaches
-}
-
-// lineWriter collects sequential write errors so renderCheck can emit many lines and
-// report only the first failure, keeping the io.Writer error contract without a check
-// after every line (Rob Pike's errWriter pattern).
-type lineWriter struct {
-	w   io.Writer
-	err error
-}
-
-func (lw *lineWriter) printf(format string, a ...any) {
-	if lw.err != nil {
-		return
-	}
-	_, lw.err = fmt.Fprintf(lw.w, format, a...)
-}
-
-func (lw *lineWriter) println(s string) {
-	if lw.err != nil {
-		return
-	}
-	_, lw.err = fmt.Fprintln(lw.w, s)
 }
 
 func renderCheck(cmd *cobra.Command, since string, t checkTotals, b budget, p config.Pricing) error {
@@ -161,7 +154,6 @@ func renderCheck(cmd *cobra.Command, since string, t checkTotals, b budget, p co
 		lw.println("  no budget set -- pass --max-tokens or --max-cost to gate.")
 	}
 	lw.println("")
-	lw.println(report.CostEstimateDisclosure)
 	return lw.err
 }
 

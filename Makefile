@@ -15,6 +15,7 @@ fuzz:
 	go test ./internal/parser/gemini/ -fuzz FuzzParse -fuzztime $(FUZZTIME)
 	go test ./internal/parser/cline/ -fuzz FuzzParseTask -fuzztime $(FUZZTIME)
 	go test ./internal/plugin/ -fuzz FuzzMetricResult -fuzztime $(FUZZTIME)
+	go test ./internal/plugin/ -fuzz FuzzRuleAlerts -fuzztime $(FUZZTIME)
 lint:
 	gofmt -l .
 	go vet ./...
@@ -34,7 +35,14 @@ vuln:
 	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 # --- releasing (see RELEASING.md) ---
-LATEST_TAG = $(shell git describe --tags --abbrev=0 2>/dev/null || echo v0.0.0)
+# Highest release tag that exists, not the nearest one reachable from HEAD: a tag can sit
+# off the current history (a rewritten branch leaves its old release tags behind, and those
+# tags are immutable by repository rule), and `git describe` would then propose a version
+# that has already shipped.
+LATEST_TAG = $(shell git tag --list 'v*' --sort=-v:refname 2>/dev/null | head -n1 || true)
+ifeq ($(strip $(LATEST_TAG)),)
+LATEST_TAG = v0.0.0
+endif
 
 release-patch: ## tag next patch release (requires CONFIRM=yes)
 	@$(MAKE) release VERSION=$(shell echo $(LATEST_TAG) | awk -F. '{printf "%s.%s.%d", $$1, $$2, $$3+1}') CONFIRM=$(CONFIRM)

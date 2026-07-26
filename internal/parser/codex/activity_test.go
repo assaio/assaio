@@ -29,17 +29,20 @@ func TestParseActivityFieldsPerTurn(t *testing.T) {
 	}
 
 	turn1, turn2 := recs[0], recs[1]
-	if turn1.LinesAdded != 5 || turn1.LinesRemoved != 0 || turn1.Edits != 1 || turn1.ToolCalls != 2 || turn1.Compactions != 0 || turn1.ReworkLines != 0 {
-		t.Fatalf("turn1 = %+v, want LinesAdded=5 LinesRemoved=0 Edits=1 ToolCalls=2 Compactions=0 ReworkLines=0", turn1)
+	if turn1.LinesAdded != 5 || turn1.LinesRemoved != 0 || turn1.Edits != 1 || turn1.ToolCalls != 6 || turn1.Compactions != 0 || turn1.ReworkLines != 0 {
+		t.Fatalf("turn1 = %+v, want LinesAdded=5 LinesRemoved=0 Edits=1 ToolCalls=6 Compactions=0 ReworkLines=0", turn1)
 	}
 	// turn2's patch_apply_end re-edits a.ts (5 added in turn1): +3/-2 there plus +5/-1 on
 	// the new b.ts = +8/-3 total; 2 of a.ts's 2 removed lines undo turn1's own additions.
-	if turn2.LinesAdded != 8 || turn2.LinesRemoved != 3 || turn2.Edits != 1 || turn2.ToolCalls != 1 || turn2.Compactions != 1 || turn2.ReworkLines != 2 {
-		t.Fatalf("turn2 = %+v, want LinesAdded=8 LinesRemoved=3 Edits=1 ToolCalls=1 Compactions=1 ReworkLines=2", turn2)
+	if turn2.LinesAdded != 8 || turn2.LinesRemoved != 3 || turn2.Edits != 1 || turn2.ToolCalls != 4 || turn2.Compactions != 1 || turn2.ReworkLines != 2 {
+		t.Fatalf("turn2 = %+v, want LinesAdded=8 LinesRemoved=3 Edits=1 ToolCalls=4 Compactions=1 ReworkLines=2", turn2)
 	}
 }
 
-func TestParsePatchApplyEndFailureIgnored(t *testing.T) {
+// TestParsePatchApplyEndFailureIsAnErrorNotLines covers a rolled-back patch: it wrote no
+// code, so it contributes no lines and no edit, but it is friction and must be counted as
+// a tool error.
+func TestParsePatchApplyEndFailureIsAnErrorNotLines(t *testing.T) {
 	const rollout = `{"type":"session_meta","payload":{"id":"c2","cwd":"/home/dev/app2","timestamp":"2026-07-01T09:00:00Z"}}
 {"type":"turn_context","payload":{"model":"gpt-5.1"}}
 {"type":"event_msg","payload":{"type":"patch_apply_end","success":false,"changes":{"/repo/x.ts":{"type":"update","unified_diff":"@@ -1,3 +1,4 @@\n-a\n-b\n-c\n+d\n+e\n+f\n+g"}}}}
@@ -52,8 +55,8 @@ func TestParsePatchApplyEndFailureIgnored(t *testing.T) {
 	if len(recs) != 1 {
 		t.Fatalf("got %d records, want 1: %+v", len(recs), recs)
 	}
-	if r := recs[0]; r.LinesAdded != 0 || r.LinesRemoved != 0 || r.Edits != 0 {
-		t.Fatalf("recs[0] = %+v, want LinesAdded=0 LinesRemoved=0 Edits=0 (success:false must contribute nothing)", r)
+	if r := recs[0]; r.LinesAdded != 0 || r.LinesRemoved != 0 || r.Edits != 0 || r.ToolErrors != 1 {
+		t.Fatalf("recs[0] = %+v, want LinesAdded=0 LinesRemoved=0 Edits=0 ToolErrors=1 (success:false contributes only an error)", r)
 	}
 }
 
@@ -144,10 +147,11 @@ func TestParseDiffLineCountsSkipsUnifiedDiffHeaders(t *testing.T) {
 	}
 }
 
-// TestParseNoFilePathLeaksIntoRecords is a belt-and-suspenders privacy check alongside
-// the golden inspection: the changes map's file paths must never reach the marshaled
-// output, even though they drive rework tracking internally.
-func TestParseNoFilePathLeaksIntoRecords(t *testing.T) {
+// TestParseNoRawLogContentLeaksIntoRecords is a belt-and-suspenders privacy check
+// alongside the golden inspection: the changes map's file paths and the tool names drive
+// rework tracking and bucket classification internally, but neither -- nor a call's
+// arguments, input, or output -- may ever reach the marshaled output.
+func TestParseNoRawLogContentLeaksIntoRecords(t *testing.T) {
 	f, err := os.Open("testdata/rollout.jsonl")
 	if err != nil {
 		t.Fatal(err)
@@ -162,9 +166,13 @@ func TestParseNoFilePathLeaksIntoRecords(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"/repo/a.ts", "/repo/b.ts", "/repo/c.ts", "/repo/"} {
-		if strings.Contains(string(blob), path) {
-			t.Fatalf("marshaled records leak file path %q: %s", path, blob)
+	raw := []string{
+		"/repo/a.ts", "/repo/b.ts", "/repo/c.ts", "/repo/",
+		"read_file", "web_search", "apply_patch", "update_plan", "exec", "wait",
+	}
+	for _, s := range raw {
+		if strings.Contains(string(blob), s) {
+			t.Fatalf("marshaled records leak raw log content %q: %s", s, blob)
 		}
 	}
 }

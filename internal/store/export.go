@@ -17,7 +17,9 @@ func (s *Store) Export(ctx context.Context, since time.Time) ([]usage.Record, er
                cache_read_tokens, cache_write_tokens, reasoning_tokens, dedupe_key,
                project, subpath, git_branch, entrypoint, granularity,
                lines_added, lines_removed, edits, tool_calls, rejected, compactions,
-               rework_lines, member
+               rework_lines, member,
+               tool_reads, tool_searches, tool_commands, tool_writes, tool_other,
+               tool_errors, sidechain, skill, agent
         FROM usage_record
         WHERE ts >= ?
         ORDER BY ts`, since.UTC().Format(time.RFC3339))
@@ -46,7 +48,9 @@ func scanExportRow(rows *sql.Rows) (usage.Record, error) {
 		&r.CacheReadTokens, &r.CacheWriteTokens, &r.ReasoningTokens, &r.DedupeKey,
 		&r.Project, &r.Subpath, &r.GitBranch, &r.Entrypoint, &r.Granularity,
 		&r.LinesAdded, &r.LinesRemoved, &r.Edits, &r.ToolCalls, &r.Rejected, &r.Compactions,
-		&r.ReworkLines, &r.Member); err != nil {
+		&r.ReworkLines, &r.Member,
+		&r.ToolReads, &r.ToolSearches, &r.ToolCommands, &r.ToolWrites, &r.ToolOther,
+		&r.ToolErrors, &r.Sidechain, &r.Skill, &r.Agent); err != nil {
 		return usage.Record{}, err
 	}
 	parsed, err := time.Parse(time.RFC3339, ts)

@@ -21,6 +21,171 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-26
+
+### Added
+- **Three `analyze` validators, all on data the store already holds** (no schema change,
+  no re-backfill). `concentration` (Spend Concentration) — how token spend spreads across
+  projects and, more usefully, where a project's share of the tokens outruns its share of
+  the AI-written lines; concentration alone is reported as neither good nor bad, since one
+  project can legitimately own the work. `rhythm` (Work Rhythm) — the off-hours and weekend
+  share of sessions, the time-of-day shape of the work, and the p95 focused-session length;
+  an aggregate workload signal, never an individual measure. `burn-anomaly` (Burn Anomaly) —
+  the days that burned far outside the window's typical day, by a robust median/MAD outlier
+  test, to catch the spike nobody noticed (a runaway loop, a re-ingested backfill, an agent
+  left running) rather than to fault a heavy day. Closes B26, B27, and the after-hours and
+  p95-session parts of B28/B36.
+- **Tool-call purpose capture, and three validators over it.** The Claude Code and Codex
+  parsers now classify each tool call into read / search / command / write / other against a
+  shared allowlist (`internal/parser/toolclass.go`) and count the ones that came back an
+  error. The tool's *name* is classified during parsing and then dropped — neither it nor any
+  tool input is ever stored. On top of it: `explore-produce` (Explore vs Produce) — how much
+  of the work was looking around versus changing code, with reads-per-write; `friction`
+  (Friction) — how often calls fail outright, reported apart from how often a human declines
+  one, because the two have different fixes; and `skill-economics` (Skill & Agent Economics)
+  — which skills and sub-agents the tokens went to and how much code each produced, the place
+  shared tooling quietly concentrates spend. Closes B15 and B38.
+- **Sub-agent turns are now marked at the source.** Records carry `sidechain`, read from the
+  log's own marker instead of inferred from the dedupe key, so the delegation share is exact.
+  The served team dashboard now computes delegation and attribution too; it previously
+  rendered delegation as a blank because it never queried them.
+- **Exec rule plugins — your own CI gate, in any language (ADR 0005).** The third
+  out-of-tree protocol, completing parsers → metrics → rules. A rule plugin declared under
+  `rules:` is invoked as `<command> evaluate`, reads this window's validator verdicts on
+  stdin (exactly what `analyze --format json` prints — no usage rows, no sessions, no
+  prices) and emits alerts with a severity of `info`, `warn`, or `error`. `assaio-agent
+  check` runs them: alerts print under the budget report, an `error` alert exits non-zero,
+  and a rule that could not be evaluated fails the gate too rather than passing silently.
+  Thresholds are organizational, so they belong in your script, not in our tree. Everything
+  is validated at the boundary — whitelisted severity, required `rule` and `message`, 50
+  alerts max, length caps, no control characters, unknown JSON fields rejected — and a
+  violating document is dropped whole. Closes B13.
+
+### Changed
+- **Record schema (migration `0002_activity_signals.sql`).** Nine columns added:
+  `tool_reads`, `tool_searches`, `tool_commands`, `tool_writes`, `tool_other`, `tool_errors`,
+  `sidechain`, `skill`, `agent`. All default to `0`/`''`, so rows written by an older build
+  stay valid and simply read as "not captured".
+- **The first backfill after upgrading restates old rows.** History parsed by a build that
+  could not extract these signals would otherwise keep zeros forever behind
+  `ON CONFLICT DO NOTHING`. `Insert` now fills them in on a stored row that carries none of
+  them, and never overwrites a signal already recorded — so a steady-state re-run still
+  writes nothing.
+
+### Breaking
+- **`Result.BarsAreProjects` is now `Result.BarsPseudonym`** (JSON `barsAreProjects` →
+  `barsPseudonym`), a string naming what kind of user-authored label the bars carry:
+  `"project"`, `"skill"`, or `""` for a fixed vocabulary that must never be pseudonymized.
+  A boolean could not express that skill and sub-agent names need pseudonymizing too, which
+  is how they reached an anonymized dashboard verbatim. Exec **metric** plugins may keep
+  emitting the old key — it is accepted and maps to `"project"` — but should migrate, since
+  the new field is the only way to say `"skill"`.
+
+### Compatibility
+- Exec **parser** plugins cannot emit the new activity fields yet; records they push read as
+  "not captured" (`0`/`''`), not as a real zero. The wire protocol is unchanged.
+- Metrics over the new fields state their own coverage. Gemini CLI and Cline logs do not name
+  their tool calls, so their usage is excluded from the explore/produce split rather than
+  counted as zero, and only Claude Code labels turns with a skill or sub-agent today.
+
+### Fixed
+- **A metric plugin written against the pre-rename `barsAreProjects` key lost its
+  pseudonymization**, publishing real repository names into an anonymized dashboard. The
+  legacy key is accepted again and maps to `"project"`; every *other* unknown field is now
+  rejected outright, so a misspelled key can never quietly disarm a setting again.
+- **The project drill re-ran window-scoped metrics against one project's rows.** Subscription
+  Fit divided the whole plan price by a single project's spend and printed "API could be
+  cheaper" beside the window-level "your plan pays off" on the same page; Skill & Agent
+  Economics showed window-wide totals under a project heading. A validator can now declare
+  itself `WindowScoped` and the drill skips it — see `docs/extending.md`.
+- **Codex's tool-purpose split reported 0% produced whatever the agent did**, because Codex
+  applies file edits through a `patch_apply_end` event that no tool call names. Those edits
+  now count as write calls (and a failed one as an errored call), with a guard so a version
+  that *does* name its patch calls cannot double-count them.
+- **`friction` counted calls that cannot report a failure.** Codex marks the outcome of file
+  edits only — a shell command that exits non-zero looks identical to one that succeeded — so
+  its calls padded the denominator and diluted the error rate. Rates are now taken over tools
+  that mark every call, and the caveat says which.
+- **Sub-agent tokens were double-counted** on a store holding both a pre-upgrade `agent:`
+  aggregate row and the per-turn rows later parsed from the same transcript. A window now
+  picks one definition: the `sidechain` marker when any row carries it, the older dedupe-key
+  shape otherwise.
+- **`concentration` returned a green ALIGNED when no project was large enough to compute a
+  gap** — a passed check for an examination that never ran — and computed its headline shares
+  over the whole window while the Gini score used only named projects, so the two figures on
+  one line disagreed. Both now read as shares of attributable spend.
+- **`rhythm` asserted an off-hours finding its own verdict had refused**, printing "a large
+  share of sessions runs off-hours" beside a neutral read on a two-session window.
+- **`burn-anomaly` named calendar dates as spikes below its own day floor**, computed from a
+  baseline the same entry declared unusable.
+- **`skill-economics` rendered a share and a total from different dimensions** side by side,
+  pointing the reader at a skill worth 1% of the window. Both now come from one dimension.
+- **`check` double-counted reasoning tokens** against the budget, so a CI gate could fail a
+  window that `report` and `analyze` showed as under budget. The same double-count is fixed
+  in the delegation query.
+- **The sync boundary accepted a tool-purpose split that contradicts its own tool-call
+  count**, and a `sidechain` outside 0/1. Both are rejected now; an all-zero split with calls
+  present stays valid, since that is the documented "not captured" state.
+- **`StructuredOutput` counted as code production**, inflating the produce share of any turn
+  that answered structurally. It writes no file and is classified as "other".
+- **`assaio-agent demo` left three of eighteen panels blank** — the tool's own showcase — for
+  want of the new signals on its bundled records. Its sample sessions are also pinned to a
+  working weekday morning now: they used to inherit the invocation clock, so the identical
+  fixture read as ordinary hours before lunch and as off-hours work after dinner, and its
+  rhythm verdict changed with the reader's timezone.
+- **Skill and sub-agent names reached anonymized reports verbatim.** The team server's
+  unauthenticated dashboard pooled them across every member beside pseudonymized project
+  and member names; skill names are user-authored and can name a client. They are now
+  pseudonymized like project names.
+- **Rule plugins were handed the ranked bar lists**, which carry project, skill, and
+  sub-agent names — more than PRIVACY.md said they receive. Bars are stripped from the
+  envelope; a rule gates on a verdict, not on which repository produced it.
+- **The nine columns migration 0002 adds bypassed the sync boundary's numeric check**, so a
+  pushed record could store a negative count (rendering impossible percentages) or an
+  overflow-magnitude one (breaking `SUM()` for the whole team). A reflection-based test now
+  fails the build if any numeric record field is left unbounded.
+- **`check` failed open in two ways.** A metric plugin that failed was dropped with a
+  warning, so a rule gating on its verdict passed on a verdict set it never saw; and a rule
+  emitting `null` or `{}` — what a jq filter prints when it stops matching — was read as
+  "no alerts" instead of a rule that evaluated nothing. Both now fail the gate, matching
+  what the command already promised.
+- **`friction` reported a fabricated 0.0% and a green verdict** on windows where no call
+  could record a failure at all, and impossible percentages (`150%` errors, `-50%` clean)
+  when errors outnumbered counted calls. Rates are now taken over calls whose failure state
+  was actually recorded, coverage is stated, and incoherent counts render `—`.
+- **`rhythm` raised a WATCH alarm on windows too small to judge** — an amber badge beside
+  its own "too few sessions to call the rhythm" takeaway. It now returns the neutral read
+  every sibling validator uses.
+- **`skill-economics` flagged anyone using a single skill**, whose share is 100% by
+  construction. A concentration verdict now needs at least two labels to compare.
+- **`concentration` treated the unattributed bucket as a project**, so usage from tools that
+  log no working directory became the widest spend gap and inflated the project count. It is
+  excluded from every statistic and disclosed as a caveat instead.
+- **`backfill` and `sync` counted restated rows as new records**, inflating `inserted=` to
+  the whole store on exactly the upgrade run. Restatement is now a separate repair step and
+  the count means new rows again.
+- **The dashboard's project drill dropped four inputs** its caller had populated, so
+  Subscription Fit demanded a plan cost that was already configured and Skill & Agent
+  Economics and Model Right-Sizing rendered blank on every dashboard.
+- `burn-anomaly` now discloses that days are bucketed in UTC, which splits an evening that
+  runs past midnight across two of them.
+- `explore-produce`'s coverage caveat blamed tools that name no tool calls; those record no
+  calls at all, so they cannot lower coverage. It now names the real cause — history
+  ingested before the capture existed — and points at `backfill`.
+- `PRIVACY.md`'s exhaustive "what it extracts" list did not mention migration 0002's nine
+  columns, two of which are text labels rather than counts.
+- `FEATURES.md` listed every validator that shipped in 0.2.0 as "Unreleased"; they now
+  carry their real release.
+
+### Internal
+- Percentile interpolation is now one shared helper (`percentileAt`) instead of a median
+  open-coded in `context.go`, so every median and p95 figure uses the same method.
+- The metric and rule protocols share one subprocess runner (`docProtocol`), so timeout,
+  stdout cap, stderr prefixing, and handshake handling exist once. As a side effect a
+  metric plugin that floods stdout is now killed on the breach instead of at the timeout.
+- The CLI tests that assert `analyze --list` output no longer hard-code the validator
+  count; they derive it from the registry, so registering a metric cannot break them.
+
 ## [0.2.0] - 2026-07-22
 
 ### Added
@@ -172,7 +337,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/assaio/assaio/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/assaio/assaio/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/assaio/assaio/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/assaio/assaio/releases/tag/v0.1.0

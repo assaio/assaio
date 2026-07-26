@@ -73,7 +73,7 @@ func runDashboard(cmd *cobra.Command, since, output *string) error {
 	if err != nil {
 		return err
 	}
-	extras := runMetricPlugins(cmd.Context(), cfg.Metrics, &in, cmd.ErrOrStderr())
+	extras, _ := runMetricPlugins(cmd.Context(), cfg.Metrics, &in, cmd.ErrOrStderr())
 	data := dashboard.Build(in, windowLabel(*since), doAnonymize, subpaths, extras)
 
 	if err := writeDashboardFile(*output, &data); err != nil {

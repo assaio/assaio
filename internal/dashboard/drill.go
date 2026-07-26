@@ -67,13 +67,13 @@ func buildDrill(in analyze.Input, subpaths []store.SubpathRow, anonymize bool) *
 		// top-level one -- a known, documented approximation, not a per-project figure.
 		in.Delegation,
 	)
-	verdicts := runValidators(&scoped)
+	verdicts := runProjectValidators(&scoped)
 	if anonymize {
 		anonymizeVerdicts(verdicts)
 	}
 
 	if anonymize {
-		name = report.Pseudonym("project", name)
+		name = report.Pseudonym(analyze.PseudonymProject, name)
 		subpaths = pseudonymizeSubpaths(subpaths)
 	}
 	return &ProjectDrill{

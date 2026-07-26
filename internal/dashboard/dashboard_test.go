@@ -106,8 +106,25 @@ func TestBuildDrillsIntoTopProjectByLines(t *testing.T) {
 	if d.Drill.Sessions != 1 {
 		t.Fatalf("Drill.Sessions = %d, want 1", d.Drill.Sessions)
 	}
-	if len(d.Drill.Verdicts) != len(analyze.Validators()) {
-		t.Fatalf("len(Drill.Verdicts) = %d, want %d", len(d.Drill.Verdicts), len(analyze.Validators()))
+	// The drill runs only what survives being narrowed to one project: a window-scoped
+	// metric re-run over a slice of the window contradicts the top-level verdict beside it.
+	var projectScoped int
+	for _, v := range analyze.Validators() {
+		if analyze.ProjectScoped(v) {
+			projectScoped++
+		}
+	}
+	if projectScoped == len(analyze.Validators()) {
+		t.Fatal("no validator is window-scoped; this assertion would no longer prove anything")
+	}
+	if len(d.Drill.Verdicts) != projectScoped {
+		t.Fatalf("len(Drill.Verdicts) = %d, want one per project-scoped validator (%d)", len(d.Drill.Verdicts), projectScoped)
+	}
+	for _, got := range d.Drill.Verdicts {
+		v, ok := analyze.Get(got.Name)
+		if ok && !analyze.ProjectScoped(v) {
+			t.Fatalf("drill rendered window-scoped validator %q", got.Name)
+		}
 	}
 	if len(d.Drill.Subpaths) != 2 {
 		t.Fatalf("Drill.Subpaths = %+v, want the 2 fixture rows passed through unchanged", d.Drill.Subpaths)
@@ -160,22 +177,22 @@ func TestBuildNeverAnonymizesModelNames(t *testing.T) {
 }
 
 // TestAnonymizeVerdictsAppliesToAnyValidatorsProjectBars asserts anonymizeVerdicts
-// pseudonymizes any Result whose Bars are marked project-labeled (Result.BarsAreProjects),
+// pseudonymizes any Result whose Bars are marked pseudonymizable (Result.BarsPseudonym),
 // not just the built-in throughput validator by name -- the same rule a custom,
 // out-of-tree Validator's project-ranked Bars need. Exercised directly against
 // anonymizeVerdicts (rather than via Build + a registered fake Validator) so the test
 // never mutates analyze's shared, process-wide validator registry.
 func TestAnonymizeVerdictsAppliesToAnyValidatorsProjectBars(t *testing.T) {
 	verdicts := []analyze.Result{
-		{Name: "custom-metric", BarsAreProjects: true, Bars: []analyze.Bar{{Label: "web", Value: "1", Frac: 1}}},
+		{Name: "custom-metric", BarsPseudonym: analyze.PseudonymProject, Bars: []analyze.Bar{{Label: "web", Value: "1", Frac: 1}}},
 		{Name: "model-fit", Bars: []analyze.Bar{{Label: "claude-sonnet-4-5", Value: "1", Frac: 1}}},
 	}
 	anonymizeVerdicts(verdicts)
 	if got := verdicts[0].Bars[0].Label; got == "web" || !strings.HasPrefix(got, "project-") {
-		t.Fatalf("a custom validator's BarsAreProjects Bars must be pseudonymized, got %q", got)
+		t.Fatalf("a custom validator's pseudonymizable Bars must be pseudonymized, got %q", got)
 	}
 	if got := verdicts[1].Bars[0].Label; got != "claude-sonnet-4-5" {
-		t.Fatalf("a validator without BarsAreProjects must never be pseudonymized, got %q", got)
+		t.Fatalf("a validator without BarsPseudonym must never be pseudonymized, got %q", got)
 	}
 }
 
@@ -264,13 +281,13 @@ func TestBuildEmptyInputIsHonestNotACrash(t *testing.T) {
 
 func TestBuildAppendsExtraVerdicts(t *testing.T) {
 	extra := []analyze.Result{{
-		Name:            "plugin:demo",
-		Title:           "Demo Metric",
-		Read:            analyze.Read{Key: "watch", Label: "WATCH"},
-		HowToRead:       "H",
-		Takeaway:        "K",
-		Bars:            []analyze.Bar{{Label: "web", Value: "40", Frac: 1}},
-		BarsAreProjects: true,
+		Name:          "plugin:demo",
+		Title:         "Demo Metric",
+		Read:          analyze.Read{Key: "watch", Label: "WATCH"},
+		HowToRead:     "H",
+		Takeaway:      "K",
+		Bars:          []analyze.Bar{{Label: "web", Value: "40", Frac: 1}},
+		BarsPseudonym: analyze.PseudonymProject,
 	}}
 	d := Build(fixtureInput(), "last 30 days", true, nil, extra)
 

@@ -50,8 +50,9 @@ var knownGranularities = map[string]bool{"turn": true, "session": true}
 
 // validateRecord rejects a pushed record that could poison the shared dashboard: an
 // unrecognized Tool or Granularity (including a forged "plugin:x" namespace or a
-// mislabeled granularity), a timestamp that is zero or out of plausible range, or any
-// numeric field that is negative or an overflow-magnitude outlier.
+// mislabeled granularity), a timestamp that is zero or out of plausible range, any numeric
+// field that is negative or an overflow-magnitude outlier, a Sidechain flag that is neither
+// 0 nor 1, or a tool-purpose split that contradicts the tool-call count it splits.
 func validateRecord(r *usage.Record) error {
 	return validateRecordAt(r, time.Now())
 }
@@ -65,7 +66,7 @@ func validateRecordAt(r *usage.Record, now time.Time) error {
 	if r.DedupeKey == "" {
 		return errors.New("empty dedupe_key")
 	}
-	for _, s := range []string{r.Tool, r.SessionID, r.Model, r.DedupeKey, r.Project, r.Subpath, r.GitBranch, r.Entrypoint} {
+	for _, s := range []string{r.Tool, r.SessionID, r.Model, r.DedupeKey, r.Project, r.Subpath, r.GitBranch, r.Entrypoint, r.Skill, r.Agent} {
 		if len(s) > maxStringField {
 			return fmt.Errorf("string field exceeds %d bytes", maxStringField)
 		}
@@ -79,9 +80,14 @@ func validateRecordAt(r *usage.Record, now time.Time) error {
 	if r.Timestamp.Before(tsFloor) || r.Timestamp.After(now.Add(tsFutureSkew)) {
 		return fmt.Errorf("timestamp %s out of range", r.Timestamp.UTC().Format(time.RFC3339))
 	}
+	// Every numeric field a record carries must appear here: an unbounded one is summed
+	// into the shared aggregates, where a negative value renders impossible percentages and
+	// an overflow-magnitude one makes SUM() fail for the whole team.
 	fields := [...]int64{
 		r.InputTokens, r.OutputTokens, r.CacheReadTokens, r.CacheWriteTokens, r.ReasoningTokens,
 		r.LinesAdded, r.LinesRemoved, r.Edits, r.ToolCalls, r.Rejected, r.Compactions, r.ReworkLines,
+		r.ToolReads, r.ToolSearches, r.ToolCommands, r.ToolWrites, r.ToolOther, r.ToolErrors,
+		r.Sidechain,
 	}
 	for _, v := range fields {
 		if v < 0 {
@@ -91,5 +97,21 @@ func validateRecordAt(r *usage.Record, now time.Time) error {
 			return fmt.Errorf("count field exceeds %d", maxFieldValue)
 		}
 	}
-	return nil
+	if r.Sidechain != 0 && r.Sidechain != 1 {
+		return fmt.Errorf("sidechain %d is not 0 or 1", r.Sidechain)
+	}
+	return validateToolPurposeSplit(r)
+}
+
+// validateToolPurposeSplit holds the contract both parsers' fuzz tests assert: the purpose
+// buckets split ToolCalls, so they sum to it. An all-zero split is the documented "not
+// captured" state and stays accepted; a non-zero one that disagrees is rejected, because
+// the team dashboard reads their ratio as coverage and would present a partial split as a
+// complete one.
+func validateToolPurposeSplit(r *usage.Record) error {
+	split := r.ToolReads + r.ToolSearches + r.ToolCommands + r.ToolWrites + r.ToolOther
+	if split == 0 || split == r.ToolCalls {
+		return nil
+	}
+	return fmt.Errorf("tool purpose split sums to %d, not tool_calls %d", split, r.ToolCalls)
 }

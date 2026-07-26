@@ -27,7 +27,7 @@ nothing** — and that promise constrains code too (see "Honesty rules" below).
 - One file, one responsibility. If a file passes ~200 lines or starts doing two things,
   split it.
 - One metric = one file in `internal/analyze/`. One data source = one package in
-  `internal/parser/`. Out-of-tree, both are exec plugins declared in config
+  `internal/parser/`. Out-of-tree, those and rules are exec plugins declared in config
   ([`docs/extending.md`](docs/extending.md)). The planned in-process `plugin/` tree
   (`plugin/metric/`, `plugin/rule/`, `plugin/connector/` — see `ROADMAP.md`) keeps the
   same one-unit-one-file law when it lands.
@@ -172,9 +172,11 @@ larger one.
   [Adding a metric validator](docs/extending.md#adding-a-metric-validator). A
   company-specific metric can instead ship as an out-of-tree
   [metric plugin](docs/extending.md#write-a-metric-plugin-any-language), no fork needed.
-- **Rule** (alerting/policy units): not a shipped surface yet. The planned in-process
-  `plugin/rule/` tree is roadmap (`ROADMAP.md`); if you need one today, open an issue
-  describing the signal so the interface is shaped by real cases.
+- **Rule** (alerting/policy units): out-of-tree only, as an exec
+  [rule plugin](docs/extending.md#write-a-rule-plugin-any-language) — it reads the
+  window's verdicts and its `error` alerts fail `assaio-agent check`. Thresholds are
+  organizational, so in-tree rules are not a surface we ship; the in-process
+  `plugin/rule/` tree stays roadmap (`ROADMAP.md`).
 
 If your change alters the data schema or a plugin protocol, follow the
 versioning/compatibility policy (semver + deprecation window), call it out in the PR,

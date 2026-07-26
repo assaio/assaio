@@ -12,18 +12,37 @@ import (
 // events, so they can be flushed onto the turn record the next token_count closes.
 type activity struct {
 	linesAdded, linesRemoved int64
-	edits, toolCalls         int64
-	compactions, reworkLines int64
+	edits, compactions       int64
+	reworkLines, toolErrors  int64
+	byPurpose                parser.ToolCounts
+	// patchWrites counts file edits Codex reports as their own patch_apply_end event
+	// instead of as a named tool call. Without them a Codex window's write bucket is
+	// always empty and the explore-versus-produce split reads 0% produced whatever the
+	// agent did.
+	patchWrites int64
 }
 
-// flushInto folds a into r and resets a to zero, so nothing is ever counted twice.
+// flushInto folds a into r and resets a to zero, so nothing is ever counted twice. The
+// tool-call total is the purpose split summed, so the two can never disagree.
 func (a *activity) flushInto(r *usage.Record) {
 	r.LinesAdded += a.linesAdded
 	r.LinesRemoved += a.linesRemoved
 	r.Edits += a.edits
-	r.ToolCalls += a.toolCalls
 	r.Compactions += a.compactions
 	r.ReworkLines += a.reworkLines
+	r.ToolErrors += a.toolErrors
+	// A version that names its patch calls already counted them, so the event-derived
+	// count is dropped rather than added twice.
+	patches := a.patchWrites
+	if a.byPurpose.Writes > 0 {
+		patches = 0
+	}
+	r.ToolCalls += a.byPurpose.Total() + patches
+	r.ToolReads += a.byPurpose.Reads
+	r.ToolSearches += a.byPurpose.Searches
+	r.ToolCommands += a.byPurpose.Commands
+	r.ToolWrites += a.byPurpose.Writes + patches
+	r.ToolOther += a.byPurpose.Other
 	*a = activity{}
 }
 
@@ -65,31 +84,20 @@ func (st *parseState) applyEventMsg(payload json.RawMessage) {
 	}
 }
 
-// applyResponseItem counts a response_item payload as a tool call when it is a call
-// (function_call, custom_tool_call), never its output counterpart, so a call and its
-// result are never double-counted.
-func (st *parseState) applyResponseItem(payload json.RawMessage) {
-	var k payloadKind
-	if err := json.Unmarshal(payload, &k); err != nil {
-		st.skipped++
-		return
-	}
-	switch k.Type {
-	case "function_call", "custom_tool_call":
-		st.pending.toolCalls++
-	}
-}
-
 // applyPatchApplyEnd counts one successful patch application as a single edit, then
 // counts added/removed diff lines and rework per file. A failed application (success
-// false) contributes nothing -- Codex already rolled it back.
+// false) contributes no lines -- Codex already rolled it back -- only a tool error.
 func (st *parseState) applyPatchApplyEnd(payload json.RawMessage) {
 	var p patchApplyEnd
 	if err := json.Unmarshal(payload, &p); err != nil {
 		st.skipped++
 		return
 	}
+	// Counted on failure too: the write was attempted, and an error with no call to divide
+	// by makes every rate over the two meaningless.
+	st.pending.patchWrites++
 	if !p.Success {
+		st.pending.toolErrors++
 		return
 	}
 	st.pending.edits++

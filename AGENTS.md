@@ -17,7 +17,8 @@ SQLite) that reads the local session logs of Claude Code, Codex CLI, Gemini CLI,
 Cline and turns them into reports (`report`, `effectiveness`), diagnostics (`analyze`,
 `check`, `doctor`, `status`), and the self-contained Assay HTML dashboard. Out-of-tree
 exec plugins extend it in any language — parsers via `plugins:` (ADR 0003), metrics via
-`metrics:` (ADR 0004). A team-server MVP (`serve` + `sync`) pools a team's usage on
+`metrics:` (ADR 0004), rules gating `check` via `rules:` (ADR 0005). A team-server MVP
+(`serve` + `sync`) pools a team's usage on
 self-hosted infrastructure; the deeper org-analytics server (git/issue-tracker
 correlation for survival/bug/quality) is future roadmap — see `ROADMAP.md`.
 
@@ -87,7 +88,8 @@ is deliberate (see `docs/adr/0002-code-standards-and-enforcement.md`).
   a parser.
 - Exec-plugin protocol: out-of-tree parsers are subprocesses speaking handshake + JSONL
   over stdout, opt-in via config only, validated at the boundary, stored as
-  `plugin:<name>` — see `docs/extending.md` and ADR 0003.
+  `plugin:<name>` — see `docs/extending.md` and ADR 0003. Metric (ADR 0004) and rule
+  (ADR 0005) plugins keep the same posture over a single stdin/stdout document.
 
 ## Honesty rules (product-critical)
 
@@ -124,7 +126,7 @@ internal/parser/cline/   parses Cline task directories into usage records
 internal/parser/codex/   parses Codex CLI rollout logs into usage records
 internal/parser/gemini/  parses Gemini CLI chat logs into usage records
 internal/paths/          resolves data/config/tool-log filesystem locations
-internal/plugin/         runs out-of-tree exec plugins (parser + metric protocols),
+internal/plugin/         runs out-of-tree exec plugins (parser, metric, rule protocols),
                          validating everything at the boundary
 internal/pricing/        loads the vendored LiteLLM price table, prices usage records
 internal/projectid/      resolves a session's cwd to its git repository root + subpath

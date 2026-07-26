@@ -17,13 +17,13 @@ mattering the moment a second release exists.
 | `report` | v0.1 | Token/cost report; `--by day\|project\|tool\|model\|entrypoint\|member`, `--format table\|json\|csv`, `--compare` top movers. |
 | `effectiveness` | v0.1 | AI output vs cost — AI lines, edits, rejections, **`$`/100 AI lines** — per project by default; `--compare`. |
 | `analyze` | v0.1 | Runs the metric validators below plus configured exec metric plugins; `--list`, `--format text\|json`, `[name...]` subset. |
-| `check` | v0.1 | Budget gate with non-zero exit: `--max-tokens` (default basis) or `--max-cost` (labeled API-equivalent). |
+| `check` | v0.1 | Budget gate with non-zero exit: `--max-tokens` (default basis) or `--max-cost` (labeled API-equivalent). Since v0.3, also the host for exec **rule** plugins: an `error` alert — or a rule that could not be evaluated — fails the gate. |
 | `dashboard` | v0.1 | Writes the self-contained offline Assay HTML report; pseudonymized by default, `--no-anonymize` opt-out. |
 | `serve` | v0.1 | Self-hosted team server: collects pushed usage, serves the aggregated team dashboard. |
 | `sync` | v0.1 | Pushes local usage to a team server; pseudonymous by default, `--member` is an explicit opt-in. |
 | `doctor` | v0.1 | Detected tools, resolved log roots, store inventory, health, accuracy caveats. |
 | `status` | v0.1 | Terminal overview: inventory, headline `$`/100 lines, hot / going-stale projects, session stats. |
-| `survival` | Unreleased | Directional local outcome check: how much of a git repo's window survives in `HEAD` (`git blame`), beside the AI lines the store recorded. See [automation](docs/automation.md). |
+| `survival` | v0.2 | Directional local outcome check: how much of a git repo's window survives in `HEAD` (`git blame`), beside the AI lines the store recorded. See [automation](docs/automation.md). |
 | `clear` | v0.1 | Deletes stored data; requires an explicit scope and `--yes`. |
 | `config` | v0.1 | Prints the effective merged configuration and its source path. |
 | `plugins` | v0.1 | `list` / `verify` for exec **parser** plugins (protocol conformance, nothing stored). |
@@ -38,17 +38,23 @@ generically by the CLI, JSON output, and the dashboard.
 | Validator | Since | Question it answers | Built-in caveat |
 |-----------|-------|--------------------|-----------------|
 | `adoption` | v0.1 | How broad is AI usage (sessions, active days, project/tool breadth) and is it growing? | Breadth, not quality. |
-| `cache-hygiene` | Unreleased | Prompt-cache reuse: cache-read share of billed input, and whether cache writes are reused. | Cost signal, not quality; a big one-shot task legitimately shows low reuse. |
+| `burn-anomaly` | v0.3 | Which days burned far outside the window's typical day (robust median/MAD outlier test) — catching a runaway loop or an agent left running. | A spike is a prompt to look, not a fault; needs 7+ active days for a baseline. |
+| `cache-hygiene` | v0.2 | Prompt-cache reuse: cache-read share of billed input, and whether cache writes are reused. | Cost signal, not quality; a big one-shot task legitimately shows low reuse. |
+| `concentration` | v0.3 | How token spend spreads across projects, and where a project's share of tokens outruns its share of AI-written lines. | Concentration itself is neither good nor bad; undefined below 2 projects. Project-level only, never people. |
 | `context` | v0.1 | Are sessions healthy: turns, peak context, focused minutes, compaction rate? | Neutral below 3 sessions — no verdict from thin data. |
-| `coverage` | Unreleased | How much of the window is high-confidence data: token share from tools with full activity capture, and share priced. | Per-record granularity (turn vs session) not yet surfaced. |
+| `coverage` | v0.2 | How much of the window is high-confidence data: token share from tools with full activity capture, and share priced. | Per-record granularity (turn vs session) not yet surfaced. |
+| `explore-produce` | v0.3 | What the tool calls were for: reading and searching the codebase vs writing code in it, with reads-per-write. | Exploring earns the right to write; only flags the extreme. Covers Claude Code and Codex; states its own coverage, and un-backfilled history reads as unclassified. |
+| `friction` | v0.3 | How often tool calls fail outright, beside how often a human declines one — the tokens spent on calls that produced nothing. | Some failure is normal probing. Rates cover only tools that mark the outcome of every call (Claude Code today); Codex reports it for file edits alone and is excluded rather than counted as successful. |
 | `model-fit` | v0.1 | Premium vs cheaper token share (by real price tier), lines-per-token contrast, sub-agent delegation share, upper-bound routing savings. | Savings figure is an upper bound, never a switch recommendation. |
-| `model-right-sizing` | Unreleased | Premium-model turns that produced little output — downgrade candidates a cheaper/faster model might handle. | Task difficulty is invisible; a prompt to review, not a verdict. On a flat plan it's about speed/limits, not $. |
-| `reasoning-share` | Unreleased | Extended-thinking (reasoning) share of output among tools that report it, and how much of your output that covers. | Only Codex/reasoning models report it today; Claude Code doesn't. |
+| `model-right-sizing` | v0.2 | Premium-model turns that produced little output — downgrade candidates a cheaper/faster model might handle. | Task difficulty is invisible; a prompt to review, not a verdict. On a flat plan it's about speed/limits, not $. |
+| `reasoning-share` | v0.2 | Extended-thinking (reasoning) share of output among tools that report it, and how much of your output that covers. | Only Codex/reasoning models report it today; Claude Code doesn't. |
 | `rework` | v0.1 | Within-session churn (AI lines undone in the same transcript) and human rejection rate. | Directional friction proxy; healthy iteration churns too. |
-| `session-taxonomy` | Unreleased | The mix of session kinds: conversational (no edits), light-edit, heavy-edit — how you actually use AI. | Descriptive, not a scorecard; conversational is real work. A thrash bucket needs per-session rework (not stored yet). |
-| `subscription-fit` | Unreleased | For flat-plan users: the window's API-equivalent projected to a month vs the configured plan cost — a value multiple and an "is it paying off?" verdict. | API-equivalent is an estimate at public prices, not your bill; needs `pricing.monthly_subscription_cost`. |
+| `rhythm` | v0.3 | When sessions run: off-hours and weekend share, the time-of-day shape of the work, and how long the longest focused sessions last (p95). | Aggregate workload signal, not an individual measure; hours read in the machine's local timezone. |
+| `session-taxonomy` | v0.2 | The mix of session kinds: conversational (no edits), light-edit, heavy-edit — how you actually use AI. | Descriptive, not a scorecard; conversational is real work. A thrash bucket needs per-session rework (not stored yet). |
+| `skill-economics` | v0.3 | Which skills and sub-agents the tokens went to, and how much code each produced — where shared tooling quietly concentrates spend. | Only Claude Code labels turns with a skill/sub-agent today; other tools are absent from the split, not zero. |
+| `subscription-fit` | v0.2 | For flat-plan users: the window's API-equivalent projected to a month vs the configured plan cost — a value multiple and an "is it paying off?" verdict. | API-equivalent is an estimate at public prices, not your bill; needs `pricing.monthly_subscription_cost`. |
 | `throughput` | v0.1 | Total AI lines, lines per active day, top projects, week-over-week trend. | Activity rate, never a productivity score. |
-| `turn-efficiency` | Unreleased | Getting more per prompt: one-shot rate, median turns per code-producing session, output tokens per turn. | Task size is invisible; directional, never a per-person score. |
+| `turn-efficiency` | v0.2 | Getting more per prompt: one-shot rate, median turns per code-producing session, output tokens per turn. | Task size is invisible; directional, never a per-person score. |
 
 Exec **metric plugins** (below) render beside these, namespaced `plugin:<name>`.
 
@@ -59,6 +65,7 @@ Exec **metric plugins** (below) render beside these, namespaced `plugin:<name>`.
 | In-tree parser (new data source) | v0.1 | One Go package under `internal/parser/` + golden & fuzz tests ([guide](docs/extending.md#add-a-data-source)). |
 | Exec **parser** plugin, any language | v0.1 | `<command> scan`, handshake + JSONL records on stdout; `plugins:` in config (ADR 0003). |
 | Exec **metric** plugin, any language | v0.1 | `<command> analyze`, Input JSON on stdin → handshake + one Result on stdout; `metrics:` in config (ADR 0004). |
+| Exec **rule** plugin, any language | v0.3 | `<command> evaluate`, the window's verdicts on stdin → handshake + one alerts document on stdout; `rules:` in config; gates `check` (ADR 0005). |
 | In-tree metric validator | v0.1 | One file implementing `Validator`, registered via `init()` ([guide](docs/extending.md#adding-a-metric-validator)). |
 | Direct SQL on the store | v0.1 | Documented `usage_record` schema, any SQLite client. |
 | JSON/CSV pipes | v0.1 | `report`/`effectiveness` `--format json\|csv` into your own tooling. |
@@ -99,7 +106,7 @@ discovered across VS Code, VS Code Insiders, VSCodium, and Cursor.
 | `GET /` — served team dashboard, always anonymized (no auth on read — run behind a reverse proxy) | v0.1 |
 | `GET /healthz` | v0.1 |
 | Team-aware CLI: `--db` against a central store, `--by member` | v0.1 |
-| Explicitly not executed server-side: exec metric plugins (ADR 0004) | v0.1 |
+| Explicitly not executed server-side: exec metric plugins (ADR 0004), exec rule plugins (ADR 0005) | v0.1 |
 
 ## Cost honesty & budgeting
 
@@ -117,7 +124,7 @@ discovered across VS Code, VS Code Insiders, VSCodium, and Cursor.
   read — counts only ([PRIVACY.md](PRIVACY.md)).
 - Aggregate and pseudonymized by default; per-person is a deliberate, governed opt-in;
   never a leaderboard.
-- Plugins (parser and metric) are config-declared only — never PATH-scanned, never
-  downloaded; everything they emit is validated at the boundary and namespaced
-  `plugin:<name>`.
+- Plugins (parser, metric, and rule) are config-declared only — never PATH-scanned, never
+  downloaded; everything they emit is validated at the boundary and attributed to the
+  plugin that emitted it (`plugin:<name>`).
 - Schema self-heal: an existing local database migrates itself forward.

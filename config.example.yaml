@@ -55,6 +55,17 @@ format: table
 #     command: /path/to/assaio-metric-weekend
 #     timeout: 30s            # optional, default 60s
 
+# Out-of-tree exec rule plugins: your own CI gate, in any language — see
+# docs/extending.md#write-a-rule-plugin-any-language. Same entry shape as plugins:. Only
+# `check` runs them: each reads this window's validator verdicts (exactly what
+# `analyze --format json` prints — no usage rows) and emits alerts with a severity of
+# info, warn, or error. An error alert makes `check` exit non-zero, and so does a rule
+# that could not be evaluated -- a gate that did not run is not a gate that passed.
+# rules:
+#   - name: budget-drift      # [a-z0-9-]+; stamped on every alert the plugin raises
+#     command: /path/to/assaio-rule-budget
+#     timeout: 15s            # optional, default 60s
+
 # Privacy settings for shareable exports (today: `assaio-agent dashboard` and the team
 # server's served dashboard both read this). The interactive CLI tables
 # (status/report/effectiveness) always show real project/member names regardless of this

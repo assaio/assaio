@@ -82,6 +82,20 @@ func runValidators(in *analyze.Input) []analyze.Result {
 	return out
 }
 
+// runProjectValidators runs only the validators whose answer survives being narrowed to one
+// project. A window-scoped metric re-run over a slice of the window would compare a
+// window-wide constant (the plan price, attribution pooled across projects) against part of
+// the usage and contradict the top-level verdict on the same page -- see analyze.WindowScoped.
+func runProjectValidators(in *analyze.Input) []analyze.Result {
+	var out []analyze.Result
+	for _, v := range analyze.Validators() {
+		if analyze.ProjectScoped(v) {
+			out = append(out, v.Analyze(*in))
+		}
+	}
+	return out
+}
+
 // anonymizeVerdicts pseudonymizes every Bars list a Validator has marked as
 // project-labeled via Result.BarsAreProjects (the built-in throughput validator's
 // top-projects ranking is the only one today, but this applies to any Validator, built-in
@@ -90,11 +104,12 @@ func runValidators(in *analyze.Input) []analyze.Result {
 // names are pseudonymized).
 func anonymizeVerdicts(verdicts []analyze.Result) {
 	for i := range verdicts {
-		if !verdicts[i].BarsAreProjects {
+		kind := verdicts[i].BarsPseudonym
+		if kind == "" {
 			continue
 		}
 		for j := range verdicts[i].Bars {
-			verdicts[i].Bars[j].Label = report.Pseudonym("project", verdicts[i].Bars[j].Label)
+			verdicts[i].Bars[j].Label = report.Pseudonym(kind, verdicts[i].Bars[j].Label)
 		}
 	}
 }

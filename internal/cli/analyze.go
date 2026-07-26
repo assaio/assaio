@@ -54,7 +54,7 @@ func runAnalyzeList(cmd *cobra.Command) error {
 	for _, v := range analyze.Validators() {
 		cmd.Printf("%-14s %-32s %s\n", v.Name(), v.Title(), v.Describe())
 	}
-	for _, pc := range sortedMetricConfigs(cfg.Metrics) {
+	for _, pc := range sortedPluginConfigs(cfg.Metrics) {
 		cmd.Printf("%-14s %-32s %s\n", metricPluginPrefix+pc.Name, "(exec metric plugin)", pc.Command)
 	}
 	return nil
@@ -124,8 +124,13 @@ func buildAnalyzeInput(cmd *cobra.Command, st *store.Store, start time.Time) (an
 	if err != nil {
 		return analyze.Input{}, err
 	}
+	skills, agents, err := st.Attribution(cmd.Context(), start)
+	if err != nil {
+		return analyze.Input{}, err
+	}
 	in := analyze.BuildInput(usageRows, sessionRows, table, time.Now(), analyzeRecentWindow, analyze.Delegation{Sub: sub, Total: total})
 	in.TurnSizing = turns
+	in.Skills, in.Agents = skills, agents
 	return in, nil
 }
 

@@ -8,14 +8,15 @@ import (
 )
 
 // pluginNamePattern constrains a plugin's config name, which also becomes its namespace
-// (tool plugin:<name> for parser plugins, validator plugin:<name> for metric plugins).
+// (tool plugin:<name> for parser plugins, validator plugin:<name> for metric plugins,
+// the alert's raising plugin for rule plugins).
 var pluginNamePattern = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 // defaultPluginTimeout applies when a configured plugin omits timeout.
 const defaultPluginTimeout = 60 * time.Second
 
 // PluginConfig is one exec plugin as declared in config.yaml -- the same entry shape
-// serves both the plugins: (parser) and metrics: (analyzer) lists.
+// serves the plugins: (parser), metrics: (analyzer), and rules: (gate) lists.
 type PluginConfig struct {
 	// Name becomes the plugin:<name> namespace on whatever the plugin emits.
 	Name string `koanf:"name"`
@@ -47,9 +48,9 @@ func (p PluginConfig) TimeoutOrDefault() (time.Duration, error) {
 	return time.ParseDuration(p.Timeout)
 }
 
-// dupName returns the first name declared twice within one plugin list. plugins: and
-// metrics: are separate namespaces on purpose -- one binary may serve both protocols
-// under one name.
+// dupName returns the first name declared twice within one plugin list. plugins:,
+// metrics:, and rules: are separate namespaces on purpose -- one binary may serve
+// several protocols under one name.
 func dupName(list []PluginConfig) string {
 	seen := make(map[string]bool, len(list))
 	for _, p := range list {

@@ -31,6 +31,9 @@ func (subscriptionValidator) Name() string     { return subscriptionName }
 func (subscriptionValidator) Title() string    { return subscriptionTitle }
 func (subscriptionValidator) Describe() string { return subscriptionDescribe }
 
+// WindowScoped: the plan price covers the whole window, not one project's share of it.
+func (subscriptionValidator) WindowScoped() {}
+
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (subscriptionValidator) Analyze(in Input) Result {
 	r := Result{Name: subscriptionName, Title: subscriptionTitle, Describe: subscriptionDescribe, HowToRead: subscriptionHowToRead}

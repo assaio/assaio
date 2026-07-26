@@ -32,7 +32,7 @@ func TestCoverageReportsActivityAndPricedShares(t *testing.T) {
 	if !strings.Contains(joined, "50%") {
 		t.Fatalf("Figures = %q, want 50%% priced coverage (1000/2000)", joined)
 	}
-	if got.BarsAreProjects {
+	if got.BarsPseudonym != "" {
 		t.Fatal("coverage bars label tools, so they must never be pseudonymized as projects")
 	}
 	var sawCostOnly bool

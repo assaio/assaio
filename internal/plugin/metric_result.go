@@ -34,11 +34,13 @@ const (
 // returned for `metrics verify`. Name is always stamped plugin:<name> so a plugin cannot
 // shadow a built-in validator.
 func parseMetricResult(doc []byte, pluginName string) (analyze.Result, []string, error) {
-	var r analyze.Result
+	var w wireResult
 	dec := json.NewDecoder(bytes.NewReader(doc))
-	if err := dec.Decode(&r); err != nil {
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&w); err != nil {
 		return analyze.Result{}, nil, fmt.Errorf("decoding result: %w", err)
 	}
+	r := w.result()
 	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
 		return analyze.Result{}, nil, errors.New("trailing data after the result document")
 	}

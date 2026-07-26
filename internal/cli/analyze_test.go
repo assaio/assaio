@@ -32,8 +32,8 @@ func TestAnalyzeList(t *testing.T) {
 			t.Fatalf("analyze --list missing %q: %s", want, s)
 		}
 	}
-	if got := strings.Count(s, "\n"); got != 12 {
-		t.Fatalf("analyze --list must print exactly 12 lines, got %d: %s", got, s)
+	if want := len(analyze.Validators()); strings.Count(s, "\n") != want {
+		t.Fatalf("analyze --list must print one line per registered validator (%d), got %d: %s", want, strings.Count(s, "\n"), s)
 	}
 }
 
@@ -183,8 +183,8 @@ func TestAnalyzeFormatJSONIsValidJSON(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &decoded); err != nil {
 		t.Fatalf("analyze --format json produced invalid JSON: %v\n%s", err, out.String())
 	}
-	if len(decoded) != 12 {
-		t.Fatalf("json output has %d entries, want 12: %s", len(decoded), out.String())
+	if want := len(analyze.Validators()); len(decoded) != want {
+		t.Fatalf("json output has %d entries, want one per registered validator (%d): %s", len(decoded), want, out.String())
 	}
 	gotNames := make(map[string]bool, len(decoded))
 	for _, r := range decoded {
@@ -357,8 +357,8 @@ func TestAnalyzeListShowsMetricPluginsWithoutRunning(t *testing.T) {
 	if !strings.Contains(out, "plugin:demo") || !strings.Contains(out, "exec metric plugin") {
 		t.Fatalf("--list missing configured metric plugin:\n%s", out)
 	}
-	if got := strings.Count(out, "\n"); got != 13 {
-		t.Fatalf("--list must print 12 built-ins + 1 plugin = 13 lines, got %d:\n%s", got, out)
+	if want := len(analyze.Validators()) + 1; strings.Count(out, "\n") != want {
+		t.Fatalf("--list must print every built-in plus the 1 plugin (%d lines), got %d:\n%s", want, strings.Count(out, "\n"), out)
 	}
 	if _, err := os.Stat(metricRanSentinel(script)); err == nil {
 		t.Fatal("--list must never execute metric plugins")

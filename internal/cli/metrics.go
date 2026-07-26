@@ -33,7 +33,7 @@ func newMetricsListCmd() *cobra.Command {
 				cmd.Println("no metric plugins configured")
 				return nil
 			}
-			for _, pc := range sortedMetricConfigs(cfg.Metrics) {
+			for _, pc := range sortedPluginConfigs(cfg.Metrics) {
 				printPluginListing(cmd, pc)
 			}
 			return nil

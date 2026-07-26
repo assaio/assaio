@@ -238,7 +238,7 @@ blank, never faked.
 | `report`   | Print a token/cost report. `--since 7d`, `--by day\|project\|tool\|model\|entrypoint\|member`, `--format table\|json\|csv`, `--compare` for period-over-period top movers. |
 | `effectiveness` | Print AI output vs. cost — AI lines, edits, rejections, and **`$`/100 AI lines** — per project. Same `--since`, `--by`, `--format`, `--compare` flags (defaults to `--by project`). A directional, per-project diagnostic. |
 | `analyze` | Run metric validators — adoption, model fit, context health, throughput, rework, plus any configured [metric plugins](docs/extending.md#write-a-metric-plugin-any-language) — and print each one's directional report. `--since`, `--format text\|json`, `--list`, or pass `[name...]` to run a subset. |
-| `check`    | Exit non-zero when usage exceeds a budget — `--max-tokens N` (plan-independent default) or `--max-cost N` (labeled API-equivalent). A CI / pre-push gate. |
+| `check`    | Exit non-zero when usage exceeds a budget — `--max-tokens N` (plan-independent default) or `--max-cost N` (labeled API-equivalent) — or when a configured [rule plugin](docs/extending.md#write-a-rule-plugin-any-language) raises an `error` alert. A CI / pre-push gate. |
 | `dashboard` | Write a self-contained, offline **HTML dashboard** — stat tiles, hot/going-stale projects, model/tool mix, inventory. `--since`, `--output`. Project names are pseudonymized by default so it's safe to share; `--no-anonymize` for real names. |
 | `serve`    | Run the self-hosted **team server**: collects usage pushed by teammates' `sync` and serves the aggregated, pseudonymized-by-default team dashboard. |
 | `sync`     | Push this machine's local usage to a team server — pseudonymous by default, `--member` is an explicit opt-in to a real name. |
@@ -307,7 +307,7 @@ More tools (opencode, Copilot CLI, Factory droid, Cursor) are on the
 
 ## Adapt it to your organization
 
-`assaio` is built to be adapted, not just installed. Seven extension surfaces are
+`assaio` is built to be adapted, not just installed. Eight extension surfaces are
 available today:
 
 | Surface | What you do |
@@ -315,6 +315,7 @@ available today:
 | Add a data source (in-tree) | Teach `assaio` to read another tool's logs — one Go package plus golden and fuzz tests, merged in-tree via PR. See the [extensibility guide](docs/extending.md). |
 | Write an exec plugin (any language) | An out-of-tree parser as a standalone executable — Python, Rust, shell — declared in your `config.yaml` and speaking a simple stdout protocol; `plugins verify` checks conformance. See [writing a plugin](docs/extending.md#write-a-plugin-any-language). |
 | Write a **metric plugin** (any language) | An out-of-tree **analyzer**: reads the same prepared data every built-in metric reads (as JSON on stdin) and returns one result — it appears in `analyze` and on the dashboard beside the built-ins, no fork, no rebuild. `metrics verify` checks conformance. See [writing a metric plugin](docs/extending.md#write-a-metric-plugin-any-language). |
+| Write a **rule plugin** (any language) | An out-of-tree **gate**: reads the window's verdicts (as JSON on stdin) and emits alerts with a severity — an `error` alert makes `assaio-agent check` exit non-zero, so your thresholds gate CI without living in our tree. See [writing a rule plugin](docs/extending.md#write-a-rule-plugin-any-language). |
 | Add a metric validator (in-tree) | Teach `assaio analyze` a new diagnostic — one file under `internal/analyze/` implementing `Validator`, self-registered via `init()`. See [adding a metric validator](docs/extending.md#adding-a-metric-validator). |
 | Query the store directly | The SQLite schema is documented and stable enough to query with `sqlite3`, DB Browser, or any SQL client — build your own metrics and classifiers. See the [schema section](docs/extending.md#schema). |
 | Pipe machine-readable output | `report --format json` or `--format csv` feeds your own tooling, BI, or spreadsheets. |

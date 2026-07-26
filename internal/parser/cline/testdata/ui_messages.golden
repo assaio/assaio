@@ -22,6 +22,15 @@
     "ToolCalls": 0,
     "Rejected": 0,
     "Compactions": 0,
+    "ToolReads": 0,
+    "ToolSearches": 0,
+    "ToolCommands": 0,
+    "ToolWrites": 0,
+    "ToolOther": 0,
+    "ToolErrors": 0,
+    "Sidechain": 0,
+    "Skill": "",
+    "Agent": "",
     "ReworkLines": 0
   },
   {
@@ -47,6 +56,15 @@
     "ToolCalls": 0,
     "Rejected": 0,
     "Compactions": 0,
+    "ToolReads": 0,
+    "ToolSearches": 0,
+    "ToolCommands": 0,
+    "ToolWrites": 0,
+    "ToolOther": 0,
+    "ToolErrors": 0,
+    "Sidechain": 0,
+    "Skill": "",
+    "Agent": "",
     "ReworkLines": 0
   }
 ]

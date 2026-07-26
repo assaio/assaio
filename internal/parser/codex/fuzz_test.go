@@ -24,6 +24,10 @@ func FuzzParse(f *testing.F) {
 {"type":"event_msg","timestamp":"2026-07-01T23:59:30Z","payload":{"type":"patch_apply_end","success":true,"changes":{"/x":{"unified_diff":"--- a/x\n+++ b/x\n@@ -1,1 +1,2 @@\n-old\n+new\n+extra"}}}}
 {"type":"event_msg","timestamp":"2026-07-02T00:00:00Z","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":0,"output_tokens":50,"reasoning_output_tokens":0,"total_tokens":150}}}}`))
 	f.Add([]byte(`{"type":"session_meta","timestamp":"not-a-timestamp","payload":{"id":"c13"}}`))
+	f.Add([]byte(`{"type":"response_item","payload":{"type":"function_call","name":123}}
+{"type":"response_item","payload":{"type":"custom_tool_call","name":"exec","status":"failed"}}
+{"type":"response_item","payload":{"type":"custom_tool_call","name":"UNKNOWN","status":9}}
+{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":10,"cached_input_tokens":0,"output_tokens":5}}}}`))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		recs, skipped, err := Parse(strings.NewReader(string(data)))
@@ -40,8 +44,14 @@ func FuzzParse(f *testing.F) {
 				t.Fatalf("negative token field: %+v", r)
 			}
 			if r.LinesAdded < 0 || r.LinesRemoved < 0 || r.Edits < 0 || r.ToolCalls < 0 ||
-				r.Compactions < 0 || r.ReworkLines < 0 {
+				r.Compactions < 0 || r.ReworkLines < 0 || r.ToolErrors < 0 {
 				t.Fatalf("negative activity field: %+v", r)
+			}
+			if sum := r.ToolReads + r.ToolSearches + r.ToolCommands + r.ToolWrites + r.ToolOther; sum != r.ToolCalls {
+				t.Fatalf("tool buckets sum to %d, want ToolCalls=%d: %+v", sum, r.ToolCalls, r)
+			}
+			if r.Sidechain != 0 || r.Skill != "" || r.Agent != "" {
+				t.Fatalf("codex has no sub-agents or skills, got %+v", r)
 			}
 			if r.Tool != tool {
 				t.Fatalf("Tool = %q, want %q", r.Tool, tool)

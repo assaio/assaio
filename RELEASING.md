@@ -97,7 +97,16 @@ build-provenance attestations.
 ## Rules
 
 - Tags are immutable: never delete or re-point a published tag. A bad release is
-  fixed by the next patch release.
+  fixed by the next patch release. The `immutable-release-tags` repository ruleset
+  enforces this server-side, so a force-push to a tag is rejected even for an admin.
+- **If `main` is ever rewritten, published tags stay where they are** and therefore stop
+  being ancestors of `main`. That is the correct outcome, not a problem to fix by moving
+  them: the tag must keep pointing at the commit the release was actually built from.
+  The one thing it breaks is version derivation, because `git describe` only sees tags
+  reachable from `HEAD` and would propose a version that has already shipped. `LATEST_TAG`
+  in the `Makefile` therefore reads the highest tag that *exists* rather than the nearest
+  reachable one. The divergence is self-healing: the next release tags the current history,
+  and `git describe` behaves normally again from then on.
 - Release only from `main`. No release branches while pre-1.0; introduce
   `release-vX.Y` branches only if/when backports become necessary.
 - A release that changes the record schema or the plugin protocol must say so

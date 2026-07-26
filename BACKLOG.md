@@ -60,20 +60,11 @@ existing store columns; none needs a migration.
   user's own script (mail, Slack, …).
 - [ ] **B12 · GitHub Action** — M · team — packaged action running `check` as a gate
   plus a PR comment with movers/effectiveness for the changed window.
-- [ ] **B13 · exec rule plugins (ADR 0005)** — M · both — third protocol completing
-  processors → analyzers → rules: a rule reads the window's verdicts (all Results +
-  totals as JSON on stdin) and emits alerts with severity; assaio prints, sets exit
-  code, or forwards. Config `rules:`, same opt-in and boundary-validation posture as
-  ADR 0003/0004.
 - [ ] **B14 · Aider connector** — M · both — in-tree parser. The parseable token source is
   the opt-in `~/.aider/analytics.jsonl` (`message_send` events with `properties.{main_model,
   prompt_tokens,completion_tokens,total_tokens,cost}`, `time` in epoch seconds, no session
   id or cache split); `.aider.chat.history.md` is markdown-only. No structured per-edit field
   — Aider auto-commits, so lines +/- come from git, not the logs.
-- [ ] **B15 · explore-vs-produce** — M · both — first schema extension (migration
-  `0002_*.sql` — shipped migrations are immutable): split `tool_calls` into
-  read/search/command/write counts → a validator explaining *why* `$`/100 lines
-  differs (debugging-heavy vs building-heavy projects).
 - [ ] **B16 · context-utilization** — M · both — vendored model context-window table
   (like the price table) → peak context vs model limit, near-limit share, and honest
   right-sizing hints ("paying long-context rates for 50k contexts").
@@ -114,18 +105,16 @@ existing store columns; none needs a migration.
 
 ## Pool — validators from data already stored (unscheduled)
 
-- [ ] **B26 · burn-anomaly** — S/M · both — daily cost/token spikes vs a trailing
-  robust median (MAD z-score); the local foundation for later alerting rules.
-- [ ] **B27 · concentration** — S · team — Pareto/Lorenz of cost across projects
-  (project-level only, never people).
-- [ ] **B28 · rhythm** — S · both — day-of-week × hour heatmap plus after-hours
-  share; explicitly never an attendance view.
+- [ ] **B28 · rhythm: day × hour heatmap** — S · both — the shipped `rhythm` validator
+  reports off-hours/weekend share, four time-of-day bands, and p95 focused minutes; still
+  to add the full day-of-week × hour heatmap. Explicitly never an attendance view.
 - [ ] **B29 · session-taxonomy: thrash + trend** — M · both — the shipped `session-taxonomy`
   validator buckets conversational / light-edit / heavy-edit; still to add a thrash bucket
   (needs per-session rework, not stored yet) and the mix's week-over-week trend.
-- [ ] **B30 · delegation** — M · solo — sub-agent economics: delegation share trend,
-  tokens per delegated vs main-loop session, lines-per-token with vs without
-  delegation. Task difficulty is invisible — a prompt to look, not a verdict.
+- [ ] **B30 · delegation: trends and per-session economics** — S · solo — `sidechain` now
+  marks sub-agent turns exactly and `skill-economics` reports per-agent tokens and lines;
+  still to add the delegation-share trend and tokens per delegated vs main-loop session.
+  Task difficulty is invisible — a prompt to look, not a verdict.
 - [ ] **B31 · throughput-per-hour** — S · both — AI lines per focused hour
   (ActiveMinutes); labeled an activity rate, never a productivity score.
 - [ ] **B32 · rework-bursts** — S/M · both — rework clustered over time and per-session
@@ -137,15 +126,28 @@ existing store columns; none needs a migration.
   share of usage on unknown/legacy-priced models.
 - [ ] **B35 · entrypoint-mix** — S · both — CLI vs IDE vs hook usage and where
   friction (rejections) differs; the stored `entrypoint` column is unused today.
-- [ ] **B36 · marathon** — S · solo — p95 session active minutes and long- vs
-  short-session efficiency; thrash correlates with marathons.
+- [ ] **B36 · marathon: long- vs short-session efficiency** — S · solo — p95 session
+  active minutes ships in `rhythm`; still to compare output and thrash between long and
+  short sessions, since thrash correlates with marathons.
 - [ ] **B37 · branch-mix** — S · both — AI lines on the default branch vs feature
   branches; a process signal (direct-to-main AI work), local only.
 
 ## Pool — needs a schema or parser extension
 
-- [ ] **B38 · friction-events** — M · both — tool errors / API errors / retries
-  extracted from logs → an error-rate trend; needs per-tool log research.
+- [ ] **B79 · local-day bucketing** — M · both — `UsageRow.Day` is `substr(ts,1,10)` over
+  timestamps normalised to UTC, so every day-based figure (active days, lines/active-day,
+  week-over-week, burn-anomaly's baseline) counts UTC calendar days while `rhythm` reads
+  session starts in local time. Blocked on data, not effort: Claude Code and Codex both log
+  `Z` timestamps, so the offset a session actually happened in **does not exist in the
+  source** and cannot be recovered for history. Converting to the reporting machine's zone
+  would help a solo user but make the team server arbitrary (bucketing every member in the
+  server's zone) where UTC is at least uniform. A real fix needs the tools to log an offset,
+  or an explicit reporting-timezone setting with the trade-off stated. Disclosed meanwhile
+  as caveats on `burn-anomaly` and in `doctor`.
+- [ ] **B78 · sub-agent tool-call split** — S · solo — a Claude sub-agent's aggregate record
+  keeps `ToolCalls=0` and an all-zero purpose split, so its `toolStats` read/search/bash/edit
+  counts never reach `explore-produce`. Populating them means also setting `ToolCalls`, which
+  today would double-count against the parent turn — needs the accounting decided first.
 - [ ] **B39 · Cline activity extraction** — M · both — close the "cost but no lines" gap
   for Cline: `ui_messages.json` `say:"tool"` payloads (`newFileCreated` /
   `editedExistingFile` / `appliedDiff`) and `api_conversation_history.json` tool_use blocks

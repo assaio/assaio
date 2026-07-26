@@ -49,12 +49,26 @@ type Input struct {
 	// comparing against the API-equivalent estimate. Zero (the default) means unset, and
 	// subscription-fit then prompts to configure it rather than comparing against nothing.
 	PlanMonthlyCost float64
+	// Skills and Agents are the window's per-skill and per-sub-agent totals from
+	// store.Attribution, each sorted by Tokens descending. Populated by the CLI; empty in
+	// the drill and in tests that don't set them, where skill-economics reports that no
+	// usage carried attribution rather than inventing a zero.
+	Skills []store.AttributionRow
+	Agents []store.AttributionRow
 	// TurnSizing is per-model raw turn counts (output-producing turns, and how many were
 	// small) for model-right-sizing, which needs the per-turn grain the daily Usage
 	// aggregate hides. Populated by the CLI from store.TurnSizing; empty in the drill and
 	// in tests that don't set it, where model-right-sizing reads "no premium turns".
 	TurnSizing []store.ModelTurns
 }
+
+// The label kinds Result.BarsPseudonym may name. Each is a dimension whose values people
+// choose themselves -- a repository, a skill, a sub-agent -- and can therefore identify the
+// work an anonymized report is meant to hide.
+const (
+	PseudonymProject = "project"
+	PseudonymSkill   = "skill"
+)
 
 // Read is a validator's headline verdict. Key drives the dashboard's color: "good",
 // "watch", or "neutral" for a window with no data. Label is the short word the text
@@ -100,14 +114,14 @@ type Result struct {
 	HowToRead string   `json:"howToRead"`
 	Figures   []Figure `json:"figures,omitempty"`
 	Bars      []Bar    `json:"bars,omitempty"`
-	// BarsAreProjects marks whether Bars' Label values are project names -- the one
-	// dimension the dashboard pseudonymizes under --anonymize (see
-	// internal/dashboard.anonymizeVerdicts). Leave false (the default) when Bars label
-	// anything else (models, tools, ...); those must never be pseudonymized. Set it from
-	// any Validator, built-in or custom, whose Bars rank by project -- the dashboard
-	// applies the rule generically, not just to the built-in throughput validator.
-	BarsAreProjects bool   `json:"barsAreProjects,omitempty"`
-	Takeaway        string `json:"takeaway"`
+	// BarsPseudonym names the kind of user-authored label Bars carry -- PseudonymProject or
+	// PseudonymSkill -- and is what makes the dashboard pseudonymize them under --anonymize
+	// (see internal/dashboard.anonymizeVerdicts). Leave "" (the default) when Bars label a
+	// fixed vocabulary the tool itself defines (models, tools, time bands, ...); those must
+	// never be pseudonymized. Set it from any Validator, built-in or custom, whose Bars rank
+	// by a name a person chose -- the dashboard applies the rule generically.
+	BarsPseudonym string `json:"barsPseudonym,omitempty"`
+	Takeaway      string `json:"takeaway"`
 	// Caveats are honesty notes (directional, contested, or server-stage-only signals);
 	// optional.
 	Caveats []string `json:"caveats,omitempty"`
@@ -121,6 +135,22 @@ type Validator interface {
 	Title() string
 	Describe() string
 	Analyze(Input) Result
+}
+
+// WindowScoped marks a Validator whose answer belongs to the whole queried window and
+// cannot be narrowed to one project -- a flat plan price, attribution pooled across every
+// project, per-model turn counts. A project-scoped view (the dashboard's drill-down) skips
+// these rather than re-running them against a slice of the data: doing so compares a
+// window-wide constant against one project's usage and prints a verdict that contradicts
+// the window-level one on the same page.
+type WindowScoped interface {
+	WindowScoped()
+}
+
+// ProjectScoped reports whether v can honestly be re-run over a single project's rows.
+func ProjectScoped(v Validator) bool {
+	_, window := v.(WindowScoped)
+	return !window
 }
 
 // registry holds every self-registered Validator. Populated by each validator file's

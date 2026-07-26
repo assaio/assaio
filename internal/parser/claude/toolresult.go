@@ -16,6 +16,7 @@ import (
 // rework tracking ONLY -- it is never copied onto a usage.Record or stored (PRIVACY.md).
 type toolResult struct {
 	AgentID         string      `json:"agentId"`
+	AgentType       string      `json:"agentType"`
 	ResolvedModel   string      `json:"resolvedModel"`
 	Usage           *tokenUsage `json:"usage"`
 	ToolStats       *toolStats  `json:"toolStats"`
@@ -94,6 +95,8 @@ func parseToolResult(raw json.RawMessage) (toolResult, bool) {
 
 // subAgentRecord builds the additional usage record for a completed sub-agent call.
 // DedupeKey is the agentId: unique and stable, so re-parsing a transcript is idempotent.
+// The work it aggregates ran inside a sub-agent even though the line reporting it sits in
+// the parent transcript, so Sidechain is 1 regardless of the line's own marker.
 func subAgentRecord(l *line, t *toolResult, cf *carryForward) usage.Record {
 	r := usage.Record{
 		Tool:             tool,
@@ -110,6 +113,8 @@ func subAgentRecord(l *line, t *toolResult, cf *carryForward) usage.Record {
 		GitBranch:        cf.gitBranch,
 		Entrypoint:       cf.entrypoint,
 		Granularity:      "turn",
+		Sidechain:        1,
+		Agent:            t.AgentType,
 	}
 	if t.ToolStats != nil {
 		r.LinesAdded = parser.NonNeg(t.ToolStats.LinesAdded)

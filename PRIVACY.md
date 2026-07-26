@@ -30,6 +30,13 @@ the fields listed below, never prompts or code (which are never collected at all
 it can compute its metric. That data goes only to the local program you configured;
 know what a metric plugin does with it before declaring one.
 
+Rule plugins (`rules:` in `config.yaml`) are opt-in the same way and receive strictly
+less: only the validator verdicts — titles, verdict labels, figures, caveats, and
+takeaways — never usage rows, sessions, or prices. The ranked bar lists are **stripped
+before the plugin is called**, because those are where project, skill, and sub-agent names
+appear and a rule gates on a verdict, not on which repository produced it.
+They run in `assaio-agent check` and can only emit alerts back.
+
 ## What it extracts
 
 From each session log, the parsers extract only usage accounting fields:
@@ -66,11 +73,29 @@ From each session log, the parsers extract only usage accounting fields:
   read only transiently, in memory, to group edits by file while parsing that one
   transcript, and is discarded the moment parsing finishes — **never stored.** Only the
   resulting numeric count is kept, same as every other field on this list.
+- tool-call purpose counts — the same turn's tool calls split into how many read, searched,
+  ran a command, wrote, or did something else. The tool's **name** is matched against a
+  fixed allowlist while parsing and then dropped: only the five counts are stored, never the
+  name, its arguments, or its output.
+- tool error counts — how many of a turn's tool calls came back an error
+- a sub-agent flag — whether the turn ran inside a sub-agent (`1` or `0`), read from the
+  log's own marker
 
-That is the complete list. These fields are **numeric counts only** — how much AI
-produced, how efficiently, and with how much friction. No field carries prompt text,
-model output, or code content: a diff line contributes a `+1` or a `-1` and nothing
-else. Everything `assaio` needs for its reports is a count, so a count is all it keeps.
+Two fields on this list are **short text labels rather than counts**, and they are the only
+ones:
+
+- skill — the skill the tool itself attributed the turn to (e.g. `code-review`)
+- sub-agent type — the kind of sub-agent the turn ran as (e.g. `general-purpose`)
+
+Both are category labels the tool assigns, not anything you typed, and they exist so a
+report can say where the spend went. They are names people choose, though, so a shared
+report treats them exactly like project names: `--anonymize` (the default for the team
+server and the published dashboard) replaces them with stable pseudonyms.
+
+That is the complete list. Apart from those two labels, the fields are **numeric counts
+only** — how much AI produced, how efficiently, and with how much friction. No field
+carries prompt text, model output, or code content: a diff line contributes a `+1` or a
+`-1` and nothing else.
 
 ## What it never reads
 

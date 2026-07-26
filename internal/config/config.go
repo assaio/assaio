@@ -34,6 +34,10 @@ type Config struct {
 	// same entry shape as Plugins. Run by analyze and dashboard; the team server never
 	// executes them (see internal/plugin's metric protocol and ADR 0004).
 	Metrics []PluginConfig `koanf:"metrics"`
+	// Rules lists out-of-tree exec rule plugins, opt-in only, same entry shape as
+	// Plugins. They read the window's validator verdicts and emit severity alerts; only
+	// check runs them, and an error-severity alert fails it (ADR 0005).
+	Rules []PluginConfig `koanf:"rules"`
 	// Privacy governs shareable exports; only the dashboard command reads it today.
 	Privacy Privacy `koanf:"privacy"`
 	// Server holds `assaio-agent serve` defaults.
@@ -119,8 +123,8 @@ func Load(path string) (Config, error) {
 	return c, nil
 }
 
-// Validate reports whether Format, Since, Plugins, Metrics, and Pricing hold values the
-// CLI accepts.
+// Validate reports whether Format, Since, Plugins, Metrics, Rules, and Pricing hold
+// values the CLI accepts.
 //
 //nolint:gocritic // Config is a small value bundle validated once per CLI run, not a hot path.
 func (c Config) Validate() error {
@@ -142,11 +146,19 @@ func (c Config) Validate() error {
 			return fmt.Errorf("metric %q: %w", m.Name, err)
 		}
 	}
+	for _, r := range c.Rules {
+		if err := r.Validate(); err != nil {
+			return fmt.Errorf("rule %q: %w", r.Name, err)
+		}
+	}
 	if name := dupName(c.Plugins); name != "" {
 		return fmt.Errorf("duplicate plugin name %q", name)
 	}
 	if name := dupName(c.Metrics); name != "" {
 		return fmt.Errorf("duplicate metric name %q", name)
+	}
+	if name := dupName(c.Rules); name != "" {
+		return fmt.Errorf("duplicate rule name %q", name)
 	}
 	if err := c.Pricing.Validate(); err != nil {
 		return err

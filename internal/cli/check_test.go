@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/assaio/assaio/internal/config"
+	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/report"
+	"github.com/assaio/assaio/internal/store"
 	"github.com/assaio/assaio/internal/usage"
 )
 
@@ -42,14 +44,44 @@ func TestSumCheckTotals(t *testing.T) {
 		{In: 50, Out: 60, HasUnpriced: true},
 	}
 	got := sumCheckTotals(rows)
-	if got.Tokens != 426 {
-		t.Fatalf("Tokens = %d, want 426 (all token types summed)", got.Tokens)
+	if got.Tokens != 425 {
+		t.Fatalf("Tokens = %d, want 425 (input, output, cache read and cache write summed)", got.Tokens)
 	}
 	if got.Cost != 1.25 {
 		t.Fatalf("Cost = %v, want 1.25 (only priced rows)", got.Cost)
 	}
 	if !got.HasUnpriced {
 		t.Fatal("HasUnpriced = false, want true")
+	}
+}
+
+// TestSumCheckTotalsExcludesReasoning locks the gate to the same token definition the
+// reports use. Reasoning tokens are already inside output (usage.Record), so re-adding them
+// would fail a CI build on a window report and effectiveness both show under budget.
+func TestSumCheckTotalsExcludesReasoning(t *testing.T) {
+	usageRows := []store.UsageRow{{
+		Day: "2026-07-20", Tool: "codex", Model: "claude-sonnet-4-5", Project: "web",
+		In: 1000, Out: 2000, CacheRead: 300, CacheWrite: 100, Reasoning: 1500,
+	}}
+	table, err := pricing.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	eff, err := report.BuildEffectiveness(usageRows, table, "project")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var reported int64
+	for i := range eff {
+		reported += eff[i].TokensTotal
+	}
+
+	got := sumCheckTotals(report.Build(usageRows, table))
+	if got.Tokens != reported {
+		t.Fatalf("check tokens = %d, effectiveness tokens = %d -- the gate must count the window the reports show", got.Tokens, reported)
+	}
+	if got.Tokens != 3400 {
+		t.Fatalf("Tokens = %d, want 3400 (in+out+cache read+cache write; reasoning is a subset of out)", got.Tokens)
 	}
 }
 

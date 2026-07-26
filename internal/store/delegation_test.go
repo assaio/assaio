@@ -30,10 +30,12 @@ func TestDelegationSplitsSubAgentFromTotalTokens(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if wantSub := int64(100 + 50 + 10 + 5 + 1); sub != wantSub {
+	// reasoning_tokens (1) is a subset of output_tokens and is deliberately not re-added --
+	// these totals must agree with rowTokens on every other surface.
+	if wantSub := int64(100 + 50 + 10 + 5); sub != wantSub {
 		t.Fatalf("sub = %d, want %d", sub, wantSub)
 	}
-	if wantTotal := int64(166 + 300); total != wantTotal {
+	if wantTotal := int64(165 + 300); total != wantTotal {
 		t.Fatalf("total = %d, want %d", total, wantTotal)
 	}
 }
@@ -111,10 +113,12 @@ func TestDelegationMatchesMemberPrefixedAgentKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if wantSub := int64(100 + 50 + 10 + 5 + 1); sub != wantSub {
+	// reasoning_tokens (1) is a subset of output_tokens and is deliberately not re-added --
+	// these totals must agree with rowTokens on every other surface.
+	if wantSub := int64(100 + 50 + 10 + 5); sub != wantSub {
 		t.Fatalf("sub = %d, want %d (member-prefixed agent key must still count as delegation)", sub, wantSub)
 	}
-	if wantTotal := int64(166 + 300); total != wantTotal {
+	if wantTotal := int64(165 + 300); total != wantTotal {
 		t.Fatalf("total = %d, want %d", total, wantTotal)
 	}
 }
@@ -154,5 +158,45 @@ func TestDelegationEmptyStoreIsZeroNotError(t *testing.T) {
 	}
 	if sub != 0 || total != 0 {
 		t.Fatalf("sub=%d total=%d, want 0/0 on an empty store", sub, total)
+	}
+}
+
+// TestDelegationPrefersSidechainOverLegacyKey is the double-count guard: a store upgraded
+// from a build that predates sub-agent transcripts holds an `agent:` aggregate row, and the
+// next backfill adds the per-turn rows parsed from the same transcript, each marked
+// sidechain. Counting both would report roughly twice the real delegation share, so once
+// any row in the window carries the marker it alone decides.
+func TestDelegationPrefersSidechainOverLegacyKey(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+	ts := time.Now().UTC()
+	recs := []usage.Record{
+		// the stale pre-upgrade aggregate for the same sub-agent
+		{
+			Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", DedupeKey: "agent:ag1",
+			Granularity: "turn", InputTokens: 500,
+		},
+		// the per-turn rows the newer parser writes for it
+		{
+			Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", DedupeKey: "t1",
+			Granularity: "turn", InputTokens: 200, Sidechain: 1,
+		},
+		{
+			Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", DedupeKey: "t2",
+			Granularity: "turn", InputTokens: 300, Sidechain: 1,
+		},
+	}
+	if _, err := s.Insert(ctx, recs); err != nil {
+		t.Fatal(err)
+	}
+	sub, total, err := s.Delegation(ctx, ts.Add(-time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sub != 500 {
+		t.Fatalf("sub = %d, want 500: the marker decides, so the stale aggregate must not be added again", sub)
+	}
+	if sub > total {
+		t.Fatalf("sub = %d exceeds total = %d, which no share can", sub, total)
 	}
 }

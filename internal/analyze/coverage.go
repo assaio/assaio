@@ -107,7 +107,7 @@ func pricedTokenSum(models []ModelStat) int64 {
 }
 
 // toolCoverageBars renders each tool's token share, marking cost-only tools. Bars label
-// tools, never projects, so they are never pseudonymized (BarsAreProjects stays false).
+// tools, never projects, so they are never pseudonymized (BarsPseudonym stays "").
 func toolCoverageBars(byTool map[string]int64, total int64) []Bar {
 	tools := make([]string, 0, len(byTool))
 	for t := range byTool {

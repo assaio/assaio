@@ -33,7 +33,7 @@ func TestParseMetricResultValid(t *testing.T) {
 	r.Name = "adoption"
 	r.Purity = 1.7
 	r.Bars = []analyze.Bar{{Label: "web", Value: "40", Frac: 2.5}}
-	r.BarsAreProjects = true
+	r.BarsPseudonym = analyze.PseudonymProject
 
 	got, violations, err := parseMetricResult(mustDoc(t, &r), "demo")
 	if err != nil {
@@ -48,8 +48,8 @@ func TestParseMetricResultValid(t *testing.T) {
 	if got.Bars[0].Frac != 1.0 {
 		t.Fatalf("Bars[0].Frac = %v, want clamped 1.0", got.Bars[0].Frac)
 	}
-	if !got.BarsAreProjects {
-		t.Fatal("BarsAreProjects must carry through: the dashboard's anonymization depends on it")
+	if got.BarsPseudonym != analyze.PseudonymProject {
+		t.Fatal("BarsPseudonym must carry through: the dashboard's anonymization depends on it")
 	}
 	if got.Title != "Demo Metric" || got.Read.Label != "WATCH" || got.Takeaway != "Demo takeaway." {
 		t.Fatalf("carried fields wrong: %+v", got)
@@ -141,5 +141,36 @@ func TestParseMetricResultMalformedDocuments(t *testing.T) {
 				t.Fatalf("got %q, want substring %q", joined, tc.wantSub)
 			}
 		})
+	}
+}
+
+// TestParseMetricResultLegacyBarsKeyStillPseudonymizes is the regression guard for the
+// BarsAreProjects -> BarsPseudonym rename: a plugin released against the old key kept
+// emitting it, the decoder dropped it, and its project-named bars then escaped
+// --anonymize entirely -- publishing the real repository names the flag exists to hide.
+func TestParseMetricResultLegacyBarsKeyStillPseudonymizes(t *testing.T) {
+	r := validMetricResult()
+	r.Bars = []analyze.Bar{{Label: "acme-secret-repo", Value: "40", Frac: 1}}
+	doc := mustDoc(t, &r)
+	legacy := strings.Replace(string(doc), `"bars":`, `"barsAreProjects":true,"bars":`, 1)
+
+	got, violations, err := parseMetricResult([]byte(legacy), "demo")
+	if err != nil {
+		t.Fatalf("legacy key must stay accepted: %v (violations %v)", err, violations)
+	}
+	if got.BarsPseudonym != analyze.PseudonymProject {
+		t.Fatalf("BarsPseudonym = %q, want the legacy key mapped to %q so the bars are pseudonymized",
+			got.BarsPseudonym, analyze.PseudonymProject)
+	}
+}
+
+// TestParseMetricResultRejectsUnknownField asserts a misspelled key is a loud violation
+// rather than a silently ignored setting -- the failure mode that let the rename leak.
+func TestParseMetricResultRejectsUnknownField(t *testing.T) {
+	r := validMetricResult()
+	doc := strings.Replace(string(mustDoc(t, &r)), `"name":`, `"barsPseudonim":"project","name":`, 1)
+
+	if _, _, err := parseMetricResult([]byte(doc), "demo"); err == nil {
+		t.Fatal("an unknown field must be rejected, not ignored")
 	}
 }
