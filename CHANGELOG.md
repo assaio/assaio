@@ -21,6 +21,12 @@ Discussion.
 
 ## [Unreleased]
 
+### Internal
+- The dashboard golden fixtures are built in `time.Local` rather than UTC. `rhythm` reads
+  session starts in the machine's own zone, so a UTC fixture placed the same session in a
+  different time-of-day band depending on where the test ran -- the rendered goldens passed
+  on a CET laptop and failed in CI. Verified identical across five zones.
+
 ## [0.3.0] - 2026-07-26
 
 ### Added

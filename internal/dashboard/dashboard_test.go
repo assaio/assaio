@@ -10,7 +10,11 @@ import (
 	"github.com/assaio/assaio/internal/store"
 )
 
-var fixtureNow = time.Date(2026, 7, 14, 12, 0, 0, 0, time.UTC)
+// fixtureNow is built in time.Local, not UTC: the rhythm validator reads session starts in
+// the machine's own zone, so a UTC fixture put the same session in a different time-of-day
+// band depending on where the test ran -- making the rendered goldens machine-dependent and
+// green locally while red in CI.
+var fixtureNow = time.Date(2026, 7, 14, 12, 0, 0, 0, time.Local)
 
 func fixturePrices() pricing.Table {
 	return pricing.Table{
