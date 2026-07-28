@@ -244,6 +244,8 @@ blank, never faked.
 | `sync`     | Push this machine's local usage to a team server — pseudonymous by default, `--member` is an explicit opt-in to a real name. |
 | `doctor`   | Show detected tools, log locations, store inventory, health, and accuracy caveats. |
 | `status`   | A terminal overview: inventory, headline `$`/100 lines, hottest projects, and what's going stale — projects only. `--since`. |
+| `statusline` | Print **one ambient line** for an editor or shell status bar: today's tokens, AI lines, cost basis, and how fresh the data is. The day is your machine's local day. Read-only, and never fails loudly — see [automation](docs/automation.md#option-c--claude-code-session-hooks-for-statusline). |
+| `explain`  | Print a metric's **long-form page** — what it measures, how to read it, what to do about it, and its limits. Needs no store, so it works before your first import; no argument lists every metric. |
 | `clear`    | Delete stored data — needs an explicit scope (`--all`, `--older-than`, `--tool`) and `--yes`. |
 | `config`   | Print the effective configuration and where it was loaded from. |
 | `plugins`  | `list` configured exec parser plugins; `verify <name>` runs one and reports protocol conformance without storing. |

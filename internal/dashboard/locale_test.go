@@ -2,57 +2,49 @@ package dashboard
 
 import (
 	"bytes"
-	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/assaio/assaio/internal/i18n"
 )
 
-// TestLocaleStringsNonEmpty asserts every en field is populated -- an empty chrome
-// string would render as a silent gap in the report. Uses reflection so a newly added
-// localeStrings field is covered automatically, with no list to keep in sync by hand.
-func TestLocaleStringsNonEmpty(t *testing.T) {
-	v := reflect.ValueOf(en)
-	typ := v.Type()
-	for i := range v.NumField() {
-		if v.Field(i).String() == "" {
-			t.Fatalf("localeStrings.%s is empty", typ.Field(i).Name)
+// TestLocaleTemplateFuncReturnsCatalog asserts the template's "locale" func -- the seam a
+// future language switcher hooks into -- resolves to the shared catalog today.
+func TestLocaleTemplateFuncReturnsCatalog(t *testing.T) {
+	fn, ok := templateFuncs["locale"].(func() i18n.Dashboard)
+	if !ok {
+		t.Fatal(`templateFuncs["locale"] missing or has the wrong signature`)
+	}
+	if got := fn(); got != i18n.For("").Dashboard {
+		t.Fatalf("locale() = %+v, want the en catalog", got)
+	}
+}
+
+// TestTemplateLooksUpLocaleForToggleAndProv is half of the finding-5 regression: the
+// theme-toggle's aria-label and the "Prov." stamp must be looked up from the catalog. A
+// hardcoded literal that happened to match the catalog's current text would pass a
+// rendered-output check, so the template source itself is asserted here.
+func TestTemplateLooksUpLocaleForToggleAndProv(t *testing.T) {
+	for _, want := range []string{"(locale).ToggleDarkLabel", "(locale).ProvLabel"} {
+		if !strings.Contains(templateSource, want) {
+			t.Errorf("dashboard.html.tmpl must render %s from the locale, not a literal", want)
 		}
 	}
 }
 
-// TestLocaleTemplateFuncReturnsEN asserts the template's "locale" func -- the seam a
-// future language switcher hooks into -- resolves to the en locale today.
-func TestLocaleTemplateFuncReturnsEN(t *testing.T) {
-	fn, ok := templateFuncs["locale"].(func() localeStrings)
-	if !ok {
-		t.Fatal(`templateFuncs["locale"] missing or has the wrong signature`)
-	}
-	if got := fn(); got != en {
-		t.Fatalf("locale() = %+v, want en", got)
-	}
-}
-
-// TestRenderHTMLUsesLocaleForToggleAndProvStrings is the finding-5 regression: the
-// theme-toggle's initial aria-label and the "Prov." caveat stamp must render from
-// localeStrings, not a hardcoded literal in dashboard.html.tmpl. Changing en's value and
-// re-rendering is what proves the template actually reads it, rather than merely
-// happening to contain the same text.
-func TestRenderHTMLUsesLocaleForToggleAndProvStrings(t *testing.T) {
-	original := en
-	t.Cleanup(func() { en = original })
-
-	en.ToggleDarkLabel = "zz-toggle-marker"
-	en.ProvLabel = "zz-prov-marker"
-
+// TestRenderHTMLRendersLocaleValues is the other half: the looked-up strings must actually
+// reach the page, so neither is dropped by a template edit.
+func TestRenderHTMLRendersLocaleValues(t *testing.T) {
+	l := i18n.For("").Dashboard
 	var buf bytes.Buffer
 	if err := RenderHTML(&buf, Build(fixtureInput(), "last 30 days", true, fixtureSubpaths(), nil)); err != nil {
 		t.Fatal(err)
 	}
 	html := buf.String()
-	if !strings.Contains(html, `aria-label="zz-toggle-marker"`) {
-		t.Fatalf("theme toggle button must render ToggleDarkLabel from locale: %s", html)
+	if !strings.Contains(html, `aria-label="`+l.ToggleDarkLabel+`"`) {
+		t.Errorf("theme toggle button must render ToggleDarkLabel (%q)", l.ToggleDarkLabel)
 	}
-	if !strings.Contains(html, "zz-prov-marker") {
-		t.Fatalf(`the "Prov." stamp must render ProvLabel from locale: %s`, html)
+	if !strings.Contains(html, l.ProvLabel) {
+		t.Errorf("the Prov. stamp must render ProvLabel (%q)", l.ProvLabel)
 	}
 }

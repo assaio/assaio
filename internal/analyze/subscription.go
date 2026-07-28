@@ -3,6 +3,8 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/humanize"
+
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -47,7 +49,7 @@ func (subscriptionValidator) Analyze(in Input) Result {
 	if in.PlanMonthlyCost <= 0 {
 		r.Read = planUnsetRead
 		if priced {
-			r.Figures = []Figure{{Label: "API-equivalent", Value: "~$" + money(apiMonthly) + "/mo", Note: "projected estimate"}}
+			r.Figures = []Figure{{Label: "API-equivalent", Value: "~$" + humanize.USD(apiMonthly) + "/mo", Note: "projected estimate"}}
 		}
 		r.Takeaway = "Set config.pricing.monthly_subscription_cost to see whether your flat plan beats API pricing at this volume."
 		r.Caveats = []string{"The API-equivalent $ is an estimate at public pay-as-you-go prices, not your actual bill."}
@@ -64,8 +66,8 @@ func (subscriptionValidator) Analyze(in Input) Result {
 	r.Read = readFor(payingOff, "Paying off")
 	r.Purity = clamp01(multiple / 2)
 	r.Figures = []Figure{
-		{Label: "plan cost", Value: "$" + money(in.PlanMonthlyCost) + "/mo", Note: "configured flat rate"},
-		{Label: "API-equivalent", Value: "~$" + money(apiMonthly) + "/mo", Note: "projected estimate"},
+		{Label: "plan cost", Value: "$" + humanize.USD(in.PlanMonthlyCost) + "/mo", Note: "configured flat rate"},
+		{Label: "API-equivalent", Value: "~$" + humanize.USD(apiMonthly) + "/mo", Note: "projected estimate"},
 		{Label: "value multiple", Value: valueMultiple(multiple), Note: "API-equiv / plan"},
 		{Label: "vs API", Value: signedMoney(apiMonthly-in.PlanMonthlyCost) + "/mo", Note: savingsNote(payingOff)},
 	}
@@ -116,23 +118,11 @@ func subscriptionTakeaway(payingOff bool, multiple float64) string {
 	}
 }
 
-// money renders a dollar amount compactly: 195 -> "195", 26004 -> "26.0K".
-func money(v float64) string {
-	switch {
-	case v >= 10_000:
-		return strconv.FormatFloat(v/1000, 'f', 1, 64) + "K"
-	case v >= 100:
-		return strconv.FormatFloat(v, 'f', 0, 64)
-	default:
-		return strconv.FormatFloat(v, 'f', 2, 64)
-	}
-}
-
 func signedMoney(v float64) string {
 	if v >= 0 {
-		return "+$" + money(v)
+		return "+$" + humanize.USD(v)
 	}
-	return "-$" + money(-v)
+	return "-$" + humanize.USD(-v)
 }
 
 // valueMultiple renders the API-equiv/plan ratio: "134x", or "2.3x" below ten.

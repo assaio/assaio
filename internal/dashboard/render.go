@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/assaio/assaio/internal/analyze"
+	"github.com/assaio/assaio/internal/i18n"
 )
 
 //go:embed dashboard.html.tmpl
@@ -21,7 +22,7 @@ var templateFuncs = template.FuncMap{
 	"facets":         facets,
 	"subpathName":    subpathName,
 	"barsApplicable": func(r analyze.Result) bool { return r.Bars != nil },
-	"locale":         func() localeStrings { return en },
+	"locale":         func() i18n.Dashboard { return i18n.For("").Dashboard },
 }
 
 var tmpl = template.Must(template.New("dashboard").Funcs(templateFuncs).Parse(templateSource))

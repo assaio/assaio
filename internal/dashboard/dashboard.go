@@ -9,6 +9,7 @@ package dashboard
 
 import (
 	"github.com/assaio/assaio/internal/analyze"
+	"github.com/assaio/assaio/internal/i18n"
 	"github.com/assaio/assaio/internal/report"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -120,12 +121,13 @@ func anonymizeVerdicts(verdicts []analyze.Result) {
 func caveats(anonymize, hasUnpriced bool) []string {
 	// report.CostEstimateDisclosure is sourced from internal/report so the cost-basis
 	// wording is identical here and on the CLI cost tables -- one canonical string.
-	out := []string{en.DirectionalCaveat, en.LineCoverageCaveat, en.QualityCaveat, report.CostEstimateDisclosure}
+	l := i18n.For("").Dashboard
+	out := []string{l.DirectionalCaveat, l.LineCoverageCaveat, l.QualityCaveat, report.CostEstimateDisclosure}
 	if hasUnpriced {
-		out = append(out, en.UnpricedCaveat)
+		out = append(out, l.UnpricedCaveat)
 	}
 	if anonymize {
-		out = append(out, en.AnonymizedCaveat)
+		out = append(out, l.AnonymizedCaveat)
 	}
 	return out
 }

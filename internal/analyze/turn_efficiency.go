@@ -3,6 +3,8 @@ package analyze
 import (
 	"sort"
 	"strconv"
+
+	"github.com/assaio/assaio/internal/humanize"
 )
 
 const (
@@ -78,7 +80,7 @@ func medianOutputPerTurn(outPerTurn []float64) string {
 		return "—"
 	}
 	sort.Float64s(outPerTurn)
-	return compactCount(int64(medianAt50(outPerTurn)))
+	return humanize.Count(int64(medianAt50(outPerTurn)))
 }
 
 func turnEffTakeaway(enough bool, oneShotRate float64) string {

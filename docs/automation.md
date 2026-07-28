@@ -9,7 +9,11 @@ network step is `sync` (pseudonymized by default). A managed cloud is roadmap; t
 ## The pieces
 
 - **`backfill`** — re-imports local session logs into the store. Idempotent (deterministic
-  dedupe keys), so running it repeatedly never double-counts. Safe to run often.
+  dedupe keys), so running it repeatedly never double-counts, and incremental since v0.4:
+  an input already parsed unchanged is skipped, so a repeat run costs a fraction of a
+  second rather than a minute. Safe — and now cheap — to run often.
+- **`statusline`** — one ambient line for a status bar. It only reads the store, so it is
+  as fresh as your last `backfill`; that is why the line always ends with the data's age.
 - **`sync`** — pushes local usage to a team server over one bearer-token HTTPS call,
   **pseudonymized by default** (`--member` is an explicit opt-in to a real name). The only
   network path; nothing else leaves the machine.
@@ -69,6 +73,30 @@ never waits on a full backfill. `.git/hooks/post-commit` (make it executable):
 To install it for every repo you clone, point git at a hooks template once:
 `git config --global init.templateDir ~/.git-template` and drop the hook under
 `~/.git-template/hooks/`.
+
+## Option C — Claude Code session hooks (for `statusline`)
+
+If you want the status line to track the day as you work, refresh at the two points where
+a transcript has settled. In `~/.claude/settings.json`:
+
+```json
+{
+  "statusLine": { "type": "command", "command": "assaio-agent statusline" },
+  "hooks": {
+    "SessionEnd": [{ "hooks": [{ "type": "command", "command": "assaio-agent backfill" }] }],
+    "PreCompact": [{ "hooks": [{ "type": "command", "command": "assaio-agent backfill" }] }]
+  }
+}
+```
+
+**Why not a per-turn (`Stop`) hook.** It would look better and measure worse. Claude Code
+attributes a turn's failed tool calls from a *later* line in the transcript, so ingesting
+at the end of a turn writes a row before that line exists, with zero errors recorded.
+Inserts are first-write-wins and the repair path only fills rows whose signals are
+*entirely* absent, so such a row stays half-attributed forever and `friction` under-reports
+from then on. Ingesting at settled points keeps the numbers honest; the cost is that the
+line can lag inside a long session, which is exactly why it always shows its age. Tracked
+as `B68` — once activity columns can be restated, the per-turn hook becomes safe.
 
 ## Survival on a schedule
 

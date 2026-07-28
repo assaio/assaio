@@ -13,7 +13,7 @@ mattering the moment a second release exists.
 | Command | Since | What it does |
 |---------|-------|--------------|
 | `demo` | v0.1 | Full reports on bundled sample data — no logs needed. |
-| `backfill` | v0.1 | Import all historical local session logs into the store. |
+| `backfill` | v0.1 | Import all historical local session logs into the store. Since v0.4, incremental: an input already parsed unchanged by this build is skipped and reported as `unchanged=`; `--full` forces a complete re-parse. |
 | `report` | v0.1 | Token/cost report; `--by day\|project\|tool\|model\|entrypoint\|member`, `--format table\|json\|csv`, `--compare` top movers. |
 | `effectiveness` | v0.1 | AI output vs cost — AI lines, edits, rejections, **`$`/100 AI lines** — per project by default; `--compare`. |
 | `analyze` | v0.1 | Runs the metric validators below plus configured exec metric plugins; `--list`, `--format text\|json`, `[name...]` subset. |
@@ -23,6 +23,8 @@ mattering the moment a second release exists.
 | `sync` | v0.1 | Pushes local usage to a team server; pseudonymous by default, `--member` is an explicit opt-in. |
 | `doctor` | v0.1 | Detected tools, resolved log roots, store inventory, health, accuracy caveats. |
 | `status` | v0.1 | Terminal overview: inventory, headline `$`/100 lines, hot / going-stale projects, session stats. |
+| `statusline` | v0.4 | One ambient line for a status bar: today's tokens, AI lines, cost basis, and data age. Local day (timestamp range, not a UTC bucket); read-only; never fails loudly. See [automation](docs/automation.md). |
+| `explain` | v0.4 | The long-form page for a metric — what it measures, how to read it, what to do about it, its limits. Needs no store; no argument lists every metric. |
 | `survival` | v0.2 | Directional local outcome check: how much of a git repo's window survives in `HEAD` (`git blame`), beside the AI lines the store recorded. See [automation](docs/automation.md). |
 | `clear` | v0.1 | Deletes stored data; requires an explicit scope and `--yes`. |
 | `config` | v0.1 | Prints the effective merged configuration and its source path. |

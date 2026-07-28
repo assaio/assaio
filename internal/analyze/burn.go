@@ -1,6 +1,10 @@
 package analyze
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/assaio/assaio/internal/humanize"
+)
 
 const (
 	burnName     = "burn-anomaly"
@@ -55,7 +59,7 @@ func (burnValidator) Analyze(in Input) Result {
 	r.Purity = burnPurity(sufficient, len(spikes), len(days))
 	r.Figures = []Figure{
 		{Label: "active days", Value: strconv.Itoa(len(days))},
-		{Label: "typical day", Value: compactCount(median), Note: "median tokens"},
+		{Label: "typical day", Value: humanize.Count(median), Note: "median tokens"},
 		burnPeakFigure(days, median),
 		burnSpikeFigure(sufficient, len(spikes)),
 	}
@@ -92,7 +96,7 @@ func burnPeakFigure(days []dayBurn, median int64) Figure {
 			peak = days[i].Tokens
 		}
 	}
-	f := Figure{Label: "heaviest day", Value: compactCount(peak), Note: "tokens"}
+	f := Figure{Label: "heaviest day", Value: humanize.Count(peak), Note: "tokens"}
 	if median > 0 {
 		f.Note = strconv.FormatFloat(float64(peak)/float64(median), 'f', 1, 64) + "× the typical day"
 	}
@@ -123,7 +127,7 @@ func burnBars(spikes []dayBurn, median int64, topN int) []Bar {
 	}
 	bars := make([]Bar, 0, len(kept))
 	for i := range kept {
-		value := compactCount(kept[i].Tokens) + " tokens"
+		value := humanize.Count(kept[i].Tokens) + " tokens"
 		if median > 0 {
 			value += " · " + strconv.FormatFloat(float64(kept[i].Tokens)/float64(median), 'f', 1, 64) + "×"
 		}

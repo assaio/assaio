@@ -1,22 +1,15 @@
-package dashboard
+package i18n
 
-// localeStrings is the dashboard's static UI chrome: the eyebrows, headers, labels, and
+// Dashboard is the Assay page's static UI chrome: the eyebrows, headers, labels, and
 // footer lines that read the same on every render, independent of the queried data.
-// Figures, project/model names, and validator-generated Read/Takeaway/HowToRead text
-// are data, not chrome, and never belong here -- they flow straight from analyze.Result.
 //
-// en is the only locale today. A future language switcher would add another
-// localeStrings value (e.g. de, pl) and pick between them per request; there is no
-// negotiation or switcher yet, by design -- see the locale template func in render.go,
-// the one seam a switcher would hook into.
-//
-// Not every visible string routes through here. Three connector words are CSS
-// `content:` values in dashboard.html.tmpl's <style> block (the "How to read — ", "Note
-// — ", and "— " prefixes on .entry__howto/.entry__caveat/.entry__takeaway): they render
-// from static stylesheet text, not from template data, so this seam does not reach them.
-// The inline theme-toggle <script>'s own two aria-label strings are the same kind of
+// Not every visible string routes through here. Three connector words are CSS `content:`
+// values in dashboard.html.tmpl's <style> block (the "How to read — ", "Note — ", and
+// "— " prefixes on .entry__howto/.entry__caveat/.entry__takeaway): they render from
+// static stylesheet text, not from template data, so this seam does not reach them. The
+// inline theme-toggle <script>'s own two aria-label strings are the same kind of
 // exception, in JS rather than CSS. Both are deliberate, narrow carve-outs, not gaps.
-type localeStrings struct {
+type Dashboard struct {
 	ReportEyebrow      string // masthead: "<ReportEyebrow> · <window>"
 	StatusChip         string // masthead: local/offline status pill
 	ToggleDarkLabel    string // masthead: theme toggle button's initial (light-mode) aria-label
@@ -49,8 +42,7 @@ type localeStrings struct {
 	TeamCaption        string // Team section's one-line honesty caption
 }
 
-// en is today's -- and only -- locale.
-var en = localeStrings{
+var enDashboard = Dashboard{
 	ReportEyebrow:      "Assay report",
 	StatusChip:         "Local · Offline",
 	ToggleDarkLabel:    "Switch to dark theme",

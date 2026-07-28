@@ -2,11 +2,14 @@ package cli
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/assaio/assaio/internal/config"
+	"github.com/assaio/assaio/internal/i18n"
 	"github.com/assaio/assaio/internal/parser/claude"
 	"github.com/assaio/assaio/internal/parser/cline"
 	"github.com/assaio/assaio/internal/parser/codex"
@@ -32,7 +35,7 @@ func newDoctorCmd() *cobra.Command {
 				return err
 			}
 
-			cmd.Print(doctorSourceLine("claude-code", "file", cfg.Sources.Claude, claude.Discover, paths.ClaudeRoot(home)))
+			cmd.Print(doctorClaudeLine(cfg.Sources.Claude, paths.ClaudeRoot(home)))
 			cmd.Print(doctorSourceLine("codex", "file", cfg.Sources.Codex, codex.Discover, paths.CodexRoots(home)...))
 			cmd.Print(doctorSourceLine("gemini-cli", "file", cfg.Sources.Gemini, gemini.Discover, paths.GeminiRoot(home)))
 			cmd.Print(doctorSourceLine("cline", "task", cfg.Sources.Cline, cline.Discover, paths.ClineRoots(home)...))
@@ -59,6 +62,7 @@ func newDoctorCmd() *cobra.Command {
 			}
 			cmd.Printf("store:        ok, %d record(s) at %s\n", n, dbPath)
 			cmd.Printf("inventory:    %s\n", doctorInventoryLabel(cmd, st, n))
+			cmd.Printf("freshness:    %s\n", doctorFreshnessLabel(cmd, st))
 
 			models, snapshotDate := pricing.Info()
 			cmd.Printf("pricing:      %d models, snapshot %s (refresh ships with releases)\n", models, snapshotDate)
@@ -100,9 +104,7 @@ func toolActivityLabel(n int, noun string) string {
 
 // doctorSourceLine renders one tool's discovery line: activity count, the roots
 // actually in effect (configured, or the internal/paths default), and whether those
-// roots are the default or config-overridden. A configured root that doesn't exist on
-// disk gets a hint line — a missing default root does not, since the tool may simply
-// not be installed here.
+// roots are the default or config-overridden.
 func doctorSourceLine(tool, noun string, configured []string, discover func(string) ([]string, error), defaults ...string) string {
 	roots := paths.Resolve(configured, defaults...)
 	var files []string
@@ -110,18 +112,65 @@ func doctorSourceLine(tool, noun string, configured []string, discover func(stri
 		found, _ := discover(root)
 		files = append(files, found...)
 	}
-	overridden := len(configured) > 0
+	return doctorLine(tool, toolActivityLabel(len(files), noun), configured, roots)
+}
+
+// doctorClaudeLine reports Claude's two kinds of transcript separately. ingest reads
+// top-level sessions and the sub-agent transcripts beneath them, so a line counting only
+// the former hides the whole sub-agent surface -- thousands of files on a real machine,
+// and exactly the usage v0.3.0 made exact.
+func doctorClaudeLine(configured []string, defaults ...string) string {
+	roots := paths.Resolve(configured, defaults...)
+	var main, sub int
+	for _, root := range roots {
+		m, _ := claude.Discover(root)
+		s, _ := claude.DiscoverSubagents(root)
+		main += len(m)
+		sub += len(s)
+	}
+	activity := toolActivityLabel(main, "file")
+	if sub > 0 {
+		activity += fmt.Sprintf(" + %d sub-agent transcript(s)", sub)
+	}
+	return doctorLine("claude-code", activity, configured, roots)
+}
+
+// doctorLine renders a source line's shared shape. A configured root that doesn't exist
+// on disk gets a hint line — a missing default root does not, since the tool may simply
+// not be installed here.
+func doctorLine(tool, activity string, configured, roots []string) string {
 	origin := "default"
-	if overridden {
+	if len(configured) > 0 {
 		origin = "config-overridden"
 	}
-	line := fmt.Sprintf("%-14s%s under %v (%s)\n", tool+":", toolActivityLabel(len(files), noun), roots, origin)
-	if overridden {
+	line := fmt.Sprintf("%-14s%s under %v (%s)\n", tool+":", activity, roots, origin)
+	if len(configured) > 0 {
 		if missing := paths.Missing(roots); len(missing) > 0 {
 			line += fmt.Sprintf("  hint: configured path(s) not found: %v\n", missing)
 		}
 	}
 	return line
+}
+
+// doctorFreshnessLabel reports when each source was last ingested: how current the stored
+// figures are, which no other line answers.
+func doctorFreshnessLabel(cmd *cobra.Command, st *store.Store) string {
+	freshness, err := st.IngestFreshness(cmd.Context())
+	if err != nil || len(freshness) == 0 {
+		return "no ingest recorded yet — run 'assaio-agent backfill'"
+	}
+	tools := make([]string, 0, len(freshness))
+	for tool := range freshness {
+		tools = append(tools, tool)
+	}
+	sort.Strings(tools)
+	now := time.Now()
+	l := i18n.For("").CLI
+	parts := make([]string, 0, len(tools))
+	for _, tool := range tools {
+		parts = append(parts, tool+" "+agoLabel(now.Sub(freshness[tool]), &l))
+	}
+	return strings.Join(parts, " · ")
 }
 
 // doctorInventoryLabel renders the doctor summary line for distinct projects, models,

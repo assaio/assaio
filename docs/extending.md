@@ -1326,6 +1326,12 @@ file — Cline reads `ui_messages.json` alongside `task_metadata.json` — may e
 `ParseDir(dir string) ([]usage.Record, int, error)` helper instead, but the file-oriented
 `Parse(io.Reader)` shape is the default and the one to reach for first.
 
+**While you work on a parser, run `assaio-agent backfill --full`.** Ingest skips inputs it
+has already parsed unchanged, and the stored state is keyed on the build's identity — which
+stays constant for a local build, precisely so a rebuild does not force a re-parse of every
+file. A released binary invalidates the state automatically; your development build does
+not, so `--full` is how you see a parser change take effect.
+
 Where `Discover`'s root itself comes from — the built-in default, or a team's own
 override — is a separate, non-code concern; see [Custom log-source
 paths](#custom-log-source-paths).

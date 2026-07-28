@@ -21,7 +21,67 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+- **`backfill` is incremental.** An input this build already parsed unchanged is skipped
+  and reported as `unchanged=`, so keeping the store current stops being a chore. Measured
+  on a real 4.7 GB / 6262-file Claude Code history: the pass that reads everything took
+  **68 s**, the next one **0.13 s** — and that fast pass still picked up the 291 records a
+  session had written in between. Nothing is skipped silently, and nothing is skipped that
+  could hide a problem:
+  a file that failed to parse is never recorded, so it keeps being retried and keeps
+  appearing in `failed=`. The stored state is keyed on the parsing build's identity, so a
+  new version re-reads everything once — that pass is what lets history gain signals an
+  older parser could not extract, and it is now automatic instead of implicit. Use
+  `backfill --full` to force it on the same build, which is what you want while working on
+  a parser. Closes B43's mechanism.
+- **`statusline`** — one ambient line for an editor or shell status bar: today's tokens,
+  AI lines, cost basis, and how fresh the data is. The day is the machine's **local** day,
+  computed as a timestamp range rather than the store's UTC day bucket, so work after
+  local midnight counts where it happened. Figures route through the same aggregation and
+  pricing path as `report`, so the two cannot disagree. On a flat plan the money segment
+  shows month-to-date beside the plan price as two raw numbers (`$412/$200 mo`) rather
+  than a percentage, which would read as "consumed" when a plan only pays off *above* its
+  price. It only ever reads: it never creates or writes the store, and any error prints
+  nothing and exits 0 rather than breaking your prompt. Closes B05.
+- **`explain <validator>`** — the long-form page for each of the 18 metrics: what it
+  measures, how to read it, what to do about it, and the limits that keep it honest.
+  Documentation, not measurement: it never opens the store, so it works before any data
+  exists. `explain` with no argument lists every metric. Closes B07.
+- **`doctor` reports ingest freshness per source**, so "why are my numbers stale" is
+  answerable without guessing.
+
+### Fixed
+- **`doctor` under-reported Claude Code by thousands of files.** It counted only top-level
+  transcripts while `backfill` reads those *and* every sub-agent transcript beneath them —
+  on a real machine, 1993 files reported against 6398 actually read. The diagnostic that
+  answers "what will be read" now reports both counts separately.
+
+### Compatibility
+- **New migration `0003_ingest_state.sql`** adds an `ingest_file` table. It is applied
+  automatically on first open and holds no usage: it records only which inputs were parsed,
+  at what size, mtime, and by which build. Nothing else reads it, so it can be dropped at
+  any time at the cost of one slow re-parse. `usage_record` is untouched and the sync wire
+  protocol is unchanged, so an older team server accepts pushes from this build unchanged.
+- **The first `backfill` after upgrading is a full one**, by design: state written by a
+  different build is never trusted, and that pass is what lets history gain the activity
+  signals an older parser could not extract. Runs after it are incremental.
+- Stores carried over from an earlier release have no ingest state until that first
+  backfill, so `statusline` reports the data's age as unknown rather than guessing, and
+  `doctor` says no ingest has been recorded yet.
+
+### Changed
+- Static user-visible text moved into a new `internal/i18n` catalog — dashboard chrome,
+  the statusline's words, and the explain pages — so adding a language becomes one new
+  catalog rather than an edit spread across the codebase. No wording changed; the
+  dashboard's rendered output is byte-identical. Data-derived text (a validator's read,
+  takeaway, and figures) deliberately stays with the validator, since translating it
+  means templating interpolated numbers. This is the scaffolding B08 needs.
+
 ### Internal
+- The four duplicated K/M/B number formatters are collapsing into one `internal/humanize`
+  package; `analyze`'s two call sites moved with byte-identical output (part of B75).
+- `internal/ingest` split into `ingest.go`, `discover.go`, and `state.go`, which brings
+  the package back under the file-size budget.
 - The dashboard golden fixtures are built in `time.Local` rather than UTC. `rhythm` reads
   session starts in the machine's own zone, so a UTC fixture placed the same session in a
   different time-of-day band depending on where the test ran -- the rendered goldens passed

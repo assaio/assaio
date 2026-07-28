@@ -1,5 +1,7 @@
 package analyze
 
+import "github.com/assaio/assaio/internal/humanize"
+
 const (
 	reasoningName      = "reasoning-share"
 	reasoningTitle     = "Reasoning Share"
@@ -53,7 +55,7 @@ func (reasoningValidator) Analyze(in Input) Result {
 	r.Purity = clamp01(1 - share)
 	r.Figures = []Figure{
 		{Label: "reasoning share", Value: honestPercent(share), Note: "of reporting output"},
-		{Label: "reasoning tokens", Value: compactCount(reasoning)},
+		{Label: "reasoning tokens", Value: humanize.Count(reasoning)},
 		{Label: "reporting coverage", Value: honestPercent(coverage), Note: "output from tools that report it"},
 	}
 	r.Takeaway = reasoningTakeaway(share)

@@ -1,6 +1,8 @@
 package analyze
 
-import "strconv"
+import (
+	"github.com/assaio/assaio/internal/humanize"
+)
 
 const (
 	cacheName      = "cache-hygiene"
@@ -38,8 +40,8 @@ func (cacheValidator) Analyze(in Input) Result {
 	r.Purity = clamp01(reuse)
 	r.Figures = []Figure{
 		{Label: "cache-read share", Value: honestPercent(reuse), Note: "of billed input"},
-		{Label: "cache reads", Value: compactCount(t.CacheRead)},
-		{Label: "cache writes", Value: compactCount(t.CacheWrite), Note: cacheWriteNote(t.CacheRead, t.CacheWrite)},
+		{Label: "cache reads", Value: humanize.Count(t.CacheRead)},
+		{Label: "cache writes", Value: humanize.Count(t.CacheWrite), Note: cacheWriteNote(t.CacheRead, t.CacheWrite)},
 	}
 	r.Takeaway = cacheTakeaway(healthy, t.CacheRead, t.CacheWrite)
 	r.Caveats = []string{
@@ -67,19 +69,4 @@ func cacheWriteNote(read, write int64) string {
 		return "written more than reused"
 	}
 	return ""
-}
-
-// compactCount renders a token count compactly, e.g. 33_400_000_000 -> "33.4B",
-// 1_500_000 -> "1.5M", 2_300 -> "2.3K". Real cache-read totals reach billions.
-func compactCount(n int64) string {
-	switch {
-	case n >= 1_000_000_000:
-		return strconv.FormatFloat(float64(n)/1_000_000_000, 'f', 1, 64) + "B"
-	case n >= 1_000_000:
-		return strconv.FormatFloat(float64(n)/1_000_000, 'f', 1, 64) + "M"
-	case n >= 1_000:
-		return strconv.FormatFloat(float64(n)/1_000, 'f', 1, 64) + "K"
-	default:
-		return strconv.FormatInt(n, 10)
-	}
 }

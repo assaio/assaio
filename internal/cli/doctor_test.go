@@ -142,3 +142,43 @@ func TestDoctorShowsConfigOverriddenSourceWithoutHintWhenPathExists(t *testing.T
 		t.Fatalf("doctor output = %q, want no missing-path hint when the configured root exists", out)
 	}
 }
+
+// TestDoctorCountsSubAgentTranscripts is the reporting-accuracy fix: ingest reads both
+// top-level transcripts and the sub-agent transcripts beneath them, so a diagnostic that
+// answers "what will be read" must count both. Counting only the top level hid the entire
+// sub-agent surface -- thousands of files on a real machine.
+func TestDoctorCountsSubAgentTranscripts(t *testing.T) {
+	home := t.TempDir()
+	project := filepath.Join(home, ".claude", "projects", "-x")
+	subagents := filepath.Join(project, "subagents")
+	if err := os.MkdirAll(subagents, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"s1.jsonl", "s2.jsonl"} {
+		if err := os.WriteFile(filepath.Join(project, name), []byte("{}\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, name := range []string{"agent-a.jsonl", "agent-b.jsonl", "agent-c.jsonl"} {
+		if err := os.WriteFile(filepath.Join(subagents, name), []byte("{}\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	root := NewRootCmd()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetErr(&out)
+	root.SetArgs([]string{"doctor"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	s := out.String()
+	if !strings.Contains(s, "2 file(s) + 3 sub-agent transcript(s)") {
+		t.Fatalf("doctor must report both counts, so they add up to what backfill reads: %q", s)
+	}
+}

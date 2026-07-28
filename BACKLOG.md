@@ -31,22 +31,21 @@ existing store columns; none needs a migration.
   trend to the shipped `cache-hygiene` validator, which already reports the current-window
   share and the cache-write-waste flag. Caveat: vendor cache TTLs are invisible; day-grain
   approximation.
-- [ ] **B05 · statusline** — S · solo — `assaio-agent statusline`: one line (today's
-  estimated `$`, tokens, budget remaining) plus a Claude Code statusline integration
-  recipe. The daily-visibility habit loop.
 - [ ] **B06 · metric-plugin scaffolder + schemas** — S · both — `metrics init --lang
   python|node|sh` writes a working plugin skeleton; publish JSON Schemas for the
   metric envelope/result under `docs/schemas/`. Lowers the barrier the moment the
   protocol is public.
-- [ ] **B07 · explain** — S · both — `assaio-agent explain <validator>`: the long-form
-  "how to read this metric, and what to do about it" page in the terminal.
-- [ ] **B08 · dashboard PL locale** — S · both — a second language through the
-  existing `localeStrings` seam, proving the i18n scaffolding with a real locale.
+- [ ] **B08 · a second locale** — S · both — add one `i18n.Catalog` beside `en` and a case in
+  `i18n.For`, proving the scaffolding with a real language. v0.4 built the catalog (dashboard
+  chrome, statusline words, the 18 explain pages); what remains is translating it and choosing
+  how a locale is selected. Data-derived validator text stays out of scope: translating it
+  needs message templates for the interpolated numbers.
 - [ ] **B58 · format-drift heuristics** — S/M · both — per-source canary metrics after
   every `backfill` (files vs last run, records/file vs history, zero-token share,
   skipped ratio) → `warning: possible format drift in <tool>` + a `doctor` section.
   Closes the silent-underreporting gap described in
-  [docs/format-resilience.md](docs/format-resilience.md).
+  [docs/format-resilience.md](docs/format-resilience.md). Cheaper since v0.4: `ingest_file`
+  already holds per-source state and `doctor` already has a freshness section to extend.
 
 ## v0.3 — "Team & ecosystem"
 
@@ -193,8 +192,10 @@ existing store columns; none needs a migration.
 
 ## Pool — CLI & DX
 
-- [ ] **B43 · hook / incremental ingest** — S/M · both — a Claude Code session-end
-  hook recipe (or `backfill --incremental`) so data stays fresh without a daemon.
+- [ ] **B43 · per-turn freshness hook** — S · both — the `SessionEnd` / `PreCompact` hook
+  recipes shipped with the incremental ingest in v0.4; a per-turn (`Stop`) hook is still
+  deliberately not recommended, because ingesting a live transcript freezes a half-attributed
+  turn (see B68). Revisit once B68 lands.
 - [ ] **B44 · MCP server** — M · solo — `assaio-agent mcp`: query your own usage from
   Claude ("what did that refactor cost?"); also on ROADMAP's further-out list.
 - [ ] **B45 · TUI** — L · both — interactive terminal dashboard (validators +
@@ -273,14 +274,19 @@ Deferred cleanups surfaced by the max-effort review of the 0.2 work; no behavior
 they wait behind features but keep the growing metric surface maintainable.
 
 - [ ] **B73 · validator meta** — S · both — embed a `meta{name,title,describe,howToRead}`
-  value in each validator so the twelve metrics stop repeating the three trivial interface
-  methods and the duplicated `Result` header; one source of truth per metric.
+  value in each validator so the eighteen metrics stop repeating the three trivial interface
+  methods and the duplicated `Result` header; one source of truth per metric. The long-form
+  explain text is deliberately *not* part of this: it lives in the i18n catalog so it can be
+  translated, and keeping it there is what let `internal/analyze` stay free of any
+  presentation dependency.
 - [ ] **B74 · member aggregate** — S · team — collapse `dashboard/team.go`'s four parallel
   per-member maps (`lines`/`cost`/`hasCost`/`unpriced`) into one `map[string]memberAgg`, so a
   member's totals travel as a unit.
-- [ ] **B75 · humanize helpers** — S · both — unify the four K/M/B number formatters
-  (`compactCount`, `money`, `formatCompactUSD`, `formatCompactTokens`) behind one shared core
-  so token and USD glance-figures read consistently across CLI and dashboard.
+- [ ] **B75 · humanize helpers** — S · both — `internal/humanize` landed in v0.4 with
+  `analyze`'s two formatters (`compactCount`, `money`) moved onto it byte-identically. Still
+  to fold in: `report.formatCompactTokens` and `dashboard.formatCompactUSD`, which round and
+  case differently ("1.0K" vs "1k"), so unifying them *changes rendered output* and needs a
+  deliberate decision plus golden updates -- which is why v0.4 left them alone.
 - [ ] **B76 · cli/common.go** — S · both — split the shared cross-command helpers
   (`addDBFlag`, `resolveDBPath`, `openReportStore`, `emptyStoreHint`, `emptyStatusHint`,
   `compareFormatConflict`, `parseSinceAt`) out of the single-command `report.go` (now past the

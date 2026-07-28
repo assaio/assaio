@@ -9,17 +9,27 @@ import (
 )
 
 func newBackfillCmd() *cobra.Command {
-	return &cobra.Command{
+	var full bool
+	c := &cobra.Command{
 		Use:   "backfill",
 		Short: "Import all historical local session logs into the store",
-		Args:  cobra.NoArgs,
+		Long: `Import local session logs into the store. Inputs this build already parsed
+unchanged are skipped and reported as unchanged=, so a repeat run costs almost nothing.
+
+A new build never trusts the previous one's state and re-reads everything once, which is
+how history gains signals an older parser could not extract. Use --full to force that
+re-read on the same build -- notably when working on a parser, since a local build keeps a
+stable identity across rebuilds.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runBackfill(cmd)
+			return runBackfill(cmd, ingest.Options{Full: full})
 		},
 	}
+	c.Flags().BoolVar(&full, "full", false, "re-parse every input, ignoring stored ingest state")
+	return c
 }
 
-func runBackfill(cmd *cobra.Command) error {
+func runBackfill(cmd *cobra.Command, opts ingest.Options) error {
 	home, err := paths.Home()
 	if err != nil {
 		return err
@@ -40,7 +50,7 @@ func runBackfill(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	results, err := ingest.Run(cmd.Context(), home, st, cfg.Sources, cfg.Plugins)
+	results, err := ingest.Run(cmd.Context(), home, st, cfg.Sources, cfg.Plugins, opts)
 	if err != nil {
 		return err
 	}
@@ -50,7 +60,11 @@ func runBackfill(cmd *cobra.Command) error {
 
 func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
 	for _, r := range results {
-		cmd.Printf("%-12s  files=%d  records=%d  inserted=%d", r.Tool, r.Files, r.Records, r.Inserted)
+		cmd.Printf("%-12s  files=%d", r.Tool, r.Files)
+		if r.Unchanged != 0 {
+			cmd.Printf("  unchanged=%d", r.Unchanged)
+		}
+		cmd.Printf("  records=%d  inserted=%d", r.Records, r.Inserted)
 		if r.Skipped != 0 {
 			cmd.Printf("  skipped=%d", r.Skipped)
 		}

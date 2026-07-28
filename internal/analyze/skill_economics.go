@@ -3,6 +3,8 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/humanize"
+
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -61,7 +63,7 @@ func (skillValidator) Analyze(in Input) Result {
 	r.Figures = []Figure{
 		{Label: "skills seen", Value: strconv.Itoa(len(in.Skills))},
 		{Label: "sub-agent types", Value: strconv.Itoa(len(in.Agents))},
-		{Label: "attributed tokens", Value: compactCount(attributed), Note: "in the dimension below"},
+		{Label: "attributed tokens", Value: humanize.Count(attributed), Note: "in the dimension below"},
 		{Label: "largest single share", Value: formatPercent(topShareOf, 0), Note: "of that dimension"},
 	}
 	r.Bars = attributionBars(in.Skills, in.Agents, skillTopN)
@@ -129,7 +131,7 @@ func dimensionBars(rows []store.AttributionRow, kind string, topN int) []Bar {
 	for i := range kept {
 		out = append(out, Bar{
 			Label: kept[i].Name,
-			Value: kind + " · " + compactCount(kept[i].Tokens) + " tokens · " + formatPercent(shareOf(kept[i].Tokens, total), 0) + " · " + strconv.FormatInt(kept[i].Lines, 10) + " lines",
+			Value: kind + " · " + humanize.Count(kept[i].Tokens) + " tokens · " + formatPercent(shareOf(kept[i].Tokens, total), 0) + " · " + strconv.FormatInt(kept[i].Lines, 10) + " lines",
 			Frac:  fracOf(kept[i].Tokens, maxTokens),
 		})
 	}

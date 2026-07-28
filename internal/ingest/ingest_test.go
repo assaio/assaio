@@ -46,7 +46,7 @@ func TestRunIngestsAllTools(t *testing.T) {
 	}
 	defer func() { _ = st.Close() }()
 
-	results, err := Run(context.Background(), home, st, config.Sources{}, nil)
+	results, err := Run(context.Background(), home, st, config.Sources{}, nil, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestRunCountsSubagentsWithoutDoubleCounting(t *testing.T) {
 	}
 	defer func() { _ = st.Close() }()
 
-	results, err := Run(context.Background(), home, st, config.Sources{}, nil)
+	results, err := Run(context.Background(), home, st, config.Sources{}, nil, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestRunContinuesPastUnreadableFile(t *testing.T) {
 	}
 	defer func() { _ = st.Close() }()
 
-	results, err := Run(context.Background(), home, st, config.Sources{}, nil)
+	results, err := Run(context.Background(), home, st, config.Sources{}, nil, Options{})
 	if err != nil {
 		t.Fatalf("a single bad file must not abort the run: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestIngestSourceInsertsRecordsRecoveredBeforeAParseError(t *testing.T) {
 	write(t, path, "irrelevant: parsing is stubbed for this test\n")
 
 	s := source{tool: "claude-code", files: []string{path}, parse: partial}
-	res, err := ingestSource(context.Background(), st, s, make(projectCache))
+	res, err := ingestSource(context.Background(), st, &skipper{full: true}, s, make(projectCache))
 	if err != nil {
 		t.Fatalf("ingestSource() err = %v, want nil (a per-file parse error must not abort the run)", err)
 	}
@@ -212,7 +212,7 @@ func TestRunUsesConfiguredClaudeRootInsteadOfDefault(t *testing.T) {
 	defer func() { _ = st.Close() }()
 
 	sources := config.Sources{Claude: []string{customRoot}}
-	results, err := Run(context.Background(), home, st, sources, nil)
+	results, err := Run(context.Background(), home, st, sources, nil, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +243,7 @@ func TestRunIngestsConfiguredPlugin(t *testing.T) {
 	defer func() { _ = st.Close() }()
 
 	plugins := []config.PluginConfig{{Name: "demo", Command: pluginScript, Timeout: "5s"}}
-	results, err := Run(context.Background(), home, st, config.Sources{}, plugins)
+	results, err := Run(context.Background(), home, st, config.Sources{}, plugins, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +288,7 @@ func TestRunPluginFailureCountsAsFailedAndContinues(t *testing.T) {
 		{Name: "demo", Command: badScript, Timeout: "5s"},
 		{Name: "good", Command: goodScript, Timeout: "5s"},
 	}
-	results, err := Run(context.Background(), home, st, config.Sources{}, plugins)
+	results, err := Run(context.Background(), home, st, config.Sources{}, plugins, Options{})
 	if err != nil {
 		t.Fatalf("a failing plugin must not abort the run: %v", err)
 	}

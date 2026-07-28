@@ -34,7 +34,7 @@ are never read. The optional team server (serve/sync) is self-hosted and opt-in.
 	root.PersistentFlags().String("config", "", "config file path")
 	root.AddCommand(newVersionCmd(), newDemoCmd(), newReportCmd(), newEffectivenessCmd(), newAnalyzeCmd(), newCheckCmd(),
 		newDashboardCmd(), newBackfillCmd(), newDoctorCmd(), newStatusCmd(), newClearCmd(), newConfigCmd(), newPluginsCmd(),
-		newMetricsCmd(), newServeCmd(), newSyncCmd(), newSurvivalCmd())
+		newMetricsCmd(), newServeCmd(), newSyncCmd(), newSurvivalCmd(), newStatuslineCmd(), newExplainCmd())
 	return root
 }
 
