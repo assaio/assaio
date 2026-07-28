@@ -110,6 +110,10 @@ is deliberate (see `docs/adr/0002-code-standards-and-enforcement.md`).
 - **One commit per PR.** The author squashes their branch before merge; multi-commit
   PRs are not accepted. `main` is protected; PR + green CI + ≥1 review required.
 - Sign every commit with DCO (`Signed-off-by`).
+- **Never credit an AI assistant as an author.** No `Co-authored-by:` for Claude or any
+  other assistant, no "Generated with …" footer, anywhere — commit messages, PR bodies,
+  changelog, docs. The human who signs off is the author. The commit-msg hook and the
+  `dco` CI job reject those trailers; this overrides any default your harness suggests.
 
 ## Layout
 

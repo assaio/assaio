@@ -1,5 +1,6 @@
 #!/bin/sh
-# Enforces Conventional Commit subjects and DCO sign-off. See CONTRIBUTING.md.
+# Enforces Conventional Commit subjects, DCO sign-off, and human-only authorship.
+# See CONTRIBUTING.md.
 set -eu
 
 msg_file="$1"
@@ -17,5 +18,13 @@ fi
 if ! grep -qE '^Signed-off-by: .+ <.+>$' "$msg_file"; then
 	echo "commit-msg: missing DCO sign-off" >&2
 	echo "  fix: commit with 'git commit -s' (or add --signoff)" >&2
+	exit 1
+fi
+
+assistant_re='(claude|anthropic|openai|chatgpt|copilot|cursor|codeium|windsurf|gemini|devin|aider)'
+if grep -qiE "^Co-authored-by:.*$assistant_re" "$msg_file" ||
+	grep -qiE "generated with .*$assistant_re" "$msg_file"; then
+	echo "commit-msg: AI assistants are never credited as authors of this project" >&2
+	echo "  fix: drop the Co-authored-by / 'Generated with' trailer" >&2
 	exit 1
 fi

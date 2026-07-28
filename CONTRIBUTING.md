@@ -113,7 +113,13 @@ Every commit needs `Signed-off-by:` (`git commit -s`). By signing you certify th
 [Developer Certificate of Origin](https://developercertificate.org/). We use DCO, not a
 CLA.
 
-**4. `main` is protected.**
+**4. Authorship is human.**
+A commit credits the people who take responsibility for it. Never add a
+`Co-authored-by:` trailer for an AI assistant, and never leave a "Generated with …"
+footer — whichever tool helped you write the patch. You sign it off, so you author it.
+The commit-msg hook and the `dco` CI job both reject those trailers.
+
+**5. `main` is protected.**
 A PR and green CI are required for every change. A contributor PR also needs an
 approving review from a maintainer. (While there is a single maintainer, they self-merge
 their own changes after green CI — GitHub does not allow self-approval — and the review
@@ -139,7 +145,8 @@ branches, not the number.
 
 Hooks are optional but recommended: `make hooks` installs the lefthook pre-commit hook
 (gofumpt on staged files + `go vet` + lint of new issues) and commit-msg hook
-(Conventional Commits + `Signed-off-by`), so the gate runs before you push.
+(Conventional Commits + `Signed-off-by` + no AI-assistant authorship trailers), so the
+gate runs before you push.
 
 Your PR description must include: what changed and why, the linked issue, how it was
 tested, and any documentation impact. The PR template will prompt for these.

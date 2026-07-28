@@ -32,3 +32,21 @@ jobs:
             echo "DCO check failed: every commit must be signed off. See CONTRIBUTING.md."
             exit 1
           fi
+      - name: Reject AI-assistant authorship trailers
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          re='(claude|anthropic|openai|chatgpt|copilot|cursor|codeium|windsurf|gemini|devin|aider)'
+          credited=0
+          while read -r sha; do
+            body=$(git log -1 --format='%B' "$sha")
+            if printf '%s' "$body" | grep -qiE "^Co-authored-by:.*$re" ||
+               printf '%s' "$body" | grep -qiE "generated with .*$re"; then
+              echo "::error::commit $sha credits an AI assistant as an author — drop the trailer"
+              credited=1
+            fi
+          done < <(git log --no-merges --format='%H' "origin/$BASE_REF..HEAD")
+          if [ "$credited" -ne 0 ]; then
+            echo "Authorship check failed: AI assistants are never credited as authors. See CONTRIBUTING.md."
+            exit 1
+          fi
