@@ -21,6 +21,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-29
+
 ### Added
 - **`backfill` is incremental.** An input this build already parsed unchanged is skipped
   and reported as `unchanged=`, so keeping the store current stops being a chore. Measured
@@ -413,7 +415,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/assaio/assaio/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/assaio/assaio/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/assaio/assaio/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/assaio/assaio/compare/v0.1.0...v0.1.1
