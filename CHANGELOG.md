@@ -51,6 +51,16 @@ Discussion.
   answerable without guessing.
 
 ### Fixed
+- **A session ingested while it was still being written froze a half-attributed turn.** A
+  turn's failed tool calls, denials and edit counts are attributed by a *later* line in the
+  log, so ingesting a live transcript stored the turn with its calls but without its
+  outcomes — and nothing ever corrected it, because a re-read only ever repaired rows that
+  carried no signals at all. `friction` therefore reported an error rate it could prove was
+  wrong. Re-reading a file the store owns now restates that turn's activity columns, taking
+  `MAX(stored, offered)` so a repair can never lower a stored figure. Records pushed to a
+  team server keep the opposite contract — first-write-wins, so one member's push cannot
+  restate another's row. A count that first read too *high* is still not corrected; `doctor`
+  says so. Closes B68, and with it the reason a per-turn hook was not recommended.
 - **`doctor` under-reported Claude Code by thousands of files.** It counted only top-level
   transcripts while `backfill` reads those *and* every sub-agent transcript beneath them —
   on a real machine, 1993 files reported against 6398 actually read. The diagnostic that

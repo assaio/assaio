@@ -35,7 +35,7 @@ func ingestParsed(ctx context.Context, st *store.Store, cache projectCache, res 
 	}
 	resolveProjects(recs, cache)
 	res.Records += len(recs)
-	n, err := st.Insert(ctx, recs)
+	n, err := st.InsertLocal(ctx, recs)
 	if err != nil {
 		return err
 	}

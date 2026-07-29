@@ -164,13 +164,14 @@ existing store columns; none needs a migration.
 - [ ] **B59 · doctor --strict** — S · both — non-zero exit when B58's drift heuristics
   fire (or a configured source discovers zero files), so a cron/CI job can alert on
   vendor format drift instead of a human noticing shrunk numbers.
-- [ ] **B68 · live-session ingest consistency** — M · both — activity counts (lines /
-  edits / rework, not tokens or cost) can double-count (Codex trailing-flush) or
-  under-count (Claude post-hoc attribution) when a session is ingested while still being
-  written, because inserts are idempotent (first-write-wins) and activity is attributed
-  after the fact. Needs upsert-on-activity semantics (`ON CONFLICT ... DO UPDATE` for the
-  derived columns only) with care around the sync dedupe contract. Disclosed as a `doctor`
-  caveat until fixed.
+- [x] **B68 · live-session ingest consistency** — M · both — a session ingested while still
+  being written stored a turn whose activity a later line had not been attributed to yet, and
+  nothing ever corrected it. `Store.InsertLocal` now restates the derived columns from a
+  re-read of the file the store owns, taking `MAX(stored, offered)` so a repair can never
+  degrade a row; `Store.Insert` stays first-write-wins for pushed records, so one team
+  member cannot restate another's. The remaining half — a count that first read too *high*
+  (Codex trailing-flush) — is not corrected by an upward-only repair and stays a `doctor`
+  caveat.
 - [ ] **B69 · usage-granularity provenance in reports** — S/M · both — `Store.Usage`
   blends session-granularity plugin rows with per-turn rows without surfacing
   `granularity`; carry it into `UsageRow` and mark mixed-granularity totals so session
@@ -193,9 +194,9 @@ existing store columns; none needs a migration.
 ## Pool — CLI & DX
 
 - [ ] **B43 · per-turn freshness hook** — S · both — the `SessionEnd` / `PreCompact` hook
-  recipes shipped with the incremental ingest in v0.4; a per-turn (`Stop`) hook is still
-  deliberately not recommended, because ingesting a live transcript freezes a half-attributed
-  turn (see B68). Revisit once B68 lands.
+  recipes shipped with the incremental ingest in v0.4; a per-turn (`Stop`) hook became
+  honest once B68 landed, since re-reading the transcript now restates a turn that was
+  ingested half-attributed. What is left is the recipe itself and its cost measurement.
 - [ ] **B44 · MCP server** — M · solo — `assaio-agent mcp`: query your own usage from
   Claude ("what did that refactor cost?"); also on ROADMAP's further-out list.
 - [ ] **B45 · TUI** — L · both — interactive terminal dashboard (validators +

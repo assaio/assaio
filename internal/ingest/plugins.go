@@ -35,6 +35,7 @@ func ingestPlugins(ctx context.Context, st *store.Store, plugins []config.Plugin
 		}
 		res.Records = stats.Records
 		res.Skipped = stats.Skipped
+		// Insert, not InsertLocal: a plugin makes no append-only promise about what it read.
 		n, err := st.Insert(ctx, recs)
 		if err != nil {
 			return results, err

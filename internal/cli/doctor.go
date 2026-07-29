@@ -77,8 +77,9 @@ func newDoctorCmd() *cobra.Command {
 			cmd.Println("    modeled yet, so cost for very long-context or heavy-caching sessions is an under-estimate.")
 			cmd.Println("  - Days and week-over-week windows are bucketed in UTC; late local-evening work may land on the")
 			cmd.Println("    next UTC day.")
-			cmd.Println("  - Activity counts (lines/edits/rework), not tokens or cost, can be off if you ingest a session")
-			cmd.Println("    while it is still being written; re-running backfill after it ends does not restate that turn.")
+			cmd.Println("  - Activity counts (lines/edits/rework), not tokens or cost, read low on a session ingested")
+			cmd.Println("    while it was still being written; the next backfill restates them upward, never downward,")
+			cmd.Println("    so a count that first came out too high stays.")
 			cmd.Println("  - All on-disk log formats are internal and may change between tool versions.")
 			return nil
 		},
