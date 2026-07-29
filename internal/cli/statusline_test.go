@@ -66,9 +66,11 @@ func TestStatuslineNeverCreatesTheStore(t *testing.T) {
 }
 
 func TestStatuslineShowsTodaysWork(t *testing.T) {
-	now := time.Now()
+	// Local midnight, not now-minus-a-minute: a run starting in the first minute of the
+	// local day would place that record on yesterday and fail for the clock, not the code.
+	now := startOfLocalDay(time.Now())
 	seedLocalStore(t, []usage.Record{{
-		Tool: "claude-code", SessionID: "s1", Timestamp: now.Add(-time.Minute).UTC(),
+		Tool: "claude-code", SessionID: "s1", Timestamp: now.UTC(),
 		Model: "claude-opus-4-5", InputTokens: 1000, OutputTokens: 500,
 		Project: "web", DedupeKey: "1", LinesAdded: 120,
 	}})
