@@ -852,8 +852,8 @@ parser protocol's `assaio_plugin`):
   "now": "2026-07-17T10:00:00Z",
   "recentDays": 7,
   "usage":    [{"day":"2026-07-16","tool":"claude-code","model":"...","project":"...",
-                "entrypoint":"","member":"","in":100,"out":200,"cacheRead":0,
-                "cacheWrite":0,"reasoning":0,"linesAdded":40,"linesRemoved":5,
+                "entrypoint":"","member":"","granularity":"turn","in":100,"out":200,
+                "cacheRead":0,"cacheWrite":0,"reasoning":0,"linesAdded":40,"linesRemoved":5,
                 "edits":3,"toolCalls":7,"rejected":1,"compactions":1,"reworkLines":2}],
   "sessions": [{"sessionId":"...","project":"...","tool":"...","model":"...",
                 "member":"","firstTs":"...","lastTs":"...","turns":4,
@@ -1192,7 +1192,7 @@ file is the whole of your data.
 
 ### Schema
 
-There is one table, `usage_record`
+One table holds your data, `usage_record`
 ([`internal/store/migrations/0001_init.sql`](../internal/store/migrations/0001_init.sql)):
 
 | Column | Type | Notes |
@@ -1232,6 +1232,16 @@ adds the activity and `$`/100-lines columns.
 time against the embedded price table, because prices change and unpriced models must stay
 honestly blank. For cost figures, use `assaio-agent report --format csv` (which carries a
 `cost` column) rather than SQL.
+
+**Two bookkeeping tables sit beside it**, neither holding usage: `ingest_file` (one row per
+input already parsed — path, size, mtime, parsing build) makes a repeat `backfill` nearly
+free, and `ingest_source` (one row per source per run — files found, files read, records,
+skipped lines, zero-token records) is the baseline the [format-drift
+canaries](format-resilience.md) compare against. Both are caches: dropping them costs one
+slow re-parse and a reset drift baseline, nothing more. `ingest_file` is pruned to what is
+actually on disk after each pass, and `ingest_source` keeps only the newest runs per tool,
+so neither grows with how long assaio has been installed. Use `assaio-agent compact` to
+return freed pages to the filesystem — SQLite does not do that on its own.
 
 **Stability.** The schema may still evolve before v1.0. Changes will be additive where
 possible — new nullable columns rather than renames — but treat direct queries as coupled

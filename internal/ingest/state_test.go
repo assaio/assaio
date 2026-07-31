@@ -228,3 +228,5 @@ func TestBuildIdentityIsNeverEmpty(t *testing.T) {
 		t.Fatal("buildIdentity() must never be empty; it is the skip predicate's key")
 	}
 }
+
+const claudeZeroTokenTurn = `{"type":"assistant","uuid":"a9","timestamp":"2026-07-01T12:00:00Z","sessionId":"s1","message":{"model":"claude-opus-4-5","usage":{"input_tokens":0,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}}` + "\n"

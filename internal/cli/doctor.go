@@ -10,10 +10,6 @@ import (
 
 	"github.com/assaio/assaio/internal/config"
 	"github.com/assaio/assaio/internal/i18n"
-	"github.com/assaio/assaio/internal/parser/claude"
-	"github.com/assaio/assaio/internal/parser/cline"
-	"github.com/assaio/assaio/internal/parser/codex"
-	"github.com/assaio/assaio/internal/parser/gemini"
 	"github.com/assaio/assaio/internal/paths"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/report"
@@ -21,10 +17,17 @@ import (
 )
 
 func newDoctorCmd() *cobra.Command {
-	return &cobra.Command{
+	var strict bool
+	c := &cobra.Command{
 		Use:   "doctor",
 		Short: "Diagnose detected AI tools, log locations, and store health",
-		Args:  cobra.NoArgs,
+		Long: `Report what assaio can see: each tool's log roots and how many inputs they hold,
+the store's health and freshness, and whether any format-drift canary fired.
+
+--strict turns the diagnosis into a gate, exiting non-zero when a canary fired or a
+configured source finds no inputs at all -- so a cron or CI job alerts on vendor format
+drift instead of a human eventually noticing the numbers shrank.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			home, err := paths.Home()
 			if err != nil {
@@ -35,10 +38,10 @@ func newDoctorCmd() *cobra.Command {
 				return err
 			}
 
-			cmd.Print(doctorClaudeLine(cfg.Sources.Claude, paths.ClaudeRoot(home)))
-			cmd.Print(doctorSourceLine("codex", "file", cfg.Sources.Codex, codex.Discover, paths.CodexRoots(home)...))
-			cmd.Print(doctorSourceLine("gemini-cli", "file", cfg.Sources.Gemini, gemini.Discover, paths.GeminiRoot(home)))
-			cmd.Print(doctorSourceLine("cline", "task", cfg.Sources.Cline, cline.Discover, paths.ClineRoots(home)...))
+			scans := scanSources(home, &cfg.Sources)
+			for i := range scans {
+				cmd.Print(doctorLine(&scans[i]))
+			}
 
 			cmd.Printf("plugins:      %s\n", pluginCountLabel(cfg.Plugins))
 
@@ -61,8 +64,16 @@ func newDoctorCmd() *cobra.Command {
 				return nil
 			}
 			cmd.Printf("store:        ok, %d record(s) at %s\n", n, dbPath)
+			if size, sizeErr := st.Size(cmd.Context()); sizeErr == nil {
+				cmd.Printf("size:         %s\n", storeSizeLine(size))
+			}
 			cmd.Printf("inventory:    %s\n", doctorInventoryLabel(cmd, st, n))
 			cmd.Printf("freshness:    %s\n", doctorFreshnessLabel(cmd, st))
+			warnings, err := driftWarnings(cmd.Context(), st)
+			if err != nil {
+				return err
+			}
+			cmd.Print(doctorDriftSection(warnings))
 
 			models, snapshotDate := pricing.Info()
 			cmd.Printf("pricing:      %d models, snapshot %s (refresh ships with releases)\n", models, snapshotDate)
@@ -81,9 +92,14 @@ func newDoctorCmd() *cobra.Command {
 			cmd.Println("    while it was still being written; the next backfill restates them upward, never downward,")
 			cmd.Println("    so a count that first came out too high stays.")
 			cmd.Println("  - All on-disk log formats are internal and may change between tool versions.")
+			if failures := strictFailures(warnings, scans); strict && len(failures) > 0 {
+				return fmt.Errorf("strict check failed: %s", strings.Join(failures, "; "))
+			}
 			return nil
 		},
 	}
+	c.Flags().BoolVar(&strict, "strict", false, "exit non-zero on suspected format drift or a configured source with no inputs")
+	return c
 }
 
 // pluginCountLabel renders the doctor summary line for configured exec plugins.
@@ -94,59 +110,18 @@ func pluginCountLabel(plugins []config.PluginConfig) string {
 	return fmt.Sprintf("%d configured", len(plugins))
 }
 
-// toolActivityLabel renders a tool's detected count, so a zero count reads
-// unambiguously as "not detected" rather than a bare, ambiguous zero.
-func toolActivityLabel(n int, noun string) string {
-	if n == 0 {
-		return fmt.Sprintf("0 %s(s) — not detected", noun)
-	}
-	return fmt.Sprintf("%d %s(s)", n, noun)
-}
-
-// doctorSourceLine renders one tool's discovery line: activity count, the roots
-// actually in effect (configured, or the internal/paths default), and whether those
-// roots are the default or config-overridden.
-func doctorSourceLine(tool, noun string, configured []string, discover func(string) ([]string, error), defaults ...string) string {
-	roots := paths.Resolve(configured, defaults...)
-	var files []string
-	for _, root := range roots {
-		found, _ := discover(root)
-		files = append(files, found...)
-	}
-	return doctorLine(tool, toolActivityLabel(len(files), noun), configured, roots)
-}
-
-// doctorClaudeLine reports Claude's two kinds of transcript separately. ingest reads
-// top-level sessions and the sub-agent transcripts beneath them, so a line counting only
-// the former hides the whole sub-agent surface -- thousands of files on a real machine,
-// and exactly the usage v0.3.0 made exact.
-func doctorClaudeLine(configured []string, defaults ...string) string {
-	roots := paths.Resolve(configured, defaults...)
-	var main, sub int
-	for _, root := range roots {
-		m, _ := claude.Discover(root)
-		s, _ := claude.DiscoverSubagents(root)
-		main += len(m)
-		sub += len(s)
-	}
-	activity := toolActivityLabel(main, "file")
-	if sub > 0 {
-		activity += fmt.Sprintf(" + %d sub-agent transcript(s)", sub)
-	}
-	return doctorLine("claude-code", activity, configured, roots)
-}
-
-// doctorLine renders a source line's shared shape. A configured root that doesn't exist
-// on disk gets a hint line — a missing default root does not, since the tool may simply
-// not be installed here.
-func doctorLine(tool, activity string, configured, roots []string) string {
+// doctorLine renders one scanned source: what was found, the roots actually in effect,
+// and whether those roots are the default or config-overridden. A configured root that
+// doesn't exist on disk gets a hint line — a missing default root does not, since the tool
+// may simply not be installed here.
+func doctorLine(sc *sourceScan) string {
 	origin := "default"
-	if len(configured) > 0 {
+	if len(sc.configured) > 0 {
 		origin = "config-overridden"
 	}
-	line := fmt.Sprintf("%-14s%s under %v (%s)\n", tool+":", activity, roots, origin)
-	if len(configured) > 0 {
-		if missing := paths.Missing(roots); len(missing) > 0 {
+	line := fmt.Sprintf("%-14s%s under %v (%s)\n", sc.tool+":", sc.activity, sc.roots, origin)
+	if len(sc.configured) > 0 {
+		if missing := paths.Missing(sc.roots); len(missing) > 0 {
 			line += fmt.Sprintf("  hint: configured path(s) not found: %v\n", missing)
 		}
 	}

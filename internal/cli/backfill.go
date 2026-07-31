@@ -55,6 +55,11 @@ func runBackfill(cmd *cobra.Command, opts ingest.Options) error {
 		return err
 	}
 	printBackfillResults(cmd, results)
+	warnings, err := driftWarnings(cmd.Context(), st)
+	if err != nil {
+		return err
+	}
+	printDriftWarnings(cmd, warnings)
 	return nil
 }
 

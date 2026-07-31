@@ -21,6 +21,62 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+- **Format-drift canaries.** Every vendor log format assaio parses is internal and can change
+  without notice, and the failure that mattered was never a crash — it was plausible-looking
+  under-reporting that no error path reports. After each `backfill`, four canaries judge every
+  source against its own recent history: files discovered, records per file read, share of
+  lines skipped, and share of records that parse but carry no tokens. A breach prints
+  `warning: possible format drift in <tool>` and shows up in a new `doctor` drift section.
+  Each canary is paired with a minimum-sample floor and abstains below it, and the history
+  baseline is a median, so one odd pass cannot move it. Verified on a real 4.5 GB / 5707-file
+  Claude Code corpus: **317,354 records, no canary fired**; renaming the vendor's token fields
+  in a 60-transcript copy fired `zero-token: 831 of 831 record(s) carry no tokens (100.0%)`
+  (`B58`).
+- **`doctor --strict`** exits non-zero when a canary fired or a source you configured
+  explicitly in `sources:` finds no inputs at all, so a cron or CI job alerts on drift instead
+  of a human eventually noticing the numbers shrank. The second case is the one no canary can
+  catch: a path that never worked has no history to have shrunk from (`B59`).
+- **`compact`** rewrites the store without its free pages and truncates the write-ahead log.
+  Deleting records only ever moves bytes onto SQLite's freelist — the file itself never
+  shrinks until something reclaims them — so `clear` now says how much is still held, and
+  `doctor` gained a `size:` line making growth legible before it becomes a surprise. It is a
+  separate command because rewriting needs roughly twice the store's size in temporary disk
+  space.
+
+### Changed
+- **Reports no longer blend per-turn and whole-session records silently.** `granularity`
+  travels from the store through every report row: sources that emit one record per session
+  (exec plugins today) are marked `‡` and footnoted, and a grouped total that merges both
+  units reads `mixed-granularity total` instead of quietly presenting session aggregates as
+  per-turn data. The `coverage` validator replaces its "not yet surfaced" caveat with a real
+  turn-level share, `report --format csv` gained a `granularity` column, and the metric-plugin
+  envelope carries the field so a plugin summing usage rows can see it too (`B69`).
+- **Per-input ingest state no longer grows with install age.** `ingest_file` kept a row for
+  every transcript ever seen, including ones the vendor's own retention had long since
+  deleted — measured here, the corpus fully rotates in under two months, so the table
+  accumulated roughly 34,000 dead rows a year. Rows for inputs no longer on disk are now
+  dropped after each pass, *unless* that source's discovery canary fired: "the files are gone"
+  and "we stopped being able to find them" are indistinguishable from there, and discarding
+  state during exactly the failure being diagnosed would destroy the evidence.
+
+### Compatibility
+- **New migration `0004_ingest_source.sql`** adds an `ingest_source` table, applied
+  automatically on first open. Like `ingest_file` it holds no usage and can be dropped at any
+  time at the cost of losing the drift baseline; unlike it, the table is bounded by
+  construction — only the newest runs per tool are kept, pruned inside the same transaction
+  that writes them, so its size follows how many tools are configured, never how long assaio
+  has been installed. `usage_record` is untouched.
+- **The canaries need a baseline, so the first `backfill` after upgrading fires nothing.**
+  History-relative canaries (discovery, yield) stay silent until a second pass exists to
+  compare against; the two absolute ones (skipped lines, zero-token records) work from the
+  first run.
+- **`report --format csv` gained a `granularity` column** between `member` and `in`. A
+  consumer that reads columns by position rather than by header name needs updating.
+- **The metric-plugin envelope gained `usage[].granularity`.** The addition is backward
+  compatible and `assaio_metric_input` stays at `1`: a plugin that ignores the field behaves
+  exactly as before.
+
 ### Fixed
 - **The README's manual install instructions pointed at v0.1.0**, three releases behind, so
   anyone following them got a binary without `statusline`, `explain`, incremental backfill or

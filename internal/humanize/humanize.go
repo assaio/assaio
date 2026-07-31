@@ -19,6 +19,22 @@ func Count(n int64) string {
 	}
 }
 
+// Bytes renders an on-disk size in binary units, e.g. 35_131_392 -> "33.5 MB". Sizes are
+// compared against what a file manager reports, so the units are powers of 1024 -- unlike
+// Count, which renders quantities nobody measures in kibibytes.
+func Bytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return strconv.FormatInt(n, 10) + " B"
+	}
+	v, exp := float64(n)/unit, 0
+	for v >= unit && exp < 3 {
+		v /= unit
+		exp++
+	}
+	return strconv.FormatFloat(v, 'f', 1, 64) + " " + [...]string{"KB", "MB", "GB", "TB"}[exp]
+}
+
 // USD renders a dollar amount compactly: 195 -> "195", 26004 -> "26.0K". Cents are shown
 // only below $100, where they still carry meaning.
 func USD(v float64) string {

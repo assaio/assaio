@@ -19,6 +19,11 @@ type Row struct {
 	// Member is "" for purely local usage; non-empty only on a central store synced
 	// from a team member.
 	Member string `json:"member"`
+	// Granularity is "turn" for per-request records, "session" for session-aggregate
+	// sources, or GranularityMixed once a group has merged both. It travels with the row
+	// because a session aggregate summed into a per-turn total reads as per-turn, and
+	// nothing downstream could tell the difference otherwise.
+	Granularity string `json:"granularity"`
 	// In, Out, CacheRead, CacheWrite, Reasoning are summed token counts.
 	In         int64 `json:"in"`
 	Out        int64 `json:"out"`
@@ -54,7 +59,8 @@ func Build(rows []store.UsageRow, t pricing.Table) []Row {
 		u := &rows[i]
 		r := Row{
 			Day: u.Day, Tool: u.Tool, Model: u.Model, Project: u.Project, Entrypoint: u.Entrypoint, Member: u.Member,
-			In: u.In, Out: u.Out, CacheRead: u.CacheRead, CacheWrite: u.CacheWrite, Reasoning: u.Reasoning,
+			Granularity: u.Granularity,
+			In:          u.In, Out: u.Out, CacheRead: u.CacheRead, CacheWrite: u.CacheWrite, Reasoning: u.Reasoning,
 		}
 		if cost, ok := t.CostTokens(u.Model, u.In, u.Out, u.CacheWrite, u.CacheRead); ok {
 			r.Cost = &cost

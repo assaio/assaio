@@ -119,16 +119,34 @@ Normalized usage is stored in a single embedded SQLite database:
 
 The location honors `XDG_DATA_HOME`. This file never leaves your machine.
 
+Beside the usage records, the same file holds two small bookkeeping tables. Neither holds
+usage, and both exist only so a repeat `backfill` stays cheap and honest:
+
+- `ingest_file` — one row per input already parsed: its **path on your disk**, size,
+  modification time, and which build read it. This is the only place `assaio` stores a
+  full local path, and it is never synced, exported, or shown in a dashboard. Rows for
+  files that are no longer on disk are dropped on the next pass.
+- `ingest_source` — one row per source per `backfill` run, holding only counts (files
+  found, files read, records, skipped lines, records carrying no tokens) and a timestamp.
+  It is what the format-drift canaries compare against, and only the newest runs per tool
+  are kept.
+
+Both can be deleted at any time; the only cost is one slow re-parse and a reset drift
+baseline.
+
 ## How to delete it
 
 ```sh
 assaio-agent clear --all --yes
+assaio-agent compact          # actually return the freed space to the filesystem
 ```
 
 `clear` refuses to run without an explicit scope (`--all`, `--older-than`, or `--tool`)
-and the `--yes` confirmation flag. You can also simply delete the database file. Because
-all data is local and self-contained, this makes `assaio` straightforward to operate
-under GDPR-style deletion requirements.
+and the `--yes` confirmation flag. Note that deleting rows frees pages *inside* the
+database file without shrinking it — `compact` is what returns that space to your
+filesystem. You can also simply delete the database file. Because all data is local and
+self-contained, this makes `assaio` straightforward to operate under GDPR-style deletion
+requirements.
 
 ## Network
 

@@ -30,19 +30,19 @@ Before `assaio` advises anything it should show what it read, what it missed, an
 it is. Everything here is a prerequisite for the levels below: a metric computed on quietly
 under-reported data is worse than no metric.
 
-- [ ] **B58 · format-drift heuristics** — S/M · both — per-source canary metrics after
-  every `backfill` (files vs last run, records/file vs history, zero-token share,
-  skipped ratio) → `warning: possible format drift in <tool>` + a `doctor` section.
-  Closes the silent-underreporting gap described in
-  [docs/format-resilience.md](docs/format-resilience.md). Cheaper since v0.4: `ingest_file`
-  already holds per-source state and `doctor` already has a freshness section to extend.
-- [ ] **B59 · doctor --strict** — S · both — non-zero exit when B58's drift heuristics
-  fire (or a configured source discovers zero files), so a cron/CI job can alert on
+- [x] **B58 · format-drift heuristics** — S/M · both — four per-source canaries run after
+  every `backfill` (discovery, records-per-file yield, skipped-line share, zero-token share),
+  each with a sample floor it abstains below and a median-of-recent-runs baseline. Fires
+  `warning: possible format drift in <tool>` plus a `doctor` drift section. Verified silent
+  on a real 4.5 GB / 5707-file corpus and loud on a simulated vendor field rename. Closes the
+  silent-underreporting gap in [docs/format-resilience.md](docs/format-resilience.md).
+- [x] **B59 · doctor --strict** — S · both — non-zero exit when a B58 canary fires or a
+  source configured explicitly in `sources:` discovers zero inputs, so a cron/CI job alerts on
   vendor format drift instead of a human noticing shrunk numbers.
-- [ ] **B69 · usage-granularity provenance in reports** — S/M · both — `Store.Usage`
-  blends session-granularity plugin rows with per-turn rows without surfacing
-  `granularity`; carry it into `UsageRow` and mark mixed-granularity totals so session
-  data never silently reads as per-turn (honesty rule).
+- [x] **B69 · usage-granularity provenance in reports** — S/M · both — `granularity` is part
+  of the store's grouping and travels through `report.Row`, the table/JSON/CSV renderers, the
+  `coverage` validator and the metric-plugin envelope; a grouped total that merges per-turn
+  and session records is marked `mixed` rather than reading as per-turn.
 - [ ] **B81 · confidence envelope on every result** — M · both — carry coverage, sample
   size, granularity mix, pricing coverage, freshness and the parsing build as structured fields
   on `analyze.Result`, with a derived `high|medium|low|insufficient` label. Today those limits

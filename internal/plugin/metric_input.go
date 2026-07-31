@@ -32,12 +32,16 @@ type metricInput struct {
 }
 
 type metricUsageRow struct {
-	Day          string `json:"day"`
-	Tool         string `json:"tool"`
-	Model        string `json:"model"`
-	Project      string `json:"project"`
-	Entrypoint   string `json:"entrypoint"`
-	Member       string `json:"member"`
+	Day        string `json:"day"`
+	Tool       string `json:"tool"`
+	Model      string `json:"model"`
+	Project    string `json:"project"`
+	Entrypoint string `json:"entrypoint"`
+	Member     string `json:"member"`
+	// Granularity is "turn" or "session". A plugin that sums these rows without reading it
+	// would fold whole-session aggregates into a per-turn figure, which is the same misread
+	// the core reports now disclose.
+	Granularity  string `json:"granularity"`
 	In           int64  `json:"in"`
 	Out          int64  `json:"out"`
 	CacheRead    int64  `json:"cacheRead"`
@@ -142,7 +146,7 @@ func usageWire(rows []store.UsageRow) []metricUsageRow {
 		r := &rows[i]
 		out = append(out, metricUsageRow{
 			Day: r.Day, Tool: r.Tool, Model: r.Model, Project: r.Project,
-			Entrypoint: r.Entrypoint, Member: r.Member,
+			Entrypoint: r.Entrypoint, Member: r.Member, Granularity: r.Granularity,
 			In: r.In, Out: r.Out, CacheRead: r.CacheRead, CacheWrite: r.CacheWrite,
 			Reasoning: r.Reasoning, LinesAdded: r.LinesAdded, LinesRemoved: r.LinesRemoved,
 			Edits: r.Edits, ToolCalls: r.ToolCalls, Rejected: r.Rejected,

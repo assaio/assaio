@@ -12,11 +12,13 @@ import (
 // Store persists usage.Record values in an embedded SQLite database.
 type Store struct{ db *sql.DB }
 
-// UsageRow is one day/tool/model/project/entrypoint/member group with summed token and
-// activity counts. Member is "" for purely local usage; it is only ever non-empty on a
-// central store a team has synced into (see internal/server).
+// UsageRow is one day/tool/model/project/entrypoint/member/granularity group with summed
+// token and activity counts. Member is "" for purely local usage; it is only ever non-empty
+// on a central store a team has synced into (see internal/server). Granularity is part of
+// the group rather than a summary of it: a per-turn record and a session aggregate are
+// different units, so summing them into one row would state a total nobody can interpret.
 type UsageRow struct {
-	Day, Tool, Model, Project, Entrypoint, Member                     string
+	Day, Tool, Model, Project, Entrypoint, Member, Granularity        string
 	In, Out, CacheRead, CacheWrite, Reasoning                         int64
 	LinesAdded, LinesRemoved, Edits, ToolCalls, Rejected, Compactions int64
 	ReworkLines                                                       int64
@@ -51,13 +53,14 @@ func Open(path string) (*Store, error) {
 // Close closes the underlying database connection.
 func (s *Store) Close() error { return s.db.Close() }
 
-// Usage returns per-day/tool/model/project/entrypoint/member token totals for records
-// with timestamp >= since. Member is "" on every row of a purely local store, so
+// Usage returns per-day/tool/model/project/entrypoint/member/granularity token totals for
+// records with timestamp >= since. Member is "" on every row of a purely local store, so
 // grouping by it is a no-op there; it only fans a group out further on a central store
-// synced from more than one team member.
+// synced from more than one team member. Granularity almost never fans a group out either,
+// since a source emits one kind of record -- but when it does, the split is the point.
 func (s *Store) Usage(ctx context.Context, since time.Time) ([]UsageRow, error) {
 	rows, err := s.db.QueryContext(ctx, `
-        SELECT substr(ts,1,10) AS day, tool, model, project, entrypoint, member,
+        SELECT substr(ts,1,10) AS day, tool, model, project, entrypoint, member, granularity,
                SUM(input_tokens), SUM(output_tokens),
                SUM(cache_read_tokens), SUM(cache_write_tokens), SUM(reasoning_tokens),
                SUM(lines_added), SUM(lines_removed), SUM(edits), SUM(tool_calls), SUM(rejected), SUM(compactions),
@@ -66,8 +69,8 @@ func (s *Store) Usage(ctx context.Context, since time.Time) ([]UsageRow, error) 
                SUM(tool_errors)
         FROM usage_record
         WHERE ts >= ?
-        GROUP BY day, tool, model, project, entrypoint, member
-        ORDER BY day, tool, model, project, entrypoint, member`, since.UTC().Format(time.RFC3339))
+        GROUP BY day, tool, model, project, entrypoint, member, granularity
+        ORDER BY day, tool, model, project, entrypoint, member, granularity`, since.UTC().Format(time.RFC3339))
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +78,7 @@ func (s *Store) Usage(ctx context.Context, since time.Time) ([]UsageRow, error) 
 	var out []UsageRow
 	for rows.Next() {
 		var u UsageRow
-		if err := rows.Scan(&u.Day, &u.Tool, &u.Model, &u.Project, &u.Entrypoint, &u.Member,
+		if err := rows.Scan(&u.Day, &u.Tool, &u.Model, &u.Project, &u.Entrypoint, &u.Member, &u.Granularity,
 			&u.In, &u.Out, &u.CacheRead, &u.CacheWrite, &u.Reasoning,
 			&u.LinesAdded, &u.LinesRemoved, &u.Edits, &u.ToolCalls, &u.Rejected, &u.Compactions,
 			&u.ReworkLines,

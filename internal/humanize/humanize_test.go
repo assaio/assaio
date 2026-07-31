@@ -40,3 +40,21 @@ func TestUSD(t *testing.T) {
 		}
 	}
 }
+
+func TestBytes(t *testing.T) {
+	tests := []struct {
+		in   int64
+		want string
+	}{
+		{0, "0 B"},
+		{512, "512 B"},
+		{1024, "1.0 KB"},
+		{35_131_392, "33.5 MB"},
+		{4_831_838_208, "4.5 GB"},
+	}
+	for _, tt := range tests {
+		if got := Bytes(tt.in); got != tt.want {
+			t.Errorf("Bytes(%d) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}

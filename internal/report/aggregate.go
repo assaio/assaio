@@ -57,8 +57,28 @@ func newGroup(by, key string) *Row {
 	return g
 }
 
+// GranularityMixed marks a group that merged per-turn and session-aggregate records. It
+// exists only on an aggregated row: the store never produces one, because it groups by
+// granularity instead of summing across it.
+const GranularityMixed = "mixed"
+
+// foldGranularity combines a group's granularity with the row being added. Grouping is the
+// one place a session aggregate can vanish into a per-turn total, so the merge is recorded
+// rather than resolved to whichever value arrived first.
+func foldGranularity(group, row string) string {
+	switch {
+	case group == "":
+		return row
+	case row == "" || group == row:
+		return group
+	default:
+		return GranularityMixed
+	}
+}
+
 // accumulate folds r's tokens and cost into group g.
 func accumulate(g, r *Row) {
+	g.Granularity = foldGranularity(g.Granularity, r.Granularity)
 	g.In += r.In
 	g.Out += r.Out
 	g.CacheRead += r.CacheRead

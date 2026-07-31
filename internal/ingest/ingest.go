@@ -17,12 +17,15 @@ import (
 // Result summarizes one tool's ingest pass: files discovered, files left unparsed because
 // this build already read them unchanged (Unchanged), records parsed from the rest,
 // records actually inserted (new rows, post-dedupe), lines skipped within otherwise-
-// parsed files, and files that failed outright or midway through (Failed). A file that
-// fails midway still contributes whatever it yielded before the failure to
-// Records/Inserted/Skipped -- skip-and-count, never discard-on-error (see ingestParsed).
+// parsed files, files that failed outright or midway through (Failed), and how many of
+// the parsed records carried no tokens at all (ZeroToken, the format-drift canary's
+// input). A file that fails midway still contributes whatever it yielded before the
+// failure to Records/Inserted/Skipped -- skip-and-count, never discard-on-error (see
+// ingestParsed).
 type Result struct {
 	Tool                                                 string
 	Files, Unchanged, Records, Inserted, Skipped, Failed int
+	ZeroToken                                            int
 }
 
 type source struct {
@@ -45,6 +48,7 @@ type source struct {
 func Run(ctx context.Context, home string, st *store.Store, sources config.Sources, plugins []config.PluginConfig, opts Options) ([]Result, error) {
 	cache := make(projectCache)
 	var results []Result
+	seen := make(map[string]map[string]bool)
 
 	sk, err := newSkipper(ctx, st, opts.Full)
 	if err != nil {
@@ -60,6 +64,7 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 		return results, err
 	}
 	results = append(results, claudeResult)
+	seen[claudeResult.Tool] = pathSet(claudeMain, claudeSub)
 
 	discovered, err := discoverSources(home, sources)
 	if err != nil {
@@ -71,6 +76,7 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 			return results, err
 		}
 		results = append(results, res)
+		seen[s.tool] = pathSet(s.files)
 	}
 
 	clineDirs, err := discoverClineDirs(home, sources)
@@ -82,13 +88,21 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 		return results, err
 	}
 	results = append(results, clineResult)
+	seen[clineResult.Tool] = pathSet(clineDirs)
 
-	if err := sk.flush(ctx, st, time.Now()); err != nil {
+	at := time.Now()
+	if err := sk.flush(ctx, st, at); err != nil {
 		return results, err
 	}
 
 	pluginResults, err := ingestPlugins(ctx, st, plugins)
 	if err != nil {
+		return results, err
+	}
+	if err := st.RecordSourceRun(ctx, sourceRuns(results, pluginResults, at)); err != nil {
+		return results, err
+	}
+	if err := pruneVanished(ctx, st, seen); err != nil {
 		return results, err
 	}
 	results = append(results, pluginResults...)

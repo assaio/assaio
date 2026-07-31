@@ -48,8 +48,37 @@ func RenderTable(w io.Writer, rows []Row, by string) error {
 			return err
 		}
 	}
+	if note, ok := granularityFootnote(rows); ok {
+		if _, err := fmt.Fprintln(w, note); err != nil {
+			return err
+		}
+	}
 	_, err := fmt.Fprintln(w, CostEstimateDisclosure)
 	return err
+}
+
+// granularityFootnote returns the legend for the "‡" marker when any row is not plain
+// per-turn data. A mixed row wins over a merely session-level one: it is the harder case
+// to read, so it is the one named.
+func granularityFootnote(rows []Row) (string, bool) {
+	note := ""
+	for i := range rows {
+		switch rows[i].Granularity {
+		case GranularityMixed:
+			return mixedGranularityFootnote, true
+		case "session":
+			note = sessionGranularityFootnote
+		}
+	}
+	return note, note != ""
+}
+
+// granularityMark is the "‡" a row carries when its unit is not one turn.
+func granularityMark(g string) string {
+	if g == "session" || g == GranularityMixed {
+		return " ‡"
+	}
+	return ""
 }
 
 // tableDimColumns returns the leading header and footer cells for the dimension
@@ -96,9 +125,12 @@ func tableRow(r *Row, grouped bool, by, cost string) prettytable.Row {
 		if label == "" {
 			label = emptyDimLabel(by)
 		}
-		return prettytable.Row{label, r.In, r.Out, r.CacheRead, r.CacheWrite, cacheEffStr, cost}
+		return prettytable.Row{label + granularityMark(r.Granularity), r.In, r.Out, r.CacheRead, r.CacheWrite, cacheEffStr, cost}
 	}
-	return prettytable.Row{r.Day, r.Tool, r.Model, r.In, r.Out, r.CacheRead, r.CacheWrite, cacheEffStr, cost}
+	return prettytable.Row{
+		r.Day, r.Tool + granularityMark(r.Granularity), r.Model,
+		r.In, r.Out, r.CacheRead, r.CacheWrite, cacheEffStr, cost,
+	}
 }
 
 // RenderJSON writes rows to w as indented JSON.
@@ -112,7 +144,7 @@ func RenderJSON(w io.Writer, rows []Row) error {
 func RenderCSV(w io.Writer, rows []Row) error {
 	cw := csv.NewWriter(w)
 	_ = cw.Write([]string{
-		"day", "tool", "model", "project", "entrypoint", "member", "in", "out",
+		"day", "tool", "model", "project", "entrypoint", "member", "granularity", "in", "out",
 		"cache_read", "cache_write", "reasoning", "cache_eff", "cost", "priced", "has_unpriced",
 	})
 	for i := range rows {
@@ -126,7 +158,7 @@ func RenderCSV(w io.Writer, rows []Row) error {
 			cacheEffStr = strconv.FormatFloat(*r.CacheEff, 'f', 6, 64)
 		}
 		_ = cw.Write([]string{
-			r.Day, r.Tool, r.Model, r.Project, r.Entrypoint, r.Member,
+			r.Day, r.Tool, r.Model, r.Project, r.Entrypoint, r.Member, r.Granularity,
 			strconv.FormatInt(r.In, 10), strconv.FormatInt(r.Out, 10),
 			strconv.FormatInt(r.CacheRead, 10), strconv.FormatInt(r.CacheWrite, 10),
 			strconv.FormatInt(r.Reasoning, 10), cacheEffStr,

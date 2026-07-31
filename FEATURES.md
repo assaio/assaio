@@ -21,12 +21,13 @@ mattering the moment a second release exists.
 | `dashboard` | v0.1 | Writes the self-contained offline Assay HTML report; pseudonymized by default, `--no-anonymize` opt-out. |
 | `serve` | v0.1 | Self-hosted team server: collects pushed usage, serves the aggregated team dashboard. |
 | `sync` | v0.1 | Pushes local usage to a team server; pseudonymous by default, `--member` is an explicit opt-in. |
-| `doctor` | v0.1 | Detected tools, resolved log roots, store inventory, health, accuracy caveats. |
+| `doctor` | v0.1 | Detected tools, resolved log roots, store inventory and size, health, format-drift canaries, accuracy caveats. `--strict` (v0.5) exits non-zero on suspected drift or a configured source with no inputs, for cron/CI. |
 | `status` | v0.1 | Terminal overview: inventory, headline `$`/100 lines, hot / going-stale projects, session stats. |
 | `statusline` | v0.4 | One ambient line for a status bar: today's tokens, AI lines, cost basis, and data age. Local day (timestamp range, not a UTC bucket); read-only; never fails loudly. See [automation](docs/automation.md). |
 | `explain` | v0.4 | The long-form page for a metric — what it measures, how to read it, what to do about it, its limits. Needs no store; no argument lists every metric. |
 | `survival` | v0.2 | Directional local outcome check: how much of a git repo's window survives in `HEAD` (`git blame`), beside the AI lines the store recorded. See [automation](docs/automation.md). |
-| `clear` | v0.1 | Deletes stored data; requires an explicit scope and `--yes`. |
+| `clear` | v0.1 | Deletes stored data; requires an explicit scope and `--yes`. Reports what stays held by the store afterwards. |
+| `compact` | v0.5 | Reclaims disk space the store freed but still holds (`VACUUM` + WAL truncate); prints the size before and after. Deleting rows never shrinks a SQLite file on its own. |
 | `config` | v0.1 | Prints the effective merged configuration and its source path. |
 | `plugins` | v0.1 | `list` / `verify` for exec **parser** plugins (protocol conformance, nothing stored). |
 | `metrics` | v0.1 | `list` / `verify` for exec **metric** plugins (runs on your real window, prints violations + rendered result). |
@@ -44,7 +45,7 @@ generically by the CLI, JSON output, and the dashboard.
 | `cache-hygiene` | v0.2 | Prompt-cache reuse: cache-read share of billed input, and whether cache writes are reused. | Cost signal, not quality; a big one-shot task legitimately shows low reuse. |
 | `concentration` | v0.3 | How token spend spreads across projects, and where a project's share of tokens outruns its share of AI-written lines. | Concentration itself is neither good nor bad; undefined below 2 projects. Project-level only, never people. |
 | `context` | v0.1 | Are sessions healthy: turns, peak context, focused minutes, compaction rate? | Neutral below 3 sessions — no verdict from thin data. |
-| `coverage` | v0.2 | How much of the window is high-confidence data: token share from tools with full activity capture, and share priced. | Per-record granularity (turn vs session) not yet surfaced. |
+| `coverage` | v0.2 | How much of the window is high-confidence data: token share from tools with full activity capture, share priced, and — when a window mixes them — the share from per-turn rather than whole-session records. | Says how complete the data is, never whether the work was good. |
 | `explore-produce` | v0.3 | What the tool calls were for: reading and searching the codebase vs writing code in it, with reads-per-write. | Exploring earns the right to write; only flags the extreme. Covers Claude Code and Codex; states its own coverage, and un-backfilled history reads as unclassified. |
 | `friction` | v0.3 | How often tool calls fail outright, beside how often a human declines one — the tokens spent on calls that produced nothing. | Some failure is normal probing. Rates cover only tools that mark the outcome of every call (Claude Code today); Codex reports it for file edits alone and is excluded rather than counted as successful. |
 | `model-fit` | v0.1 | Premium vs cheaper token share (by real price tier), lines-per-token contrast, sub-agent delegation share, upper-bound routing savings. | Savings figure is an upper bound, never a switch recommendation. |

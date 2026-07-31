@@ -12,3 +12,12 @@ const CostEstimateDisclosure = "Cost is an estimate at public pay-as-you-go API 
 // a row whose total excludes some usage priced from an unknown model -- one wording, so a
 // starred cost reads the same in report, effectiveness, and movers.
 const unpricedFootnote = "* group contains unpriced usage excluded from cost"
+
+// The granularity footnotes name the unit behind a row, so a session aggregate can never
+// be read as a per-turn figure. Sources differ here -- most emit one record per request,
+// some only a per-session total -- and a mixed row is the case worth calling out loudest,
+// because its numbers answer neither question cleanly.
+const (
+	sessionGranularityFootnote = "‡ session-granularity rows: one record covers a whole session, not one turn"
+	mixedGranularityFootnote   = "‡ mixed-granularity total: blends per-turn and whole-session records"
+)

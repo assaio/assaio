@@ -432,3 +432,32 @@ func TestUsageSumsActivityFields(t *testing.T) {
 		t.Fatalf("ReworkLines sum = %d, want 3", row.ReworkLines)
 	}
 }
+
+// TestUsageSeparatesTurnFromSessionRows keeps a session-aggregate source out of a per-turn
+// total: the two are different units, so they never share a row.
+func TestUsageSeparatesTurnFromSessionRows(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	ts := time.Date(2026, 7, 1, 10, 0, 0, 0, time.UTC)
+	_, err := s.Insert(ctx, []usage.Record{
+		{Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", InputTokens: 10, DedupeKey: "t1", Granularity: "turn"},
+		{Tool: "claude-code", SessionID: "s2", Timestamp: ts, Model: "m", InputTokens: 50, DedupeKey: "s1", Granularity: "session"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := s.Usage(ctx, ts.Add(-time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("want turn and session kept apart, got %+v", rows)
+	}
+	byGrain := map[string]int64{}
+	for _, r := range rows {
+		byGrain[r.Granularity] = r.In
+	}
+	if byGrain["turn"] != 10 || byGrain["session"] != 50 {
+		t.Fatalf("Usage = %+v, want turn=10 session=50", rows)
+	}
+}

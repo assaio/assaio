@@ -48,7 +48,7 @@ small enough to ship and prove on real data.
 
 | Level | Promise | Done when |
 |---|---|---|
-| **1 · Trust the dataset** | Before `assaio` advises anything, it shows what it read, what it missed, and how sure it is | every validator carries coverage + confidence as data, not prose; format drift is detected instead of silently under-reporting; `doctor --strict` fails a cron job; every source publishes its real depth, and a first run needs no config (`B58`, `B59`, `B69`, `B81`, `B82`, `B83`) |
+| **1 · Trust the dataset** | Before `assaio` advises anything, it shows what it read, what it missed, and how sure it is | every validator carries coverage + confidence as data, not prose; format drift is detected instead of silently under-reporting; `doctor --strict` fails a cron job; every source publishes its real depth, and a first run needs no config (`B58` ✓, `B59` ✓, `B69` ✓, `B81`, `B82`, `B83`) |
 | **2 · Intent, and a next step** | Metrics can be read per kind of work, and each finding comes with one concrete action | a session can be labeled task class / outcome / difficulty and any metric stratified by it, with unlabeled data still fully useful; recommendations are deterministic rules carrying evidence, a caveat, a follow-up metric and a review window — never an LLM narrating a dashboard (`B80`, `B84`, `B87`) |
 | **3 · From session to shipped change** | The work can be traced to commits, PRs, review and CI, with visible attribution confidence | session→change links carry method, confidence and alternatives; ambiguous links stay ambiguous; survival is age-matched (`B18`, `B85`) |
 | **4 · Team, without surveillance** | A team self-hosts it, sees adoption and spend, and cannot build a leaderboard from it | authenticated, resumable sync; adoption read as activation → retention → breadth, in bands with a cohort floor (`B22`, `B09`, `B40`) |
@@ -88,12 +88,14 @@ Four directions, one goal: every tool a team actually uses should be counted, ev
 should be reconcilable against reality, and a report should state both its own limits and
 the real depth of each source it read.
 
-- **Confidence as a first-class field** (`B81`, with `B69`). Today a validator's limits live
-  in prose caveats a reader can skip. They should travel as structure — source coverage,
-  activity coverage, pricing coverage, record granularity, sample size, freshness, parsing
-  build — so a low-coverage verdict cannot be quoted as a solid one, and so `check` and any
-  future recommendation can refuse to fire on thin data. Deliberately **not** collapsed into
-  one opaque score: a display label may summarize, the components stay inspectable.
+- **Confidence as a first-class field** (`B81`). Record granularity already travels this way
+  (`B69`): a report marks a total that blends per-turn and whole-session records instead of
+  presenting it as per-turn. The rest of a validator's limits still live in prose caveats a
+  reader can skip. They should travel as structure too — source coverage, activity coverage,
+  pricing coverage, sample size, freshness, parsing build — so a low-coverage verdict cannot
+  be quoted as a solid one, and so `check` and any future recommendation can refuse to fire on
+  thin data. Deliberately **not** collapsed into one opaque score: a display label may
+  summarize, the components stay inspectable.
 - **A depth matrix instead of a supported/unsupported list** (`B83`). "Supports Gemini CLI" is
   misleading when that means tokens but no edits. Every source should publish per-field depth
   in three tiers — **deep** (tokens + activity + attribution), **standard** (reliable usage,

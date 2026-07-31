@@ -48,13 +48,43 @@ func (coverageValidator) Analyze(in Input) Result {
 		{Label: "priced coverage", Value: honestPercent(pricedShare), Note: "cost known"},
 		{Label: "cost-only tokens", Value: honestPercent(1 - activityShare), Note: "no line signals"},
 	}
+	if turnShare, mixed := turnGranularityShare(in.Usage); mixed {
+		r.Figures = append(r.Figures, Figure{
+			Label: "turn-level records", Value: honestPercent(turnShare), Note: "rest are session aggregates",
+		})
+		r.Caveats = append(r.Caveats,
+			"Session-granularity records cover a whole session, so per-turn figures describe only the turn-level share above.")
+	}
 	r.Bars = toolCoverageBars(byTool, in.Totals.Tokens)
 	r.Takeaway = coverageTakeaway(activityShare, pricedShare)
-	r.Caveats = []string{
-		"Cost-only tools (Gemini CLI, Cline, plugins) contribute tokens and cost but no line or edit signals -- see ROADMAP.",
-		"Per-record granularity (turn vs session) is not yet surfaced, so a mix isn't flagged here.",
-	}
+	r.Caveats = append(r.Caveats,
+		"Cost-only tools (Gemini CLI, Cline, plugins) contribute tokens and cost but no line or edit signals -- see ROADMAP.")
 	return r
+}
+
+// turnGranularityShare returns the share of the window's tokens that came from per-turn
+// records, and whether the window mixes granularities at all. An all-per-turn window --
+// every built-in source today -- reports nothing: a figure that always reads 100% teaches
+// a reader to skip it, which is how the one time it does not gets missed.
+//
+// The denominator counts only records whose granularity is known, so an unlabeled row
+// lowers nothing; it is absent from the comparison rather than counted against per-turn.
+func turnGranularityShare(rows []store.UsageRow) (share float64, mixed bool) {
+	var turn, known int64
+	for i := range rows {
+		switch rows[i].Granularity {
+		case "turn":
+			tokens := rowTokens(&rows[i])
+			turn += tokens
+			known += tokens
+		case "session":
+			known += rowTokens(&rows[i])
+		}
+	}
+	if known == 0 || turn == known {
+		return 1, false
+	}
+	return fracOf(turn, known), true
 }
 
 func coverageTakeaway(activityShare, pricedShare float64) string {

@@ -143,3 +143,21 @@ func TestBuildMetricInputEmpty(t *testing.T) {
 		t.Fatalf("prices = %v (%T), want an empty JSON object, never null", got["prices"], got["prices"])
 	}
 }
+
+// TestMetricInputCarriesGranularity gives a metric plugin the same provenance the core
+// reports have: without it, a plugin summing usage rows would blend session aggregates
+// into a per-turn figure with no way to notice.
+func TestMetricInputCarriesGranularity(t *testing.T) {
+	in := analyze.BuildInput([]store.UsageRow{
+		{Day: "2026-07-16", Tool: "plugin:acme", Model: "m-priced", Granularity: "session", In: 100, Out: 200},
+	}, nil, pricing.Table{}, metricInputTestNow, 7*24*time.Hour, analyze.Delegation{})
+	got := roundTrip(t, &in)
+	rows, ok := got["usage"].([]any)
+	if !ok || len(rows) == 0 {
+		t.Fatalf("usage rows missing: %+v", got)
+	}
+	row, _ := rows[0].(map[string]any)
+	if row["granularity"] != "session" {
+		t.Fatalf("usage row = %+v, want granularity=session", row)
+	}
+}

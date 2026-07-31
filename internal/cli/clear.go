@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/paths"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -64,6 +65,12 @@ func runClear(cmd *cobra.Command, all, yes bool, olderThan, tool string) error {
 		return err
 	}
 	cmd.Printf("deleted %d record(s)\n", n)
+	// Deleting rows frees pages inside the file without shrinking it, so someone who ran
+	// clear to get disk space back has to be told it is not back yet.
+	if size, sizeErr := st.Size(cmd.Context()); sizeErr == nil && size.Reclaimable > 0 {
+		cmd.Printf("%s still held by the store — run 'assaio-agent compact' to reclaim it\n",
+			humanize.Bytes(size.Reclaimable))
+	}
 	return nil
 }
 
