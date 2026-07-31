@@ -21,6 +21,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-31
+
 ### Added
 - **Format-drift canaries.** Every vendor log format assaio parses is internal and can change
   without notice, and the failure that mattered was never a crash — it was plausible-looking
@@ -511,7 +513,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/assaio/assaio/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/assaio/assaio/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/assaio/assaio/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/assaio/assaio/compare/v0.1.1...v0.2.0
