@@ -49,6 +49,9 @@ func RenderResultText(w io.Writer, r Result) error {
 			return err
 		}
 	}
+	if _, err := fmt.Fprintf(w, "  Confidence: %s\n", ConfidenceSummary(&r.Confidence)); err != nil {
+		return err
+	}
 	if _, err := fmt.Fprintf(w, "  Takeaway: %s\n", r.Takeaway); err != nil {
 		return err
 	}

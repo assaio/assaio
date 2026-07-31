@@ -50,6 +50,7 @@ func (burnValidator) Analyze(in Input) Result {
 		r.Takeaway = "No usage in this window."
 		return r
 	}
+	r.restsOn(len(days), "active days")
 	median := medianTokens(days)
 	sufficient := len(days) >= burnMinDays
 	spikes := burnSpikes(days, median)

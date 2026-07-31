@@ -29,6 +29,7 @@ func (reasoningValidator) Analyze(in Input) Result {
 		r.Takeaway = "No output tokens in this window."
 		return r
 	}
+	r.restsOn(activeDays(&in), "active days")
 	var reasoning, reportingOutput int64
 	for i := range in.Usage {
 		u := &in.Usage[i]

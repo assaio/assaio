@@ -42,6 +42,7 @@ func (contextValidator) Analyze(in Input) Result {
 		return r
 	}
 	stats := report.BuildSessionStats(in.Sessions, in.Now)
+	r.restsOn(stats.Count, "sessions")
 	compactionOK := stats.CompactionRate <= contextWatchCeiling
 	sufficientSample := stats.Count >= contextMinSessionsForHealthy
 	healthy := compactionOK && sufficientSample

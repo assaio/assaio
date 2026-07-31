@@ -237,6 +237,7 @@ blank, never faked.
 | Command    | What it does |
 |------------|--------------|
 | `demo`     | Print the full reports on bundled sample data — no logs needed, the 60-second first look. |
+| `init`     | First run: show what will be read, import it, write the report, name what to run next. |
 | `backfill` | Import all historical local session logs into the store. |
 | `report`   | Print a token/cost report. `--since 7d`, `--by day\|project\|tool\|model\|entrypoint\|member`, `--format table\|json\|csv`, `--compare` for period-over-period top movers. |
 | `effectiveness` | Print AI output vs. cost — AI lines, edits, rejections, and **`$`/100 AI lines** — per project. Same `--since`, `--by`, `--format`, `--compare` flags (defaults to `--by project`). A directional, per-project diagnostic. |

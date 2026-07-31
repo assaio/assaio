@@ -33,6 +33,7 @@ func (cacheValidator) Analyze(in Input) Result {
 		return r
 	}
 
+	r.restsOn(activeDays(&in), "active days")
 	reuse := t.CacheEfficiency // CacheRead / (CacheRead + Input)
 	healthy := reuse >= cacheGoodReuse
 

@@ -45,6 +45,7 @@ func (subscriptionValidator) Analyze(in Input) Result {
 		return r
 	}
 
+	r.restsOn(activeDays(&in), "active days")
 	apiMonthly, priced := projectedMonthlyCost(&in)
 	if in.PlanMonthlyCost <= 0 {
 		r.Read = planUnsetRead

@@ -44,6 +44,31 @@ Discussion.
   separate command because rewriting needs roughly twice the store's size in temporary disk
   space.
 
+- **A confidence envelope on every verdict.** A metric's limits used to live in prose
+  caveats a reader can skip, so a verdict computed on thin or partial data could be quoted as
+  a solid one. Every `analyze` result now carries structure instead: the window's activity,
+  priced and turn-level coverage, how many observations the metric counted and what they are,
+  when the data was read and by which parsing build, and a derived
+  `high | medium | low | insufficient` label. Deliberately not one opaque score — the label
+  summarizes, the components stay inspectable, and the text report names the axis that held
+  the label down (`low · 1 active days · priced coverage 1%`) because "medium" alone tells
+  nobody what to do. `insufficient` is distinct from a neutral read: one says the data gave
+  no answer, the other that there was not enough data to ask (`B81`).
+- **`init`** — one command for a first run. It detects which supported tools have logs here,
+  prints the exact directories it will read **before** reading anything and states that only
+  counts are extracted, imports, writes the report, and names the three commands worth
+  running next. It writes no config file when the default locations work, and when nothing is
+  found it prints the `sources:` skeleton and exits successfully — a machine with no AI tools
+  installed is not an error. Network-free; `--non-interactive` for packaging smoke tests
+  (`B82`).
+- **A source depth matrix.** "Supported" was one word for two very different things: a source
+  that reports tokens but no edits cannot answer the questions one that reports both can.
+  Every source now publishes its depth — **deep** (tokens + per-turn activity + attribution),
+  **standard** (reliable usage with documented gaps), **import-only** (aggregates that cannot
+  support session-level conclusions) — with the specific gaps spelled out below the top tier.
+  `doctor` prints it for the tools found on this machine, FEATURES.md carries the full matrix,
+  and the `coverage` validator reads it rather than keeping its own list (`B83`).
+
 ### Changed
 - **Reports no longer blend per-turn and whole-session records silently.** `granularity`
   travels from the store through every report row: sources that emit one record per session
@@ -76,6 +101,15 @@ Discussion.
 - **The metric-plugin envelope gained `usage[].granularity`.** The addition is backward
   compatible and `assaio_metric_input` stays at `1`: a plugin that ignores the field behaves
   exactly as before.
+- **A metric plugin should now declare `confidence.samples` and `confidence.samplesUnit`** in
+  its result. Coverage and provenance are stamped for it from the same window the built-in
+  metrics use, but only the plugin knows how many observations its verdict counted. One that
+  omits the field reads as `insufficient` — the honest label for "did not say what it rests
+  on" — rather than borrowing a number assaio would have to invent. The result protocol stays
+  at `assaio_metric: 1`.
+- **`doctor` replaced its `activity:` line with a `depth:` section** and dropped the two
+  caveats the matrix now owns; they are printed per source, and only for sources present on
+  this machine.
 
 ### Fixed
 - **The README's manual install instructions pointed at v0.1.0**, three releases behind, so

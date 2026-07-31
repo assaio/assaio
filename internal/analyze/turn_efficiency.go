@@ -54,6 +54,7 @@ func (turnEffValidator) Analyze(in Input) Result {
 		r.Takeaway = "No code-producing sessions in this window."
 		return r
 	}
+	r.restsOn(int(codeSessions), "code-producing sessions")
 	enough := codeSessions >= turnEffMinCodeSessions
 	oneShotRate := fracOf(oneShot, codeSessions)
 	sort.Float64s(codeTurns)

@@ -131,6 +131,9 @@ func buildAnalyzeInput(cmd *cobra.Command, st *store.Store, start time.Time) (an
 	in := analyze.BuildInput(usageRows, sessionRows, table, time.Now(), analyzeRecentWindow, analyze.Delegation{Sub: sub, Total: total})
 	in.TurnSizing = turns
 	in.Skills, in.Agents = skills, agents
+	// Provenance is diagnostic, not a figure: a store that cannot answer leaves it unknown
+	// rather than failing an analysis that is otherwise complete.
+	in.Ingested, in.ParsedBy, _ = st.Provenance(cmd.Context())
 	return in, nil
 }
 

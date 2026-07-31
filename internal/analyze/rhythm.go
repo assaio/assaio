@@ -50,6 +50,7 @@ func (rhythmValidator) Analyze(in Input) Result {
 		r.Takeaway = "No usage in this window."
 		return r
 	}
+	r.restsOn(len(timed), "sessions")
 	p := buildRhythm(timed)
 	sufficient := len(timed) >= rhythmMinSessions
 	calm := p.OffHoursShare <= rhythmOffHoursCeiling && p.MarathonShare <= rhythmMarathonCeiling

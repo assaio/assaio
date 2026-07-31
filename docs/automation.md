@@ -89,14 +89,29 @@ a transcript has settled. In `~/.claude/settings.json`:
 }
 ```
 
-**Why not a per-turn (`Stop`) hook.** It would look better and measure worse. Claude Code
-attributes a turn's failed tool calls from a *later* line in the transcript, so ingesting
-at the end of a turn writes a row before that line exists, with zero errors recorded.
-Inserts are first-write-wins and the repair path only fills rows whose signals are
-*entirely* absent, so such a row stays half-attributed forever and `friction` under-reports
-from then on. Ingesting at settled points keeps the numbers honest; the cost is that the
-line can lag inside a long session, which is exactly why it always shows its age. Tracked
-as `B68` — once activity columns can be restated, the per-turn hook becomes safe.
+**A per-turn (`Stop`) hook is safe since v0.4**, and it is the closest thing to live data
+assaio has. It used to be the wrong recommendation for a real reason: Claude Code attributes
+a turn's failed tool calls from a *later* line in the transcript, so ingesting at the end of
+a turn wrote a row before that line existed, with zero errors recorded — and nothing ever
+corrected it, so `friction` under-reported from then on. v0.4 made a re-read restate those
+columns upward (`B68`), which removed the objection.
+
+```json
+"Stop": [{ "hooks": [{ "type": "command", "command": "assaio-agent backfill" }] }]
+```
+
+What it costs, measured on a 4.5 GB / 5710-transcript history:
+
+| The hook fires and… | Time |
+|---|---|
+| nothing changed since the last run | 0.07 s |
+| one typical transcript (112 KB) was appended to | 0.17 s |
+| the largest transcript on the machine (89 MB) was appended to | 0.99 s |
+
+That is per turn, on the largest local history we have measured; a fresh install is faster.
+The trade is latency against freshness, and it is yours to make — `SessionEnd` and
+`PreCompact` alone keep the numbers just as honest, at the cost of a status line that lags
+inside a long session, which is exactly why it always shows its age.
 
 ## Survival on a schedule
 

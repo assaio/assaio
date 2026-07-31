@@ -46,6 +46,7 @@ func (concentrationValidator) Analyze(in Input) Result {
 	// every tool that logs no working directory, so counting it as a project inflates the
 	// project count and the concentration score alike. Its size is disclosed as a caveat.
 	named := namedProjects(all)
+	r.restsOn(len(named), "projects")
 	gap, gapFound := widestSpendGap(named)
 	// A gap has to have been computed for "aligned" to mean anything: with every project
 	// below the size floor there is nothing to align, and calling that a pass is a green

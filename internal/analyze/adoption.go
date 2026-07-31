@@ -42,6 +42,7 @@ func (adoptionValidator) Analyze(in Input) Result {
 		return r
 	}
 	// topN=0: dormant counts must reflect every stale project/tool, never a top-N cap.
+	r.restsOn(activeDays(&in), "active days")
 	insights := report.BuildInsights(in.Usage, in.Prices, in.Now, in.Recent, 0)
 	recent, prior, changePct, trendOK := weekOverWeek(in.Usage, in.Now, in.Recent)
 	inv := insights.Inventory

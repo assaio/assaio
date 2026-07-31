@@ -78,7 +78,7 @@ func runValidators(in *analyze.Input) []analyze.Result {
 	validators := analyze.Validators()
 	out := make([]analyze.Result, len(validators))
 	for i, v := range validators {
-		out[i] = v.Analyze(*in)
+		out[i] = analyze.Evaluate(v, in)
 	}
 	return out
 }
@@ -91,7 +91,7 @@ func runProjectValidators(in *analyze.Input) []analyze.Result {
 	var out []analyze.Result
 	for _, v := range analyze.Validators() {
 		if analyze.ProjectScoped(v) {
-			out = append(out, v.Analyze(*in))
+			out = append(out, analyze.Evaluate(v, in))
 		}
 	}
 	return out

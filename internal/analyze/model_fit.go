@@ -38,6 +38,7 @@ func (modelFitValidator) Analyze(in Input) Result {
 		r.Takeaway = "No usage in this window."
 		return r
 	}
+	r.restsOn(activeDays(&in), "active days")
 	premiumTokens, cheaperTokens, otherTokens, premiumLines, cheaperLines := modelTierTotals(in.ByModel)
 
 	total := premiumTokens + cheaperTokens + otherTokens

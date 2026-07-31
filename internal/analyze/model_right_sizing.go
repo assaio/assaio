@@ -46,6 +46,7 @@ func (rightSizeValidator) Analyze(in Input) Result {
 		r.Takeaway = "No premium-model turns in this window."
 		return r
 	}
+	r.restsOn(int(premiumTurns), "premium-model turns")
 	enough := premiumTurns >= rightSizeMinTurns
 	smallShare := fracOf(smallPremium, premiumTurns)
 

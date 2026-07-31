@@ -22,6 +22,7 @@ var templateFuncs = template.FuncMap{
 	"facets":         facets,
 	"subpathName":    subpathName,
 	"barsApplicable": func(r analyze.Result) bool { return r.Bars != nil },
+	"confidence":     analyze.ConfidenceSummary,
 	"locale":         func() i18n.Dashboard { return i18n.For("").Dashboard },
 }
 

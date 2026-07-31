@@ -3,6 +3,7 @@ package analyze
 import (
 	"sort"
 
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -36,9 +37,9 @@ func (coverageValidator) Analyze(in Input) Result {
 		return r
 	}
 
-	activityTokens, byTool := tokensByTool(in.Usage)
-	activityShare := fracOf(activityTokens, in.Totals.Tokens)
-	pricedShare := fracOf(pricedTokenSum(in.ByModel), in.Totals.Tokens)
+	r.restsOn(activeDays(&in), "active days")
+	_, byTool := tokensByTool(in.Usage)
+	activityShare, pricedShare, _ := coverageShares(&in)
 	solid := activityShare >= coverageStrongFloor && pricedShare >= coverageStrongFloor
 
 	r.Read = readFor(solid, "Solid")
@@ -98,13 +99,6 @@ func coverageTakeaway(activityShare, pricedShare float64) string {
 	}
 }
 
-// activityCapableTool reports whether tool's parser extracts line and edit activity, not
-// just tokens and cost. Update this when a cost-only parser (Gemini CLI, Cline) gains
-// activity extraction (BACKLOG B39).
-func activityCapableTool(tool string) bool {
-	return tool == "claude-code" || tool == "codex"
-}
-
 // rowTokens is a row's billable token total, matching Totals.Tokens -- reasoning tokens
 // are a subset of output (usage.Record) and are never re-added.
 func rowTokens(r *store.UsageRow) int64 {
@@ -118,7 +112,7 @@ func tokensByTool(rows []store.UsageRow) (activity int64, byTool map[string]int6
 	for i := range rows {
 		t := rowTokens(&rows[i])
 		byTool[rows[i].Tool] += t
-		if activityCapableTool(rows[i].Tool) {
+		if parser.HasActivity(rows[i].Tool) {
 			activity += t
 		}
 	}
@@ -156,7 +150,7 @@ func toolCoverageBars(byTool map[string]int64, total int64) []Bar {
 	bars := make([]Bar, len(tools))
 	for i, t := range tools {
 		label := t
-		if !activityCapableTool(t) {
+		if !parser.HasActivity(t) {
 			label += " (cost only)"
 		}
 		bars[i] = Bar{Label: label, Value: honestPercent(fracOf(byTool[t], total)), Frac: fracOf(byTool[t], maxTok)}

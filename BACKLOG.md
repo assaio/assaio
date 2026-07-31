@@ -43,24 +43,24 @@ under-reported data is worse than no metric.
   of the store's grouping and travels through `report.Row`, the table/JSON/CSV renderers, the
   `coverage` validator and the metric-plugin envelope; a grouped total that merges per-turn
   and session records is marked `mixed` rather than reading as per-turn.
-- [ ] **B81 · confidence envelope on every result** — M · both — carry coverage, sample
-  size, granularity mix, pricing coverage, freshness and the parsing build as structured fields
-  on `analyze.Result`, with a derived `high|medium|low|insufficient` label. Today those limits
-  live in prose caveats a reader can skip, so a thin-data verdict can be quoted as a solid one.
-  Deliberately not one opaque score in storage: a display label may summarize, the components
-  stay inspectable. Extends B69's granularity provenance; becomes the floor `check` and B84
-  refuse to fire below.
-- [ ] **B83 · source depth matrix** — S · both — replace "supported / unsupported" with
-  per-source, per-field depth generated from parser capabilities: **deep** (tokens + activity +
-  attribution), **standard** (reliable usage, documented activity gaps), **import-only**
-  (billing or aggregate data that cannot support session-level conclusions), plus parser
-  freshness and known gaps. Surfaced in `doctor` and in docs. Stops "supports Gemini CLI" from
-  reading as "counts Gemini's edits".
-- [ ] **B82 · `init`** — S/M · both — one command for a first run: detect supported tools
-  and their log locations, print exactly what will be read before reading it, write a minimal
-  config only when needed, run the incremental backfill, print the dashboard path. Stays
-  network-free; `--non-interactive` for packaging smoke tests; must produce something useful
-  when only one source exists.
+- [x] **B81 · confidence envelope on every result** — M · both — every `analyze.Result`
+  carries activity/priced/turn coverage, the sample count and unit the validator itself
+  declares, and when and by which build the data was read, plus a derived
+  `high|medium|low|insufficient` label. The components stay inspectable and the text report
+  names the weakest axis rather than only the label. Exec metric plugins declare their own
+  sample basis and are stamped with the same window coverage. Becomes the floor `check` and
+  B84 can refuse to fire below.
+- [x] **B83 · source depth matrix** — S · both — one declarative table of what each source
+  actually extracts across three tiers (**deep**, **standard**, **import-only**), with the
+  specific gaps required below the top tier. `doctor` prints it for the tools found on this
+  machine, FEATURES.md carries the full matrix, and the `coverage` validator reads it instead
+  of keeping its own list of which parsers capture activity.
+- [x] **B82 · `init`** — S/M · both — one command for a first run: detects the tools with
+  logs on this machine, prints the exact directories it will read *before* reading anything
+  and what it extracts, imports, writes the report and names the next three commands. Writes
+  no config when the defaults work; prints the `sources:` skeleton when nothing is found, and
+  treats that as a normal outcome rather than an error. Network-free; `--non-interactive`
+  for packaging smoke tests.
 
 ## Level 2 — "Intent, and a next step"
 
@@ -245,10 +245,12 @@ Plugin authors and any future managed cloud can build on it without breakage.
 
 ## Pool — CLI & DX
 
-- [ ] **B43 · per-turn freshness hook** — S · both — the `SessionEnd` / `PreCompact` hook
-  recipes shipped with the incremental ingest in v0.4; a per-turn (`Stop`) hook became
+- [x] **B43 · per-turn freshness hook** — S · both — the `SessionEnd` / `PreCompact` hook
+  recipes shipped with the incremental ingest in v0.4; the per-turn (`Stop`) hook became
   honest once B68 landed, since re-reading the transcript now restates a turn that was
-  ingested half-attributed. What is left is the recipe itself and its cost measurement.
+  ingested half-attributed. [docs/automation.md](docs/automation.md) now carries the recipe
+  and its measured cost: 0.07 s idle, 0.17 s for a typical transcript, 0.99 s for the
+  largest one on a 4.5 GB history.
 - [ ] **B44 · MCP server** — M · solo — `assaio-agent mcp`: query your own usage from
   Claude ("what did that refactor cost?"); also on ROADMAP's further-out list.
 - [ ] **B45 · TUI** — L · both — interactive terminal dashboard (validators +

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -91,4 +92,40 @@ func (s *Store) IngestFreshness(ctx context.Context) (map[string]time.Time, erro
 		out[tool] = t
 	}
 	return out, rows.Err()
+}
+
+// Provenance answers what the stored data is, not what it says: when the newest of it was
+// read, and by which parsing build. A figure can be perfectly covered and still be a week
+// stale, or come from a parser that did not yet extract a field the metric reading it
+// needs -- neither is visible from the usage records themselves. More than one build means
+// history is uneven, so the answer says so rather than naming whichever came last.
+func (s *Store) Provenance(ctx context.Context) (newest time.Time, build string, err error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT version, MAX(ingested_at) FROM ingest_file GROUP BY version`)
+	if err != nil {
+		return time.Time{}, "", err
+	}
+	defer func() { _ = rows.Close() }()
+	var builds []string
+	for rows.Next() {
+		var version, stamp string
+		if err := rows.Scan(&version, &stamp); err != nil {
+			return time.Time{}, "", err
+		}
+		builds = append(builds, version)
+		if t, perr := time.Parse(time.RFC3339, stamp); perr == nil && t.After(newest) {
+			newest = t
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return time.Time{}, "", err
+	}
+	switch len(builds) {
+	case 0:
+		return time.Time{}, "", nil
+	case 1:
+		return newest, builds[0], nil
+	default:
+		return newest, fmt.Sprintf("mixed (%d builds)", len(builds)), nil
+	}
 }

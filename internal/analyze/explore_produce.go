@@ -39,6 +39,7 @@ func (exploreValidator) Analyze(in Input) Result {
 		return r
 	}
 	m := buildToolMix(in.Usage)
+	r.restsOn(int(m.Classified), "classified tool calls")
 	if m.Classified == 0 {
 		r.Read = noDataRead
 		r.Purity = 0.5

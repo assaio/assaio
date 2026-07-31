@@ -52,6 +52,7 @@ func (skillValidator) Analyze(in Input) Result {
 	// The share and the total it is a share of must come from the same dimension: reading
 	// "80% of 500K" when the 80% is 4K of 5K in the other dimension puts two numbers side by
 	// side that cannot both be true, and points the reader at a skill worth 1% of the window.
+	r.restsOn(len(in.Skills)+len(in.Agents), "labeled skills and sub-agents")
 	topShareOf, attributed, comparable := topAttributionShare(in.Skills, in.Agents)
 	// Concentration needs something to concentrate against: with one label its share is
 	// 100% by construction, which is arithmetic, not a finding.

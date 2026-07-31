@@ -60,6 +60,11 @@ type Input struct {
 	// aggregate hides. Populated by the CLI from store.TurnSizing; empty in the drill and
 	// in tests that don't set it, where model-right-sizing reads "no premium turns".
 	TurnSizing []store.ModelTurns
+	// Ingested is when the newest data in the store was read and ParsedBy is the build that
+	// read it; both travel onto every Result's Confidence. Zero and "" mean unknown, which
+	// is what a caller that cannot answer should leave them as rather than guessing.
+	Ingested time.Time
+	ParsedBy string
 }
 
 // The label kinds Result.BarsPseudonym may name. Each is a dimension whose values people
@@ -125,6 +130,11 @@ type Result struct {
 	// Caveats are honesty notes (directional, contested, or server-stage-only signals);
 	// optional.
 	Caveats []string `json:"caveats,omitempty"`
+	// Confidence is what this verdict rests on: coverage, how many observations it counted,
+	// and how current the data is. A validator sets only Confidence.Samples and Unit; the
+	// rest is stamped by Evaluate, which is how every Result carries it -- including a
+	// validator written out of tree.
+	Confidence Confidence `json:"confidence"`
 }
 
 // Validator is one independently testable, self-describing metric. Name is a stable

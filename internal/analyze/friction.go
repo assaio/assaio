@@ -38,6 +38,7 @@ func (frictionValidator) Analyze(in Input) Result {
 		return r
 	}
 	f := buildFriction(in.Usage)
+	r.restsOn(int(f.Observed), "tool calls")
 	sufficient := f.Observed >= frictionMinCalls && f.Coherent()
 	lowErrors := f.ErrorRate() <= frictionWatchCeiling
 	smooth := sufficient && lowErrors

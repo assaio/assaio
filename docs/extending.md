@@ -890,6 +890,20 @@ reshapes it says so explicitly (see `RELEASING.md`).
 
 Anything written to stderr passes through prefixed `[metric/<name>] `.
 
+**Declare what your verdict rests on** (v0.5). Every result carries a confidence envelope,
+and assaio fills all of it except the one part only your plugin knows: how many
+observations you counted.
+
+```json
+"confidence": {"samples": 12, "samplesUnit": "sessions"}
+```
+
+Coverage, freshness and the parsing build are stamped for you from the same window the
+built-in metrics use, so your verdict is judged on the same footing as theirs. A plugin
+that omits the field reads as `insufficient` — the honest label for "did not say what it
+rests on" — so declare it even when the number is large. Count observations, not the
+buckets you report: "3 models" is a shape, "31 active days" is evidence.
+
 ### What the boundary enforces
 
 The honesty rules are enforced, not requested. A result that fails **any** check is

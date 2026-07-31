@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 )
@@ -131,5 +132,60 @@ func TestRecordSourceRunWritesEveryToolInOneCall(t *testing.T) {
 	}
 	if got["plugin:acme"][0].Records != 12 {
 		t.Errorf("plugin source not recorded: %+v", got["plugin:acme"])
+	}
+}
+
+func TestProvenanceReportsNewestReadAndItsBuild(t *testing.T) {
+	st := openTempStore(t)
+	ctx := context.Background()
+	early := time.Date(2026, 7, 30, 10, 0, 0, 0, time.UTC)
+	late := time.Date(2026, 7, 31, 8, 0, 0, 0, time.UTC)
+	if err := st.RecordIngest(ctx, "v0.5.0", early, []IngestEntry{{Path: "/a", Tool: "claude-code"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.RecordIngest(ctx, "v0.5.0", late, []IngestEntry{{Path: "/b", Tool: "codex"}}); err != nil {
+		t.Fatal(err)
+	}
+	newest, build, err := st.Provenance(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !newest.Equal(late) {
+		t.Errorf("newest = %v, want %v", newest, late)
+	}
+	if build != "v0.5.0" {
+		t.Errorf("build = %q, want v0.5.0", build)
+	}
+}
+
+// TestProvenanceSaysWhenBuildsDisagree keeps an upgrade mid-history visible: part of the
+// window may carry signals the older parser could not extract.
+func TestProvenanceSaysWhenBuildsDisagree(t *testing.T) {
+	st := openTempStore(t)
+	ctx := context.Background()
+	at := time.Date(2026, 7, 31, 8, 0, 0, 0, time.UTC)
+	for i, v := range []string{"v0.4.0", "v0.5.0"} {
+		e := []IngestEntry{{Path: "/p" + string(rune('a'+i)), Tool: "claude-code"}}
+		if err := st.RecordIngest(ctx, v, at, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, build, err := st.Provenance(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(build, "mixed") {
+		t.Errorf("build = %q, want it to disclose more than one parsing build", build)
+	}
+}
+
+func TestProvenanceOnAnEmptyStore(t *testing.T) {
+	st := openTempStore(t)
+	newest, build, err := st.Provenance(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !newest.IsZero() || build != "" {
+		t.Errorf("empty store = (%v, %q), want unknown rather than a guess", newest, build)
 	}
 }

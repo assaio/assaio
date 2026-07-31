@@ -40,6 +40,7 @@ func (throughputValidator) Analyze(in Input) Result {
 	}
 	// inv is still needed for Days (Totals carries no distinct-day count); TotalLinesAdded
 	// is the same sum as the prepared in.Totals.Lines, so figures read that instead.
+	r.restsOn(activeDays(&in), "active days")
 	inv := report.BuildInventory(in.Usage, in.Prices)
 	recent, prior, changePct, trendOK := weekOverWeek(in.Usage, in.Now, in.Recent)
 	growthSignal := trendOK && changePct > 0

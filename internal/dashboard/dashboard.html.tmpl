@@ -294,6 +294,23 @@ button{font:inherit;}
   max-width:52ch;
 }
 .entry__caveat::before{content:"Note — ";color:var(--muted);}
+.entry__conf{
+  margin-top:10px;
+  font:12px/1.5 var(--font-sans);
+  color:var(--muted);
+  max-width:52ch;
+}
+.conf{
+  font:11px/1 var(--font-sans);
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  padding:3px 6px;
+  border:1px solid var(--hairline);
+  border-radius:3px;
+  color:var(--muted);
+}
+.conf--high{color:var(--verdigris);border-color:var(--verdigris);}
+.conf--low,.conf--insufficient{color:var(--oxide);border-color:var(--oxide);}
 .entry__takeaway{
   margin-top:18px;
   font:14px/1.55 var(--font-sans);
@@ -614,6 +631,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--{{.R.Read.Key}}">{{.R.Read.Label}}</span>
       {{if .R.Caveats}}<span class="prov">{{(locale).ProvLabel}}</span>{{end}}
+      <span class="conf conf--{{.R.Confidence.Label}}">{{.R.Confidence.Label}}</span>
     </div>
   </div>
   <div>
@@ -647,6 +665,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     {{end}}
     {{range .R.Caveats}}<p class="entry__caveat">{{.}}</p>{{end}}
+    <p class="entry__conf">{{(locale).ConfidenceLabel}} — {{confidence .R.Confidence}}</p>
     <p class="entry__takeaway">{{.R.Takeaway}}</p>
   </div>
 </article>

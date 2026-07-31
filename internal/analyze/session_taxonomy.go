@@ -31,6 +31,7 @@ func (taxonomyValidator) Analyze(in Input) Result {
 		r.Takeaway = "No sessions in this window."
 		return r
 	}
+	r.restsOn(len(in.Sessions), "sessions")
 	var conv, light, heavy int64
 	for i := range in.Sessions {
 		switch e := in.Sessions[i].Edits; {

@@ -52,7 +52,7 @@ func collectNamedResults(cmd *cobra.Command, names []string, metricCfgs []config
 		if !ok {
 			return nil, unknownAnalysisName(name, metricCfgs)
 		}
-		out = append(out, v.Analyze(*in))
+		out = append(out, analyze.Evaluate(v, in))
 	}
 	return out, nil
 }
@@ -60,7 +60,7 @@ func collectNamedResults(cmd *cobra.Command, names []string, metricCfgs []config
 func runValidatorResults(validators []analyze.Validator, in *analyze.Input) []analyze.Result {
 	out := make([]analyze.Result, len(validators))
 	for i, v := range validators {
-		out[i] = v.Analyze(*in)
+		out[i] = analyze.Evaluate(v, in)
 	}
 	return out
 }
@@ -90,7 +90,14 @@ func runOneMetricPlugin(ctx context.Context, pc config.PluginConfig, in *analyze
 	if err != nil {
 		return analyze.Result{}, fmt.Errorf("metric plugin %s: %w", pc.Name, err)
 	}
-	return plugin.RunMetric(ctx, resolved, in)
+	res, err := plugin.RunMetric(ctx, resolved, in)
+	if err != nil {
+		return analyze.Result{}, err
+	}
+	// A plugin's verdict rests on the same window as a built-in one, so it carries the same
+	// coverage; only the sample basis is the plugin's own to declare.
+	analyze.Stamp(&res, in)
+	return res, nil
 }
 
 func sortedPluginConfigs(cfgs []config.PluginConfig) []config.PluginConfig {

@@ -294,6 +294,23 @@ button{font:inherit;}
   max-width:52ch;
 }
 .entry__caveat::before{content:"Note — ";color:var(--muted);}
+.entry__conf{
+  margin-top:10px;
+  font:12px/1.5 var(--font-sans);
+  color:var(--muted);
+  max-width:52ch;
+}
+.conf{
+  font:11px/1 var(--font-sans);
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  padding:3px 6px;
+  border:1px solid var(--hairline);
+  border-radius:3px;
+  color:var(--muted);
+}
+.conf--high{color:var(--verdigris);border-color:var(--verdigris);}
+.conf--low,.conf--insufficient{color:var(--oxide);border-color:var(--oxide);}
 .entry__takeaway{
   margin-top:18px;
   font:14px/1.55 var(--font-sans);
@@ -702,6 +719,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--good">STRONG</span>
       
+      <span class="conf conf--high">high</span>
     </div>
   </div>
   <div>
@@ -749,6 +767,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     
+    <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">Usage is broad and trending up week over week.</p>
   </div>
 </article>
@@ -760,6 +779,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--high">high</span>
     </div>
   </div>
   <div>
@@ -801,6 +821,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     <p class="entry__caveat">Prov.: days are bucketed in UTC, so an evening that runs past midnight UTC is split across two of them -- inflating the active-day count and halving the typical day it is measured against.</p>
+    <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">Too few active days this window to tell an unusual day from an ordinary one.</p>
   </div>
 </article>
@@ -812,6 +833,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--watch">WATCH</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--high">high</span>
     </div>
   </div>
   <div>
@@ -841,6 +863,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     <p class="entry__caveat">High reuse is cheaper, not better work -- a large one-shot task legitimately shows low reuse.</p><p class="entry__caveat">Vendor cache lifetimes (TTLs) are invisible, so this is a day-grain approximation.</p>
+    <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">Little input is served from cache this window -- expected for one-shot or exploratory work.</p>
   </div>
 </article>
@@ -852,6 +875,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--watch">WATCH</span>
       
+      <span class="conf conf--low">low</span>
     </div>
   </div>
   <div>
@@ -913,6 +937,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     
+    <p class="entry__conf">Confidence — low · 2 projects</p>
     <p class="entry__takeaway">One project takes a much larger share of tokens than of the lines produced -- worth asking what those tokens bought.</p>
   </div>
 </article>
@@ -924,6 +949,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--watch">WATCH</span>
       
+      <span class="conf conf--low">low</span>
     </div>
   </div>
   <div>
@@ -971,6 +997,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     
+    <p class="entry__conf">Confidence — low · 2 sessions</p>
     <p class="entry__takeaway">Compaction is rare so far, but too few sessions this window to call context health confidently.</p>
   </div>
 </article>
@@ -982,6 +1009,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--good">SOLID</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--high">high</span>
     </div>
   </div>
   <div>
@@ -1031,6 +1059,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     <p class="entry__caveat">Cost-only tools (Gemini CLI, Cline, plugins) contribute tokens and cost but no line or edit signals -- see ROADMAP.</p>
+    <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">Most usage carries full activity and price data -- the other figures rest on solid coverage.</p>
   </div>
 </article>
@@ -1042,6 +1071,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--insufficient">insufficient</span>
     </div>
   </div>
   <div>
@@ -1055,6 +1085,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     <p class="entry__caveat">Prov.: 0% of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified -- run `backfill` to restate them. Tools that name no tool calls (Gemini CLI, Cline) record none, so they neither raise nor lower this.</p>
+    <p class="entry__conf">Confidence — insufficient — nothing to measure in this window</p>
     <p class="entry__takeaway">No tool in this window records what its tool calls were for.</p>
   </div>
 </article>
@@ -1066,6 +1097,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--insufficient">insufficient</span>
     </div>
   </div>
   <div>
@@ -1095,6 +1127,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     <p class="entry__caveat">Prov.: 0% of tool calls record whether they failed. Only Claude Code marks the outcome of every call, and only for sessions ingested by a build that captures it -- run `backfill` after upgrading. Codex reports it for file edits alone, so its calls are excluded from these rates rather than counted as successes.</p>
+    <p class="entry__conf">Confidence — insufficient — nothing to measure in this window</p>
     <p class="entry__takeaway">No tool call in this window records whether it failed, so no failure rate can be read from it.</p>
   </div>
 </article>
@@ -1106,6 +1139,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--watch">WATCH</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--high">high</span>
     </div>
   </div>
   <div>
@@ -1161,6 +1195,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     <p class="entry__caveat">Est. savings is an upper bound -- it assumes every premium-tier token could move to claude-sonnet-4-5 with no quality loss (rarely true) and projects your active-day pace to 30 days; directional, a prompt to review, not a recommendation to switch.</p>
+    <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">Nearly all tokens run on premium models -- consider delegating routine work to cheaper models or sub-agents.</p>
   </div>
 </article>
@@ -1172,6 +1207,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
       
+      <span class="conf conf--insufficient">insufficient</span>
     </div>
   </div>
   <div>
@@ -1179,6 +1215,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     
+    <p class="entry__conf">Confidence — insufficient — nothing to measure in this window</p>
     <p class="entry__takeaway">No premium-model turns in this window.</p>
   </div>
 </article>
@@ -1190,6 +1227,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--good">LEAN</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--high">high</span>
     </div>
   </div>
   <div>
@@ -1219,6 +1257,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     <p class="entry__caveat">Only Codex and Gemini CLI report reasoning tokens; Claude Code doesn&#39;t, so this covers part of your output.</p><p class="entry__caveat">Reasoning is a subset of output (already billed there); this is a composition signal, not extra cost.</p>
+    <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">Reasoning is a modest share of reported output -- the thinking budget looks proportionate.</p>
   </div>
 </article>
@@ -1230,6 +1269,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--good">LOW</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--high">high</span>
     </div>
   </div>
   <div>
@@ -1253,6 +1293,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     <p class="entry__caveat">Evidence on AI churn&#39;s real-world impact is contested; bug/survival impact needs the server stage.</p>
+    <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">Rework and rejection are both low.</p>
   </div>
 </article>
@@ -1264,6 +1305,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--low">low</span>
     </div>
   </div>
   <div>
@@ -1331,6 +1373,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     <p class="entry__caveat">Prov.: hours are read in this machine&#39;s local timezone; sessions recorded in another zone land in the wrong band.</p><p class="entry__caveat">Aggregate workload signal -- not an input to evaluating an individual.</p>
+    <p class="entry__conf">Confidence — low · 2 sessions</p>
     <p class="entry__takeaway">Too few sessions this window to call the rhythm -- the timing shares above are shown without a verdict.</p>
   </div>
 </article>
@@ -1342,6 +1385,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--low">low</span>
     </div>
   </div>
   <div>
@@ -1397,6 +1441,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     <p class="entry__caveat">Conversational sessions are real work (design, debugging, planning) -- not idle time.</p><p class="entry__caveat">A thrash bucket needs per-session rework, which isn&#39;t stored yet, so it isn&#39;t split out here.</p>
+    <p class="entry__conf">Confidence — low · 2 sessions</p>
     <p class="entry__takeaway">Too few sessions this window to characterize the mix.</p>
   </div>
 </article>
@@ -1408,6 +1453,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--insufficient">insufficient</span>
     </div>
   </div>
   <div>
@@ -1421,6 +1467,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     <p class="entry__caveat">Prov.: only Claude Code labels turns with a skill or sub-agent today; usage from other tools is absent from this split, not zero.</p>
+    <p class="entry__conf">Confidence — insufficient — nothing to measure in this window</p>
     <p class="entry__takeaway">No usage in this window carried a skill or sub-agent label.</p>
   </div>
 </article>
@@ -1432,6 +1479,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">SET PLAN</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--high">high</span>
     </div>
   </div>
   <div>
@@ -1449,6 +1497,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     <p class="entry__caveat">The API-equivalent $ is an estimate at public pay-as-you-go prices, not your actual bill.</p>
+    <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">Set config.pricing.monthly_subscription_cost to see whether your flat plan beats API pricing at this volume.</p>
   </div>
 </article>
@@ -1460,6 +1509,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--good">RAMPING</span>
       
+      <span class="conf conf--high">high</span>
     </div>
   </div>
   <div>
@@ -1509,6 +1559,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     
+    <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">AI-line output is ramping up week over week.</p>
   </div>
 </article>
@@ -1520,6 +1571,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
+      <span class="conf conf--low">low</span>
     </div>
   </div>
   <div>
@@ -1549,6 +1601,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     <p class="entry__caveat">Task size is invisible in logs, so a low one-shot rate can mean hard problems, not weak prompting -- directional only.</p>
+    <p class="entry__conf">Confidence — low · 2 code-producing sessions</p>
     <p class="entry__takeaway">Too few code-producing sessions this window to judge prompting efficiency.</p>
   </div>
 </article>

@@ -12,11 +12,12 @@ mattering the moment a second release exists.
 
 | Command | Since | What it does |
 |---------|-------|--------------|
+| `init` | v0.5 | A first run end to end: detects tools, prints the exact directories it will read before reading them, imports, writes the report, names what to run next. Writes no config when defaults work; `--non-interactive` for scripted setup. |
 | `demo` | v0.1 | Full reports on bundled sample data — no logs needed. |
 | `backfill` | v0.1 | Import all historical local session logs into the store. Since v0.4, incremental: an input already parsed unchanged by this build is skipped and reported as `unchanged=`; `--full` forces a complete re-parse. |
 | `report` | v0.1 | Token/cost report; `--by day\|project\|tool\|model\|entrypoint\|member`, `--format table\|json\|csv`, `--compare` top movers. |
 | `effectiveness` | v0.1 | AI output vs cost — AI lines, edits, rejections, **`$`/100 AI lines** — per project by default; `--compare`. |
-| `analyze` | v0.1 | Runs the metric validators below plus configured exec metric plugins; `--list`, `--format text\|json`, `[name...]` subset. |
+| `analyze` | v0.1 | Runs the metric validators below plus configured exec metric plugins; `--list`, `--format text\|json`, `[name...]` subset. Since v0.5 every result carries a confidence envelope (coverage, sample size and unit, data age, parsing build, and a `high\|medium\|low\|insufficient` label). |
 | `check` | v0.1 | Budget gate with non-zero exit: `--max-tokens` (default basis) or `--max-cost` (labeled API-equivalent). Since v0.3, also the host for exec **rule** plugins: an `error` alert — or a rule that could not be evaluated — fails the gate. |
 | `dashboard` | v0.1 | Writes the self-contained offline Assay HTML report; pseudonymized by default, `--no-anonymize` opt-out. |
 | `serve` | v0.1 | Self-hosted team server: collects pushed usage, serves the aggregated team dashboard. |
@@ -76,13 +77,27 @@ Exec **metric plugins** (below) render beside these, namespaced `plugin:<name>`.
 
 ## Data sources (parsers)
 
-| Tool | Since | Tokens & cost | Activity (lines/edits/rework) |
-|------|-------|---------------|-------------------------------|
-| Claude Code | v0.1 | ✔ (incl. sub-agent turns) | ✔ full, incl. rejections |
-| OpenAI Codex CLI | v0.1 | ✔ (exact, delta-based) | ✔ except rejections |
-| Gemini CLI | v0.1 | ✔ | — (cost only, see ROADMAP) |
-| Cline | v0.1 | ✔ (recomputed from tokens) | — (cost only, see ROADMAP) |
-| Exec parser plugins | v0.1 | ✔ (validated at the boundary) | — (protocol carries tokens only) |
+"Supported" is not one thing: a source that reports tokens but no edits cannot answer the
+same questions as one that reports both. Every source therefore publishes its **depth**
+(v0.5), which `doctor` prints for the tools it finds on your machine and which the
+`coverage` validator reads instead of keeping its own list.
+
+| Tool | Since | Depth | Tokens & cost | Activity (lines/edits/rework) | Attribution (skill / sub-agent) |
+|------|-------|-------|---------------|-------------------------------|---------------------------------|
+| Claude Code | v0.1 | **deep** | ✔ (incl. sub-agent turns) | ✔ full, incl. rejections | ✔ |
+| OpenAI Codex CLI | v0.1 | standard | ✔ (exact, delta-based) | ✔ except rejections | — |
+| Gemini CLI | v0.1 | standard | ✔ | — (cost only, see ROADMAP) | — |
+| Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (cost only, see ROADMAP) | — |
+| Exec parser plugins | v0.1 | declared per record | ✔ (validated at the boundary) | — (protocol carries tokens only) | — |
+
+- **deep** — tokens, per-turn activity, and the labels that say what the work was.
+- **standard** — reliable per-turn usage whose activity gaps are documented, not implied.
+- **import-only** — billing or aggregate figures that cannot support session-level
+  conclusions. No in-tree parser is here today; a source that emits whole-session records
+  lands here, which is why granularity travels with every report row.
+
+A plugin is absent from the tiers by design: its depth is whatever its author implemented,
+so it is read from the records it emits rather than promised by a table assaio maintains.
 
 Shared parser guarantees: skip-and-count on corrupt lines, deterministic dedupe keys
 (re-runs never double-count), `Granularity` honesty (session-level data never

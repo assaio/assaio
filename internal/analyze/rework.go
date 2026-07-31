@@ -35,6 +35,7 @@ func (reworkValidator) Analyze(in Input) Result {
 		r.Takeaway = "No usage in this window."
 		return r
 	}
+	r.restsOn(activeDays(&in), "active days")
 	churn := report.BuildChurn(in.Usage)
 	var rejected, toolCalls int64
 	for i := range in.Usage {
