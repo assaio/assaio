@@ -59,6 +59,17 @@ func GeminiRoot(home string) string {
 	return filepath.Join(home, ".gemini")
 }
 
+// CopilotRoot returns the root of GitHub Copilot CLI session state. The CLI resolves its
+// own home as configDir -> COPILOT_HOME -> ~/.copilot, so COPILOT_HOME is honored here for
+// the same reason: a user who relocated the CLI's data should not have to tell assaio about
+// it a second time. A configured sources.copilot still overrides both.
+func CopilotRoot(home string) string {
+	if h := os.Getenv("COPILOT_HOME"); h != "" {
+		return h
+	}
+	return filepath.Join(home, ".copilot")
+}
+
 // ClineRoots returns the root directories that may contain Cline task data under home:
 // the Cline extension's global storage in each supported VS Code-family editor, and the
 // Cline CLI data directory. Each root's tasks live under a "tasks" subdirectory.

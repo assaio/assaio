@@ -305,20 +305,14 @@ a tool used by one organization is usually better served by an out-of-tree
   cache{read,write}}`, `cost`, `modelID`, and — richest of any candidate — the `edit` tool
   persists a structured `filediff{additions,deletions,patch}`, so lines +/- are stored
   directly, no diff parsing. The best activity target after the current four.
-- [ ] **B53 · Copilot CLI** — M — `~/.copilot/session-state/<id>/events.jsonl` (+ a
-  `session-store.db`). Dir layout is solid, but per-turn token counts and edit-diff fields
-  are not in the public schema; tokens appear only in an opt-in OTel export
-  (`~/.copilot/otel/*.jsonl`). **Blocked on a real CLI sample.** Inspected a machine running
-  only the JetBrains plugin (2026-07-31): `~/.copilot` held instructions, prompts and one
-  process log; `~/.config/github-copilot` held auth DBs, `versions.json`, `apps.json` and a
-  `copilot-intellij.db` whose entire `state` table is one row
-  (`mcp-first-boot-completed`). No `session-state/`, no `otel/`, no usage accounting of any
-  kind. The only token-shaped strings on that machine came from
-  `~/.cache/github-copilot/project-index/*/workspace-chunks.db` — Copilot's index of the
-  user's own repository, i.e. assaio's vendored price table read back. **The IDE plugins are
-  not a usage source; only the CLI can be, and only with its OTel export enabled.** Until a
-  sample exists, the honest Copilot path is the org-level metrics/billing API as an
-  `import-only` source, like B55.
+- [x] **B53 · Copilot CLI** — M — in-tree parser over
+  `$COPILOT_HOME`/`~/.copilot/session-state/<id>/events.jsonl`. The complete accounting rides
+  the `session.shutdown` event: per-model input/output/cache-read/cache-write/reasoning tokens
+  plus the session's line changes. Session-granularity by construction, so it is marked in
+  reports and lowers turn-level coverage. `usage.inputTokens` includes cache writes, so the
+  uncached share is read from `tokenDetails`; line changes have no per-model split and are
+  credited to the model with the most requests. The IDE plugins remain **not** a usage
+  source — only the CLI writes this state, and only once a session ends.
 - [ ] **B54 · Factory droid** — M — session-granularity local logs (per ROADMAP).
 - [ ] **B88 · Antigravity — activity-only, no cost** — M · both — research verified
   (2026-07-31), and the answer is unusual enough to record: Google Antigravity stores a lot

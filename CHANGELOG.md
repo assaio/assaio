@@ -21,6 +21,21 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+- **GitHub Copilot CLI is a supported source.** Its session logs
+  (`$COPILOT_HOME`, else `~/.copilot/session-state/<id>/events.jsonl`) carry a complete
+  accounting per model — input, output, cache-read, cache-write and reasoning tokens, plus
+  the session's added and removed lines — which assaio now reads. Two modelling decisions
+  are worth stating because both could quietly produce wrong numbers: Copilot's
+  `usage.inputTokens` is the **whole** prompt including tokens written to cache, so the
+  uncached share is read from `tokenDetails` instead — using the total beside the
+  cache-write count would have roughly doubled the estimated cost of a cached session. And
+  code changes are reported once per session with no per-model split, so they are credited
+  whole to the model that made the most requests rather than divided by a ratio nobody
+  measured. Copilot only totals a session when it ends, so records are session-granularity:
+  they are marked `‡` in reports, lower the turn-level coverage the `coverage` validator
+  reports, and carry their gaps in `doctor`'s depth matrix (`B53`).
+
 ## [0.5.0] - 2026-07-31
 
 ### Added

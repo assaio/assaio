@@ -55,10 +55,11 @@ type Config struct {
 // always exactly what the user configured. An empty list (the default) keeps the
 // current, built-in locations.
 type Sources struct {
-	Claude []string `koanf:"claude"`
-	Codex  []string `koanf:"codex"`
-	Gemini []string `koanf:"gemini"`
-	Cline  []string `koanf:"cline"`
+	Claude  []string `koanf:"claude"`
+	Codex   []string `koanf:"codex"`
+	Gemini  []string `koanf:"gemini"`
+	Cline   []string `koanf:"cline"`
+	Copilot []string `koanf:"copilot"`
 }
 
 // Privacy holds settings for shareable exports, distinct from the interactive CLI

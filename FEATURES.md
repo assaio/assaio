@@ -87,6 +87,7 @@ same questions as one that reports both. Every source therefore publishes its **
 | Claude Code | v0.1 | **deep** | ✔ (incl. sub-agent turns) | ✔ full, incl. rejections | ✔ |
 | OpenAI Codex CLI | v0.1 | standard | ✔ (exact, delta-based) | ✔ except rejections | — |
 | Gemini CLI | v0.1 | standard | ✔ | — (cost only, see ROADMAP) | — |
+| GitHub Copilot CLI | v0.5 | standard | ✔ (exact, per model) | ✔ lines added/removed per session | — |
 | Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (cost only, see ROADMAP) | — |
 | Exec parser plugins | v0.1 | declared per record | ✔ (validated at the boundary) | — (protocol carries tokens only) | — |
 

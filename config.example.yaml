@@ -30,6 +30,7 @@ format: table
 #   codex: []           # default: ~/.codex/sessions, ~/.codex/archived_sessions
 #   gemini: []          # default: ~/.gemini
 #   cline: []           # default: VS Code global storage, and ~/.cline/data
+#   copilot: []         # default: $COPILOT_HOME, else ~/.copilot
 #
 # Example: a Claude Code install that logs to an external volume.
 # sources:

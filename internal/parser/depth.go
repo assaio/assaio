@@ -1,13 +1,15 @@
 package parser
 
-// The depth tiers, ordered by what a source can support. The discriminator between the
-// first two is attribution; the discriminator for the third is record granularity, since a
-// source that only reports whole-session or daily aggregates cannot answer a question
-// asked per turn no matter how accurate its totals are.
+// The depth tiers, ordered by what a source can support. Deep is separated from Standard by
+// attribution; Standard from ImportOnly by whether the figures can be attributed to a
+// session at all. Granularity is a documented gap within Standard rather than a tier of its
+// own: a source that totals per session still answers session questions honestly, it just
+// cannot answer one asked per turn.
 const (
 	// Deep carries tokens, per-turn activity, and the labels that say what the work was.
 	Deep = "deep"
-	// Standard carries reliable per-turn usage with activity gaps that are documented.
+	// Standard carries reliable usage whose gaps -- missing activity signals, or a coarser
+	// record granularity -- are documented rather than implied.
 	Standard = "standard"
 	// ImportOnly carries billing or aggregate figures that cannot support session-level
 	// conclusions.
@@ -49,6 +51,14 @@ var depths = []Depth{
 		Gaps: []string{
 			"no line, edit or tool-call signals, so it contributes cost but no output figures",
 			"tool-use tokens are folded into output, and ~/.gemini may be shared with other tools",
+		},
+	},
+	{
+		Tool: "copilot-cli", Tier: Standard,
+		Tokens: true, Activity: true, Attribution: false,
+		Gaps: []string{
+			"totals exist only when a session ends, so one record covers a whole session and per-turn figures exclude it",
+			"code changes are counted once per session with no per-model split, so they are credited whole to the model that made the most requests",
 		},
 	},
 	{

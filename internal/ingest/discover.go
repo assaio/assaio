@@ -5,6 +5,7 @@ import (
 	"github.com/assaio/assaio/internal/parser/claude"
 	"github.com/assaio/assaio/internal/parser/cline"
 	"github.com/assaio/assaio/internal/parser/codex"
+	"github.com/assaio/assaio/internal/parser/copilot"
 	"github.com/assaio/assaio/internal/parser/gemini"
 	"github.com/assaio/assaio/internal/paths"
 )
@@ -30,9 +31,18 @@ func discoverSources(home string, sources config.Sources) ([]source, error) {
 		}
 		geminiFiles = append(geminiFiles, found...)
 	}
+	var copilotFiles []string
+	for _, root := range paths.Resolve(sources.Copilot, paths.CopilotRoot(home)) {
+		found, err := copilot.Discover(root)
+		if err != nil {
+			return nil, err
+		}
+		copilotFiles = append(copilotFiles, found...)
+	}
 	return []source{
 		{tool: "codex", files: codexFiles, parse: codex.Parse},
 		{tool: "gemini-cli", files: geminiFiles, parse: gemini.Parse},
+		{tool: "copilot-cli", files: copilotFiles, parse: copilot.Parse},
 	}, nil
 }
 
