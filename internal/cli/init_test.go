@@ -14,7 +14,7 @@ func TestInitPrintsWhatItWillReadBeforeReadingIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	readIdx := strings.Index(out, ".claude/projects")
+	readIdx := strings.Index(out, filepath.Join(".claude", "projects"))
 	importIdx := strings.Index(out, "imported")
 	if readIdx < 0 || importIdx < 0 {
 		t.Fatalf("init must name the paths and then report the import: %q", out)
