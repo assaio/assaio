@@ -76,15 +76,18 @@ brew install assaio/tap/assaio-agent
 `PATH`, e.g.:
 
 ```sh
-curl -LO https://github.com/assaio/assaio/releases/download/v0.1.0/assaio_0.1.0_linux_amd64.tar.gz
-tar xzf assaio_0.1.0_linux_amd64.tar.gz assaio-agent
+VER=$(curl -fsSL https://api.github.com/repos/assaio/assaio/releases/latest |
+  sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+curl -LO "https://github.com/assaio/assaio/releases/download/v$VER/assaio_${VER}_linux_amd64.tar.gz"
+tar xzf "assaio_${VER}_linux_amd64.tar.gz" assaio-agent
 sudo install assaio-agent /usr/local/bin/
 ```
 
 **Windows** (PowerShell) — download the zip, unpack, add to `PATH`:
 
 ```powershell
-Invoke-WebRequest https://github.com/assaio/assaio/releases/download/v0.1.0/assaio_0.1.0_windows_amd64.zip -OutFile assaio.zip
+$ver = (Invoke-RestMethod https://api.github.com/repos/assaio/assaio/releases/latest).tag_name.TrimStart('v')
+Invoke-WebRequest "https://github.com/assaio/assaio/releases/download/v$ver/assaio_${ver}_windows_amd64.zip" -OutFile assaio.zip
 Expand-Archive assaio.zip -DestinationPath "$env:LOCALAPPDATA\assaio"
 [Environment]::SetEnvironmentVariable("Path", "$([Environment]::GetEnvironmentVariable('Path','User'));$env:LOCALAPPDATA\assaio", "User")
 ```
@@ -242,11 +245,12 @@ blank, never faked.
 | `dashboard` | Write a self-contained, offline **HTML dashboard** — stat tiles, hot/going-stale projects, model/tool mix, inventory. `--since`, `--output`. Project names are pseudonymized by default so it's safe to share; `--no-anonymize` for real names. |
 | `serve`    | Run the self-hosted **team server**: collects usage pushed by teammates' `sync` and serves the aggregated, pseudonymized-by-default team dashboard. |
 | `sync`     | Push this machine's local usage to a team server — pseudonymous by default, `--member` is an explicit opt-in to a real name. |
-| `doctor`   | Show detected tools, log locations, store inventory, health, and accuracy caveats. |
+| `doctor`   | Show detected tools, log locations, store inventory and size, format-drift canaries, and accuracy caveats. `--strict` exits non-zero for cron/CI. |
 | `status`   | A terminal overview: inventory, headline `$`/100 lines, hottest projects, and what's going stale — projects only. `--since`. |
 | `statusline` | Print **one ambient line** for an editor or shell status bar: today's tokens, AI lines, cost basis, and how fresh the data is. The day is your machine's local day. Read-only, and never fails loudly — see [automation](docs/automation.md#option-c--claude-code-session-hooks-for-statusline). |
 | `explain`  | Print a metric's **long-form page** — what it measures, how to read it, what to do about it, and its limits. Needs no store, so it works before your first import; no argument lists every metric. |
 | `clear`    | Delete stored data — needs an explicit scope (`--all`, `--older-than`, `--tool`) and `--yes`. |
+| `compact`  | Reclaim disk space the store freed but still holds — deleting rows alone never shrinks the file. |
 | `config`   | Print the effective configuration and where it was loaded from. |
 | `plugins`  | `list` configured exec parser plugins; `verify <name>` runs one and reports protocol conformance without storing. |
 | `metrics`  | `list` configured exec **metric** plugins; `verify <name>` runs one on your real window and reports contract conformance plus the rendered result — nothing stored. |

@@ -2,8 +2,10 @@
 
 The ranked pool of concrete candidate work items — the finer-grained counterpart to
 [ROADMAP.md](ROADMAP.md)'s narrative direction. **Nothing here is a commitment or a
-schedule.** The release buckets below are a working hypothesis of order; real feedback
-from people running `assaio` reorders them, and any item can be reshaped or dropped.
+schedule.** The levels below are a working hypothesis of order — they mirror the promises in
+[ROADMAP.md](ROADMAP.md#the-next-levels), and the pools after them hold everything not yet
+attached to one. Real feedback from people running `assaio` reorders all of it, and any item
+can be reshaped or dropped.
 
 **How this file works**
 
@@ -22,57 +24,76 @@ from people running `assaio` reorders them, and any item can be reshaped or drop
   before the work — connectors additionally follow the
   [connector intake flow](docs/extending.md#the-intake-path-open-a-connector-issue-first).
 
-## v0.2 — "Know thyself" (fast wins, no schema change)
+## Level 1 — "Trust the dataset"
 
-Theme: a solo user sees their own curve within two weeks of installing. All items read
-existing store columns; none needs a migration.
+Before `assaio` advises anything it should show what it read, what it missed, and how sure
+it is. Everything here is a prerequisite for the levels below: a metric computed on quietly
+under-reported data is worse than no metric.
 
-- [ ] **B02 · cache-hygiene trend** — S · both — add the day-over-day cache-read-share
-  trend to the shipped `cache-hygiene` validator, which already reports the current-window
-  share and the cache-write-waste flag. Caveat: vendor cache TTLs are invisible; day-grain
-  approximation.
-- [ ] **B06 · metric-plugin scaffolder + schemas** — S · both — `metrics init --lang
-  python|node|sh` writes a working plugin skeleton; publish JSON Schemas for the
-  metric envelope/result under `docs/schemas/`. Lowers the barrier the moment the
-  protocol is public.
-- [ ] **B08 · a second locale** — S · both — add one `i18n.Catalog` beside `en` and a case in
-  `i18n.For`, proving the scaffolding with a real language. v0.4 built the catalog (dashboard
-  chrome, statusline words, the 18 explain pages); what remains is translating it and choosing
-  how a locale is selected. Data-derived validator text stays out of scope: translating it
-  needs message templates for the interpolated numbers.
 - [ ] **B58 · format-drift heuristics** — S/M · both — per-source canary metrics after
   every `backfill` (files vs last run, records/file vs history, zero-token share,
   skipped ratio) → `warning: possible format drift in <tool>` + a `doctor` section.
   Closes the silent-underreporting gap described in
   [docs/format-resilience.md](docs/format-resilience.md). Cheaper since v0.4: `ingest_file`
   already holds per-source state and `doctor` already has a freshness section to extend.
+- [ ] **B59 · doctor --strict** — S · both — non-zero exit when B58's drift heuristics
+  fire (or a configured source discovers zero files), so a cron/CI job can alert on
+  vendor format drift instead of a human noticing shrunk numbers.
+- [ ] **B69 · usage-granularity provenance in reports** — S/M · both — `Store.Usage`
+  blends session-granularity plugin rows with per-turn rows without surfacing
+  `granularity`; carry it into `UsageRow` and mark mixed-granularity totals so session
+  data never silently reads as per-turn (honesty rule).
+- [ ] **B81 · confidence envelope on every result** — M · both — carry coverage, sample
+  size, granularity mix, pricing coverage, freshness and the parsing build as structured fields
+  on `analyze.Result`, with a derived `high|medium|low|insufficient` label. Today those limits
+  live in prose caveats a reader can skip, so a thin-data verdict can be quoted as a solid one.
+  Deliberately not one opaque score in storage: a display label may summarize, the components
+  stay inspectable. Extends B69's granularity provenance; becomes the floor `check` and B84
+  refuse to fire below.
+- [ ] **B83 · source depth matrix** — S · both — replace "supported / unsupported" with
+  per-source, per-field depth generated from parser capabilities: **deep** (tokens + activity +
+  attribution), **standard** (reliable usage, documented activity gaps), **import-only**
+  (billing or aggregate data that cannot support session-level conclusions), plus parser
+  freshness and known gaps. Surfaced in `doctor` and in docs. Stops "supports Gemini CLI" from
+  reading as "counts Gemini's edits".
+- [ ] **B82 · `init`** — S/M · both — one command for a first run: detect supported tools
+  and their log locations, print exactly what will be read before reading it, write a minimal
+  config only when needed, run the incremental backfill, print the dashboard path. Stays
+  network-free; `--non-interactive` for packaging smoke tests; must produce something useful
+  when only one source exists.
 
-## v0.3 — "Team & ecosystem"
+## Level 2 — "Intent, and a next step"
 
-- [ ] **B09 · team-evenness** — M · team — new validator + dashboard Team panel:
-  Lorenz/Gini spread of usage across pseudonymized members with a minimum-cohort
-  (≥5) guard. Answers "broad adoption, or two power users?" — never a ranked list.
-- [ ] **B10 · tool-coverage** — S · team — members per tool on a central store;
-  shadow-tool and unused-seat detection.
-- [ ] **B11 · weekly digest** — S/M · both — `digest --weekly`: markdown summary
-  (top movers, verdict changes, anomalies) fit for cron/launchd; delivery stays the
-  user's own script (mail, Slack, …).
-- [ ] **B12 · GitHub Action** — M · team — packaged action running `check` as a gate
-  plus a PR comment with movers/effectiveness for the changed window.
-- [ ] **B14 · Aider connector** — M · both — in-tree parser. The parseable token source is
-  the opt-in `~/.aider/analytics.jsonl` (`message_send` events with `properties.{main_model,
-  prompt_tokens,completion_tokens,total_tokens,cost}`, `time` in epoch seconds, no session
-  id or cache split); `.aider.chat.history.md` is markdown-only. No structured per-edit field
-  — Aider auto-commits, so lines +/- come from git, not the logs.
-- [ ] **B16 · context-utilization** — M · both — vendored model context-window table
-  (like the price table) → peak context vs model limit, near-limit share, and honest
-  right-sizing hints ("paying long-context rates for 50k contexts").
+Metrics become readable per kind of work, and each finding comes with one action and the
+metric that will show whether it worked.
+
+- [ ] **B80 · task & outcome annotations** — M · both — the missing intent layer: `mark
+  <session> --task bugfix|feature|test|refactor|docs|research|review|other --outcome
+  done|partial|abandoned --difficulty low|medium|high`, plus an optional issue id or branch
+  reference. Category labels only — never free text on the sync wire, never a prompt. Unlocks
+  stratification for every existing metric (survival, cost, model fit, friction *per kind of
+  work*), which is what makes "did AI-written code hold up" an answerable question instead of
+  an average over research and greenfield. Unlabeled sessions stay fully counted and are never
+  read as failures. Needs a migration and a PRIVACY.md note.
+- [ ] **B84 · deterministic recommendations** — M/L · both — one concrete next step per
+  finding: rules over existing validator verdicts emitting observed pattern, evidence,
+  confidence, one action, the follow-up metric that will show whether it worked, and a review
+  window; dismissable as "not relevant", and the dismissal sticks. No LLM anywhere in the
+  decision path — an LLM may later only explain a suggestion that already exists. Requires B81;
+  pairs with B87 for the verification half.
+- [ ] **B87 · pre/post window comparison** — M · both — compare a metric before and after
+  a deliberate change (model switch, workflow change, a new skill) over matched windows, with
+  sample-size and seasonality warnings and mandatory association-not-causation framing. What
+  makes "did that change help?" answerable without inventing a causal claim.
 - [ ] **B17 · progress ("skill curve")** — M · solo — the headline composite: you vs
   you four weeks ago across adoption breadth, turn-efficiency, cache-hygiene, rework —
   a small panel of deltas, deliberately not a single score. Strictly self-relative,
   never cross-person. Needs a careful design pass before code.
 
-## v0.4 — "Outcome & truth"
+## Level 3 — "From session to shipped change"
+
+The outcome layer: whether the work reached and survived production. Everything here ships
+with its error bars or it does not ship.
 
 - [ ] **B18 · survival: per-day correlation + age-matching** — M · both — the shipped
   `survival` command reports window-level survival of a repo's commits beside the store's
@@ -80,25 +101,62 @@ existing store columns; none needs a migration.
   AI-heavy days survive at a different rate?), an age/settle threshold so recent commits
   aren't counted as "survived", and rename-following in blame. Server-side git/issue-tracker
   correlation across the team remains the larger "Outcome & quality" stage.
-- [ ] **B19 · vendor billing reconciliation** — M/L · both — opt-in pull of
-  Anthropic/OpenAI usage/cost APIs; estimate-vs-actual delta with a confidence band.
-  Network- and credential-gated; pulls vendor aggregates only, never uploads logs.
-- [ ] **B20 · compaction-recovery-cost** — M · both — tokens spent in the turns right
-  after a compaction vs baseline: the true price of overflowing context.
+- [ ] **B85 · attribution edges (session → commit / PR)** — L · both — versioned,
+  confidence-bearing links carrying their method (explicit marker, branch, temporal proximity,
+  issue id, inferred), the alternatives they beat, and their ambiguity count. Never force one
+  session onto one PR; replay when new git data arrives without mutating usage events. Outcome
+  analyzers then pick a minimum confidence instead of treating links as facts. The prerequisite
+  for any outcome metric beyond local survival.
 - [ ] **B21 · test-touch** — M · both — share of AI edits touching test files via
   privacy-safe category counts (test/source/docs/config) classified at parse time —
   paths are never stored. Needs a PRIVACY.md note. First quality-adjacent signal
   without a server.
+- [ ] **B20 · compaction-recovery-cost** — M · both — tokens spent in the turns right
+  after a compaction vs baseline: the true price of overflowing context.
+
+## Level 4 — "Team, without surveillance"
+
+A team self-hosts it, sees adoption and spend, and cannot build a leaderboard from it.
+
 - [ ] **B22 · server hardening** — M · team — TLS/reverse-proxy guidance, per-member
   tokens, retention policy, chunked/resumable sync (per ROADMAP's own MVP caveats).
+- [ ] **B09 · team-evenness** — M · team — new validator + dashboard Team panel:
+  Lorenz/Gini spread of usage across pseudonymized members with a minimum-cohort
+  (≥5) guard. Answers "broad adoption, or two power users?" — never a ranked list.
+- [ ] **B10 · tool-coverage** — S · team — members per tool on a central store;
+  shadow-tool and unused-seat detection.
+- [ ] **B40 · onboarding-curve** — M · team — usage growth vs weeks-since-first-sync,
+  in aggregated bands, pseudonymized.
+- [ ] **B41 · team efficiency spread** — M · team — distribution bands of
+  turn-efficiency-style signals across members; "the team needs prompting practice"
+  without naming anyone.
 
-## v1.0 — stability
+## Level 5 — "Cost truth"
+
+Every `$` today is an estimate at public pay-as-you-go prices, which a flat-rate
+subscription makes structurally different from real spend.
+
+- [ ] **B19 · vendor billing reconciliation** — M/L · both — opt-in pull of
+  Anthropic/OpenAI usage/cost APIs; estimate-vs-actual delta with a confidence band.
+  Network- and credential-gated; pulls vendor aggregates only, never uploads logs.
+- [ ] **B16 · context-utilization** — M · both — vendored model context-window table
+  (like the price table) → peak context vs model limit, near-limit share, and honest
+  right-sizing hints ("paying long-context rates for 50k contexts").
+
+## Level 6 — "Stable platform"
+
+Plugin authors and any future managed cloud can build on it without breakage.
 
 - [ ] **B23 · protocol & schema freeze** — M · both — declare the exec plugin
   protocols (parser, metric, rule) and the SQLite schema stable under semver.
-- [ ] **B24 · in-process Go plugin API** — L · both — the dynamically loaded
-  `plugin/metric|rule|connector` tree sketched in CONTRIBUTING.md; no rebuild, no
-  subprocess.
+- [ ] **B24 · in-process plugin API (research first)** — L · both — the `plugin/metric|rule|
+  connector` tree sketched in CONTRIBUTING.md: no subprocess, no rebuild. The mechanism is
+  **not** decided: Go's native `plugin` package needs cgo, does not work on Windows, and
+  requires host and plugin to be built with identical toolchain and dependency versions, which
+  contradicts shipping one static binary per platform. Evaluate a sandboxed WebAssembly/WASI
+  component instead — it also brings capability limits and resource budgets — and keep exec
+  plugins as the universal baseline either way. Deliverable of this item is first a decision
+  record, not code.
 - [ ] **B25 · Postgres backend** — L · team — once a single SQLite file stops being
   enough for a central store.
 
@@ -130,6 +188,10 @@ existing store columns; none needs a migration.
   short sessions, since thrash correlates with marathons.
 - [ ] **B37 · branch-mix** — S · both — AI lines on the default branch vs feature
   branches; a process signal (direct-to-main AI work), local only.
+- [ ] **B02 · cache-hygiene trend** — S · both — add the day-over-day cache-read-share
+  trend to the shipped `cache-hygiene` validator, which already reports the current-window
+  share and the cache-write-waste flag. Caveat: vendor cache TTLs are invisible; day-grain
+  approximation.
 
 ## Pool — needs a schema or parser extension
 
@@ -161,9 +223,6 @@ existing store columns; none needs a migration.
 
 ## Pool — robustness
 
-- [ ] **B59 · doctor --strict** — S · both — non-zero exit when B58's drift heuristics
-  fire (or a configured source discovers zero files), so a cron/CI job can alert on
-  vendor format drift instead of a human noticing shrunk numbers.
 - [x] **B68 · live-session ingest consistency** — M · both — a session ingested while still
   being written stored a turn whose activity a later line had not been attributed to yet, and
   nothing ever corrected it. `Store.InsertLocal` now restates the derived columns from a
@@ -172,24 +231,17 @@ existing store columns; none needs a migration.
   member cannot restate another's. The remaining half — a count that first read too *high*
   (Codex trailing-flush) — is not corrected by an upward-only repair and stays a `doctor`
   caveat.
-- [ ] **B69 · usage-granularity provenance in reports** — S/M · both — `Store.Usage`
-  blends session-granularity plugin rows with per-turn rows without surfacing
-  `granularity`; carry it into `UsageRow` and mark mixed-granularity totals so session
-  data never silently reads as per-turn (honesty rule).
 - [ ] **B70 · subpaths composite index** — S · both — add `(project, ts)` index for the
   dashboard drill query (`WHERE project = ? AND ts >= ?`); today it range-scans `idx_usage_ts`.
   Perf only at local scale; ship with the next schema migration.
 
 ## Pool — team
 
-- [ ] **B40 · onboarding-curve** — M · team — usage growth vs weeks-since-first-sync,
-  in aggregated bands, pseudonymized.
-- [ ] **B41 · team efficiency spread** — M · team — distribution bands of
-  turn-efficiency-style signals across members; "the team needs prompting practice"
-  without naming anyone.
 - [ ] **B42 · server-side exec metrics** — M · team — lift the ADR 0004 non-goal
   safely: compute metric-plugin results on sync-write or a TTL cache, never per
   unauthenticated request.
+- [ ] **B12 · GitHub Action** — M · team — packaged action running `check` as a gate
+  plus a PR comment with movers/effectiveness for the changed window.
 
 ## Pool — CLI & DX
 
@@ -212,6 +264,22 @@ existing store columns; none needs a migration.
 - [ ] **B67 · winget manifest** — M · both — automated manifest PR to
   `microsoft/winget-pkgs` on release (goreleaser supports it); a heavier review loop
   than Scoop, so Scoop first.
+- [ ] **B06 · metric-plugin scaffolder + schemas** — S · both — `metrics init --lang
+  python|node|sh` writes a working plugin skeleton; publish JSON Schemas for the
+  metric envelope/result under `docs/schemas/`. Lowers the barrier the moment the
+  protocol is public.
+- [ ] **B08 · a second locale** — S · both — add one `i18n.Catalog` beside `en` and a case in
+  `i18n.For`, proving the scaffolding with a real language. v0.4 built the catalog (dashboard
+  chrome, statusline words, the 18 explain pages); what remains is translating it and choosing
+  how a locale is selected. Data-derived validator text stays out of scope: translating it
+  needs message templates for the interpolated numbers.
+- [ ] **B11 · weekly digest** — S/M · both — `digest --weekly`: markdown summary
+  (top movers, verdict changes, anomalies) fit for cron/launchd; delivery stays the
+  user's own script (mail, Slack, …).
+- [ ] **B86 · contributor entry points** — S · both — public issues cut from the top
+  backlog items, labels (`good first issue`, `help wanted`, `connector`, `metric`,
+  `parser-drift`, `research-needed`, `privacy-review`), Discussions categories, and a short
+  architecture map showing where a parser, metric, rule, connector or dashboard change belongs.
 
 ## Pool — dashboard
 
@@ -268,8 +336,13 @@ a tool used by one organization is usually better served by an out-of-tree
   code, no token counts — Cursor's local storage is verified to lack them). Would ship
   as lines/activity with `granularity`/provenance honestly tagged, complementing the
   Admin-API cost path (B55). Research item.
+- [ ] **B14 · Aider connector** — M · both — in-tree parser. The parseable token source is
+  the opt-in `~/.aider/analytics.jsonl` (`message_send` events with `properties.{main_model,
+  prompt_tokens,completion_tokens,total_tokens,cost}`, `time` in epoch seconds, no session
+  id or cache split); `.aider.chat.history.md` is markdown-only. No structured per-edit field
+  — Aider auto-commits, so lines +/- come from git, not the logs.
 
-## Pool — code health (0.3 candidates, from the pre-0.2 review)
+## Pool — code health (from earlier reviews)
 
 Deferred cleanups surfaced by the max-effort review of the 0.2 work; no behavior change, so
 they wait behind features but keep the growing metric surface maintainable.

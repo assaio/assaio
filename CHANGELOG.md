@@ -21,6 +21,12 @@ Discussion.
 
 ## [Unreleased]
 
+### Fixed
+- **The README's manual install instructions pointed at v0.1.0**, three releases behind, so
+  anyone following them got a binary without `statusline`, `explain`, incremental backfill or
+  the last two rounds of correctness fixes. Both the shell and PowerShell snippets now resolve
+  the latest tag before downloading.
+
 ## [0.4.0] - 2026-07-29
 
 ### Added

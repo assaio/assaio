@@ -24,6 +24,37 @@ much it cost, how efficiently. It does not yet measure **outcome**: whether that
 any good. Closing that gap — without ever fabricating a number to do it — is the throughline
 of everything below.
 
+## Four layers, never relabeled
+
+Everything `assaio` reports sits on exactly one of four layers, and the product says which:
+
+- **Activity** — tokens, turns, tool calls, edits. What happened.
+- **Output** — changed lines, commits, PRs, tests. What was produced.
+- **Outcome** — merged, survived, passed CI, review burden, reverted. Whether it held.
+- **Impact** — value to a user or a business. Needs context `assaio` does not have.
+
+The `$/100 AI lines` headline lives on **output**, and that is the whole reason it is framed
+as cost efficiency rather than productivity. Lines reward greenfield and boilerplate, punish
+debugging and analysis, say nothing about tests, review rounds, or whether the code shipped —
+and can grow with unnecessary complexity. Promoting an output metric to an outcome claim is
+the most likely way this project could start lying, so the layer label is not decoration.
+
+## The next levels
+
+The themes below are the direction; these are the next **promises to a user**, each with what
+would have to be true to call it done. Same caveat as everything else here: no dates, and a
+level can be reshaped or skipped. One maintainer, pre-1.0 — so each level is deliberately
+small enough to ship and prove on real data.
+
+| Level | Promise | Done when |
+|---|---|---|
+| **1 · Trust the dataset** | Before `assaio` advises anything, it shows what it read, what it missed, and how sure it is | every validator carries coverage + confidence as data, not prose; format drift is detected instead of silently under-reporting; `doctor --strict` fails a cron job; every source publishes its real depth, and a first run needs no config (`B58`, `B59`, `B69`, `B81`, `B82`, `B83`) |
+| **2 · Intent, and a next step** | Metrics can be read per kind of work, and each finding comes with one concrete action | a session can be labeled task class / outcome / difficulty and any metric stratified by it, with unlabeled data still fully useful; recommendations are deterministic rules carrying evidence, a caveat, a follow-up metric and a review window — never an LLM narrating a dashboard (`B80`, `B84`, `B87`) |
+| **3 · From session to shipped change** | The work can be traced to commits, PRs, review and CI, with visible attribution confidence | session→change links carry method, confidence and alternatives; ambiguous links stay ambiguous; survival is age-matched (`B18`, `B85`) |
+| **4 · Team, without surveillance** | A team self-hosts it, sees adoption and spend, and cannot build a leaderboard from it | authenticated, resumable sync; adoption read as activation → retention → breadth, in bands with a cohort floor (`B22`, `B09`, `B40`) |
+| **5 · Cost truth** | The `$` figure can be reconciled against what was actually billed | opt-in vendor billing reconciliation shows the estimate-vs-actual delta with a confidence band, and pricing models long-context and cache tiers instead of one flat per-model rate (`B19`, `B16`) |
+| **6 · Stable platform** | Plugin authors and a managed cloud can build on it without breakage | plugin protocols and the schema frozen under semver, with conformance fixtures (`B23`) |
+
 ## Themes we're pursuing
 
 ### 1. Outcome & quality — the big one
@@ -39,11 +70,36 @@ path we're exploring: a local `survival` MVP first (correlate AI-heavy days agai
 server-side correlation proper (GitHub first; GitLab, Bitbucket, Jira as breadth once the
 core works). Everything here ships with its error bars or it does not ship.
 
+Two things have to exist before any of it is honest, and both are now tracked:
+
+- **Attribution as evidence, not a foreign key** (`B85`). A session-to-commit or
+  session-to-PR link is a claim, so it carries its method (explicit marker, branch, temporal
+  proximity, issue id, inferred), its confidence, and the alternatives it beat. One session
+  is never silently forced onto one PR, ambiguous stays ambiguous, and re-running attribution
+  after new git data arrives must never mutate the underlying usage events. Outcome metrics
+  then pick a minimum confidence rather than pretending links are facts.
+- **Task intent** (`B80`). "Did AI-written code survive" means nothing averaged over
+  research, a refactor and a greenfield feature. Intent is not in the logs and will not be
+  recovered by reading prompts; it comes from an explicit, optional label.
+
 ### 2. Coverage & truth
 
-Two directions, one goal: every tool a team actually uses should be counted, and every `$`
-should be reconcilable against reality.
+Four directions, one goal: every tool a team actually uses should be counted, every `$`
+should be reconcilable against reality, and a report should state both its own limits and
+the real depth of each source it read.
 
+- **Confidence as a first-class field** (`B81`, with `B69`). Today a validator's limits live
+  in prose caveats a reader can skip. They should travel as structure — source coverage,
+  activity coverage, pricing coverage, record granularity, sample size, freshness, parsing
+  build — so a low-coverage verdict cannot be quoted as a solid one, and so `check` and any
+  future recommendation can refuse to fire on thin data. Deliberately **not** collapsed into
+  one opaque score: a display label may summarize, the components stay inspectable.
+- **A depth matrix instead of a supported/unsupported list** (`B83`). "Supports Gemini CLI" is
+  misleading when that means tokens but no edits. Every source should publish per-field depth
+  in three tiers — **deep** (tokens + activity + attribution), **standard** (reliable usage,
+  documented activity gaps), **import-only** (billing or aggregate data that cannot support
+  session-level conclusions) — plus parser freshness and known gaps. Tool count is not the
+  goal; high-confidence signal coverage is.
 - **More tools.** The activity gap (some tools contribute cost but no line/edit signals) is
   the priority, because closing it multiplies every activity metric. Cline-family logs carry
   the diffs needed for line extraction (`B39`); `opencode` stores structured
@@ -87,27 +143,65 @@ cloud is where this theme's hardening (per-member auth, retention, TLS) ultimate
 
 `assaio` is built to be extended, and the extension surfaces should become dependable
 enough to build a community on. The third exec-plugin protocol, **rule** units gating
-`check` (ADR 0005), has landed; what remains: an
-in-process Go **plugin API** (`plugin/metric|rule|connector`, no subprocess, no rebuild —
-`B24`); a published, versioned freeze of the plugin protocols and the SQLite schema under
-semver (`B23`); JSON Schemas and a scaffolder for plugin authors; and a community registry
-page once a few plugins exist. The core rule holds: `internal/` never depends on `plugin/`
-or `ee/`.
+`check` (ADR 0005), has landed; what remains: a published, versioned freeze of the plugin
+protocols and the SQLite schema under semver (`B23`); JSON Schemas and a scaffolder for
+plugin authors (`B06`); and a community registry page once a few plugins exist (`B57`).
+Exec plugins stay the universal baseline — any language, no ABI, no rebuild.
+
+The in-process plugin API (`B24`) needs its mechanism revisited before it is built. Go's
+native `plugin` package fights everything this project promises: it needs cgo, does not work
+on Windows, and requires plugin and host to be built with identical toolchain and dependency
+versions — which is incompatible with shipping one static binary per platform. A sandboxed
+**WebAssembly/WASI** component is the more plausible in-process path, with capability limits
+and resource budgets as a bonus rather than an afterthought. Until that is evaluated, `B24`
+is a research item, not a commitment. The core rule holds regardless: `internal/` never
+depends on `plugin/` or `ee/`.
 
 ### 6. Developer experience
 
-The daily-habit and integration layer: an ambient status-line one-liner (today's cost, burn
-rate, budget remaining), an interactive TUI, an MCP server so you can ask your own usage
-questions from an agent, a weekly markdown digest fit for cron, a packaged GitHub Action
-(the `check` gate plus a PR comment), shell completions and man pages, data exports
-(OpenMetrics for Grafana, ndjson/parquet for data teams), and growing the dashboard's
-i18n scaffold into real locales as people ask.
+The daily-habit and integration layer. The ambient `statusline` and the incremental backfill
+that makes it cheap shipped in v0.4; what remains: a first run that needs no config at all
+(`init` — detect the tools, show exactly what will be read, backfill, print the dashboard
+path, stay network-free — `B82`), an interactive TUI (`B45`), a read-only MCP server so you
+can ask your own usage questions from an agent (`B44`), a weekly digest fit for cron (`B11`),
+a packaged GitHub Action (the `check` gate plus a PR comment — `B12`), shell completions and
+man pages (`B46`), data exports (OpenMetrics for Grafana, ndjson/parquet for data teams —
+`B47`), and growing the i18n scaffold into real locales as people ask (`B08`).
+
+Every one of those is a **surface over the same analysis**, never a second implementation of
+it. A number that differs between `report`, the dashboard, the TUI and MCP is a bug, and the
+cheapest way to avoid it is to keep the computation in `internal/analyze` and `internal/report`
+and let surfaces only render.
 
 ### 7. Scale
 
 Reserved for when the current shape stops being enough, not before: a Postgres backend once
 a single SQLite file no longer suffices for a central store (`B25`), and dashboard depth
 (multi-window tabs, sparklines, top-N drilldowns) as reports carry more history.
+
+### 8. From a finding to a checked change
+
+The gap between "here is a number" and "here is what to do" is where an analytics tool either
+earns its place in someone's week or gets uninstalled. The intended shape (`B84`):
+
+```text
+explain → suggest → act → verify
+```
+
+A suggestion is a **deterministic rule over signals** — context bloat and repeated
+compaction, a premium model on low-output turns, cache behaviour that never pays off, retry
+and tool-error loops, long sessions that correlate with rework, a plan that does not pay for
+itself — and it carries what was observed, on how much data, at what confidence, one concrete
+action, the metric that will show whether it worked, and the window after which to look again.
+It can be dismissed as not relevant, and that dismissal sticks.
+
+The order matters: facts → metrics → confidence → rule → suggestion, and only then an
+optional LLM *explaining* a suggestion that already exists. Never raw numbers → LLM →
+confident-sounding advice; that route manufactures certainty the data does not have, which is
+the one thing this project cannot afford. Verifying whether a change helped is a
+before/after comparison with its limits stated — never a causal claim from observational
+data (the pre/post window is a candidate `B87`, and it is what makes "did the suggestion
+work?" answerable at all).
 
 ## Principles that don't change
 
@@ -123,14 +217,34 @@ No theme above is allowed to weaken these:
   contain no counterfactual), no lines-of-code or token leaderboard, nothing ranked per
   named individual, and no cohort/percentile comparison without a minimum cohort size and
   explicit consent.
+- **Never relabel a layer.** Activity is not output, output is not outcome, outcome is not
+  impact (see above). A metric states which one it is.
+- **Privacy is a protocol property, not a policy page.** "Prompts and code are never
+  collected" has to stay true in local storage, the sync wire format, plugin inputs and
+  outputs, exports, and error output — every one of those is a place it could leak, and each
+  is where the guarantee is actually kept or broken.
 - **The core stays Apache-2.0** throughout; commercial modules, if any, stay isolated under
-  `ee/`.
+  `ee/`. The boundary that keeps that honest: **open source owns the data, the schemas, the
+  core computation and self-hosting; anything paid would monetize operations, managed
+  integrations, scale and governance** — never unlocking a chart the local binary could
+  compute. A local and self-hosted user must keep a complete, useful product with no cloud
+  requirement, or the open-source promise is bait.
 
 ## How we prioritize
 
 Order follows real-world feedback, pull requests, and bug reports — not this document's
 sequence, and things not listed anywhere can land first when a PR or a bug report makes the
-case. To weigh in: open a feature-request issue or a Discussion, or add weight to a tracked
+case.
+
+GitHub stars are not the measure of whether this is working. The questions worth tracking are:
+how long from install to a first useful insight; what share of users have high-confidence
+**activity** data rather than tokens only; whether someone runs a second report in the
+following week; how often a finding is acted on, and whether the metric it named actually
+moved; how often the honest answer was "insufficient evidence"; and, for the ecosystem,
+whether a plugin author gets something working and whether parser drift gets fixed quickly.
+An "insufficient evidence" rate that is *too low* is a warning sign, not a win.
+
+To weigh in: open a feature-request issue or a Discussion, or add weight to a tracked
 item by referencing its `B`-id. Connectors additionally follow the
 [connector intake flow](docs/extending.md#the-intake-path-open-a-connector-issue-first) —
 open an issue with a redacted sample before building, so the format is verified first.
