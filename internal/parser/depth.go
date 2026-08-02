@@ -25,6 +25,12 @@ type Depth struct {
 	// Tokens, Activity and Attribution are the three capability axes: what it cost, what
 	// was produced, and what the work was labeled as.
 	Tokens, Activity, Attribution bool
+	// Answers lists the ids of the signals this source can actually answer (internal/signal).
+	// The three axes above summarise a source for the tier table; this is the per-signal
+	// truth, and the two are not interchangeable -- "has activity" is a single bit over a
+	// source that reports changed lines but no edit count, no tool calls and no turns. What
+	// Gaps says in prose, this says in a form the signal catalog can compute with.
+	Answers []string
 	// Gaps names what this source does not carry, in a reader's terms. Required below Deep.
 	Gaps []string
 }
@@ -32,14 +38,43 @@ type Depth struct {
 // depths is the matrix, deepest first. A parser that gains a capability updates its row
 // here in the same change -- this is the one place the answer lives, and doctor, the
 // coverage validator and the docs all read it rather than each keeping their own list.
+// The signal groups sources are built from, so a row states what it adds rather than
+// repeating a list. Ids are internal/signal's; a test there asserts every one is declared.
+var (
+	costSignals = []string{
+		"ai.tokens.total", "ai.tokens.input", "ai.tokens.output",
+		"ai.tokens.cache_read", "ai.tokens.cache_write", "ai.tokens.reasoning",
+		"ai.cost.estimated", "ai.sessions.count",
+	}
+	// perTurnSignals need records at turn grain: a source that totals a whole session has
+	// no second timestamp to measure a gap or a turn against.
+	perTurnSignals = []string{"ai.turns.count", "ai.session.active_minutes"}
+	lineSignals    = []string{"ai.lines.added", "ai.lines.removed"}
+	editSignals    = []string{"ai.edits.count", "ai.tool_calls.count", "ai.rework.lines"}
+)
+
+func answers(groups ...[]string) []string {
+	var out []string
+	for _, g := range groups {
+		out = append(out, g...)
+	}
+	return out
+}
+
 var depths = []Depth{
 	{
 		Tool: "claude-code", Tier: Deep,
 		Tokens: true, Activity: true, Attribution: true,
+		Answers: answers(costSignals, perTurnSignals, lineSignals, editSignals,
+			[]string{"ai.tool_errors.count", "ai.skill.tokens", "ai.agent.tokens"}),
 	},
 	{
 		Tool: "codex", Tier: Standard,
 		Tokens: true, Activity: true, Attribution: false,
+		// tool_errors is absent deliberately: Codex marks failures only for file edits, so
+		// counting it would read partial coverage as a clean run -- the same reason the
+		// friction validator excludes it rather than treating silence as success.
+		Answers: answers(costSignals, perTurnSignals, lineSignals, editSignals),
 		Gaps: []string{
 			"no skill or sub-agent labels, so its turns are absent from the attribution split",
 			"tool-use denials are not recorded, and call failures only for file edits",
@@ -48,6 +83,7 @@ var depths = []Depth{
 	{
 		Tool: "gemini-cli", Tier: Standard,
 		Tokens: true, Activity: false, Attribution: false,
+		Answers: answers(costSignals, perTurnSignals),
 		Gaps: []string{
 			"no line, edit or tool-call signals, so it contributes cost but no output figures",
 			"tool-use tokens are folded into output, and ~/.gemini may be shared with other tools",
@@ -56,6 +92,9 @@ var depths = []Depth{
 	{
 		Tool: "copilot-cli", Tier: Standard,
 		Tokens: true, Activity: true, Attribution: false,
+		// Lines but nothing else: a whole-session total carries no turn, edit or tool-call
+		// count, so every per-turn signal is absent rather than zero.
+		Answers: answers(costSignals, lineSignals),
 		Gaps: []string{
 			"totals exist only when a session ends, so one record covers a whole session and per-turn figures exclude it",
 			"code changes are counted once per session with no per-model split, so they are credited whole to the model that made the most requests",
@@ -64,6 +103,7 @@ var depths = []Depth{
 	{
 		Tool: "cline", Tier: Standard,
 		Tokens: true, Activity: false, Attribution: false,
+		Answers: answers(costSignals, perTurnSignals),
 		Gaps: []string{
 			"no line, edit or tool-call signals, so it contributes cost but no output figures",
 			"its own per-request cost is recorded but recomputed from tokens for cross-tool consistency",

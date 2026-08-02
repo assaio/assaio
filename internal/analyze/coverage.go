@@ -105,6 +105,13 @@ func rowTokens(r *store.UsageRow) int64 {
 	return r.In + r.Out + r.CacheRead + r.CacheWrite
 }
 
+// TokensByTool totals the window's tokens per tool. Exported so the signal catalog's coverage
+// command reads the same arithmetic this validator does rather than keeping its own.
+func TokensByTool(rows []store.UsageRow) map[string]int64 {
+	_, byTool := tokensByTool(rows)
+	return byTool
+}
+
 // tokensByTool sums tokens per tool and, separately, the subtotal for activity-capable
 // tools.
 func tokensByTool(rows []store.UsageRow) (activity int64, byTool map[string]int64) {
@@ -157,6 +164,11 @@ func toolCoverageBars(byTool map[string]int64, total int64) []Bar {
 	}
 	return bars
 }
+
+// HonestPercent is honestPercent for callers outside this package -- the signal catalog's
+// coverage command renders shares through it so a partial verdict can never print "100%".
+// (Folding this and the rest of the formatters into internal/humanize is B75.)
+func HonestPercent(share float64) string { return honestPercent(share) }
 
 // honestPercent renders a share without the two dishonest rounding edges: a small but
 // nonzero share reads "<1%" (not "0%", which looks absent -- e.g. a few real Codex sessions

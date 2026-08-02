@@ -1370,6 +1370,23 @@ Where `Discover`'s root itself comes from — the built-in default, or a team's 
 override — is a separate, non-code concern; see [Custom log-source
 paths](#custom-log-source-paths).
 
+#### Declare what your source can answer
+
+A parser also adds one row to the depth matrix in
+[`internal/parser/depth.go`](../internal/parser/depth.go), and the part that matters most is
+`Answers`: the ids of the signals your source can actually produce (`assaio-agent signals
+list` prints them all). Do not reach for the nearest tier and move on — the tier's three
+axes are a summary, and `Activity: true` says nothing about *which* activity. Copilot CLI
+records changed lines and no edit count, no tool calls, no turns and no rework, so it lists
+two activity signals and not the other four; declaring the axis alone made `signals coverage`
+report sixteen of eighteen signals as fully supported when the truth was ten.
+
+The rule is one question per signal: **would a figure computed from my records be right, or
+merely non-empty?** If the log does not carry it, leave it out — an absent signal is reported
+as "this source cannot answer it", which is a useful fact, while a claimed one becomes a
+number someone trusts. A test asserts the ids you list are real and that they do not
+contradict the tier axes ([ADR 0008](adr/0008-signal-catalog.md)).
+
 #### Corrupt-line policy: skip and count
 
 Session logs are live, append-only files a tool can be writing to while `assaio` reads
