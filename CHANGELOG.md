@@ -21,6 +21,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-02
+
 ### Added
 - **Sessions can be labeled with what the work actually was.** `assaio-agent mark` attaches
   a task class, an outcome and a difficulty to a session — the one fact session logs never
@@ -611,7 +613,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/assaio/assaio/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/assaio/assaio/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/assaio/assaio/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/assaio/assaio/compare/v0.2.0...v0.3.0
