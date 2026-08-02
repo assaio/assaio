@@ -1,0 +1,78 @@
+name: site
+
+# The page at https://assaio.dev/ is a single static file. It deploys itself on every push
+# to main that touches it, so the site can never be a step someone forgets at release time --
+# which is exactly how it once ended up three releases behind the binary.
+# Deliberately not path-filtered. The version guard below has to run on every push and every
+# tag, including the ones that do not touch site/ -- a release cut without updating the page
+# is precisely the drift this exists to catch, and a path filter would skip it silently.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Guards the one claim the page makes about itself that can silently rot: which version it
+  # describes. The site documents what a user can install, so it must name the latest *tag* --
+  # or the release currently being prepared, because RELEASING.md requires the page and the
+  # changelog section to be updated before the tag exists, and a check that forbade that would
+  # make the release-prep commit unmergeable on a protected branch.
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Site must name the latest released version
+        run: |
+          set -euo pipefail
+          claimed=$(grep -oE 'Assay report · v[0-9]+\.[0-9]+\.[0-9]+' site/index.html \
+                    | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          latest=$(git tag --list 'v*' --sort=-v:refname | head -1)
+          # The release being prepared, if any: the newest changelog section with no tag yet.
+          # consistency.yml is what keeps this to at most one.
+          pending=""
+          for v in $(grep -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | tr -d '#[] '); do
+            if ! git rev-parse "v$v" >/dev/null 2>&1; then
+              pending="v$v"
+              break
+            fi
+          done
+          echo "site claims:  ${claimed:-<none>}"
+          echo "latest tag:   ${latest:-<none>}"
+          echo "being cut:    ${pending:-<none>}"
+          if [ -z "$claimed" ]; then
+            echo "::error::site/index.html carries no 'Assay report · vX.Y.Z' version stamp"
+            exit 1
+          fi
+          if [ -n "$latest" ] && [ "$claimed" != "$latest" ] && [ "$claimed" != "$pending" ]; then
+            echo "::error::site/index.html describes $claimed but the latest release is $latest."
+            echo "::error::The site documents what a user can install. Update it, or cut the release first."
+            echo "::error::(A version being prepared is allowed once CHANGELOG.md carries its section.)"
+            exit 1
+          fi
+
+  # Self-contained by design: no build step, no CDN, no external asset. A deploy is an upload,
+  # so it runs on every push to main rather than only when site/ changed: the published page
+  # is then always exactly what main says, with no state to reconcile.
+  deploy:
+    needs: version
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site --project-name=assaio --branch=main

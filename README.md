@@ -36,8 +36,8 @@ now, not the headline.
 ## Privacy first
 
 `assaio` is built to be safe to run on a work machine without asking anyone's
-permission. This section describes the **v0.1 local agent** — the only thing that ships
-today.
+permission. This section describes the **local agent**, which is what runs on your machine
+and needs no network at all.
 
 - **No network at runtime.** The price table is embedded into the binary at build time.
   Nothing is fetched, posted, or phoned home.
@@ -51,7 +51,7 @@ today.
 
 Full detail, including the exact fields extracted: [PRIVACY.md](PRIVACY.md).
 
-**The optional team server.** v0.1 also ships an early, self-hostable team server:
+**The optional team server.** assaio also ships an early, self-hostable team server:
 `assaio-agent serve` pools a team's usage in one place and `assaio-agent sync` pushes each
 member's records to it, with a per-member team dashboard. Running it uses the network — the
 offline guarantee above is about the local analysis — and it talks only to infrastructure
@@ -273,12 +273,15 @@ Environment variables take precedence over the file, using an `ASSAIO_` prefix:
 
 ## Supported tools and accuracy
 
-Today `assaio` reads four sources:
+Today `assaio` reads five sources:
 
 - **Claude Code** — session transcripts under `~/.claude/projects/**/*.jsonl`.
 - **OpenAI Codex CLI** — rollout logs under `~/.codex/sessions/**` and
   `~/.codex/archived_sessions/**`.
 - **Gemini CLI** — chat logs under `~/.gemini/tmp/<hash>/chats/session-*.jsonl`.
+- **GitHub Copilot CLI** — session events under `$COPILOT_HOME`, else
+  `~/.copilot/session-state/<id>/events.jsonl`. Totalled when a session ends, so its
+  records are session-granularity.
 - **Cline** — task data under the VS Code extension's global storage
   (`saoudrizwan.claude-dev`) and the Cline CLI's `~/.cline/data/tasks`.
 
@@ -309,7 +312,7 @@ When a model is missing from the price table, `assaio` never fakes a `$0` cost: 
 table shows `—`, JSON reports `"cost": null`, CSV leaves the cell empty, and the row is
 excluded from the `TOTAL`. Wrong-but-precise numbers are worse than an honest blank.
 
-More tools (opencode, Copilot CLI, Factory droid, Cursor) are on the
+More tools (opencode, Aider, Factory droid, Cursor) are on the
 [roadmap](ROADMAP.md).
 
 ## Adapt it to your organization
@@ -337,17 +340,20 @@ Go API for connectors, metrics, and rules is still ahead; see the [roadmap](ROAD
 
 ## Status and roadmap
 
-`assaio` v0.1 is pre-release, and it already reaches well past an offline token
-reporter: four tool parsers, AI-line/edit/rework activity extraction for Claude Code
-and Codex, the `effectiveness` and `analyze` diagnostics, the offline **Assay** HTML
-dashboard, and a self-hosted team-server MVP — `serve` plus `sync` — that aggregates a
-team's usage into one pseudonymized-by-default dashboard and CLI. All of it runs today;
-the team server is the one piece that needs a network, and you host it yourself, on
-infrastructure you control.
+`assaio` is pre-1.0, and it already reaches well past an offline token reporter: five tool
+parsers, AI-line/edit/rework activity extraction for Claude Code and Codex, nineteen metric
+validators that each carry a confidence envelope, the `effectiveness` and `analyze`
+diagnostics, format-drift canaries and a published source-depth matrix, the offline
+**Assay** HTML dashboard, and a self-hosted team-server MVP — `serve` plus `sync` — that
+aggregates a team's usage into one pseudonymized-by-default dashboard and CLI. All of it
+runs today; the team server is the one piece that needs a network, and you host it
+yourself, on infrastructure you control. [FEATURES.md](FEATURES.md) is the maintained
+inventory, with the release each capability arrived in.
 
-What v0.1 still can't do is say whether AI-written code **survived** in `main`,
-**caused bugs**, or held up in **quality** terms — that needs correlating usage with
-git and issue history, and it is the next direction, not a shipped feature.
+What it still can't do is connect a session to the change it produced — whether AI-written
+code reached a pull request, passed review and CI, **survived** in `main`, or **caused
+bugs**. That needs correlating usage with git and pull-request history, and it is the next
+milestone, not a shipped feature.
 [ROADMAP.md](ROADMAP.md) lays out that direction as a conceptual, feedback-driven plan —
 not a committed schedule; [BACKLOG.md](BACKLOG.md) is the concrete, ranked pool of
 candidate work items behind it, and [FEATURES.md](FEATURES.md) inventories exactly what

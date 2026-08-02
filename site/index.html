@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>assaio — is your AI coding spend delivering?</title>
-<meta name="description" content="assaio reads the AI coding session logs already on your machine and weighs output against the tokens it burns: effectiveness, model fit, context health, adoption. Per project, offline, no upload. Claude Code, Codex, Gemini CLI, Cline.">
+<meta name="description" content="assaio reads the AI coding session logs already on your machine and weighs output against the tokens it burns: effectiveness, model fit, context health, adoption. Per project, offline, no upload. Claude Code, Codex, Gemini CLI, Copilot CLI, Cline.">
 <meta name="color-scheme" content="light dark">
 <meta property="og:title" content="assaio — is your AI coding spend delivering?">
 <meta property="og:description" content="Weighs AI output against the tokens it burns, per project: effectiveness, model fit, context health, adoption. Fully offline, no upload. The first piece of a self-hosted AI-engineering analytics platform.">
@@ -135,7 +135,6 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
 .plate.mini{grid-template-columns:repeat(6,1fr)}
 .plate.mini .cell{padding:1.05rem 1.05rem 1.2rem}
 .plate.mini .cn{padding-right:0; min-height:2.4em; font-size:.6rem; letter-spacing:.11em}
-.plate.mini .cell.new .cn::after{content:" +new"; color:var(--signal); letter-spacing:.02em}
 .plate.mini .cv{font-size:.9375rem; margin-top:.5rem}
 .plate.mini .cv.neutral{color:var(--faint)}
 .plate.mini .bar{margin-top:.85rem}
@@ -237,7 +236,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- HERO ────────────────────────────────────────────────────────────── -->
   <section class="wrap hero">
     <div>
-      <p class="eyebrow">Assay report · v0.2.0</p>
+      <p class="eyebrow">Assay report · v0.6.0</p>
       <h1>Is it <em>delivering?</em></h1>
       <p class="lede">
         Teams pour real money into AI coding tools and can't answer the one question that
@@ -245,7 +244,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         per tool. <strong>assaio</strong> reads the session logs already on your machine and
         weighs what AI produced against the tokens it burns — per project: effectiveness,
         model fit, context health, adoption, and how efficiently tokens turn into shipped
-        code. Claude Code, Codex, Gemini CLI, Cline.
+        code. Claude Code, Codex, Gemini CLI, Copilot CLI, Cline.
         Offline, no account, no upload — the first piece of a self-hosted AI-engineering
         analytics platform.
       </p>
@@ -253,11 +252,11 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="term-bar">local · offline</div>
         <div class="term-body">
 <div><span class="p">$ </span>brew install assaio/tap/assaio-agent</div>
-<div><span class="p">$ </span>assaio-agent demo</div>
-<div><span class="o">  full reports on bundled sample data — no logs needed</span></div>
+<div><span class="p">$ </span>assaio-agent init</div>
+<div><span class="o">  detects your tools, discloses what it reads, imports, reports</span></div>
         </div>
       </div>
-      <p class="note">About 60 seconds to your own numbers: <code>backfill</code>, then <code>status</code>.</p>
+      <p class="note">About 60 seconds to your own numbers: <code>init</code> detects your tools, shows every directory it will read <em>before</em> reading it, imports, and prints the report.</p>
     </div>
     <aside class="gauge">
       <p class="eyebrow">Assay verdict</p>
@@ -333,7 +332,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- ANALYZE / VALIDATORS ───────────────────────────────────────────────── -->
   <section class="sec" id="analyze">
     <div class="wrap">
-      <div class="sec-head"><h2>Twelve reads, one faceplate</h2><p class="eyebrow">analyze · one file each</p></div>
+      <div class="sec-head"><h2>Eighteen reads, one faceplate</h2><p class="eyebrow">analyze · one file each</p></div>
       <p class="intro">
         <code>analyze</code> reads what actually moves the needle — <strong>model fit, context
         health, adoption, token efficiency</strong> — and prints a directional verdict for each,
@@ -341,19 +340,25 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
       </p>
       <div class="plate mini" id="plate">
         <div class="cell"><span class="cn">Model fit</span><span class="cv watch">Watch</span><div class="bar"><i data-p=".2"></i></div></div>
-        <div class="cell new"><span class="cn">Model right-sizing</span><span class="cv">Right-sized</span><div class="bar"><i data-p=".75"></i></div></div>
+        <div class="cell"><span class="cn">Model right-sizing</span><span class="cv">Right-sized</span><div class="bar"><i data-p=".75"></i></div></div>
         <div class="cell"><span class="cn">Context health</span><span class="cv">Healthy</span><div class="bar"><i data-p=".9"></i></div></div>
         <div class="cell"><span class="cn">Adoption</span><span class="cv">Strong</span><div class="bar"><i data-p=".82"></i></div></div>
-        <div class="cell new"><span class="cn">Cache hygiene</span><span class="cv">Efficient</span><div class="bar"><i data-p="1"></i></div></div>
-        <div class="cell new"><span class="cn">Turn efficiency</span><span class="cv watch">Watch</span><div class="bar"><i data-p=".35"></i></div></div>
+        <div class="cell"><span class="cn">Cache hygiene</span><span class="cv">Efficient</span><div class="bar"><i data-p="1"></i></div></div>
+        <div class="cell"><span class="cn">Turn efficiency</span><span class="cv watch">Watch</span><div class="bar"><i data-p=".35"></i></div></div>
         <div class="cell"><span class="cn">Throughput</span><span class="cv watch">Watch</span><div class="bar"><i data-p=".4"></i></div></div>
         <div class="cell"><span class="cn">Rework</span><span class="cv">Low</span><div class="bar"><i data-p=".93"></i></div></div>
-        <div class="cell new"><span class="cn">Reasoning share</span><span class="cv">Lean</span><div class="bar"><i data-p=".85"></i></div></div>
-        <div class="cell new"><span class="cn">Session taxonomy</span><span class="cv neutral">Chat-led</span><div class="bar"><i data-p=".55"></i></div></div>
-        <div class="cell new"><span class="cn">Coverage</span><span class="cv">Solid</span><div class="bar"><i data-p="1"></i></div></div>
-        <div class="cell new"><span class="cn">Subscription fit</span><span class="cv">Paying off</span><div class="bar"><i data-p="1"></i></div></div>
+        <div class="cell"><span class="cn">Reasoning share</span><span class="cv">Lean</span><div class="bar"><i data-p=".85"></i></div></div>
+        <div class="cell"><span class="cn">Session taxonomy</span><span class="cv neutral">Chat-led</span><div class="bar"><i data-p=".55"></i></div></div>
+        <div class="cell"><span class="cn">Coverage</span><span class="cv">Solid</span><div class="bar"><i data-p="1"></i></div></div>
+        <div class="cell"><span class="cn">Subscription fit</span><span class="cv">Paying off</span><div class="bar"><i data-p="1"></i></div></div>
+        <div class="cell"><span class="cn">Burn anomaly</span><span class="cv">No spikes</span><div class="bar"><i data-p=".95"></i></div></div>
+        <div class="cell"><span class="cn">Spend concentration</span><span class="cv neutral">Spread</span><div class="bar"><i data-p=".6"></i></div></div>
+        <div class="cell"><span class="cn">Explore vs produce</span><span class="cv">Balanced</span><div class="bar"><i data-p=".7"></i></div></div>
+        <div class="cell"><span class="cn">Friction</span><span class="cv">Low</span><div class="bar"><i data-p=".88"></i></div></div>
+        <div class="cell"><span class="cn">Work rhythm</span><span class="cv neutral">Mostly hours</span><div class="bar"><i data-p=".65"></i></div></div>
+        <div class="cell"><span class="cn">Skill economics</span><span class="cv">Proportionate</span><div class="bar"><i data-p=".8"></i></div></div>
       </div>
-      <p class="more">Eight of the twelve are new in v0.2 — and the <code>survival</code> command adds the first local outcome read. Write your own <b>metric plugin</b> in any language and it renders right beside the built-ins.</p>
+      <p class="more">Since v0.5 every verdict carries a <b>confidence envelope</b> — activity, pricing and turn-level coverage, the sample it rests on, how fresh the data is, and which build read it — so a thin read cannot be quoted as a solid one. Since v0.6 every one of them can also be read <b>per kind of work</b>: label a session with <code>mark</code> and <code>$</code>/100 lines on bugfixes stops being averaged in with research and greenfield features. Write your own <b>metric plugin</b> in any language and it renders right beside the built-ins, carrying the same envelope.</p>
     </div>
   </section>
 
@@ -381,18 +386,22 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
     <div class="wrap">
       <div class="sec-head"><h2>Commands</h2><p class="eyebrow">one binary</p></div>
       <div class="cmds">
+        <div class="cmd"><b>init</b><span>A first run end to end: detects your tools, prints every directory it will read <em>before</em> reading it, imports, reports, and names what to run next. No config needed.</span></div>
         <div class="cmd"><b>demo</b><span>Full reports on bundled sample data — the 60-second first look, no logs needed.</span></div>
-        <div class="cmd"><b>backfill</b><span>Import all historical local session logs into the embedded store.</span></div>
+        <div class="cmd"><b>backfill</b><span>Import local session logs. Incremental: an input already read unchanged is skipped; <code>--full</code> forces a re-parse.</span></div>
         <div class="cmd"><b>report</b><span>Token/cost report. <code>--by day|project|tool|model|entrypoint|member</code>, <code>--format table|json|csv</code>, <code>--compare</code>.</span></div>
         <div class="cmd"><b>effectiveness</b><span>AI output vs cost — AI lines, edits, rejections, $/100 lines — per project.</span></div>
-        <div class="cmd"><b>analyze</b><span>Run the metric validators (and any metric plugins); print each one's directional read.</span></div>
+        <div class="cmd"><b>analyze</b><span>Run the metric validators (and any metric plugins); print each one's directional read. <code>--task|--outcome|--difficulty</code> recompute every one over just the sessions you labeled that way.</span></div>
+        <div class="cmd"><b>mark</b><span>Label a session with what the work actually was — task class, outcome, difficulty. Category values only, never free text, never synced; the one fact the logs cannot contain.</span></div>
         <div class="cmd"><b>survival</b><span>Directional local outcome: how much of a repo's window still lives in <code>HEAD</code>, beside its AI lines.</span></div>
         <div class="cmd"><b>dashboard</b><span>Write the self-contained offline HTML Assay report; pseudonymized by default.</span></div>
-        <div class="cmd"><b>check</b><span>Exit non-zero over a token (or API-equivalent $) budget — a CI / pre-push gate.</span></div>
+        <div class="cmd"><b>check</b><span>Exit non-zero over a token (or API-equivalent $) budget — a CI / pre-push gate. Also runs your <b>rule plugins</b>: an <code>error</code> alert, or a rule that could not be evaluated, fails the gate.</span></div>
+        <div class="cmd"><b>explain</b><span>The long-form page for a metric — what it measures, how to read it, what to do, and its limits. Needs no store.</span></div>
+        <div class="cmd"><b>statusline</b><span>One ambient line for your status bar: today's tokens, AI lines, cost basis and data age. Read-only, never fails loudly.</span></div>
         <div class="cmd"><b>serve · sync</b><span>Self-hosted team server and the push to it — pseudonymous by default.</span></div>
-        <div class="cmd"><b>doctor · status</b><span>Detected tools, log roots, health and accuracy caveats; and a terminal overview.</span></div>
-        <div class="cmd"><b>plugins · metrics</b><span><code>list</code> / <code>verify</code> out-of-tree exec parser and metric plugins — nothing stored.</span></div>
-        <div class="cmd"><b>config · clear</b><span>Print the effective config; delete stored data with an explicit scope and <code>--yes</code>.</span></div>
+        <div class="cmd"><b>doctor · status</b><span>Detected tools, resolved log roots, store size, the per-source depth matrix, and format-drift canaries. <code>doctor --strict</code> exits non-zero on suspected drift — for cron.</span></div>
+        <div class="cmd"><b>plugins · metrics</b><span><code>list</code> / <code>verify</code> out-of-tree exec parser, metric and rule plugins — nothing stored.</span></div>
+        <div class="cmd"><b>config · clear · compact</b><span>Print the effective config; delete stored data with an explicit scope and <code>--yes</code>; return freed pages to the filesystem.</span></div>
       </div>
     </div>
   </section>
@@ -400,20 +409,24 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- SUPPORTED TOOLS + ACCURACY ─────────────────────────────────────────── -->
   <section class="sec" id="tools">
     <div class="wrap">
-      <div class="sec-head"><h2>Supported tools &amp; accuracy</h2><p class="eyebrow">four sources · honest about each</p></div>
+      <div class="sec-head"><h2>Supported tools &amp; accuracy</h2><p class="eyebrow">five sources · declared depth, not a checkmark</p></div>
       <div class="tools">
         <div class="tool"><b>Claude Code</b><code>~/.claude/projects/**/*.jsonl</code><span class="cap full">tokens + activity</span></div>
         <div class="tool"><b>OpenAI Codex CLI</b><code>~/.codex/sessions/**</code><span class="cap full">tokens + activity</span></div>
         <div class="tool"><b>Gemini CLI</b><code>~/.gemini/tmp/&lt;hash&gt;/chats/*.jsonl</code><span class="cap">tokens · cost only</span></div>
+        <div class="tool"><b>GitHub Copilot CLI</b><code>~/.copilot/session-state/&lt;id&gt;/events.jsonl</code><span class="cap full">tokens + lines · per session</span></div>
         <div class="tool"><b>Cline</b><code>globalStorage/saoudrizwan.claude-dev · ~/.cline</code><span class="cap">tokens · cost only</span></div>
       </div>
+      <p class="intro" style="margin-top:1.5rem">"Supports Gemini CLI" is misleading when it means tokens but no edits. Since v0.5 each source publishes its real <strong>depth</strong> — <em>deep</em> (tokens + activity), <em>standard</em> (reliable usage, documented activity gaps), <em>import-only</em> — and <code>doctor</code> prints the matrix for the tools found on your machine.</p>
       <ul class="caveats">
         <li>AI-line activity (lines, edits, rework) is captured for Claude Code and Codex today; Gemini CLI and Cline contribute cost but not line counts yet.</li>
+        <li>Copilot CLI totals a session only when it ends, so its records cover a whole session rather than a turn: they carry lines added and removed, are marked <code>‡</code> in reports, and lower the turn-level coverage every verdict declares.</li>
+        <li>Format drift is detected rather than silently absorbed: four per-source canaries compare each import against a baseline of recent runs and warn when a vendor changes a log format under you.</li>
         <li>Cline is discovered across VS Code, Insiders, VSCodium, and Cursor. Costs come from a vendored snapshot of the LiteLLM price table.</li>
         <li>The price table is flat per model — long-context (e.g. <code>[1m]</code>) and 1-hour cache premiums aren't modeled yet, so heavy-context sessions under-estimate.</li>
         <li>A model missing from the table renders <code>—</code> (JSON <code>null</code>, CSV blank, excluded from totals) — never a faked <code>$0</code>. <code>doctor</code> prints every caveat on each run.</li>
       </ul>
-      <p class="more">More sources — opencode, Copilot CLI, Aider, Qwen, Roo &amp; Kilo Code — are on the roadmap and buildable out-of-tree today.</p>
+      <p class="more">More sources — opencode, Aider, Qwen, Roo &amp; Kilo Code — are on the roadmap and buildable out-of-tree today.</p>
     </div>
   </section>
 
@@ -437,11 +450,13 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
       <p class="intro">
         One tool = one package; one metric = one file. Extend assaio without forking — exec
         plugins are standalone executables in <strong>any language</strong>, declared in your
-        config and speaking a small stdout protocol, so they survive core refactors.
+        config and speaking a small stdout protocol, so they survive core refactors. Three
+        protocols today — data sources, metrics, and rules that gate CI.
       </p>
       <div class="cards">
         <div class="card"><h3>Data source · any language</h3><p>An out-of-tree parser — Python, Rust, shell — for a tool assaio doesn't read yet. <code>plugins verify</code> checks conformance. Or add one in-tree via PR.</p></div>
         <div class="card"><h3>Metric plugin · any language</h3><p>An analyzer that reads the same prepared data every built-in metric reads and returns one result — it renders in <code>analyze</code> and on the dashboard, no rebuild.</p></div>
+        <div class="card"><h3>Rule plugin · any language</h3><p>A gate of your own: it reads this window's verdicts — never usage rows, never project names — and raises alerts that can fail <code>check</code> in CI.</p></div>
         <div class="card"><h3>Query the store</h3><p>The SQLite schema is documented — query it with <code>sqlite3</code> or any client, or pipe <code>report --format json|csv</code> into your own BI.</p></div>
       </div>
     </div>
@@ -456,9 +471,9 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="inst"><span class="il">Go 1.25+</span><pre>go install github.com/assaio/assaio/cmd/assaio-agent@latest</pre></div>
         <div class="inst"><span class="il">Manual · mac · Linux · Windows</span><pre>tar xzf assaio_&lt;ver&gt;_&lt;os&gt;_&lt;arch&gt;.tar.gz   # from Releases
 install assaio-agent /usr/local/bin/</pre><p class="ip">amd64 &amp; arm64. Every artifact ships checksums and a build-provenance attestation — verify with <code>gh attestation verify</code>.</p></div>
-        <div class="inst"><span class="il">First run</span><pre>assaio-agent demo       # bundled sample data
-assaio-agent backfill   # ingest your local sessions
-assaio-agent status</pre></div>
+        <div class="inst"><span class="il">First run</span><pre>assaio-agent init       # detect, disclose, import, report
+assaio-agent analyze    # the nineteen directional reads
+assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer to look before importing anything? <code>assaio-agent demo</code> runs the full reports on bundled sample data.</p></div>
       </div>
     </div>
   </section>

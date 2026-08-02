@@ -61,6 +61,30 @@ none of this relies on memory:
    the tag's `CHANGELOG.md` — the changelog is the curated story, the notes are the
    raw commit list.
 
+## The public surface (check before every tag)
+
+The binary is not the only thing a release ships. Before preparing the changelog, confirm
+each of these describes the version being cut — a page or a table that lags the binary is
+how an honesty-first product starts making false claims about itself:
+
+- `site/index.html` — the page served at <https://assaio.dev/>. The supported-tool list, the
+  command list, validator counts, and any "on the roadmap" wording about something that has
+  since shipped. **Update it before tagging**, not after: the site describes what a user can
+  install, and CI fails once the tag exists while the page still names the previous version.
+  The version guard accepts a page naming the release being prepared as long as `CHANGELOG.md`
+  already carries that section — so the page bump and the prepared section must reach `main` in
+  the same push, though not necessarily in the same commit.
+  It deploys itself from `main` (see [docs/site.md](docs/site.md)), so a merge publishes it
+  immediately — there is no separate step that would prompt a review.
+- `FEATURES.md` — a row per user-facing capability, with the release it arrived in.
+- `ROADMAP.md` and `BACKLOG.md` — levels and items marked shipped, shipped entries deleted
+  from the backlog, and any scope deliberately moved recorded on the item that inherited it.
+- `docs/` — including an ADR whenever the release makes a commitment a future contributor
+  could unknowingly undo.
+
+This list exists because it was skipped: `site/index.html` still advertised v0.2 while
+v0.5.0 was being tagged, listing an already-shipped connector as a roadmap item.
+
 ## Cutting a release
 
 Everything happens from a clean, up-to-date `main` with a green CI run.
@@ -93,6 +117,9 @@ build-provenance attestations.
    user-facing highlights; put any breaking change under a **Breaking** heading first.
 3. Verify provenance of one artifact:
    `gh attestation verify <artifact> -o assaio`.
+4. Load <https://assaio.dev/> and confirm it names the version just published. Cloudflare
+   Pages rebuilds on push to `main`, so this checks the deploy went through, not the copy —
+   the copy was checked before tagging.
 
 ## Rules
 
