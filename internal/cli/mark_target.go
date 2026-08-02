@@ -59,10 +59,27 @@ func resolveSessionPrefix(cmd *cobra.Command, st *store.Store, prefix string) (s
 	case 1:
 		return matches[0], nil
 	default:
-		ids := make([]string, 0, len(matches))
-		for _, m := range matches {
-			ids = append(ids, shortSessionID(m.SessionID))
-		}
-		return store.SessionRef{}, fmt.Errorf("%q matches %d sessions: %s", prefix, len(matches), strings.Join(ids, ", "))
+		return store.SessionRef{}, fmt.Errorf("%q matches %d sessions: %s -- use a longer prefix",
+			prefix, len(matches), listCandidates(matches))
 	}
+}
+
+// ambiguityShown caps the candidate list an ambiguous prefix prints. A one-character prefix
+// matches dozens of sessions on a real store, and a wall of ids is not a suggestion.
+const ambiguityShown = 6
+
+func listCandidates(matches []store.SessionRef) string {
+	shown := matches
+	if len(shown) > ambiguityShown {
+		shown = shown[:ambiguityShown]
+	}
+	ids := make([]string, 0, len(shown))
+	for _, m := range shown {
+		ids = append(ids, shortSessionID(m.SessionID))
+	}
+	list := strings.Join(ids, ", ")
+	if rest := len(matches) - len(shown); rest > 0 {
+		list += fmt.Sprintf(" and %d more", rest)
+	}
+	return list
 }

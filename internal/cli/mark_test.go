@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -134,6 +135,45 @@ func TestMarkAmbiguousPrefixListsCandidates(t *testing.T) {
 	_, err = runCLI(t, "mark", "dupe", "--task", "docs")
 	if err == nil || !strings.Contains(err.Error(), "matches 2 sessions") {
 		t.Fatalf("error = %v, want an ambiguity report", err)
+	}
+}
+
+// A short prefix matches dozens of sessions on a real store, so the candidate list is capped:
+// a wall of ids is not a suggestion.
+func TestMarkAmbiguousPrefixTruncatesTheCandidateList(t *testing.T) {
+	seedMarkStore(t)
+	dbPath := filepath.Join(os.Getenv("XDG_DATA_HOME"), "assaio", "assaio.db")
+	st, err := store.Open(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recs := make([]usage.Record, 0, 10)
+	for i := range 10 {
+		recs = append(recs, usage.Record{
+			Tool: "codex", SessionID: fmt.Sprintf("crowd-%02d", i),
+			DedupeKey: fmt.Sprintf("crowd-%02d", i), Timestamp: time.Now(), Model: "m",
+		})
+	}
+	if _, err := st.Insert(context.Background(), recs); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = runCLI(t, "mark", "crowd", "--task", "docs")
+	if err == nil {
+		t.Fatal("want an ambiguity error")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "matches 10 sessions") {
+		t.Fatalf("error must state the full count, got %q", msg)
+	}
+	if !strings.Contains(msg, "and 4 more") {
+		t.Fatalf("error must name the ids it did not list, got %q", msg)
+	}
+	if got := strings.Count(msg, "crowd-"); got != ambiguityShown {
+		t.Fatalf("listed %d ids, want %d", got, ambiguityShown)
 	}
 }
 
