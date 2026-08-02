@@ -480,12 +480,12 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   </header>
 
   <div class="panel-label">
-    <span><strong>Assay verdict</strong> · 18 reads</span>
+    <span><strong>Assay verdict</strong> · 19 reads</span>
     <span>2 projects · last 30 days</span>
   </div>
 
   
-  <section class="faceplate" aria-label="Assay verdict, 18 dimensions">
+  <section class="faceplate" aria-label="Assay verdict, 19 dimensions">
     
 <div class="cell">
   <span class="cell__label">01 · Adoption &amp; Usage Breadth</span>
@@ -584,7 +584,19 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">09 · Model Fit</span>
+  <span class="cell__label">09 · Task Intent Coverage</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--neutral">—</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+    <span class="cell__ratio tnum">0.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">10 · Model Fit</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--watch">WATCH</span>
     <span class="prov">Prov.</span>
@@ -596,7 +608,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">10 · Model Right-Sizing</span>
+  <span class="cell__label">11 · Model Right-Sizing</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
     
@@ -608,7 +620,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">11 · Reasoning Share</span>
+  <span class="cell__label">12 · Reasoning Share</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--good">LEAN</span>
     <span class="prov">Prov.</span>
@@ -620,7 +632,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">12 · Rework &amp; Rejection</span>
+  <span class="cell__label">13 · Rework &amp; Rejection</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--good">LOW</span>
     <span class="prov">Prov.</span>
@@ -632,7 +644,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">13 · Work Rhythm</span>
+  <span class="cell__label">14 · Work Rhythm</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
@@ -644,7 +656,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">14 · Session Taxonomy</span>
+  <span class="cell__label">15 · Session Taxonomy</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
@@ -656,7 +668,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">15 · Skill &amp; Agent Economics</span>
+  <span class="cell__label">16 · Skill &amp; Agent Economics</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
@@ -668,7 +680,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">16 · Subscription Fit</span>
+  <span class="cell__label">17 · Subscription Fit</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">SET PLAN</span>
     <span class="prov">Prov.</span>
@@ -680,7 +692,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">17 · Throughput</span>
+  <span class="cell__label">18 · Throughput</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--good">RAMPING</span>
     
@@ -692,7 +704,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">18 · Turn Efficiency</span>
+  <span class="cell__label">19 · Turn Efficiency</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
@@ -1135,6 +1147,36 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 <article class="entry">
   <div class="entry__gutter">
     <span class="entry__num">09</span>
+    <span class="entry__label">Task Intent Coverage</span>
+    <div class="cell__read-row">
+      <span class="entry__read entry__read--neutral">—</span>
+      <span class="prov">Prov.</span>
+      <span class="conf conf--low">low</span>
+    </div>
+  </div>
+  <div>
+    <p class="entry__howto">Intent is the one thing session logs never contain: what the work was for. Labels come from &#39;assaio-agent mark&#39; and let every other metric be filtered per kind of work, which is what makes &#34;did this hold up&#34; answerable instead of an average over research, refactors and greenfield features. This measures readiness to stratify, not diligence -- an unlabeled session is fully counted everywhere and is never a failure.</p>
+    
+    <div class="entry__stats">
+      
+      <div class="stat">
+        <span class="stat__value stat__value--accent">0 of 2</span>
+        <span class="stat__label">labeled sessions</span>
+        
+      </div>
+      
+    </div>
+    
+    
+    <p class="entry__caveat">Labels are optional and local: unlabeled sessions stay fully counted in every metric, and &#39;sync&#39; never sends them.</p><p class="entry__caveat">A session id is reused across --resume, so one label can span work that changed character later in the same session.</p>
+    <p class="entry__conf">Confidence — low · 2 sessions</p>
+    <p class="entry__takeaway">Nothing is labeled yet -- &#39;assaio-agent mark --task &lt;kind&gt;&#39; after a session unlocks reading every metric per kind of work.</p>
+  </div>
+</article>
+
+<article class="entry">
+  <div class="entry__gutter">
+    <span class="entry__num">10</span>
     <span class="entry__label">Model Fit</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--watch">WATCH</span>
@@ -1202,7 +1244,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">10</span>
+    <span class="entry__num">11</span>
     <span class="entry__label">Model Right-Sizing</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
@@ -1222,7 +1264,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">11</span>
+    <span class="entry__num">12</span>
     <span class="entry__label">Reasoning Share</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--good">LEAN</span>
@@ -1264,7 +1306,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">12</span>
+    <span class="entry__num">13</span>
     <span class="entry__label">Rework &amp; Rejection</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--good">LOW</span>
@@ -1300,7 +1342,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">13</span>
+    <span class="entry__num">14</span>
     <span class="entry__label">Work Rhythm</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
@@ -1380,7 +1422,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">14</span>
+    <span class="entry__num">15</span>
     <span class="entry__label">Session Taxonomy</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
@@ -1448,7 +1490,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">15</span>
+    <span class="entry__num">16</span>
     <span class="entry__label">Skill &amp; Agent Economics</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
@@ -1474,7 +1516,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">16</span>
+    <span class="entry__num">17</span>
     <span class="entry__label">Subscription Fit</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">SET PLAN</span>
@@ -1504,7 +1546,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">17</span>
+    <span class="entry__num">18</span>
     <span class="entry__label">Throughput</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--good">RAMPING</span>
@@ -1566,7 +1608,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 <article class="entry">
   <div class="entry__gutter">
-    <span class="entry__num">18</span>
+    <span class="entry__num">19</span>
     <span class="entry__label">Turn Efficiency</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
@@ -1717,19 +1759,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">09 · Model Fit</span>
-  <div class="cell__read-row">
-    <span class="cell__read cell__read--good">HEALTHY</span>
-    
-  </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
-    <span class="cell__ratio tnum">1.00</span>
-  </div>
-</div>
-
-<div class="cell">
-  <span class="cell__label">10 · Reasoning Share</span>
+  <span class="cell__label">09 · Task Intent Coverage</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
@@ -1741,7 +1771,31 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">11 · Rework &amp; Rejection</span>
+  <span class="cell__label">10 · Model Fit</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--good">HEALTHY</span>
+    
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
+    <span class="cell__ratio tnum">1.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">11 · Reasoning Share</span>
+  <div class="cell__read-row">
+    <span class="cell__read cell__read--neutral">—</span>
+    <span class="prov">Prov.</span>
+  </div>
+  <div class="cell__foot">
+    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+    <span class="cell__ratio tnum">0.00</span>
+  </div>
+</div>
+
+<div class="cell">
+  <span class="cell__label">12 · Rework &amp; Rejection</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--good">LOW</span>
     <span class="prov">Prov.</span>
@@ -1753,7 +1807,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">12 · Work Rhythm</span>
+  <span class="cell__label">13 · Work Rhythm</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
@@ -1765,7 +1819,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">13 · Session Taxonomy</span>
+  <span class="cell__label">14 · Session Taxonomy</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
@@ -1777,7 +1831,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">14 · Throughput</span>
+  <span class="cell__label">15 · Throughput</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--watch">WATCH</span>
     
@@ -1789,7 +1843,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 </div>
 
 <div class="cell">
-  <span class="cell__label">15 · Turn Efficiency</span>
+  <span class="cell__label">16 · Turn Efficiency</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>

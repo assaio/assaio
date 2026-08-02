@@ -15,9 +15,9 @@ mattering the moment a second release exists.
 | `init` | v0.5 | A first run end to end: detects tools, prints the exact directories it will read before reading them, imports, writes the report, names what to run next. Writes no config when defaults work; `--non-interactive` for scripted setup. |
 | `demo` | v0.1 | Full reports on bundled sample data — no logs needed. |
 | `backfill` | v0.1 | Import all historical local session logs into the store. Since v0.4, incremental: an input already parsed unchanged by this build is skipped and reported as `unchanged=`; `--full` forces a complete re-parse. |
-| `report` | v0.1 | Token/cost report; `--by day\|project\|tool\|model\|entrypoint\|member`, `--format table\|json\|csv`, `--compare` top movers. |
-| `effectiveness` | v0.1 | AI output vs cost — AI lines, edits, rejections, **`$`/100 AI lines** — per project by default; `--compare`. |
-| `analyze` | v0.1 | Runs the metric validators below plus configured exec metric plugins; `--list`, `--format text\|json`, `[name...]` subset. Since v0.5 every result carries a confidence envelope (coverage, sample size and unit, data age, parsing build, and a `high\|medium\|low\|insufficient` label). |
+| `report` | v0.1 | Token/cost report; `--by day\|project\|tool\|model\|entrypoint\|member` plus `task\|outcome\|difficulty` (v0.6), `--format table\|json\|csv`, `--compare` top movers. |
+| `effectiveness` | v0.1 | AI output vs cost — AI lines, edits, rejections, **`$`/100 AI lines** — per project by default; `--compare`. Since v0.6 also groupable by session label, so cost per line is comparable per kind of work. |
+| `analyze` | v0.1 | Runs the metric validators below plus configured exec metric plugins; `--list`, `--format text\|json`, `[name...]` subset. Since v0.5 every result carries a confidence envelope (coverage, sample size and unit, data age, parsing build, and a `high\|medium\|low\|insufficient` label). Since v0.6, `--task\|--outcome\|--difficulty` recompute every validator over just the sessions carrying that label. |
 | `check` | v0.1 | Budget gate with non-zero exit: `--max-tokens` (default basis) or `--max-cost` (labeled API-equivalent). Since v0.3, also the host for exec **rule** plugins: an `error` alert — or a rule that could not be evaluated — fails the gate. |
 | `dashboard` | v0.1 | Writes the self-contained offline Assay HTML report; pseudonymized by default, `--no-anonymize` opt-out. |
 | `serve` | v0.1 | Self-hosted team server: collects pushed usage, serves the aggregated team dashboard. |
@@ -27,7 +27,8 @@ mattering the moment a second release exists.
 | `statusline` | v0.4 | One ambient line for a status bar: today's tokens, AI lines, cost basis, and data age. Local day (timestamp range, not a UTC bucket); read-only; never fails loudly. See [automation](docs/automation.md). |
 | `explain` | v0.4 | The long-form page for a metric — what it measures, how to read it, what to do about it, its limits. Needs no store; no argument lists every metric. |
 | `survival` | v0.2 | Directional local outcome check: how much of a git repo's window survives in `HEAD` (`git blame`), beside the AI lines the store recorded. See [automation](docs/automation.md). |
-| `clear` | v0.1 | Deletes stored data; requires an explicit scope and `--yes`. Reports what stays held by the store afterwards. |
+| `mark` | v0.6 | Labels a session with a task class, outcome and difficulty — category values only, never free text, never synced. Defaults to the newest session in the current repository; `--last`, an id prefix, `--list`, `--unmark`. |
+| `clear` | v0.1 | Deletes stored data; requires an explicit scope and `--yes`. Reports what stays held by the store afterwards. Session labels survive `--all` and are removed only by `--labels` (v0.6). |
 | `compact` | v0.5 | Reclaims disk space the store freed but still holds (`VACUUM` + WAL truncate); prints the size before and after. Deleting rows never shrinks a SQLite file on its own. |
 | `config` | v0.1 | Prints the effective merged configuration and its source path. |
 | `plugins` | v0.1 | `list` / `verify` for exec **parser** plugins (protocol conformance, nothing stored). |
@@ -48,6 +49,7 @@ generically by the CLI, JSON output, and the dashboard.
 | `context` | v0.1 | Are sessions healthy: turns, peak context, focused minutes, compaction rate? | Neutral below 3 sessions — no verdict from thin data. |
 | `coverage` | v0.2 | How much of the window is high-confidence data: token share from tools with full activity capture, share priced, and — when a window mixes them — the share from per-turn rather than whole-session records. | Says how complete the data is, never whether the work was good. |
 | `explore-produce` | v0.3 | What the tool calls were for: reading and searching the codebase vs writing code in it, with reads-per-write. | Exploring earns the right to write; only flags the extreme. Covers Claude Code and Codex; states its own coverage, and un-backfilled history reads as unclassified. |
+| `intent` | v0.6 | How much of the window carries a task label, and whether enough classes have enough sessions to compare kinds of work at all. | Reads readiness to stratify, never diligence: it has no unfavorable verdict, and unlabeled sessions stay fully counted everywhere. |
 | `friction` | v0.3 | How often tool calls fail outright, beside how often a human declines one — the tokens spent on calls that produced nothing. | Some failure is normal probing. Rates cover only tools that mark the outcome of every call (Claude Code today); Codex reports it for file edits alone and is excluded rather than counted as successful. |
 | `model-fit` | v0.1 | Premium vs cheaper token share (by real price tier), lines-per-token contrast, sub-agent delegation share, upper-bound routing savings. | Savings figure is an upper bound, never a switch recommendation. |
 | `model-right-sizing` | v0.2 | Premium-model turns that produced little output — downgrade candidates a cheaper/faster model might handle. | Task difficulty is invisible; a prompt to review, not a verdict. On a flat plan it's about speed/limits, not $. |
@@ -87,7 +89,7 @@ same questions as one that reports both. Every source therefore publishes its **
 | Claude Code | v0.1 | **deep** | ✔ (incl. sub-agent turns) | ✔ full, incl. rejections | ✔ |
 | OpenAI Codex CLI | v0.1 | standard | ✔ (exact, delta-based) | ✔ except rejections | — |
 | Gemini CLI | v0.1 | standard | ✔ | — (cost only, see ROADMAP) | — |
-| GitHub Copilot CLI | v0.5 | standard | ✔ (exact, per model) | ✔ lines added/removed per session | — |
+| GitHub Copilot CLI | v0.6 | standard | ✔ (exact, per model) | ✔ lines added/removed per session | — |
 | Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (cost only, see ROADMAP) | — |
 | Exec parser plugins | v0.1 | declared per record | ✔ (validated at the boundary) | — (protocol carries tokens only) | — |
 

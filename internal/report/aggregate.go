@@ -3,6 +3,8 @@ package report
 import (
 	"fmt"
 	"strings"
+
+	"github.com/assaio/assaio/internal/label"
 )
 
 // Aggregate groups rows by the single dimension by, summing tokens and cost. Cost is
@@ -53,6 +55,12 @@ func newGroup(by, key string) *Row {
 		g.Entrypoint = key
 	case "member":
 		g.Member = key
+	case label.Task:
+		g.Task = key
+	case label.Outcome:
+		g.Outcome = key
+	case label.Difficulty:
+		g.Difficulty = key
 	}
 	return g
 }

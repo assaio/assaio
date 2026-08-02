@@ -187,3 +187,34 @@ Limits
   Only Claude Code and Codex contribute line counts today; Gemini CLI and Cline show cost
   without lines, so any per-project reading depends on which tool was used. This is never
   ranked per named individual -- that refusal holds regardless of demand.`
+
+const explainIntent = `Task Intent Coverage
+
+What it measures
+  How many of the window's sessions carry a label -- task class, outcome, difficulty --
+  and whether those labels are spread across enough task classes to read any other metric
+  per kind of work.
+
+How to read it
+  Intent is the one fact a session log never contains: what the work was for. It cannot be
+  recovered by reading prompts, so it comes from an explicit, optional label you attach
+  with 'assaio-agent mark'. Once two task classes have a few sessions each, every metric
+  can be filtered -- 'assaio-agent analyze --task refactor', 'report --by task' -- and
+  questions like "is AI-written code cheaper per line on bugfixes than on features"
+  become answerable instead of being averaged into one meaningless number.
+
+  This reads readiness to compare, never diligence. It has no unfavorable verdict: an
+  unlabeled session is fully counted in every other metric and is not a failure, and a
+  window whose work genuinely is all one kind is not doing anything wrong.
+
+What to do about it
+  Label a session right after finishing it: 'assaio-agent mark --task bugfix --outcome
+  done'. With no session named, that marks the most recent session in the repository you
+  are standing in. 'assaio-agent mark --list' shows what is labeled and what is not.
+
+Limits
+  Labels are category values only -- never free text, never a prompt -- and they stay on
+  this machine: 'sync' does not send them. A session id is reused across --resume, so a
+  single label can span work that changed character later in the same session. A filtered
+  view covers only the sessions you labeled, which is why its confidence envelope reports
+  a smaller sample than the unfiltered run.`

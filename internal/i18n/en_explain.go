@@ -13,6 +13,7 @@ var enExplain = map[string]string{
 	"coverage":           explainCoverage,
 	"explore-produce":    explainExploreProduce,
 	"friction":           explainFriction,
+	"intent":             explainIntent,
 	"model-fit":          explainModelFit,
 	"model-right-sizing": explainModelRightSizing,
 	"reasoning-share":    explainReasoningShare,

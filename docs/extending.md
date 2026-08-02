@@ -162,7 +162,7 @@ server](#the-team-server)) the served endpoint.
 | Field | Type | What it is |
 |-------|------|------------|
 | `Usage` | `[]store.UsageRow` | The window's usage, **pre-aggregated** by `(day, tool, model, project, entrypoint, member)` — one row per combination, tokens and activity counts summed (`internal/store/store.go`'s `Usage` query). Not one row per raw event: there is no per-record or per-file detail left at this point (see the [say-so-when-approximating](#honesty-constraints-for-every-extension) rule). Each row carries `Day` (`"YYYY-MM-DD"`), `Tool`, `Model`, `Project`, `Entrypoint`, `Member`; token fields `In, Out, CacheRead, CacheWrite, Reasoning`; and activity fields `LinesAdded, LinesRemoved, Edits, ToolCalls, Rejected, Compactions, ReworkLines` (see the [`usage.Record` contract](#the-usagerecord-contract) for what each counts). It also carries the tool-call purpose split `ToolReads, ToolSearches, ToolCommands, ToolWrites, ToolOther` — which sums to `ToolCalls` for tools that name their tool calls and is all-zero for tools that do not — and `ToolErrors`, calls that came back an error. Because that split is populated by only some tools, a metric reading it must report its own coverage rather than treating zero as "nothing happened". |
-| `Sessions` | `[]store.SessionRow` | One row per `(session_id, member)` in the window: `Project`, `Tool`, `Model`, `FirstTs`/`LastTs`, `Turns`, `OutputTokens`, `PeakContextTokens`, `Edits`, `Compactions`, and `ActiveMinutes` (focused time — inter-turn gaps over 30 minutes are excluded, so a resumed session's idle time never counts as work; `internal/store/sessions.go`). |
+| `Sessions` | `[]store.SessionRow` | One row per `(session_id, member)` in the window: `Project`, `Tool`, `Model`, `FirstTs`/`LastTs`, `Turns`, `OutputTokens`, `PeakContextTokens`, `Edits`, `Compactions`, and `ActiveMinutes` (focused time — inter-turn gaps over 30 minutes are excluded, so a resumed session's idle time never counts as work; `internal/store/sessions.go`). Also `Task`, `Outcome` and `Difficulty`: the closed-vocabulary labels a person attached with `assaio-agent mark`, `""` on every axis nobody set — which is most sessions. Treat unlabeled as "not stated", never as a failure or a zero, and report your own label coverage if your metric depends on them ([ADR 0006](adr/0006-session-annotations.md)). |
 | `Prices` | `pricing.Table` | `map[string]pricing.Price{Input, Output, CacheWrite, CacheRead float64}`, USD per token, the vendored LiteLLM snapshot. Indexing a model absent from the table returns a zero-value `Price` with **no error** — check the map's `ok` return if an unpriced model must be excluded from a cost figure rather than silently priced at $0. |
 | `Now` | `time.Time` | Wall-clock at CLI invocation. Use this, never call `time.Now()` yourself. |
 | `Recent` | `time.Duration` | The recent-vs-prior comparison window (7 days from the CLI today) — use it for trend/staleness splits the way `adoption` and `throughput` do. |
@@ -870,6 +870,16 @@ parser protocol's `assaio_plugin`):
                 "cacheRead":0.0000015,"cacheWrite":0.00001875}}
 }
 ```
+
+**Session labels are deliberately absent from this document.** In-tree validators can read
+the task/outcome/difficulty a person attached with `assaio-agent mark`, but the plugin wire
+does not carry them and the usage rows above are never split by them: a plugin receives
+exactly the same shape it received before labels existed. That is a decision, not an
+oversight — labels are local, and widening what leaves the machine is its own choice rather
+than a side effect ([ADR 0006](adr/0006-session-annotations.md)). If you need a metric per
+kind of work today, run your plugin under `assaio-agent analyze --task <kind>`: the filter
+is applied to the window before the input document is built, so your plugin computes over
+exactly those sessions without needing to know why.
 
 The semantics are exactly [`Input`'s](#what-a-validator-reads-input): `usage` is
 pre-aggregated by `(day, tool, model, project, entrypoint, member)`; `cost` fields are

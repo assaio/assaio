@@ -17,13 +17,38 @@ type ModelTurns struct {
 // smallMax output tokens. It reads the raw per-record grain that Usage's daily GROUP BY
 // hides, so the model-right-sizing metric measures actual turns rather than day-aggregates.
 func (s *Store) TurnSizing(ctx context.Context, since time.Time, smallMax int64) ([]ModelTurns, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	return s.turnSizing(ctx, since, smallMax, LabelFilter{})
+}
+
+// TurnSizingFiltered is TurnSizing restricted to sessions carrying filter's annotations, so
+// a narrowed analysis does not read one subset's models against the whole window's turns.
+func (s *Store) TurnSizingFiltered(ctx context.Context, since time.Time, smallMax int64, filter LabelFilter) ([]ModelTurns, error) {
+	return s.turnSizing(ctx, since, smallMax, filter)
+}
+
+const (
+	turnSizingSelect = `
         SELECT model,
             COALESCE(SUM(CASE WHEN output_tokens > 0 THEN 1 ELSE 0 END), 0) AS turns,
             COALESCE(SUM(CASE WHEN output_tokens > 0 AND output_tokens < ? THEN 1 ELSE 0 END), 0) AS small
         FROM usage_record
-        WHERE ts >= ? AND granularity = 'turn'
-        GROUP BY model`, smallMax, since.UTC().Format(time.RFC3339))
+        WHERE ts >= ? AND granularity = 'turn'`
+
+	turnSizingQuery = turnSizingSelect + `
+        GROUP BY model`
+
+	turnSizingFilteredQuery = turnSizingSelect + labelSubquery + `
+        GROUP BY model`
+)
+
+func (s *Store) turnSizing(ctx context.Context, since time.Time, smallMax int64, filter LabelFilter) ([]ModelTurns, error) {
+	query := turnSizingQuery
+	args := []any{smallMax, since.UTC().Format(time.RFC3339)}
+	if !filter.Empty() {
+		query = turnSizingFilteredQuery
+		args = append(args, filter.args()...)
+	}
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

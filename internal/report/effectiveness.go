@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/assaio/assaio/internal/label"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -71,6 +72,12 @@ func usageDimValue(u *store.UsageRow, by string) string {
 		return u.Entrypoint
 	case "member":
 		return u.Member
+	case label.Task:
+		return orUnlabeled(u.Task)
+	case label.Outcome:
+		return orUnlabeled(u.Outcome)
+	case label.Difficulty:
+		return orUnlabeled(u.Difficulty)
 	default:
 		return ""
 	}

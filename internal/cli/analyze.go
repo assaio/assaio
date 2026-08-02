@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/assaio/assaio/internal/analyze"
+	"github.com/assaio/assaio/internal/label"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/report"
 	"github.com/assaio/assaio/internal/store"
@@ -39,6 +40,7 @@ func newAnalyzeCmd() *cobra.Command {
 	c.Flags().StringVar(&since, "since", "30d", "time window, e.g. 7d")
 	c.Flags().StringVar(&format, "format", "text", "output format: text|json")
 	c.Flags().BoolVar(&list, "list", false, "list registered validators and exit")
+	addLabelFlags(c)
 	addDBFlag(c)
 	return c
 }
@@ -90,29 +92,68 @@ func runAnalyze(cmd *cobra.Command, names []string, since *string, format string
 	if n == 0 && format == "text" {
 		return emptyStatusHint(cmd)
 	}
+	filter, err := labelFilterFrom(cmd)
+	if err != nil {
+		return err
+	}
 
-	in, err := buildAnalyzeInput(cmd, st, start)
+	in, err := buildAnalyzeInputFiltered(cmd, st, start, filter)
 	if err != nil {
 		return err
 	}
 	in.PlanMonthlyCost = cfg.Pricing.MonthlySubscriptionCost
-	results, err := collectAnalysisResults(cmd, names, cfg.Metrics, &in)
+	validators := analyze.Validators()
+	if !filter.Empty() {
+		if validators, err = narrowAnalysis(cmd, st, start, filter, &in, names, format); err != nil {
+			return err
+		}
+	}
+	results, err := collectAnalysisResults(cmd, names, cfg.Metrics, &in, validators)
 	if err != nil {
 		return err
 	}
 	return renderAnalyzeResults(cmd, results, format)
 }
 
+// narrowAnalysis states what a label filter selected and returns the validators that can
+// honestly answer for a subset of the window.
+func narrowAnalysis(cmd *cobra.Command, st *store.Store, start time.Time, filter store.LabelFilter,
+	in *analyze.Input, names []string, format string,
+) ([]analyze.Validator, error) {
+	kept, skipped := narrowableValidators()
+	for _, name := range names {
+		if v, ok := analyze.Get(name); ok && !analyze.ProjectScoped(v) {
+			return nil, fmt.Errorf("%s describes the whole window and cannot be read per label; run it without --%s/--%s/--%s",
+				name, label.Task, label.Outcome, label.Difficulty)
+		}
+	}
+	if format != "text" {
+		return kept, nil
+	}
+	all, err := st.Sessions(cmd.Context(), start)
+	if err != nil {
+		return nil, err
+	}
+	return kept, renderNarrowing(cmd, filter, len(in.Sessions), len(all), skipped)
+}
+
 func buildAnalyzeInput(cmd *cobra.Command, st *store.Store, start time.Time) (analyze.Input, error) {
-	usageRows, err := st.Usage(cmd.Context(), start)
+	return buildAnalyzeInputFiltered(cmd, st, start, store.LabelFilter{})
+}
+
+// buildAnalyzeInputFiltered is buildAnalyzeInput restricted to the sessions filter selects.
+// Every one of the five queries below takes the filter: narrowing only the usage rows would
+// state one subset's figures beside the whole window's delegation, attribution and turn mix.
+func buildAnalyzeInputFiltered(cmd *cobra.Command, st *store.Store, start time.Time, filter store.LabelFilter) (analyze.Input, error) {
+	usageRows, err := st.UsageFiltered(cmd.Context(), start, filter)
 	if err != nil {
 		return analyze.Input{}, err
 	}
-	sessionRows, err := st.Sessions(cmd.Context(), start)
+	sessionRows, err := st.SessionsFiltered(cmd.Context(), start, filter)
 	if err != nil {
 		return analyze.Input{}, err
 	}
-	sub, total, err := st.Delegation(cmd.Context(), start)
+	sub, total, err := st.DelegationFiltered(cmd.Context(), start, filter)
 	if err != nil {
 		return analyze.Input{}, err
 	}
@@ -120,11 +161,11 @@ func buildAnalyzeInput(cmd *cobra.Command, st *store.Store, start time.Time) (an
 	if err != nil {
 		return analyze.Input{}, err
 	}
-	turns, err := st.TurnSizing(cmd.Context(), start, analyze.RightSizeSmallOutput)
+	turns, err := st.TurnSizingFiltered(cmd.Context(), start, analyze.RightSizeSmallOutput, filter)
 	if err != nil {
 		return analyze.Input{}, err
 	}
-	skills, agents, err := st.Attribution(cmd.Context(), start)
+	skills, agents, err := st.AttributionFiltered(cmd.Context(), start, filter)
 	if err != nil {
 		return analyze.Input{}, err
 	}

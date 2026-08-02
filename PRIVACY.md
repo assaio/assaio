@@ -97,6 +97,33 @@ only** — how much AI produced, how efficiently, and with how much friction. No
 carries prompt text, model output, or code content: a diff line contributes a `+1` or a
 `-1` and nothing else.
 
+## What you add yourself
+
+One thing in the store is not read from a log at all: the labels you attach with
+`assaio-agent mark`. Session logs record what a tool did, never what the work was *for*, and
+that intent cannot be recovered by reading prompts — which are never collected anyway.
+
+A label is three **closed vocabularies**, and nothing else:
+
+- task class — `bugfix`, `feature`, `test`, `refactor`, `docs`, `research`, `review`, `other`
+- outcome — `done`, `partial`, `abandoned`
+- difficulty — `low`, `medium`, `high`
+
+There is **no free-text field**. A value outside its vocabulary is rejected, so the table is
+free of content by construction: there is nowhere to put a branch name, a ticket title, a
+commit message, or a prompt. Deliberately absent, too, is any issue or branch reference —
+see [ADR 0006](docs/adr/0006-session-annotations.md) for why that belongs to attribution
+work rather than here.
+
+Labels are **local**. `sync` sends usage records; it does not send labels, and no other path
+does either. They are also the only data in the store that no re-import can rebuild, so
+`clear --all`, `clear --older-than` and `clear --tool` leave them alone and report how many
+they kept — only `clear --labels` deletes them.
+
+Labeling is optional and stays optional: an unlabeled session is counted in full by every
+metric, a report grouped by a label always shows the `unlabeled` group rather than hiding
+it, and nothing in `assaio` scores how much you label.
+
 ## What it never reads
 
 - Prompt text
@@ -134,6 +161,12 @@ usage, and both exist only so a repeat `backfill` stays cheap and honest:
 Both can be deleted at any time; the only cost is one slow re-parse and a reset drift
 baseline.
 
+A third table, `session_label`, holds the labels described under "What you add yourself" —
+one row per session you marked, carrying only the three vocabulary values and a timestamp.
+Unlike the two above it is **not** a cache: nothing can rebuild it, so it is the one table
+`clear` never removes without being asked. Its size is bounded by how many sessions you
+marked by hand (~80 bytes each), not by how much you have ingested.
+
 ## How to delete it
 
 ```sh
@@ -141,8 +174,10 @@ assaio-agent clear --all --yes
 assaio-agent compact          # actually return the freed space to the filesystem
 ```
 
-`clear` refuses to run without an explicit scope (`--all`, `--older-than`, or `--tool`)
-and the `--yes` confirmation flag. Note that deleting rows frees pages *inside* the
+`clear` refuses to run without an explicit scope (`--all`, `--older-than`, `--tool`, or
+`--labels`) and the `--yes` confirmation flag. The first three delete usage records and keep
+your session labels, reporting how many they kept; `--labels` is the deliberate way to
+delete those too, and deleting the database file removes everything at once. Note that deleting rows frees pages *inside* the
 database file without shrinking it — `compact` is what returns that space to your
 filesystem. You can also simply delete the database file. Because all data is local and
 self-contained, this makes `assaio` straightforward to operate under GDPR-style deletion

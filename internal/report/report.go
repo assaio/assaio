@@ -3,6 +3,7 @@
 package report
 
 import (
+	"github.com/assaio/assaio/internal/label"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -39,6 +40,11 @@ type Row struct {
 	// HasUnpriced reports whether this row aggregates any usage with an unknown model
 	// price, meaning Cost excludes that usage.
 	HasUnpriced bool `json:"has_unpriced"`
+	// Task, Outcome and Difficulty are the session annotations this group belongs to, and
+	// are populated only when the caller grouped by one of them (store.UsageByLabel).
+	Task       string `json:"task,omitempty"`
+	Outcome    string `json:"outcome,omitempty"`
+	Difficulty string `json:"difficulty,omitempty"`
 }
 
 // cacheEff returns CacheRead / (in + CacheRead), or nil when both are zero.
@@ -61,6 +67,7 @@ func Build(rows []store.UsageRow, t pricing.Table) []Row {
 			Day: u.Day, Tool: u.Tool, Model: u.Model, Project: u.Project, Entrypoint: u.Entrypoint, Member: u.Member,
 			Granularity: u.Granularity,
 			In:          u.In, Out: u.Out, CacheRead: u.CacheRead, CacheWrite: u.CacheWrite, Reasoning: u.Reasoning,
+			Task: u.Task, Outcome: u.Outcome, Difficulty: u.Difficulty,
 		}
 		if cost, ok := t.CostTokens(u.Model, u.In, u.Out, u.CacheWrite, u.CacheRead); ok {
 			r.Cost = &cost
@@ -74,8 +81,13 @@ func Build(rows []store.UsageRow, t pricing.Table) []Row {
 	return out
 }
 
-// validDims are the dimensions Aggregate accepts for --by, in canonical order.
-var validDims = []string{"day", "project", "tool", "model", "entrypoint", "member"}
+// validDims are the dimensions Aggregate accepts for --by, in canonical order. The three
+// annotation axes only carry a value when the caller read usage through
+// store.UsageByLabel; see usageForDim in internal/cli.
+var validDims = []string{
+	"day", "project", "tool", "model", "entrypoint", "member",
+	label.Task, label.Outcome, label.Difficulty,
+}
 
 // dimValue returns r's value for one of validDims.
 func dimValue(r *Row, by string) string {
@@ -92,9 +104,31 @@ func dimValue(r *Row, by string) string {
 		return r.Entrypoint
 	case "member":
 		return r.Member
+	case label.Task:
+		return orUnlabeled(r.Task)
+	case label.Outcome:
+		return orUnlabeled(r.Outcome)
+	case label.Difficulty:
+		return orUnlabeled(r.Difficulty)
 	default:
 		return ""
 	}
+}
+
+// orUnlabeled names the group usage from a session nobody marked belongs to. It is a real
+// group with a real name, never an omitted row: most usage is unannotated, and hiding it
+// would present a slice of the window as the whole of it.
+func orUnlabeled(v string) string {
+	if v == "" {
+		return label.Unlabeled
+	}
+	return v
+}
+
+// IsLabelDim reports whether by groups on a session annotation, which is what tells a
+// caller to read usage through store.UsageByLabel rather than store.Usage.
+func IsLabelDim(by string) bool {
+	return by == label.Task || by == label.Outcome || by == label.Difficulty
 }
 
 // emptyDimLabel is the table placeholder for a grouped row whose --by dimension value is

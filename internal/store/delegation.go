@@ -25,9 +25,23 @@ import (
 // window. This is the exact per-token delegation share, read from the record itself --
 // not an approximation from model mix.
 func (s *Store) Delegation(ctx context.Context, since time.Time) (subAgentTokens, totalTokens int64, err error) {
-	// reasoning_tokens is a subset of output_tokens (usage.Record) and is never re-added:
-	// these totals must match rowTokens on every other surface.
-	const q = `
+	return s.delegation(ctx, since, LabelFilter{})
+}
+
+// DelegationFiltered is Delegation restricted to sessions carrying filter's annotations, so
+// a narrowed analysis does not report the whole window's delegation share beside one
+// subset's every other figure.
+func (s *Store) DelegationFiltered(ctx context.Context, since time.Time, filter LabelFilter) (subAgentTokens, totalTokens int64, err error) {
+	return s.delegation(ctx, since, filter)
+}
+
+// reasoning_tokens is a subset of output_tokens (usage.Record) and is never re-added: these
+// totals must match rowTokens on every other surface. The EXISTS test that picks which
+// definition of sub-agent work applies is deliberately left on the whole window even when a
+// filter narrows the sums -- it asks whether this store has been re-backfilled with
+// sidechain markers, which is a property of the data, not of the subset being read.
+const (
+	delegationSelect = `
         SELECT
             COALESCE(SUM(CASE WHEN
                 CASE WHEN EXISTS (SELECT 1 FROM usage_record WHERE ts >= ? AND sidechain = 1)
@@ -40,7 +54,17 @@ func (s *Store) Delegation(ctx context.Context, since time.Time) (subAgentTokens
             COALESCE(SUM(input_tokens + output_tokens + cache_read_tokens + cache_write_tokens), 0)
         FROM usage_record
         WHERE ts >= ?`
+
+	delegationFilteredQuery = delegationSelect + labelSubquery
+)
+
+func (s *Store) delegation(ctx context.Context, since time.Time, filter LabelFilter) (subAgentTokens, totalTokens int64, err error) {
 	ts := since.UTC().Format(time.RFC3339)
-	err = s.db.QueryRowContext(ctx, q, ts, ts).Scan(&subAgentTokens, &totalTokens)
+	query, args := delegationSelect, []any{ts, ts}
+	if !filter.Empty() {
+		query = delegationFilteredQuery
+		args = append(args, filter.args()...)
+	}
+	err = s.db.QueryRowContext(ctx, query, args...).Scan(&subAgentTokens, &totalTokens)
 	return subAgentTokens, totalTokens, err
 }

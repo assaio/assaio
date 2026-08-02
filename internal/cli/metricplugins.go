@@ -21,11 +21,11 @@ const metricPluginPrefix = "plugin:"
 // collectAnalysisResults produces the Results an analyze run renders: every registered
 // validator plus every configured metric plugin when names is empty, or exactly the
 // named subset -- built-in names and plugin:<name> entries -- in the order given.
-func collectAnalysisResults(cmd *cobra.Command, names []string, metricCfgs []config.PluginConfig, in *analyze.Input) ([]analyze.Result, error) {
+func collectAnalysisResults(cmd *cobra.Command, names []string, metricCfgs []config.PluginConfig, in *analyze.Input, validators []analyze.Validator) ([]analyze.Result, error) {
 	if len(names) > 0 {
 		return collectNamedResults(cmd, names, metricCfgs, in)
 	}
-	results := runValidatorResults(analyze.Validators(), in)
+	results := runValidatorResults(validators, in)
 	plugins, _ := runMetricPlugins(cmd.Context(), metricCfgs, in, cmd.ErrOrStderr())
 	return append(results, plugins...), nil
 }

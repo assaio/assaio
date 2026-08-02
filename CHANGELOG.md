@@ -22,6 +22,29 @@ Discussion.
 ## [Unreleased]
 
 ### Added
+- **Sessions can be labeled with what the work actually was.** `assaio-agent mark` attaches
+  a task class, an outcome and a difficulty to a session — the one fact session logs never
+  contain, and one that cannot be recovered by reading prompts. With no session named it
+  marks the most recent session in the repository you are standing in, so labeling is a
+  command you run right after the work; `--last` takes the newest session anywhere, a git-style
+  id prefix names one exactly, `--list` shows what is labeled and what is not, and `--unmark`
+  undoes it. Setting an axis later merges rather than replaces, so a task set today survives
+  an outcome recorded tomorrow (`B80`).
+- **Every metric can now be read per kind of work.** `analyze --task refactor` (and
+  `--outcome`/`--difficulty`) recomputes every validator over just those sessions, and
+  `report`/`effectiveness --by task|outcome|difficulty` group the same way — which is what
+  makes `$`/100 AI lines on bugfixes comparable against features instead of averaged into
+  one number nobody can act on. A filter narrows all five window queries at once, never
+  just the usage rows, and the verdicts that describe the whole window rather than a slice
+  of it (subscription fit, pooled attribution, per-model turn counts) are skipped and named
+  as skipped rather than restated over a subset they do not describe.
+- **`intent` validator** — how much of the window carries a label and whether that is
+  enough to compare kinds of work at all. It has no unfavorable verdict by design: scoring
+  how diligently someone labels, or judging a work mix that is genuinely all one kind, is
+  not something this tool does.
+- **`clear --labels`** — the deliberate way to delete session labels. `--all`,
+  `--older-than` and `--tool` now leave them alone and report how many they kept, because
+  labels are the only data in the store that no re-import can rebuild.
 - **GitHub Copilot CLI is a supported source.** Its session logs
   (`$COPILOT_HOME`, else `~/.copilot/session-state/<id>/events.jsonl`) carry a complete
   accounting per model — input, output, cache-read, cache-write and reasoning tokens, plus
@@ -35,6 +58,66 @@ Discussion.
   measured. Copilot only totals a session when it ends, so records are session-granularity:
   they are marked `‡` in reports, lower the turn-level coverage the `coverage` validator
   reports, and carry their gaps in `doctor`'s depth matrix (`B53`).
+
+### Changed
+- Labeling a session cannot move a figure anyone was already reading: the annotation join
+  is opt-in per query, so `analyze`, `status`, `dashboard`, the exec metric-plugin input
+  (ADR 0004, unchanged) and every unfiltered report run exactly the SQL they ran before.
+  A regression test asserts the unfiltered output is byte-identical before and after
+  labeling.
+- `report --by` and `effectiveness --by` accept `task`, `outcome` and `difficulty`. Usage
+  from unlabeled sessions is always rendered as its own `unlabeled` group, never hidden.
+
+### Documentation
+- **The roadmap now leads with outcome evidence, not recommendations.** Connecting a session
+  to the change it produced — commit, pull request, review, CI, merge, survival — moves ahead
+  of the recommendation engine, because a suggestion resting on activity and output proxies
+  alone is a guess delivered in a confident voice. The milestone table is re-sequenced
+  accordingly (evidence graph → harness intelligence → team → cost truth and interoperability
+  → the v1.0 stability promise), with two new themes: measuring whether agent configuration
+  (`AGENTS.md`, skills, hooks, MCP) actually helps, and mapping the canonical fields onto
+  OpenTelemetry GenAI conventions. Connector strategy is stated as depth over count.
+- **A milestone no longer carries a version number until it ships.** The table's order is the
+  sequence, shipped rows name the release they landed in, and `v1.0` is the one exception
+  because there the number *is* the promise. Pre-assigning `v0.7` to a promise made this
+  document schedule work it explicitly says it does not schedule — and it broke the moment a
+  small release landed between two milestones, which is exactly what this one is.
+- **The stated positioning changed.** `$` per 100 AI lines remains a signal but is no longer
+  the headline answer to "is AI delivering" — it is an *output* measure, and promoting one to
+  an outcome claim is the most likely way this project could start lying.
+- README no longer describes the tool as "the v0.1 local agent — the only thing that ships
+  today", five releases after that stopped being true; `site/index.html` was three releases
+  behind and now describes this one.
+- **Four surfaces were counting four sources and eighteen validators.** README, the website,
+  `AGENTS.md` and `FEATURES.md` are corrected to five parsers and nineteen validators, and
+  Copilot CLI is listed as a source rather than as a roadmap item. `FEATURES.md` had also
+  dated the Copilot parser to v0.5, a release it missed by two commits. Miscounting your own
+  inventory is the cheapest possible way for an honesty-first tool to be wrong about itself.
+- Shipped backlog items are deleted rather than left checked off, as that file's own
+  lifecycle rule requires.
+
+### Internal
+- Two CI workflows guard the documentation lifecycle mechanically instead of by review
+  memory: `site` publishes the page on every push to `main` and fails when it names a
+  version other than the latest tag, and `consistency` fails on a completed backlog item, a
+  duplicate backlog id, a tagged version with no changelog section, or a changelog section
+  claiming a version that was never tagged. Both make one exception, for the same reason:
+  the release being prepared. `RELEASING.md` requires the changelog section and the website
+  to be updated *before* the tag is cut, and `main` is protected — so a rule that admitted no
+  pending version would have made every release-prep commit unmergeable, and the tag it was
+  preparing impossible to create. Exactly one untagged version is allowed, and only when it
+  is newer than the latest tag.
+
+### Compatibility
+- **Migration `0005_session_labels.sql`** adds the `session_label` table (session id,
+  member, the three vocabulary values, and when it was marked) and the composite
+  `(project, ts)` index on `usage_record` that project-scoped window queries want (`B70`).
+  Both apply automatically on the next run. Nothing is rewritten and no existing column
+  changes, so an older build reads the same store unchanged — it simply ignores the new
+  table. Category values are validated in Go rather than by a SQL `CHECK`, so adding a
+  category later is not a migration.
+- The store grows by roughly 80 bytes per session you mark by hand. It does not grow with
+  the volume of logs ingested, and nothing prunes labels automatically.
 
 ## [0.5.0] - 2026-07-31
 

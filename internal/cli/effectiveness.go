@@ -23,7 +23,7 @@ func newEffectivenessCmd() *cobra.Command {
 	}
 	c.Flags().StringVar(&since, "since", "30d", "time window, e.g. 7d")
 	c.Flags().StringVar(&format, "format", "table", "output format: table|json|csv")
-	c.Flags().StringVar(&by, "by", "project", "group by: project|tool|model|entrypoint|day|member")
+	c.Flags().StringVar(&by, "by", "project", "group by: project|tool|model|entrypoint|day|member|task|outcome|difficulty")
 	c.Flags().Bool("compare", false, "show period-over-period top movers vs the previous equal window (renders a movers table, not --format)")
 	addDBFlag(c)
 	return c
@@ -56,7 +56,7 @@ func runEffectiveness(cmd *cobra.Command, since, format *string, by string) erro
 }
 
 func buildEffectiveness(cmd *cobra.Command, st *store.Store, start time.Time, by string) ([]report.EffRow, error) {
-	rows, err := st.Usage(cmd.Context(), start)
+	rows, err := usageForDim(cmd, st, start, by)
 	if err != nil {
 		return nil, err
 	}

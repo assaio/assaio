@@ -27,7 +27,7 @@ func runCompare(cmd *cobra.Command, st *store.Store, since, by string) error {
 	}
 	priorStart, cutoff := compareWindow(time.Now(), days)
 
-	rows, err := st.Usage(cmd.Context(), priorStart)
+	rows, err := usageForDim(cmd, st, priorStart, by)
 	if err != nil {
 		return err
 	}

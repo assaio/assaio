@@ -14,37 +14,51 @@ import (
 )
 
 func newClearCmd() *cobra.Command {
-	var all, yes bool
+	var all, yes, labels bool
 	var olderThan, tool string
 	c := &cobra.Command{
 		Use:   "clear",
 		Short: "Delete stored usage data (all, older-than, or per-tool)",
-		Args:  cobra.NoArgs,
+		Long: `Delete stored usage records. Session labels are never touched by --all, --older-than or
+--tool: they are the one thing in the store no re-import can rebuild, since a person typed
+them. Delete them deliberately with --labels.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runClear(cmd, all, yes, olderThan, tool)
+			return runClear(cmd, clearRequest{all: all, yes: yes, labels: labels, olderThan: olderThan, tool: tool})
 		},
 	}
 	c.Flags().BoolVar(&all, "all", false, "delete all records")
 	c.Flags().StringVar(&olderThan, "older-than", "", "delete records older than e.g. 90d; 0d means everything up to now")
 	c.Flags().StringVar(&tool, "tool", "", "restrict to one tool (claude-code|codex|gemini-cli|cline)")
 	c.Flags().BoolVar(&yes, "yes", false, "confirm deletion")
+	c.Flags().BoolVar(&labels, "labels", false, "delete the session labels too (never removed by the other flags)")
 	return c
 }
 
-func runClear(cmd *cobra.Command, all, yes bool, olderThan, tool string) error {
-	if !all && olderThan == "" && tool == "" {
-		return errors.New("specify --all, --older-than, or --tool")
+// clearRequest is what one clear invocation asks for.
+type clearRequest struct {
+	all, yes, labels bool
+	olderThan, tool  string
+}
+
+// targetsUsage reports whether any usage-record selector was given; --labels alone deletes
+// only annotations.
+func (r clearRequest) targetsUsage() bool { return r.all || r.olderThan != "" || r.tool != "" }
+
+func runClear(cmd *cobra.Command, req clearRequest) error {
+	if !req.targetsUsage() && !req.labels {
+		return errors.New("specify --all, --older-than, --tool, or --labels")
 	}
-	if all && (olderThan != "" || tool != "") {
+	if req.all && (req.olderThan != "" || req.tool != "") {
 		return errors.New("--all cannot be combined with --older-than or --tool")
 	}
-	if tool != "" && !validClearTool(tool) {
-		return fmt.Errorf("unknown tool %q (want claude-code|codex|gemini-cli|cline|plugin:<name>)", tool)
+	if req.tool != "" && !validClearTool(req.tool) {
+		return fmt.Errorf("unknown tool %q (want claude-code|codex|gemini-cli|cline|plugin:<name>)", req.tool)
 	}
-	if !yes {
+	if !req.yes {
 		return errors.New("refusing to delete without --yes")
 	}
-	before, err := clearCutoff(olderThan)
+	before, err := clearCutoff(req.olderThan)
 	if err != nil {
 		return err
 	}
@@ -60,11 +74,16 @@ func runClear(cmd *cobra.Command, all, yes bool, olderThan, tool string) error {
 		return err
 	}
 	defer func() { _ = st.Close() }()
-	n, err := st.Clear(cmd.Context(), before, tool)
-	if err != nil {
+	if req.targetsUsage() {
+		n, err := st.Clear(cmd.Context(), before, req.tool)
+		if err != nil {
+			return err
+		}
+		cmd.Printf("deleted %d record(s)\n", n)
+	}
+	if err := clearLabels(cmd, st, req); err != nil {
 		return err
 	}
-	cmd.Printf("deleted %d record(s)\n", n)
 	// Deleting rows frees pages inside the file without shrinking it, so someone who ran
 	// clear to get disk space back has to be told it is not back yet.
 	if size, sizeErr := st.Size(cmd.Context()); sizeErr == nil && size.Reclaimable > 0 {
@@ -92,4 +111,24 @@ func clearCutoff(olderThan string) (time.Time, error) {
 		return time.Time{}, nil
 	}
 	return parseSinceAt(olderThan, time.Now())
+}
+
+// clearLabels deletes the annotations when --labels was passed, and otherwise says how many
+// survived. Saying so is the point: they are unrecoverable, so a person who cleared the
+// store needs to know they are still there rather than discovering it later.
+func clearLabels(cmd *cobra.Command, st *store.Store, req clearRequest) error {
+	if req.labels {
+		n, err := st.DeleteLabels(cmd.Context())
+		if err != nil {
+			return err
+		}
+		cmd.Printf("deleted %d session label(s)\n", n)
+		return nil
+	}
+	n, err := st.LabelCount(cmd.Context())
+	if err != nil || n == 0 {
+		return err
+	}
+	cmd.Printf("kept %d session label(s) -- no re-import can rebuild them; use --labels to delete them too\n", n)
+	return nil
 }

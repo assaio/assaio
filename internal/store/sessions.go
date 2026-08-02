@@ -42,6 +42,11 @@ type SessionRow struct {
 	// ActiveMinutes is the sum of inter-turn gaps that are <= 30 minutes: focused work
 	// time that excludes the long idle spans a resumed session_id spans.
 	ActiveMinutes float64
+	// Task, Outcome and Difficulty are what a person annotated this session with (see
+	// internal/label); "" on every axis nobody set, which is most sessions. Deliberately
+	// absent from the metric-plugin wire (internal/plugin.sessionWire): annotations are
+	// local, and widening what leaves this machine is a decision, not a side effect.
+	Task, Outcome, Difficulty string
 }
 
 // activeGapCeilingMinutes bounds an inter-turn gap counted as focused work: a longer gap
@@ -61,8 +66,20 @@ const activeGapCeilingMinutes = 30
 // activeGapCeilingMinutes; ts is sliced to its second-precision prefix so julianday
 // parses it without depending on the driver's timezone-suffix support.
 func (s *Store) Sessions(ctx context.Context, since time.Time) ([]SessionRow, error) {
-	sinceStr := since.UTC().Format(time.RFC3339)
-	rows, err := s.db.QueryContext(ctx, `
+	return s.sessions(ctx, since, LabelFilter{})
+}
+
+// SessionsFiltered is Sessions restricted to sessions carrying filter's annotations. An
+// empty filter returns exactly what Sessions returns.
+func (s *Store) SessionsFiltered(ctx context.Context, since time.Time, filter LabelFilter) ([]SessionRow, error) {
+	return s.sessions(ctx, since, filter)
+}
+
+// The session queries are spelled out in full for the reason attribution.go states. sl is
+// joined for the annotations; the aggregate is MAX only to keep the query strict-SQL, since
+// a label is constant within a (session_id, member) group by its own primary key.
+const (
+	sessionsSelect = `
         WITH gaps AS (
             SELECT session_id, member,
                    (julianday(substr(ts, 1, 19))
@@ -82,12 +99,31 @@ func (s *Store) Sessions(ctx context.Context, since time.Time) ([]SessionRow, er
                SUM(r.output_tokens),
                MAX(r.cache_read_tokens + r.input_tokens),
                SUM(r.edits), SUM(r.compactions),
-               COALESCE(MAX(a.active_min), 0.0)
+               COALESCE(MAX(a.active_min), 0.0),
+               COALESCE(MAX(sl.task), ''), COALESCE(MAX(sl.outcome), ''), COALESCE(MAX(sl.difficulty), '')
         FROM usage_record r
         LEFT JOIN active a ON a.session_id = r.session_id AND a.member = r.member
-        WHERE r.ts >= ?
+        LEFT JOIN session_label sl ON sl.session_id = r.session_id AND sl.member = r.member
+        WHERE r.ts >= ?`
+
+	sessionsGroup = `
         GROUP BY r.session_id, r.member
-        ORDER BY r.session_id, r.member`, sinceStr, activeGapCeilingMinutes, sinceStr)
+        ORDER BY r.session_id, r.member`
+
+	sessionsQuery = sessionsSelect + sessionsGroup
+
+	sessionsFilteredQuery = sessionsSelect + aliasedLabelSubquery + sessionsGroup
+)
+
+func (s *Store) sessions(ctx context.Context, since time.Time, filter LabelFilter) ([]SessionRow, error) {
+	sinceStr := since.UTC().Format(time.RFC3339)
+	query := sessionsQuery
+	args := []any{sinceStr, activeGapCeilingMinutes, sinceStr}
+	if !filter.Empty() {
+		query = sessionsFilteredQuery
+		args = append(args, filter.args()...)
+	}
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +146,8 @@ func scanSessionRow(rows *sql.Rows) (SessionRow, error) {
 	var firstTs, lastTs string
 	if err := rows.Scan(&r.SessionID, &r.Project, &r.Tool, &r.Model, &r.Member,
 		&firstTs, &lastTs, &r.Turns, &r.OutputTokens, &r.PeakContextTokens,
-		&r.Edits, &r.Compactions, &r.ActiveMinutes); err != nil {
+		&r.Edits, &r.Compactions, &r.ActiveMinutes,
+		&r.Task, &r.Outcome, &r.Difficulty); err != nil {
 		return SessionRow{}, err
 	}
 	first, err := time.Parse(time.RFC3339, firstTs)

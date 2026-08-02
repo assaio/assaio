@@ -58,7 +58,7 @@ func TestClearRequiresScopeFlag(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when no scope flag given")
 	}
-	if !strings.Contains(err.Error(), "--all, --older-than, or --tool") {
+	if !strings.Contains(err.Error(), "--all, --older-than, --tool, or --labels") {
 		t.Fatalf("error = %q", err)
 	}
 }
