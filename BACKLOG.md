@@ -2,9 +2,9 @@
 
 The ranked pool of concrete candidate work items — the finer-grained counterpart to
 [ROADMAP.md](ROADMAP.md)'s narrative direction. **Nothing here is a commitment or a
-schedule.** The levels below are a working hypothesis of order — they mirror the promises in
-[ROADMAP.md](ROADMAP.md#the-next-levels), and the pools after them hold everything not yet
-attached to one. Real feedback from people running `assaio` reorders all of it, and any item
+schedule.** The milestones below are a working hypothesis of order — they mirror the
+promises in [ROADMAP.md](ROADMAP.md#the-next-milestones), and the pools after them hold
+everything not yet attached to one. Real feedback from people running `assaio` reorders all of it, and any item
 can be reshaped or dropped.
 
 **How this file works**
@@ -24,141 +24,181 @@ can be reshaped or dropped.
   before the work — connectors additionally follow the
   [connector intake flow](docs/extending.md#the-intake-path-open-a-connector-issue-first).
 
-## Level 1 — "Trust the dataset"
+## Shipped — "Trust the dataset" and "Intent"
 
-Before `assaio` advises anything it should show what it read, what it missed, and how sure
-it is. Everything here is a prerequisite for the levels below: a metric computed on quietly
-under-reported data is worse than no metric.
+Two promises are closed and their items deleted per the lifecycle rule above. Kept here as
+one line so a reader knows why the numbering starts where it does: format-drift canaries,
+`doctor --strict`, granularity provenance, the confidence envelope on every result, `init`,
+the source-depth matrix (`B58`, `B59`, `B69`, `B81`, `B82`, `B83`, all v0.5), and session
+annotations with per-kind-of-work stratification (`B80`, v0.6) alongside the GitHub Copilot
+CLI parser (`B53`, v0.6). See [CHANGELOG.md](CHANGELOG.md) and [FEATURES.md](FEATURES.md).
 
-- [x] **B58 · format-drift heuristics** — S/M · both — four per-source canaries run after
-  every `backfill` (discovery, records-per-file yield, skipped-line share, zero-token share),
-  each with a sample floor it abstains below and a median-of-recent-runs baseline. Fires
-  `warning: possible format drift in <tool>` plus a `doctor` drift section. Verified silent
-  on a real 4.5 GB / 5707-file corpus and loud on a simulated vendor field rename. Closes the
-  silent-underreporting gap in [docs/format-resilience.md](docs/format-resilience.md).
-- [x] **B59 · doctor --strict** — S · both — non-zero exit when a B58 canary fires or a
-  source configured explicitly in `sources:` discovers zero inputs, so a cron/CI job alerts on
-  vendor format drift instead of a human noticing shrunk numbers.
-- [x] **B69 · usage-granularity provenance in reports** — S/M · both — `granularity` is part
-  of the store's grouping and travels through `report.Row`, the table/JSON/CSV renderers, the
-  `coverage` validator and the metric-plugin envelope; a grouped total that merges per-turn
-  and session records is marked `mixed` rather than reading as per-turn.
-- [x] **B81 · confidence envelope on every result** — M · both — every `analyze.Result`
-  carries activity/priced/turn coverage, the sample count and unit the validator itself
-  declares, and when and by which build the data was read, plus a derived
-  `high|medium|low|insufficient` label. The components stay inspectable and the text report
-  names the weakest axis rather than only the label. Exec metric plugins declare their own
-  sample basis and are stamped with the same window coverage. Becomes the floor `check` and
-  B84 can refuse to fire below.
-- [x] **B83 · source depth matrix** — S · both — one declarative table of what each source
-  actually extracts across three tiers (**deep**, **standard**, **import-only**), with the
-  specific gaps required below the top tier. `doctor` prints it for the tools found on this
-  machine, FEATURES.md carries the full matrix, and the `coverage` validator reads it instead
-  of keeping its own list of which parsers capture activity.
-- [x] **B82 · `init`** — S/M · both — one command for a first run: detects the tools with
-  logs on this machine, prints the exact directories it will read *before* reading anything
-  and what it extracts, imports, writes the report and names the next three commands. Writes
-  no config when the defaults work; prints the `sources:` skeleton when nothing is found, and
-  treats that as a normal outcome rather than an error. Network-free; `--non-interactive`
-  for packaging smoke tests.
+## Next — "Evidence Graph: from session to shipped change"
 
-## Level 2 — "Intent, and a next step"
+The outcome layer, pulled ahead of recommendations: a suggestion built on activity and
+output proxies alone is a guess with a confident voice. First connect a session to the
+change it produced — commit, pull request, review, CI, merge, survival — carrying the
+confidence and the ambiguity of every link. Everything here ships with its error bars or it
+does not ship.
 
-Metrics become readable per kind of work, and each finding comes with one action and the
-metric that will show whether it worked.
-
-- [ ] **B80 · task & outcome annotations** — M · both — the missing intent layer: `mark
-  <session> --task bugfix|feature|test|refactor|docs|research|review|other --outcome
-  done|partial|abandoned --difficulty low|medium|high`, plus an optional issue id or branch
-  reference. Category labels only — never free text on the sync wire, never a prompt. Unlocks
-  stratification for every existing metric (survival, cost, model fit, friction *per kind of
-  work*), which is what makes "did AI-written code hold up" an answerable question instead of
-  an average over research and greenfield. Unlabeled sessions stay fully counted and are never
-  read as failures. Needs a migration and a PRIVACY.md note.
-- [ ] **B84 · deterministic recommendations** — M/L · both — one concrete next step per
-  finding: rules over existing validator verdicts emitting observed pattern, evidence,
-  confidence, one action, the follow-up metric that will show whether it worked, and a review
-  window; dismissable as "not relevant", and the dismissal sticks. No LLM anywhere in the
-  decision path — an LLM may later only explain a suggestion that already exists. Requires B81;
-  pairs with B87 for the verification half.
-- [ ] **B87 · pre/post window comparison** — M · both — compare a metric before and after
-  a deliberate change (model switch, workflow change, a new skill) over matched windows, with
-  sample-size and seasonality warnings and mandatory association-not-causation framing. What
-  makes "did that change help?" answerable without inventing a causal claim.
-- [ ] **B17 · progress ("skill curve")** — M · solo — the headline composite: you vs
-  you four weeks ago across adoption breadth, turn-efficiency, cache-hygiene, rework —
-  a small panel of deltas, deliberately not a single score. Strictly self-relative,
-  never cross-person. Needs a careful design pass before code.
-
-## Level 3 — "From session to shipped change"
-
-The outcome layer: whether the work reached and survived production. Everything here ships
-with its error bars or it does not ship.
-
-- [ ] **B18 · survival: per-day correlation + age-matching** — M · both — the shipped
-  `survival` command reports window-level survival of a repo's commits beside the store's
-  AI lines. Still to add: per-day AI-heavy vs quiet-day survival comparison (does code from
-  AI-heavy days survive at a different rate?), an age/settle threshold so recent commits
-  aren't counted as "survived", and rename-following in blame. Server-side git/issue-tracker
-  correlation across the team remains the larger "Outcome & quality" stage.
-- [ ] **B85 · attribution edges (session → commit / PR)** — L · both — versioned,
-  confidence-bearing links carrying their method (explicit marker, branch, temporal proximity,
-  issue id, inferred), the alternatives they beat, and their ambiguity count. Never force one
-  session onto one PR; replay when new git data arrives without mutating usage events. Outcome
-  analyzers then pick a minimum confidence instead of treating links as facts. The prerequisite
-  for any outcome metric beyond local survival.
+- [ ] **B89 · canonical event contract v1** — M · both — one small, versioned envelope for
+  the events this milestone needs (`ai.session`, `ai.usage.observed`, `ai.edit.observed`,
+  `vcs.commit.observed`, `scm.pull_request.observed`, `scm.review.observed`,
+  `ci.check.observed`, `delivery.merge|revert|survival.observed`), each carrying source and
+  source version, parser build, observed vs logical time, grain, privacy class and provenance.
+  Deliberately **not** a migration of every existing structure: adapt today's `usage_record`
+  into it and use the contract only on the new evidence path. Decision record first.
+- [ ] **B90 · signal catalog + AnalyzerContext v1** — L · both — every analyzer-visible
+  signal gets a stable id, type, unit, supported grains, observed/estimated/attributed/derived
+  status, required source capabilities, missing-data semantics, coverage rules, provenance and
+  privacy class; `signals list|describe|coverage` exposes them. Analyzers — built-in and
+  out-of-tree — read an `AnalyzerContext` instead of querying SQLite, so the store stops being
+  the public API.
+- [ ] **B91 · local git evidence collector v1** — M · both — content-free commit
+  observations for configured repositories: hash or keyed pseudonymous digest, timestamps,
+  parents, branch/repo identity, added/removed counts, files changed **by category**
+  (test/source/docs/config/generated) rather than by path, and revert indicators. Path-level
+  storage stays an explicit local-only opt-in, never a server default. Converts today's
+  `survival` git code into observations rather than a one-off report.
+- [ ] **B92 · GitHub connector v1** — L · both — read-only, least-privilege metadata only:
+  PR lifecycle, commits in a PR, review states and requested-changes rounds, check suites and
+  runs, merge time and method, detectable revert relations. GitHub Cloud first, with the
+  interface shaped so Enterprise Server and GitLab can follow without contaminating the core
+  model. Credentials never reach reports or plugins.
+- [ ] **B85 · attribution engine + edges (session → commit / PR)** — L · both — versioned,
+  confidence-bearing candidate and confirmed edges carrying their method (explicit marker,
+  repo/branch match, bounded temporal proximity, file-category compatibility, identity
+  compatibility, parent/child session, manual confirmation), the alternatives they beat, and
+  their ambiguity status. Never force one session onto one PR; many-to-many stays
+  many-to-many; an unattributed session stays unattributed; user correction wins and survives
+  replay after an algorithm change. **Inherits from B80**: the optional issue-id or branch
+  reference was deliberately cut from session annotations rather than shipped as a bare
+  string, because a session→change pointer is a claim that must carry its method and
+  confidence, not a category label — see [ADR 0006](docs/adr/0006-session-annotations.md).
+- [ ] **B93 · attribution conformance corpus** — M · both — synthetic git/PR histories that
+  define honesty before any UI does: 1:1, N:1, 1:N, wrong-branch candidate, overlapping users,
+  delayed commit, sub-agent contribution, genuinely ambiguous, manual correction, and replay
+  after an algorithm change. Ambiguous fixtures must stay ambiguous — that assertion is the
+  point of the corpus.
+- [ ] **B94 · `outcomes` funnel + `evidence explain`** — M · both — the first visible path:
+  sessions → sessions with edits → linked commits → linked PRs → passing CI → merged →
+  surviving, sliced by tool, model, project, task annotation and confidence band, always
+  showing the unattributed and insufficient-evidence share. `evidence explain <edge>` says why
+  a link was or was not made. No causal language anywhere in it.
+- [ ] **B18 · survival: per-day correlation + age-matching** — M · both — per-day AI-heavy
+  vs quiet-day survival comparison, an age/settle threshold so recent commits are not counted
+  as "survived", and rename-following in blame. Only ever age-matched.
 - [ ] **B21 · test-touch** — M · both — share of AI edits touching test files via
-  privacy-safe category counts (test/source/docs/config) classified at parse time —
-  paths are never stored. Needs a PRIVACY.md note. First quality-adjacent signal
-  without a server.
-- [ ] **B20 · compaction-recovery-cost** — M · both — tokens spent in the turns right
-  after a compaction vs baseline: the true price of overflowing context.
+  privacy-safe category counts (test/source/docs/config) classified at parse time — paths are
+  never stored. Needs a PRIVACY.md note. The first quality-adjacent signal without a server,
+  and deliberately a floor rather than a verdict: research finds agent-written tests lean on
+  mocks more than human ones, so "tests were touched" is not "the change was verified".
+- [ ] **B100 · privacy threat model for correlation** — S/M · both — correlation creates
+  risks the local-only store did not have: commit and PR metadata reveal work patterns,
+  branch and label names can leak client or project identity, timing correlation slides toward
+  employee monitoring, and combined datasets can re-identify a pseudonym. Ships with the
+  connector, not after it: local-only defaults, field-level sync policy, retention, minimum
+  cohort for any server view, and a test asserting no ranking surface exists.
 
-## Level 4 — "Team, without surveillance"
+## After that — "Harness intelligence & verified improvement"
 
-A team self-hosts it, sees adoption and spend, and cannot build a leaderboard from it.
+Agent configuration — `AGENTS.md`, rules, skills, sub-agents, hooks, MCP servers — is a
+versioned engineering input, not magic that is assumed to help. Once outcomes are linkable,
+the question "did changing it actually improve anything" becomes answerable, and a
+recommendation can rest on outcome rather than on activity.
 
-- [ ] **B22 · server hardening** — M · team — TLS/reverse-proxy guidance, per-member
-  tokens, retention policy, chunked/resumable sync (per ROADMAP's own MVP caveats).
-- [ ] **B09 · team-evenness** — M · team — new validator + dashboard Team panel:
-  Lorenz/Gini spread of usage across pseudonymized members with a minimum-cohort
-  (≥5) guard. Answers "broad adoption, or two power users?" — never a ranked list.
-- [ ] **B10 · tool-coverage** — S · team — members per tool on a central store;
-  shadow-tool and unused-seat detection.
-- [ ] **B40 · onboarding-curve** — M · team — usage growth vs weeks-since-first-sync,
-  in aggregated bands, pseudonymized.
-- [ ] **B41 · team efficiency spread** — M · team — distribution bands of
-  turn-efficiency-style signals across members; "the team needs prompting practice"
-  without naming anyone.
+- [ ] **B95 · harness inventory v1** — M · both — detect the configuration artifacts a
+  repository carries and store only their shape: type, scope, keyed hash/version, size band,
+  modified time, tool compatibility, and whether the artifact was observably invoked. Content
+  is **not** stored by default — an `AGENTS.md` is a document, and this is an inventory.
+- [ ] **B96 · harness-to-outcome cohorts** — L · both — compare repository or time cohorts
+  before and after a harness version changed: token and cache profile, retry and failed-tool
+  behaviour, time to first edit and first test, CI-repair burden, review tax, delivery yield,
+  survival. Every result states sample size, confounders and attribution confidence, and is
+  labelled an observation, never proof.
+- [ ] **B84 · deterministic recommendations** — M/L · both — one concrete next step per
+  finding: rules over verdicts and outcomes emitting observed pattern, evidence, confidence,
+  one action, the follow-up metric and a review window; dismissable, and the dismissal sticks.
+  No LLM anywhere in the decision path — an LLM may later only explain a suggestion that
+  already exists. Abstains when outcome coverage is inadequate; that abstention rate being
+  *too low* is a warning sign, not a win.
+- [ ] **B97 · experiment framework v1** — L · both — what turns a recommendation into
+  evidence: named hypothesis, target cohort, baseline window, treatment version, success and
+  guardrail metrics, a minimum-observation requirement, pre/post or alternating-period mode,
+  and a result carrying its confidence and caveats. Nothing mutates a config automatically.
+- [ ] **B87 · pre/post window comparison** — M · both — the measurement half of B97 on its
+  own: compare a metric across matched windows around a deliberate change, with sample-size
+  and seasonality warnings and mandatory association-not-causation framing.
+- [ ] **B20 · compaction-recovery-cost** — M · both — tokens spent in the turns right after
+  a compaction vs baseline: the true price of overflowing context.
+- [ ] **B17 · progress ("skill curve")** — M · solo — you vs you four weeks ago across
+  adoption breadth, turn-efficiency, cache-hygiene, rework — a small panel of deltas,
+  deliberately not a single score. Strictly self-relative, never cross-person.
+- [ ] **B44 · read-only MCP/query interface** — M · solo — ask your own usage questions from
+  an agent: source coverage, recent cost and workflow changes, active experiments, the
+  evidence behind a finding. Never exposes prompts, code, secrets, or — in anonymized mode —
+  project names.
 
-## Level 5 — "Cost truth"
+## Then — "Team adoption, without surveillance"
+
+A team self-hosts it, sees cross-tool adoption and delivery outcomes, and cannot build a
+leaderboard from it.
+
+- [ ] **B22 · server hardening** — M · team — TLS/reverse-proxy guidance, per-member tokens
+  and roles, retention and deletion policy, chunked/resumable sync, health and migration
+  checks, backup/restore, bounded ingestion queues.
+- [ ] **B09 · team-evenness** — M · team — Lorenz/Gini spread of usage across pseudonymized
+  members with a minimum-cohort (≥5) guard. "Broad adoption, or two power users?" — never a
+  ranked list.
+- [ ] **B10 · tool-coverage** — S · team — members per tool on a central store; shadow-tool
+  and unused-seat detection, only where the evidence is explicit.
+- [ ] **B40 · onboarding-curve** — M · team — usage growth vs weeks-since-first-sync, in
+  aggregated bands, pseudonymized.
+- [ ] **B41 · team efficiency spread** — M · team — distribution bands of turn-efficiency
+  signals across members; "the team needs prompting practice" without naming anyone.
+- [ ] **B25 · Postgres backend** — L · team — once a single SQLite file stops being enough
+  for a central store.
+
+## Later — "Cost truth, policy & interoperability"
 
 Every `$` today is an estimate at public pay-as-you-go prices, which a flat-rate
-subscription makes structurally different from real spend.
+subscription makes structurally different from real spend — and assaio's own model should
+speak a standard rather than only its own dialect.
 
-- [ ] **B19 · vendor billing reconciliation** — M/L · both — opt-in pull of
-  Anthropic/OpenAI usage/cost APIs; estimate-vs-actual delta with a confidence band.
-  Network- and credential-gated; pulls vendor aggregates only, never uploads logs.
-- [ ] **B16 · context-utilization** — M · both — vendored model context-window table
-  (like the price table) → peak context vs model limit, near-limit share, and honest
-  right-sizing hints ("paying long-context rates for 50k contexts").
+- [ ] **B19 · vendor billing reconciliation** — M/L · both — opt-in pull of Anthropic/OpenAI
+  usage/cost APIs; estimate-vs-actual delta with a confidence band and an unexplained-delta
+  report. Network- and credential-gated; pulls vendor aggregates only, never uploads logs.
+- [ ] **B16 · context-utilization** — M · both — vendored model context-window table (like
+  the price table) → peak context vs model limit, near-limit share, and honest right-sizing
+  hints. Prerequisite for pricing long-context and cache tiers instead of one flat rate.
+- [ ] **B98 · OpenTelemetry GenAI mapping + content-free ingest** — M/L · both — publish a
+  field mapping between assaio's canonical events and the OTel GenAI semantic conventions
+  (model, tokens, tool calls, agent and operation identity, session), then ingest only the
+  subset needed to prove it against a Claude Code telemetry fixture. Prompt, completion, tool
+  input and tool result attributes are **dropped by default**, and the dropped set is
+  documented rather than implied. Opens a path to sources whose local files cannot be parsed.
+- [ ] **B99 · connector SDK + conformance kit** — M · both — generated scaffold, JSON
+  Schemas, typed SDKs for a couple of languages, a fixture redaction helper, a depth-manifest
+  validator, parser-drift tests and a privacy manifest. What makes a community connector
+  possible without touching core packages. Supersedes the "more parsers in core" reflex.
 
-## Level 6 — "Stable platform"
+## v1.0 — "Stable open evidence platform"
+
+The one milestone that keeps a version number, because there the number *is* the promise:
+`v1.0` is the semver stability guarantee.
 
 Plugin authors and any future managed cloud can build on it without breakage.
 
-- [ ] **B23 · protocol & schema freeze** — M · both — declare the exec plugin
-  protocols (parser, metric, rule) and the SQLite schema stable under semver.
-- [ ] **B24 · in-process plugin API (research first)** — L · both — the `plugin/metric|rule|
-  connector` tree sketched in CONTRIBUTING.md: no subprocess, no rebuild. The mechanism is
-  **not** decided: Go's native `plugin` package needs cgo, does not work on Windows, and
-  requires host and plugin to be built with identical toolchain and dependency versions, which
-  contradicts shipping one static binary per platform. Evaluate a sandboxed WebAssembly/WASI
-  component instead — it also brings capability limits and resource budgets — and keep exec
-  plugins as the universal baseline either way. Deliverable of this item is first a decision
-  record, not code.
-- [ ] **B25 · Postgres backend** — L · team — once a single SQLite file stops being
-  enough for a central store.
+- [ ] **B23 · protocol & schema freeze** — M · both — declare the exec plugin protocols
+  (parser, metric, rule), the canonical event and signal contracts, the sync API and the
+  SQLite schema stable under semver, with conformance fixtures and deprecation windows.
+- [ ] **B24 · in-process plugin API (research first)** — L · both — the mechanism is **not**
+  decided, and native Go plugins are explicitly not a v1 requirement: they need cgo, do not
+  work on Windows, and require host and plugin built with identical toolchain and dependency
+  versions, which contradicts shipping one static binary per platform. Evaluate a sandboxed
+  WebAssembly/WASI component instead — it brings capability limits and resource budgets — and
+  keep exec plugins as the universal baseline either way. Deliverable is a decision record,
+  not code.
 
 ## Pool — validators from data already stored (unscheduled)
 
@@ -221,20 +261,6 @@ Plugin authors and any future managed cloud can build on it without breakage.
   could read a user-configured OTLP file export where enabled; strictly opt-in and clearly
   labeled, since most installs won't have it on.
 
-## Pool — robustness
-
-- [x] **B68 · live-session ingest consistency** — M · both — a session ingested while still
-  being written stored a turn whose activity a later line had not been attributed to yet, and
-  nothing ever corrected it. `Store.InsertLocal` now restates the derived columns from a
-  re-read of the file the store owns, taking `MAX(stored, offered)` so a repair can never
-  degrade a row; `Store.Insert` stays first-write-wins for pushed records, so one team
-  member cannot restate another's. The remaining half — a count that first read too *high*
-  (Codex trailing-flush) — is not corrected by an upward-only repair and stays a `doctor`
-  caveat.
-- [ ] **B70 · subpaths composite index** — S · both — add `(project, ts)` index for the
-  dashboard drill query (`WHERE project = ? AND ts >= ?`); today it range-scans `idx_usage_ts`.
-  Perf only at local scale; ship with the next schema migration.
-
 ## Pool — team
 
 - [ ] **B42 · server-side exec metrics** — M · team — lift the ADR 0004 non-goal
@@ -245,14 +271,6 @@ Plugin authors and any future managed cloud can build on it without breakage.
 
 ## Pool — CLI & DX
 
-- [x] **B43 · per-turn freshness hook** — S · both — the `SessionEnd` / `PreCompact` hook
-  recipes shipped with the incremental ingest in v0.4; the per-turn (`Stop`) hook became
-  honest once B68 landed, since re-reading the transcript now restates a turn that was
-  ingested half-attributed. [docs/automation.md](docs/automation.md) now carries the recipe
-  and its measured cost: 0.07 s idle, 0.17 s for a typical transcript, 0.99 s for the
-  largest one on a 4.5 GB history.
-- [ ] **B44 · MCP server** — M · solo — `assaio-agent mcp`: query your own usage from
-  Claude ("what did that refactor cost?"); also on ROADMAP's further-out list.
 - [ ] **B45 · TUI** — L · both — interactive terminal dashboard (validators +
   project drill), the flagship DX piece once the small wins land.
 - [ ] **B46 · completions + man pages** — S · both — cobra generators, shipped via
@@ -305,14 +323,6 @@ a tool used by one organization is usually better served by an out-of-tree
   cache{read,write}}`, `cost`, `modelID`, and — richest of any candidate — the `edit` tool
   persists a structured `filediff{additions,deletions,patch}`, so lines +/- are stored
   directly, no diff parsing. The best activity target after the current four.
-- [x] **B53 · Copilot CLI** — M — in-tree parser over
-  `$COPILOT_HOME`/`~/.copilot/session-state/<id>/events.jsonl`. The complete accounting rides
-  the `session.shutdown` event: per-model input/output/cache-read/cache-write/reasoning tokens
-  plus the session's line changes. Session-granularity by construction, so it is marked in
-  reports and lowers turn-level coverage. `usage.inputTokens` includes cache writes, so the
-  uncached share is read from `tokenDetails`; line changes have no per-model split and are
-  credited to the model with the most requests. The IDE plugins remain **not** a usage
-  source — only the CLI writes this state, and only once a session ends.
 - [ ] **B54 · Factory droid** — M — session-granularity local logs (per ROADMAP).
 - [ ] **B88 · Antigravity — activity-only, no cost** — M · both — research verified
   (2026-07-31), and the answer is unusual enough to record: Google Antigravity stores a lot
@@ -382,10 +392,6 @@ they wait behind features but keep the growing metric surface maintainable.
   to fold in: `report.formatCompactTokens` and `dashboard.formatCompactUSD`, which round and
   case differently ("1.0K" vs "1k"), so unifying them *changes rendered output* and needs a
   deliberate decision plus golden updates -- which is why v0.4 left them alone.
-- [ ] **B76 · cli/common.go** — S · both — split the shared cross-command helpers
-  (`addDBFlag`, `resolveDBPath`, `openReportStore`, `emptyStoreHint`, `emptyStatusHint`,
-  `compareFormatConflict`, `parseSinceAt`) out of the single-command `report.go` (now past the
-  ~200-line budget) into a `cli/common.go`.
 - [ ] **B77 · readWhenEnough** — S · both — factor the "gate the favorable read behind a
   minimum-sample floor, else neutral" block shared verbatim by session-taxonomy,
   turn-efficiency, and model-right-sizing into one helper beside `readFor`.

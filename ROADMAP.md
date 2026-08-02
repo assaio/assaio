@@ -24,6 +24,18 @@ much it cost, how efficiently. It does not yet measure **outcome**: whether that
 any good. Closing that gap — without ever fabricating a number to do it — is the throughline
 of everything below.
 
+What that makes `assaio`, stated once so the rest of this document has a subject: **the
+open-source, privacy-first evidence layer for AI-assisted software engineering — connecting
+activity and cost across coding agents to commits, review, CI and durable outcomes.**
+
+That framing is a deliberate correction. `$ per 100 AI lines` is a useful ratio and it is
+staying, but it was carrying too much weight as the headline answer to "is AI delivering".
+Lines are an **output** measure (see the four layers below); promoting one to an outcome
+claim is the most likely way this project could start lying. It is also the part every
+first-party vendor dashboard already does for its own tool — where a cross-vendor,
+local-first tool has something nobody else does is the evidence *between* AI activity and
+what shipped.
+
 ## Four layers, never relabeled
 
 Everything `assaio` reports sits on exactly one of four layers, and the product says which:
@@ -39,21 +51,40 @@ debugging and analysis, say nothing about tests, review rounds, or whether the c
 and can grow with unnecessary complexity. Promoting an output metric to an outcome claim is
 the most likely way this project could start lying, so the layer label is not decoration.
 
-## The next levels
+## The next milestones
 
 The themes below are the direction; these are the next **promises to a user**, each with what
 would have to be true to call it done. Same caveat as everything else here: no dates, and a
-level can be reshaped or skipped. One maintainer, pre-1.0 — so each level is deliberately
-small enough to ship and prove on real data.
+milestone can be reshaped or skipped. One maintainer, pre-1.0 — so each is deliberately small
+enough to ship and prove on real data.
 
-| Level | Promise | Done when |
+A milestone deliberately carries **no version number** until it ships. The table's order is
+the sequence we intend to attempt, shipped rows name the release they landed in, and the
+first unshipped row is what is being worked on now — but a small release can land between
+two of them, and pre-assigning `v0.7` to a promise would make this document schedule work it
+explicitly says it does not schedule. `v1.0` is the exception, because there it is the
+promise: the semver stability guarantee itself.
+
+| Milestone | Promise | Done when |
 |---|---|---|
-| **1 · Trust the dataset** | Before `assaio` advises anything, it shows what it read, what it missed, and how sure it is | every validator carries coverage + confidence as data, not prose; format drift is detected instead of silently under-reporting; `doctor --strict` fails a cron job; every source publishes its real depth, and a first run needs no config (`B58` ✓, `B59` ✓, `B69` ✓, `B81` ✓, `B82` ✓, `B83` ✓ — **shipped**) |
-| **2 · Intent, and a next step** | Metrics can be read per kind of work, and each finding comes with one concrete action | a session can be labeled task class / outcome / difficulty and any metric stratified by it, with unlabeled data still fully useful; recommendations are deterministic rules carrying evidence, a caveat, a follow-up metric and a review window — never an LLM narrating a dashboard (`B80`, `B84`, `B87`) |
-| **3 · From session to shipped change** | The work can be traced to commits, PRs, review and CI, with visible attribution confidence | session→change links carry method, confidence and alternatives; ambiguous links stay ambiguous; survival is age-matched (`B18`, `B85`) |
-| **4 · Team, without surveillance** | A team self-hosts it, sees adoption and spend, and cannot build a leaderboard from it | authenticated, resumable sync; adoption read as activation → retention → breadth, in bands with a cohort floor (`B22`, `B09`, `B40`) |
-| **5 · Cost truth** | The `$` figure can be reconciled against what was actually billed | opt-in vendor billing reconciliation shows the estimate-vs-actual delta with a confidence band, and pricing models long-context and cache tiers instead of one flat per-model rate (`B19`, `B16`) |
-| **6 · Stable platform** | Plugin authors and a managed cloud can build on it without breakage | plugin protocols and the schema frozen under semver, with conformance fixtures (`B23`) |
+| **Trust the dataset** ✓ | Before `assaio` advises anything, it shows what it read, what it missed, and how sure it is | shipped in v0.5: every validator carries coverage + confidence as data, format drift is detected instead of silently under-reporting, `doctor --strict` fails a cron job, every source publishes its real depth, and a first run needs no config (`B58`, `B59`, `B69`, `B81`, `B82`, `B83`) |
+| **Intent** ✓ | Metrics can be read per kind of work | shipped in v0.6: a session can be labeled task class / outcome / difficulty, any metric stratified by it, and unlabeled data stays fully counted (`B80`) |
+| **Evidence graph** | You can see which AI sessions produced commits and pull requests, what happened in review and CI, and how sure `assaio` is about every link | a canonical event contract and a signal catalog exist; local git and GitHub PR/review/check metadata are content-free observations; attribution edges carry method, confidence, alternatives and ambiguity; ambiguous stays ambiguous; `outcomes` shows the funnel with its unattributed share and `evidence explain` says why a link was or was not made (`B89`–`B94`, `B85`, `B18`, `B21`, `B100`) |
+| **Harness intelligence** | You learn which agent configuration and workflow changes actually helped, and each finding comes with one reversible experiment | agent config artifacts are inventoried without storing their content; cohorts can be compared before and after a harness version changed; recommendations are deterministic rules carrying evidence, one action, a follow-up metric and a review window, and abstain when outcome coverage is thin — never an LLM narrating a dashboard (`B95`, `B96`, `B84`, `B97`, `B87`, `B17`, `B44`) |
+| **Team, without surveillance** | A team self-hosts it, sees adoption and delivery outcomes, and cannot build a leaderboard from it | authenticated, resumable sync with retention and roles; adoption read as activation → retention → breadth, in bands with a cohort floor (`B22`, `B09`, `B40`, `B41`) |
+| **Cost truth & interoperability** | The `$` figure can be reconciled against what was actually billed, and the data speaks a standard | opt-in vendor billing reconciliation shows the estimate-vs-actual delta with a confidence band; pricing models long-context and cache tiers; canonical fields map to OpenTelemetry GenAI conventions with content dropped by default; a connector SDK makes a community source possible without touching core (`B19`, `B16`, `B98`, `B99`) |
+| **v1.0 · Stable platform** | Plugin authors and a managed cloud can build on it without breakage | plugin protocols, the event and signal contracts, the sync API and the schema frozen under semver, with conformance fixtures (`B23`) |
+
+### Why outcome attribution moved ahead of recommendations
+
+The earlier plan reached recommendations and team adoption before connecting a session to
+the change it produced. That order is backwards for this product: a recommendation resting
+on activity and output proxies alone is a guess delivered in a confident voice, and the one
+thing `assaio` cannot afford is manufactured certainty. Linking a session to a commit, a
+pull request, review and CI is also the part that first-party vendor dashboards structurally
+cannot do — each sees only its own tool — so it is where a cross-vendor, local-first tool has
+something to say that nobody else does. Recommendations get materially more credible once
+they can name an outcome rather than a proxy, which is why they follow rather than lead.
 
 ## Themes we're pursuing
 
@@ -78,9 +109,10 @@ Two things have to exist before any of it is honest, and both are now tracked:
   is never silently forced onto one PR, ambiguous stays ambiguous, and re-running attribution
   after new git data arrives must never mutate the underlying usage events. Outcome metrics
   then pick a minimum confidence rather than pretending links are facts.
-- **Task intent** (`B80`). "Did AI-written code survive" means nothing averaged over
+- **Task intent** (`B80`, shipped). "Did AI-written code survive" means nothing averaged over
   research, a refactor and a greenfield feature. Intent is not in the logs and will not be
-  recovered by reading prompts; it comes from an explicit, optional label.
+  recovered by reading prompts; it comes from an explicit, optional label — `assaio-agent mark`,
+  three closed vocabularies, local only ([ADR 0006](docs/adr/0006-session-annotations.md)).
 
 ### 2. Coverage & truth
 
@@ -88,29 +120,34 @@ Four directions, one goal: every tool a team actually uses should be counted, ev
 should be reconcilable against reality, and a report should state both its own limits and
 the real depth of each source it read.
 
-- **Confidence as a first-class field** (`B81`). Record granularity already travels this way
-  (`B69`): a report marks a total that blends per-turn and whole-session records instead of
-  presenting it as per-turn. The rest of a validator's limits still live in prose caveats a
-  reader can skip. They should travel as structure too — source coverage, activity coverage,
-  pricing coverage, sample size, freshness, parsing build — so a low-coverage verdict cannot
-  be quoted as a solid one, and so `check` and any future recommendation can refuse to fire on
-  thin data. Deliberately **not** collapsed into one opaque score: a display label may
-  summarize, the components stay inspectable.
-- **A depth matrix instead of a supported/unsupported list** (`B83`). "Supports Gemini CLI" is
-  misleading when that means tokens but no edits. Every source should publish per-field depth
-  in three tiers — **deep** (tokens + activity + attribution), **standard** (reliable usage,
+- **Confidence as a first-class field** (`B81`, shipped v0.5). A validator's limits travel as
+  structure rather than as prose a reader can skip — activity, pricing and turn-level
+  coverage, the sample it rests on, when the data was read and by which build — so a
+  low-coverage verdict cannot be quoted as a solid one, and so `check` and the recommendation
+  engine (`B84`) have a floor to refuse to fire below. Deliberately **not** collapsed into one
+  opaque score: a display label may summarize, the components stay inspectable. What remains
+  is extending the same envelope to outcome evidence, where attribution confidence becomes a
+  fourth axis.
+- **A depth matrix instead of a supported/unsupported list** (`B83`, shipped v0.5). "Supports
+  Gemini CLI" is misleading when that means tokens but no edits. Every source publishes its
+  per-field depth in three tiers — **deep** (tokens + activity + attribution), **standard** (reliable usage,
   documented activity gaps), **import-only** (billing or aggregate data that cannot support
   session-level conclusions) — plus parser freshness and known gaps. Tool count is not the
   goal; high-confidence signal coverage is.
-- **More tools.** The activity gap (some tools contribute cost but no line/edit signals) is
-  the priority, because closing it multiplies every activity metric. Cline-family logs carry
-  the diffs needed for line extraction (`B39`); `opencode` stores structured
-  additions/deletions per edit and is the richest next target (`B52`); the Cline forks Roo
-  and Kilo Code (`B60`) and the Gemini fork Qwen (`B61`) reuse most of an existing parser;
-  Aider (`B14`) and Copilot CLI (`B53`) round out the shortlist. Out-of-tree
-  [exec-plugin connectors](docs/extending.md) already let anyone add a source in any
-  language without waiting for a core release — a tool used by one organization is usually
-  better served that way.
+- **Depth over count.** Connector count is explicitly *not* the scoreboard, and chasing it
+  would be a losing race: an OSS competitor already advertises tracking across dozens of
+  tools, and a shallow integration that contributes cost but no activity makes every activity
+  metric weaker, not stronger. The strategy is a small set of **deep** sources maintained in
+  core, **standard** and **import-only** tiers stated honestly (`B83` already publishes the
+  matrix), and everything else served by an SDK and conformance kit (`B99`) so a community
+  connector needs no core release. The activity gap stays the priority inside that set,
+  because closing it multiplies every activity metric: Cline-family logs carry the diffs
+  needed for line extraction (`B39`), `opencode` stores structured additions/deletions per
+  edit and is the richest next target (`B52`), the Cline forks Roo and Kilo Code (`B60`) and
+  the Gemini fork Qwen (`B61`) reuse most of an existing parser, and Aider (`B14`) rounds out
+  the shortlist. Vendor exports, org APIs and OTLP (`B98`) cover the sources whose local files
+  cannot honestly be reverse-engineered — imported as what they are, never dressed up as a
+  deep parser.
 - **Cost truthfulness.** Every `$` is an estimate at public pay-as-you-go API prices, which
   a flat-rate subscription makes structurally different from real spend. Two candidates
   close the gap: opt-in **vendor billing reconciliation** (pull Anthropic/OpenAI usage
@@ -175,13 +212,41 @@ it. A number that differs between `report`, the dashboard, the TUI and MCP is a 
 cheapest way to avoid it is to keep the computation in `internal/analyze` and `internal/report`
 and let surfaces only render.
 
-### 7. Scale
+### 7. Harness intelligence
+
+A repository increasingly carries configuration written *for* coding agents — `AGENTS.md` and
+other context files, rules, skills, sub-agents, hooks, commands, MCP declarations, permission
+and model policies. Research on thousands of repositories finds these artifacts spreading fast
+and used shallowly, and that skills in particular deserve to be evaluated like software rather
+than assumed to work because they exist.
+
+`assaio` is unusually well placed to ask whether any of it helped: it already sees the token
+and retry cost a configuration imposes, and after the evidence graph it will see the outcome
+on the other side. The plan is an **inventory, not a copy** (`B95`) — artifact type, scope,
+keyed hash, size band, modified time, and whether it was observably invoked, with the content
+deliberately not stored — followed by before/after cohorts around a harness version change
+(`B96`) that state their sample size and confounders and stay labelled observations. This is
+also what gives the recommendation engine (`B84`) something to recommend that is not a
+restatement of a token count.
+
+### 8. Interoperability
+
+Claude Code already exports OpenTelemetry, and the OTel **GenAI semantic conventions**
+standardize model, token, tool, agent, session and operation concepts. Inventing an isolated
+schema and deferring interoperability to the end would be a mistake `assaio` can cheaply
+avoid: map the canonical fields to those conventions while the canonical model is still small
+(`B98`). Two payoffs — OTLP becomes a source for tools whose local files cannot or should not
+be parsed, and anything `assaio` emits can land in infrastructure a team already runs. The
+non-negotiable part: prompt, completion, tool-input and tool-result attributes are dropped by
+default, and the dropped set is documented rather than implied.
+
+### 9. Scale
 
 Reserved for when the current shape stops being enough, not before: a Postgres backend once
 a single SQLite file no longer suffices for a central store (`B25`), and dashboard depth
 (multi-window tabs, sparklines, top-N drilldowns) as reports carry more history.
 
-### 8. From a finding to a checked change
+### 10. From a finding to a checked change
 
 The gap between "here is a number" and "here is what to do" is where an analytics tool either
 earns its place in someone's week or gets uninstalled. The intended shape (`B84`):

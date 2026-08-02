@@ -1,0 +1,89 @@
+name: consistency
+
+# The lifecycle documented in BACKLOG.md -- candidates → CHANGELOG → FEATURES -- is a review
+# norm, and review norms rot quietly. These checks are the mechanical subset of it: the parts
+# that can be verified without judgement. They caught nothing on the day they were written;
+# they exist because the website had drifted three releases before anyone noticed.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # A shipped item must be deleted from the backlog, not left checked off. Its own
+      # "How this file works" section says so, and a checked box reads as "still tracked".
+      - name: Backlog carries no completed items
+        run: |
+          set -euo pipefail
+          if grep -nE '^- \[x\]' BACKLOG.md; then
+            echo "::error file=BACKLOG.md::Shipped items must be deleted from BACKLOG.md, not checked off."
+            echo "::error file=BACKLOG.md::Move the entry to CHANGELOG [Unreleased] and FEATURES.md instead."
+            exit 1
+          fi
+
+      # Every id is unique and never reused, so a duplicate means two different pieces of
+      # work now answer to the same name in issues, PRs and commit bodies.
+      - name: Backlog ids are unique
+        run: |
+          set -euo pipefail
+          dupes=$(grep -oE '^- \[ \] \*\*B[0-9]+' BACKLOG.md | grep -oE 'B[0-9]+' | sort | uniq -d)
+          if [ -n "$dupes" ]; then
+            echo "::error file=BACKLOG.md::Duplicate backlog ids: $dupes"
+            exit 1
+          fi
+
+      # The changelog's own contract: a version heading describes exactly what its tag
+      # contains. A tagged version with no section, or a section claiming a version that was
+      # never tagged, breaks that in opposite directions.
+      - name: Every released version has a changelog section
+        run: |
+          set -euo pipefail
+          fail=0
+          for tag in $(git tag --list 'v*'); do
+            if ! grep -qE "^## \[${tag#v}\]" CHANGELOG.md; then
+              echo "::error file=CHANGELOG.md::$tag is tagged but has no '## [${tag#v}]' section"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      # Exactly one untagged version is the release being prepared: RELEASING.md's flow commits
+      # the section before the tag exists, so forbidding it outright would make that commit
+      # unmergeable. Two of them, or one that is not newer than the latest tag, is the drift
+      # this check is actually for -- a section that claims a release which never happened.
+      - name: At most one changelog version is awaiting its tag
+        run: |
+          set -euo pipefail
+          latest=$(git tag --list 'v*' --sort=-v:refname | head -1)
+          untagged=""
+          for v in $(grep -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | tr -d '#[] '); do
+            git rev-parse "v$v" >/dev/null 2>&1 || untagged="$untagged v$v"
+          done
+          # shellcheck disable=SC2086
+          set -- $untagged
+          if [ "$#" -gt 1 ]; then
+            echo "::error file=CHANGELOG.md::$# versions are presented as released but not tagged:$untagged"
+            echo "::error file=CHANGELOG.md::Only the release being prepared may sit untagged. Move the rest back under [Unreleased]."
+            exit 1
+          fi
+          if [ "$#" -eq 1 ] && [ -n "$latest" ]; then
+            newest=$(printf '%s\n%s\n' "$1" "$latest" | sort -V | tail -1)
+            if [ "$newest" != "$1" ]; then
+              echo "::error file=CHANGELOG.md::[$1] is presented as released but is not tagged, and is older than $latest."
+              echo "::error file=CHANGELOG.md::That is not a release being prepared. Move it back under [Unreleased]."
+              exit 1
+            fi
+            echo "preparing $1 (latest tag $latest) -- allowed until the tag is pushed"
+          fi
