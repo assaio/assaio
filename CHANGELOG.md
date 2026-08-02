@@ -21,6 +21,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-02
+
 ### Added
 - **`signals` — what assaio can tell you, and what your own data supports.** The source-depth
   matrix answers "what can this tool tell me"; this answers the question people actually have,
@@ -670,7 +672,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/assaio/assaio/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/assaio/assaio/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/assaio/assaio/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/assaio/assaio/compare/v0.3.0...v0.4.0
