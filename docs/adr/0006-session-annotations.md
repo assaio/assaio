@@ -1,7 +1,7 @@
-# 0006 — Session annotations are category labels, and they stay local
+# 6. Session annotations are category labels, and they stay local
 
-Status: accepted
-Date: 2026-07-31
+## Status
+Accepted (2026-07-31)
 
 ## Context
 

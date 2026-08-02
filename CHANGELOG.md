@@ -21,6 +21,63 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+- **`signals` — what assaio can tell you, and what your own data supports.** The source-depth
+  matrix answers "what can this tool tell me"; this answers the question people actually have,
+  "can it tell me *this*, here". `signals list` names all eighteen; `signals describe <id>`
+  says what one counts, which grains it is honest at, and — the field that earns the catalog
+  its keep — **what a zero means**, because "no rework happened" and "this source never
+  recorded rework" are different facts and every metric that confuses them lies confidently.
+  `signals coverage` reads the window in your store and reports each signal as fully, partly
+  or not at all supported, naming the sources that can answer it. Support is computed from
+  your real token mix and what each parser declares it can answer, never from a claim the
+  catalog makes about itself, and a partial share never rounds up to a whole 100% (`B90`,
+  [ADR 0008](docs/adr/0008-signal-catalog.md)).
+- **The source-depth matrix now declares capability per signal, not per axis.** `deep`,
+  `standard` and `import-only` still summarise a source, but "has activity" turned out to be
+  one bit over a source that records changed lines and nothing else — which is what Copilot
+  CLI is. Its first run on real data reported sixteen of eighteen signals as fully supported
+  when the honest answer is ten, because Copilot totals a whole session and so carries no
+  turn count, no edit count, no tool calls and no rework. Each parser now lists the signals it
+  actually answers, a test asserts that list never contradicts the tier axes, and adding a
+  parser means answering "which of these can you produce" instead of one yes-or-no.
+
+### Changed
+- `mark` no longer answers an ambiguous session prefix with every match it found — on a real
+  store a one-character prefix printed 48 ids on one line. It now lists six and counts the
+  rest, the way git reports an ambiguous short revision.
+
+### Internal
+- The dashboard's project drill builds an `Input` without the window-only fields the CLI and
+  the server fill (`Skills`, `Agents`, `TurnSizing`), so a validator reading one of those
+  while not being `WindowScoped` would report "no attribution" as a fact about the project.
+  That has never happened, because all three such validators are `WindowScoped` — but nothing
+  enforced it, and a twentieth validator would have broken it silently into a plausible-looking
+  verdict rather than a crash. A test now asserts it across every project-scoped validator.
+- `internal/store/label.go` grew past the file budget doing two jobs; naming a session is now
+  `session_ref.go`, which is where the git evidence collector will look for it.
+- **The canonical event contract, the first piece of the evidence graph.** Collectors that are
+  not log parsers — a local git reader, a pull-request connector — need a shape to emit and
+  analyzers need one to read, or every new evidence source teaches every analyzer a new record
+  and the fields that make this project defensible get re-invented per source. `internal/event`
+  is that shape: a versioned envelope carrying source, source version and the build that read
+  it, the two clocks and how much to trust them, grain, privacy class and provenance, wrapping
+  one closed payload. Today's `usage.Record` adapts into it — one usage observation always, one
+  edit observation only when the record carries activity, so a source with no edit extraction
+  emits nothing rather than a row of zeros. It is an **interface contract, not a storage
+  format**: no event table, no migration, and nothing user-facing moves. Content is impossible
+  by construction — payloads are closed structs of counts, closed vocabularies and identifiers
+  the source itself assigned, a test walks the contract and fails on any string field nobody
+  accounted for, and paths and branch names are dropped at the adapter (`B89`,
+  [ADR 0007](docs/adr/0007-canonical-event-contract.md)).
+- Proving it against 324,416 real records changed the design twice, which is the point of
+  proving it. Rejecting an event whose source timestamp is newer than the batch's reading time
+  dropped 51 real records from sessions still being written, so the two clocks are no longer
+  ordered against each other — a reading time is not a causality claim, and the evidence path
+  must not be stricter than the store it mirrors. The same run surfaced `B101`: 404 sub-agent
+  aggregates whose id collides across projects, which the store has always resolved by keeping
+  whichever file was ingested first.
+
 ## [0.6.0] - 2026-08-02
 
 ### Added

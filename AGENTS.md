@@ -124,6 +124,7 @@ internal/cli/            command wiring and flag handling; one file per command
 internal/config/         defaults + YAML file + ASSAIO_-prefixed env vars
 internal/dashboard/      builds + renders the offline Assay HTML dashboard
 internal/drift/          format-drift canaries judging each source against its own history
+internal/event/          the canonical observation contract of the evidence graph (ADR 0007)
 internal/humanize/       shared count/money formatters every surface renders through
 internal/i18n/           the translatable catalog: dashboard chrome, statusline, explain
 internal/ingest/         discovers session files, parses them, upserts into the store
@@ -141,6 +142,7 @@ internal/pricing/        loads the vendored LiteLLM price table, prices usage re
 internal/projectid/      resolves a session's cwd to its git repository root + subpath
 internal/report/         aggregates stored usage into priced rows; renders table/JSON/CSV
 internal/server/         self-hosted team server: usage collection + served dashboard
+internal/signal/         the catalog of what assaio can report, and what data supports it
 internal/store/          embedded SQLite persistence for usage records
 internal/survival/       directional local outcome check against git blame
 internal/usage/          normalized representation of AI-tool usage events

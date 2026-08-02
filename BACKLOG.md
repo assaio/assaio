@@ -41,19 +41,27 @@ change it produced — commit, pull request, review, CI, merge, survival — car
 confidence and the ambiguity of every link. Everything here ships with its error bars or it
 does not ship.
 
-- [ ] **B89 · canonical event contract v1** — M · both — one small, versioned envelope for
-  the events this milestone needs (`ai.session`, `ai.usage.observed`, `ai.edit.observed`,
-  `vcs.commit.observed`, `scm.pull_request.observed`, `scm.review.observed`,
-  `ci.check.observed`, `delivery.merge|revert|survival.observed`), each carrying source and
-  source version, parser build, observed vs logical time, grain, privacy class and provenance.
-  Deliberately **not** a migration of every existing structure: adapt today's `usage_record`
-  into it and use the contract only on the new evidence path. Decision record first.
-- [ ] **B90 · signal catalog + AnalyzerContext v1** — L · both — every analyzer-visible
-  signal gets a stable id, type, unit, supported grains, observed/estimated/attributed/derived
-  status, required source capabilities, missing-data semantics, coverage rules, provenance and
-  privacy class; `signals list|describe|coverage` exposes them. Analyzers — built-in and
-  out-of-tree — read an `AnalyzerContext` instead of querying SQLite, so the store stops being
-  the public API.
+- [ ] **B101 · a sub-agent aggregate's project is decided by parse order** — S/M · solo — a
+  completed Claude sub-agent is keyed `agent:<id>` alone, and `usage_record` is
+  `UNIQUE(tool, dedupe_key)` with `ON CONFLICT DO NOTHING`, so when the same sub-agent id is
+  seen with two different projects the first file ingested wins and the second is dropped
+  silently. Found while proving the canonical event contract against 324,416 real records:
+  **404** of them collide, identical in tokens, timestamp and session but disagreeing on
+  `project`. Cost is neither lost nor double-counted — only the project attribution wobbles,
+  on ~0.12% of records — but attribution edges (`B85`) link by project, so this becomes a
+  wrong answer rather than a rounding error. Fixing it means deciding what the key should be
+  (adding the project changes a shipped dedupe contract) and whether the parser should even
+  emit the aggregate twice; the event contract deliberately mirrors today's store behaviour
+  rather than diverging from it, so this is one fix in one place, not two.
+- [ ] **B102 · AnalyzerContext: retire the store types from the analyzer surface** — L · both
+  — the half of `B90` deliberately not shipped with the catalog. Validators already do not
+  query SQLite; what leaks is *types*, since `analyze.Input` carries `[]store.UsageRow`,
+  `[]store.SessionRow` and `[]store.AttributionRow`, and those same shapes are the published
+  metric-plugin wire (ADR 0004). Replacing them is therefore a breaking change to a public
+  surface for no user-visible gain, so it waits for a real second consumer to design against
+  — the git evidence collector (`B91`) — rather than being guessed at now. Ships with a
+  deprecation window and a conformance fixture, and is a candidate to land with the protocol
+  freeze (`B23`) rather than before it. See [ADR 0008](docs/adr/0008-signal-catalog.md).
 - [ ] **B91 · local git evidence collector v1** — M · both — content-free commit
   observations for configured repositories: hash or keyed pseudonymous digest, timestamps,
   parents, branch/repo identity, added/removed counts, files changed **by category**
