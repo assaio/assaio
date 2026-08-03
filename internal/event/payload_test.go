@@ -9,7 +9,7 @@ import (
 
 // payloads is every concrete payload this build defines. The registry and this list must
 // agree: a type nothing can fill is a name pretending to be a capability.
-var payloads = []Payload{Usage{}, Edit{}}
+var payloads = []Payload{Usage{}, Edit{}, Commit{}}
 
 func TestEveryRegisteredTypeHasAPayload(t *testing.T) {
 	have := map[string]bool{}
@@ -115,9 +115,9 @@ func walkStringFields(t *testing.T, typ reflect.Type, path string) {
 				continue
 			}
 			walkStringFields(t, f.Type, name)
-		case reflect.Int, reflect.Int64, reflect.Interface:
-			// Numbers cannot carry content; the payload interface is walked as each
-			// concrete type above.
+		case reflect.Int, reflect.Int64, reflect.Bool, reflect.Interface:
+			// A number or a two-value flag cannot carry content; the payload interface is
+			// walked as each concrete type above.
 		default:
 			t.Errorf("%s is a %s -- a map, slice or pointer is room for content the "+
 				"contract promises it cannot hold", name, f.Type.Kind())

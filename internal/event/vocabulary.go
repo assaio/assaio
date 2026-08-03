@@ -5,10 +5,12 @@ package event
 // disagree about what a valid value is. Adding a value is a one-line change here.
 
 // The grains an observation can be stated at. These extend usage.Record's Granularity rather
-// than restating it -- session-level evidence must never masquerade as per-turn.
+// than restating it -- session-level evidence must never masquerade as per-turn, and a
+// commit is a third unit again, not a coarser session.
 const (
 	GrainTurn    = "turn"
 	GrainSession = "session"
+	GrainCommit  = "commit"
 )
 
 // The privacy classes. They say what a payload *is*; what may be sent where is the
@@ -45,7 +47,7 @@ const (
 // what was expected. They stay unexported: what a consumer needs is the signal catalog
 // (B90), not four accessors nothing calls yet.
 var (
-	grains      = []string{GrainTurn, GrainSession}
+	grains      = []string{GrainTurn, GrainSession, GrainCommit}
 	privacies   = []string{LocalOnly, Pseudonymous, PublicMetadata}
 	provenances = []string{Parsed, Derived, Manual}
 	timeSources = []string{TimeStated, TimeFileMtime, TimeIngestTime}
