@@ -21,6 +21,75 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-03
+
+### Added
+- **The local git evidence collector: what your commits changed, never what they changed it
+  to.** `internal/vcs` reads a repository and emits `vcs.commit.observed` — the first
+  observation assaio produces that is not parsed out of an AI tool's log, and the first
+  consumer the canonical event contract has ever had. A commit observation carries parent
+  count, changed files, added and removed lines, a **six-way file-category split**
+  (test / source / docs / config / generated / other) and a revert flag. There is no field for
+  a path, a branch name, a commit message or a diff, the split must add up to the file count
+  beside it, and the whole thing is classed `local-only` until the correlation threat model
+  (`B100`) says otherwise (`B91`,
+  [ADR 0009](docs/adr/0009-local-git-evidence-collector.md)).
+- **`survival` reports what the window actually changed.** It no longer shells out to git for
+  its own commit set: it reads those observations, so the survival rate now travels beside the
+  mix of files the window touched and the number of commits git itself labelled a revert.
+  Categories come from a naming heuristic and say so, and unreadable commits are counted and
+  named rather than silently dropped.
+
+### Fixed
+- **Copilot CLI was only half-wired, and three surfaces were the proof.** The parser landed
+  in v0.6.0, but three places still kept their own list of tool names instead of reading the
+  depth matrix: `sync` rejected every `copilot-cli` record as an unknown tool, so a team
+  member using it synced nothing and was told nothing; `clear --tool copilot-cli` failed the
+  same way, which meant its data could not be deleted per source; and `reasoning-share`
+  skipped it while printing "Only Codex and Gemini CLI report reasoning tokens today",
+  though Copilot has reported them all along and the store held them unread.
+- **The signal catalog claimed every source reports reasoning tokens.** `ai.tokens.reasoning`
+  was bundled into the cost signals every row inherits, so `signals coverage` reported it as
+  fully supported on a Claude-only machine — where the real answer is *none*, since Claude
+  Code never surfaces a thinking count. On the maintainer's own store the figure moved from
+  "100% of tokens" to "<1%, codex", which is the honest number. Reasoning is now declared per
+  source, like every other capability.
+- **A source that records lines and nothing else no longer passes for full activity coverage.**
+  The confidence envelope on every verdict was computed from the tier table's one-bit
+  `Activity` axis, which reads true for Copilot CLI — so a Copilot-only window reported
+  *activity coverage 100%* while `signals coverage` correctly said its edit, tool-call and
+  rework signals were unsupported. Two surfaces, two answers to one question. The envelope now
+  asks the per-signal question ([ADR 0008](docs/adr/0008-signal-catalog.md)), and `coverage`
+  separates the two facts it used to conflate: "cost only" means a source contributes no
+  changed lines, and a source with lines but no edit counts is named as partial rather than
+  hidden behind either verdict.
+- **A session annotation no longer selects another member's usage.** On a central store the
+  label filter matched on `session_id` alone while every other label query joins on
+  `(session_id, member)` — the label's own primary key — so two members whose locally
+  generated session ids collided could be filtered into each other's results. Local stores,
+  where `member` is always empty, were never affected.
+- **A Copilot session with no id or no timestamp is skipped instead of stored.** Its dedupe
+  key is `<session>:<model>`, so an unidentifiable session collapsed every other one like it
+  into a single row under `ON CONFLICT DO NOTHING`, and an undated one was stored at year
+  one. Both are now counted as skipped, the same skip-and-count policy every parser follows.
+
+### Changed
+- **What a source can answer has exactly one place.** `parser.Answers(tool, signal)` is now
+  the only capability question in the codebase, and `parser.Tools()` the only list of source
+  names; `friction`, `reasoning-share`, `coverage`, the confidence envelope, `signals
+  coverage`, `sync` validation and `clear --tool` all read them instead of keeping a private
+  copy. The exec-plugin floor moved there too, and dropped its claim on the per-turn signals:
+  a plugin declares turn or session grain per record, so a turn count can no more be assumed
+  from it than from a session-total source.
+- **Caveats stopped naming sources.** The line-coverage, tool-call, failure-capture,
+  project-attribution and reasoning notes across `analyze`, `effectiveness`, the dashboard,
+  the `explain` pages and the binary's own `--help` spelled out "Claude Code and Codex" or
+  "Gemini CLI and Cline" — a sentence a new parser makes wrong, and most of them already
+  were. They now describe the property and point at `assaio-agent signals coverage`, or name
+  the window's own sources from the matrix. The `coverage` validator also stops printing a
+  cost-only caveat when the window contains no cost-only source, and no longer blames
+  cost-only sources for a window whose gap is a source recording lines and nothing else.
+
 ## [0.7.0] - 2026-08-02
 
 ### Added
@@ -672,7 +741,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/assaio/assaio/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/assaio/assaio/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/assaio/assaio/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/assaio/assaio/compare/v0.4.0...v0.5.0
