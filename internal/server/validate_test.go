@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/usage"
 )
 
@@ -17,8 +18,11 @@ func newValidRecord() usage.Record {
 	}
 }
 
+// Every in-tree source must be syncable, read from the depth matrix rather than a list kept
+// here: copilot-cli shipped in v0.6.0 and its records were rejected by this gate until the
+// matrix became the one place tool names live.
 func TestValidateRecordAcceptsKnownTools(t *testing.T) {
-	for _, tool := range []string{"claude-code", "codex", "cline", "gemini-cli", "plugin:my-plugin"} {
+	for _, tool := range append(parser.Tools(), "plugin:my-plugin") {
 		r := newValidRecord()
 		r.Tool = tool
 		if err := validateRecord(&r); err != nil {

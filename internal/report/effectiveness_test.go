@@ -174,7 +174,9 @@ func TestRenderEffectivenessTableShowsDimAndCaveat(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	for _, want := range []string{"PROJECT", "web", "directional", "never a performance metric", "Claude Code and Codex today"} {
+	// The line-coverage note points at `depth` rather than naming sources: a note that spells
+	// them out is one a new parser makes wrong, which is what happened to this one.
+	for _, want := range []string{"PROJECT", "web", "directional", "never a performance metric", "records changed lines"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("table missing %q: %s", want, out)
 		}

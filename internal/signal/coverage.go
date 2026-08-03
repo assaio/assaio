@@ -45,7 +45,7 @@ func Coverage(byTool map[string]int64) []Support {
 		var capable int64
 		var sources []string
 		for _, tool := range tools {
-			if !answers(tool, declared[i].ID) {
+			if !parser.Answers(tool, declared[i].ID) {
 				continue
 			}
 			capable += byTool[tool]
@@ -59,32 +59,6 @@ func Coverage(byTool map[string]int64) []Support {
 		})
 	}
 	return out
-}
-
-// answers reports whether tool's parser produces the data behind id. A tool outside the depth
-// matrix is an out-of-tree exec plugin, and that protocol carries tokens and nothing else --
-// so it answers the token signals and no others, which is what it can support rather than a
-// guess about its author.
-func answers(tool, id string) bool {
-	d, known := parser.DepthOf(tool)
-	if !known {
-		return pluginAnswerable[id]
-	}
-	for _, answered := range d.Answers {
-		if answered == id {
-			return true
-		}
-	}
-	return false
-}
-
-// pluginAnswerable is what the exec parser protocol's record shape can carry: tokens and the
-// session identity around them. It has no activity or attribution fields at all (ADR 0003).
-var pluginAnswerable = map[string]bool{
-	"ai.tokens.total": true, "ai.tokens.input": true, "ai.tokens.output": true,
-	"ai.tokens.cache_read": true, "ai.tokens.cache_write": true, "ai.tokens.reasoning": true,
-	"ai.cost.estimated": true, "ai.sessions.count": true,
-	"ai.turns.count": true, "ai.session.active_minutes": true,
 }
 
 func share(capable, total int64) float64 {

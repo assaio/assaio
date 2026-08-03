@@ -3,6 +3,8 @@ package analyze
 import (
 	"fmt"
 	"time"
+
+	"github.com/assaio/assaio/internal/parser"
 )
 
 // The confidence labels, from a verdict that rests on complete data to one that rests on
@@ -99,7 +101,7 @@ func coverageShares(in *Input) (activity, priced, turn float64) {
 	if in.Totals.Tokens == 0 {
 		return 0, 0, 0
 	}
-	activityTokens, _ := tokensByTool(in.Usage)
+	activityTokens := capableTokens(tokensByTool(in.Usage), parser.HasFullActivity)
 	turnShare, _ := turnGranularityShare(in.Usage)
 	return fracOf(activityTokens, in.Totals.Tokens),
 		fracOf(pricedTokenSum(in.ByModel), in.Totals.Tokens),

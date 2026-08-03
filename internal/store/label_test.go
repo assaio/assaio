@@ -315,3 +315,43 @@ func TestWindowQueriesFilterConsistently(t *testing.T) {
 		t.Fatalf("AttributionFiltered = %v/%v want empty", skills, agents)
 	}
 }
+
+// A label belongs to (session_id, member), which is its own primary key and how the grouped
+// and joined queries read it. The filter used to match on session_id alone, so on a central
+// store one member's annotation selected another member's identically-keyed usage.
+func TestLabelFilterDoesNotCrossMembers(t *testing.T) {
+	s, ctx := newStore(t), context.Background()
+	ts := time.Date(2026, 7, 1, 10, 0, 0, 0, time.UTC)
+	if _, err := s.Insert(ctx, []usage.Record{
+		{
+			Tool: "claude-code", SessionID: "shared", Member: "alice", Timestamp: ts, Model: "m",
+			Project: "web", InputTokens: 10, DedupeKey: "a", Granularity: "turn",
+		},
+		{
+			Tool: "claude-code", SessionID: "shared", Member: "bob", Timestamp: ts, Model: "m",
+			Project: "web", InputTokens: 20, DedupeKey: "b", Granularity: "turn",
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	set := SessionLabel{Task: "refactor", MarkedAt: markedAt}
+	if err := s.Mark(ctx, SessionRef{SessionID: "shared", Member: "alice"}, set); err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := s.UsageFiltered(ctx, ts.Add(-time.Hour), LabelFilter{Task: "refactor"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Member != "alice" {
+		t.Fatalf("rows = %+v, want only alice's usage", rows)
+	}
+
+	sessions, err := s.SessionsFiltered(ctx, ts.Add(-time.Hour), LabelFilter{Task: "refactor"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions) != 1 || sessions[0].Member != "alice" {
+		t.Fatalf("sessions = %+v, want only alice's session", sessions)
+	}
+}

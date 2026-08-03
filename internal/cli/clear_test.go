@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 	"github.com/assaio/assaio/internal/usage"
 )
@@ -94,6 +95,24 @@ func TestClearRejectsUnknownTool(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "unknown tool") {
 		t.Fatalf("error = %q, want an unknown-tool error", err)
+	}
+}
+
+// Data a source wrote must be deletable per source, or `clear` stops being a privacy
+// control for it. The accepted set comes from the depth matrix, not a list in the command.
+func TestClearAcceptsEveryInTreeTool(t *testing.T) {
+	for _, tool := range parser.Tools() {
+		t.Run(tool, func(t *testing.T) {
+			t.Setenv("XDG_DATA_HOME", t.TempDir())
+			root := NewRootCmd()
+			var out bytes.Buffer
+			root.SetOut(&out)
+			root.SetErr(&out)
+			root.SetArgs([]string{"clear", "--tool", tool, "--yes"})
+			if err := root.Execute(); err != nil {
+				t.Fatalf("clear --tool %s: %v", tool, err)
+			}
+		})
 	}
 }
 

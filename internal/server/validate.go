@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/usage"
 )
 
@@ -30,13 +31,17 @@ var tsFloor = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 // shared dashboard.
 const tsFutureSkew = 48 * time.Hour
 
-// knownTools is the exact set of Tool values assaio's built-in parsers emit (see
-// internal/ingest.discoverSources and internal/parser/*).
-var knownTools = map[string]bool{
-	"claude-code": true,
-	"codex":       true,
-	"cline":       true,
-	"gemini-cli":  true,
+// knownTools is the exact set of Tool values assaio's built-in parsers emit, read from the
+// depth matrix so a source becomes syncable the moment it declares its depth -- a list kept
+// here instead is one a new parser silently fails to join.
+var knownTools = toolSet(parser.Tools())
+
+func toolSet(tools []string) map[string]bool {
+	set := make(map[string]bool, len(tools))
+	for _, t := range tools {
+		set[t] = true
+	}
+	return set
 }
 
 // pluginToolPattern matches an out-of-tree plugin's Tool namespace, "plugin:<name>",

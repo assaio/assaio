@@ -67,7 +67,7 @@ func (concentrationValidator) Analyze(in Input) Result {
 	r.BarsPseudonym = PseudonymProject
 	r.Takeaway = concentrationTakeaway(measurable, aligned, gapFound)
 	if unattributed := unattributedShare(all); unattributed >= concentrationUnattributedFloor {
-		r.Caveats = append(r.Caveats, "Prov.: "+formatPercent(unattributed, 0)+" of tokens are unattributed -- tools that log no working directory (Gemini CLI, Cline) cannot be assigned to a project.")
+		r.Caveats = append(r.Caveats, "Prov.: "+formatPercent(unattributed, 0)+" of tokens are unattributed -- a source that logs no working directory cannot be assigned to a project.")
 	}
 	return r
 }

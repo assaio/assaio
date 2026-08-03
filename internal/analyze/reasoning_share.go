@@ -1,12 +1,18 @@
 package analyze
 
-import "github.com/assaio/assaio/internal/humanize"
+import (
+	"sort"
+	"strings"
+
+	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/parser"
+)
 
 const (
 	reasoningName      = "reasoning-share"
 	reasoningTitle     = "Reasoning Share"
 	reasoningDescribe  = "How much generated output is extended-thinking (reasoning) tokens, among tools that report it -- flagging deep reasoning spent on shallow tasks."
-	reasoningHowToRead = "Reasoning tokens are billed as output. A high share means much of the model's work is internal deliberation, which can be overkill on routine tasks. Only some tools report reasoning (Codex and Gemini CLI today), so the coverage figure says how much of your output this even covers."
+	reasoningHowToRead = "Reasoning tokens are billed as output. A high share means much of the model's work is internal deliberation, which can be overkill on routine tasks. Only some sources report it at all, so the coverage figure says how much of your output this even covers."
 	// reasoningWatchShare is the reasoning-of-output share above which the read flags heavy thinking.
 	reasoningWatchShare = 0.3
 )
@@ -42,8 +48,8 @@ func (reasoningValidator) Analyze(in Input) Result {
 	if reportingOutput == 0 {
 		r.Read = noDataRead
 		r.Figures = []Figure{{Label: "reporting coverage", Value: "0%", Note: "no tool here reports reasoning"}}
-		r.Takeaway = "None of your tools reported reasoning tokens this window -- Claude Code doesn't surface them."
-		r.Caveats = []string{"Only Codex and Gemini CLI report reasoning tokens today; Claude Code doesn't."}
+		r.Takeaway = "No source in this window reported reasoning tokens, so no share can be read from it."
+		r.Caveats = []string{reasoningCoverageCaveat()}
 		return r
 	}
 
@@ -61,16 +67,33 @@ func (reasoningValidator) Analyze(in Input) Result {
 	}
 	r.Takeaway = reasoningTakeaway(share)
 	r.Caveats = []string{
-		"Only Codex and Gemini CLI report reasoning tokens; Claude Code doesn't, so this covers part of your output.",
+		reasoningCoverageCaveat(),
 		"Reasoning is a subset of output (already billed there); this is a composition signal, not extra cost.",
 	}
 	return r
 }
 
-// reportsReasoning reports whether tool's parser surfaces reasoning tokens today: Codex
-// (reasoning_output_tokens) and Gemini CLI (thoughts). Claude Code does not.
-func reportsReasoning(tool string) bool {
-	return tool == "codex" || tool == "gemini-cli"
+// reportsReasoning asks the depth matrix rather than keeping a list of tool names, which is
+// how Copilot CLI's reasoning tokens sat in the store unread from v0.6.0.
+func reportsReasoning(tool string) bool { return parser.Answers(tool, "ai.tokens.reasoning") }
+
+// reasoningCoverageCaveat names the sources that report reasoning from the depth matrix, so
+// the sentence cannot outlive the list it used to spell out.
+func reasoningCoverageCaveat() string {
+	return "Reasoning is reported by " + strings.Join(reasoningSources(), ", ") +
+		"; the rest of your output comes from sources that never surface it."
+}
+
+// reasoningSources names every in-tree source answering the reasoning signal, alphabetically.
+func reasoningSources() []string {
+	var out []string
+	for _, d := range parser.Depths() {
+		if reportsReasoning(d.Tool) {
+			out = append(out, d.Tool)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 func reasoningTakeaway(share float64) string {

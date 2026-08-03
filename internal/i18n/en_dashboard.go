@@ -69,7 +69,7 @@ var enDashboard = Dashboard{
 	CostBasisSuffix:    "the denominator, not the grade.",
 	UnpricedCaveat:     "Cost figures marked * exclude usage on unpriced models -- a floor, not the full total.",
 	DirectionalCaveat:  "Directional assay -- aggregate and pseudonymized by default; per-person requires an explicit opt-in (team mode).",
-	LineCoverageCaveat: "AI-line signals: Claude Code and Codex today -- Gemini CLI and Cline contribute cost but not line counts (see ROADMAP).",
+	LineCoverageCaveat: "AI-line signals come only from sources that record changed lines; the rest contribute cost but no line counts -- run `assaio-agent signals coverage`.",
 	QualityCaveat:      "Quality signals (survival in main, bug impact) need git/issue correlation -- server stage.",
 	AnonymizedCaveat:   "Project names pseudonymized for sharing -- run with --no-anonymize for real names.",
 	TeamPanelLabel:     "Team",

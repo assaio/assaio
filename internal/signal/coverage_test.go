@@ -51,6 +51,16 @@ func TestCoverage(t *testing.T) {
 			"ai.skill.tokens", Partial, 0.5,
 		},
 		{
+			"a source that never surfaces a thinking count answers no reasoning signal",
+			map[string]int64{"claude-code": 100},
+			"ai.tokens.reasoning", None, 0,
+		},
+		{
+			"the sources that do surface one answer it",
+			map[string]int64{"codex": 100},
+			"ai.tokens.reasoning", Full, 1,
+		},
+		{
 			"codex carries no attribution at all",
 			map[string]int64{"codex": 100},
 			"ai.agent.tokens", None, 0,
@@ -64,6 +74,11 @@ func TestCoverage(t *testing.T) {
 			"an out-of-tree plugin cannot carry activity: the protocol has no such field",
 			map[string]int64{"plugin:weekend": 100},
 			"ai.edits.count", None, 0,
+		},
+		{
+			"a plugin declares its grain per record, so no turn count can be assumed from it",
+			map[string]int64{"plugin:weekend": 100},
+			"ai.turns.count", None, 0,
 		},
 		{
 			"copilot totals a session, so it cannot contribute a turn count",

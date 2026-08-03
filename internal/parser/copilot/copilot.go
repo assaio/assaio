@@ -62,7 +62,8 @@ type tokenCount struct {
 // are session-granularity by construction: a session still running, or one killed before
 // it could write that event, yields nothing rather than a row of zeros.
 //
-// skipped counts lines that failed to unmarshal as JSON; a scanner-level error still
+// skipped counts lines that failed to unmarshal as JSON, plus a session that carries no id
+// or no timestamp and so cannot be stored under a key or a date; a scanner-level error still
 // aborts the parse.
 func Parse(r io.Reader) ([]usage.Record, int, error) {
 	sc := parser.NewScanner(r)
@@ -88,13 +89,17 @@ func Parse(r io.Reader) ([]usage.Record, int, error) {
 	if err := sc.Err(); err != nil {
 		return nil, skipped, fmt.Errorf("scan copilot session: %w", err)
 	}
-	return records(&start, &shutdown), skipped, nil
+	recs, dropped := records(&start, &shutdown)
+	return recs, skipped + dropped, nil
 }
 
-// records turns one session's start and shutdown events into one record per model.
-func records(start, shutdown *event) []usage.Record {
+// records turns one session's start and shutdown events into one record per model, and
+// reports the session as skipped when it carries no identity or no clock: the dedupe key is
+// "<session>:<model>", so an empty id would collapse every such session into one stored row,
+// and a zero timestamp would date real usage to year one.
+func records(start, shutdown *event) (recs []usage.Record, skipped int) {
 	if len(shutdown.Data.ModelMetrics) == 0 {
-		return nil
+		return nil, 0
 	}
 	sessionID := start.Data.SessionID
 	if sessionID == "" {
@@ -103,6 +108,9 @@ func records(start, shutdown *event) []usage.Record {
 	at := start.Timestamp
 	if at.IsZero() {
 		at = shutdown.Timestamp
+	}
+	if sessionID == "" || at.IsZero() {
+		return nil, 1
 	}
 	models := sortedModels(shutdown.Data.ModelMetrics)
 	credited := dominantModel(shutdown.Data.ModelMetrics)
@@ -132,7 +140,7 @@ func records(start, shutdown *event) []usage.Record {
 		}
 		out = append(out, rec)
 	}
-	return out
+	return out, 0
 }
 
 // sortedModels keeps record order deterministic across runs, which golden tests and stable

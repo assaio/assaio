@@ -3,12 +3,14 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/paths"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -29,7 +31,7 @@ them. Delete them deliberately with --labels.`,
 	}
 	c.Flags().BoolVar(&all, "all", false, "delete all records")
 	c.Flags().StringVar(&olderThan, "older-than", "", "delete records older than e.g. 90d; 0d means everything up to now")
-	c.Flags().StringVar(&tool, "tool", "", "restrict to one tool (claude-code|codex|gemini-cli|cline)")
+	c.Flags().StringVar(&tool, "tool", "", "restrict to one tool ("+clearToolChoices()+")")
 	c.Flags().BoolVar(&yes, "yes", false, "confirm deletion")
 	c.Flags().BoolVar(&labels, "labels", false, "delete the session labels too (never removed by the other flags)")
 	return c
@@ -53,7 +55,7 @@ func runClear(cmd *cobra.Command, req clearRequest) error {
 		return errors.New("--all cannot be combined with --older-than or --tool")
 	}
 	if req.tool != "" && !validClearTool(req.tool) {
-		return fmt.Errorf("unknown tool %q (want claude-code|codex|gemini-cli|cline|plugin:<name>)", req.tool)
+		return fmt.Errorf("unknown tool %q (want %s)", req.tool, clearToolChoices())
 	}
 	if !req.yes {
 		return errors.New("refusing to delete without --yes")
@@ -98,11 +100,16 @@ func runClear(cmd *cobra.Command, req clearRequest) error {
 // stops a typo (e.g. "claude" for "claude-code") from silently deleting nothing while
 // reporting success.
 func validClearTool(tool string) bool {
-	switch tool {
-	case "claude-code", "codex", "gemini-cli", "cline":
+	if slices.Contains(parser.Tools(), tool) {
 		return true
 	}
-	return strings.HasPrefix(tool, "plugin:") && len(tool) > len("plugin:")
+	return strings.HasPrefix(tool, parser.PluginPrefix) && len(tool) > len(parser.PluginPrefix)
+}
+
+// clearToolChoices is what --tool accepts, spelled from the depth matrix so the help text
+// and the error can never name a different set than the check does.
+func clearToolChoices() string {
+	return strings.Join(append(parser.Tools(), parser.PluginPrefix+"<name>"), "|")
 }
 
 // clearCutoff resolves --older-than to a cutoff time, or the zero time when unset.

@@ -137,6 +137,41 @@ func TestSessionWithoutShutdownYieldsNothing(t *testing.T) {
 	}
 }
 
+// The dedupe key is "<session>:<model>", so a session whose id never appears would key every
+// such session identically and let ON CONFLICT DO NOTHING drop all but the first. Yielding
+// nothing is the honest outcome: the usage happened, but nothing can identify it.
+func TestSessionWithoutAnIdYieldsNothing(t *testing.T) {
+	recs, skipped, err := Parse(strings.NewReader(
+		`{"type":"session.shutdown","data":{"modelMetrics":{"m":{"requests":{"count":1},"tokenDetails":{"input":{"tokenCount":10}}}}},"timestamp":"2026-07-31T11:00:00Z"}` + "\n",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recs) != 0 {
+		t.Fatalf("recs = %+v, want nothing from a session with no id", recs)
+	}
+	if skipped != 1 {
+		t.Fatalf("skipped = %d, want the unidentifiable session counted as skipped", skipped)
+	}
+}
+
+// A record stamped with the zero time lands in every window that reaches back far enough and
+// in none that does not; an unstamped session is dropped rather than dated to year one.
+func TestSessionWithoutATimestampYieldsNothing(t *testing.T) {
+	recs, skipped, err := Parse(strings.NewReader(
+		`{"type":"session.shutdown","data":{"sessionId":"s1","modelMetrics":{"m":{"requests":{"count":1},"tokenDetails":{"input":{"tokenCount":10}}}}}}` + "\n",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recs) != 0 {
+		t.Fatalf("recs = %+v, want nothing from a session with no timestamp", recs)
+	}
+	if skipped != 1 {
+		t.Fatalf("skipped = %d, want the undatable session counted as skipped", skipped)
+	}
+}
+
 func TestCorruptLinesAreSkippedAndCounted(t *testing.T) {
 	_, skipped, err := Parse(strings.NewReader("{not json\n" + `{"type":"session.start","data":{}}` + "\n"))
 	if err != nil {

@@ -184,9 +184,10 @@ What to do about it
   more value. A rising line count with rising rework is churn, not throughput.
 
 Limits
-  Only Claude Code and Codex contribute line counts today; Gemini CLI and Cline show cost
-  without lines, so any per-project reading depends on which tool was used. This is never
-  ranked per named individual -- that refusal holds regardless of demand.`
+  Only sources that record changed lines contribute here; the rest show cost without
+  lines, so any per-project reading depends on which tool was used --
+  'assaio-agent signals coverage' says what your own data supports. This is never ranked per named individual -- that refusal holds
+  regardless of demand.`
 
 const explainIntent = `Task Intent Coverage
 

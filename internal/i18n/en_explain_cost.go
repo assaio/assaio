@@ -64,9 +64,9 @@ What to do about it
   nobody is actively shipping.
 
 Limits
-  Lines are only counted for tools that report them (Claude Code and Codex today), so a
-  project worked on mainly through Gemini CLI or Cline will show tokens with no lines and
-  read as a false gap. Check Coverage before drawing conclusions.`
+  Lines are only counted for sources that report them, so a project worked on mainly
+  through one that does not will show tokens with no lines and read as a false gap. Check
+  Coverage, or 'assaio-agent signals coverage', before drawing conclusions.`
 
 const explainCoverage = `Coverage & Confidence
 
@@ -148,8 +148,8 @@ What to do about it
   hard problems -- that is what it is for.
 
 Limits
-  Only some tools report reasoning separately (Codex and Gemini CLI today), so the
-  coverage figure is part of the reading, not a footnote. Codex reasoning tokens are
+  Only some sources report reasoning separately, so the coverage figure is part of the
+  reading, not a footnote -- 'assaio-agent signals coverage' says which do. Reasoning tokens are
   assumed to be included in output for costing.`
 
 const explainSubscriptionFit = `Subscription Fit

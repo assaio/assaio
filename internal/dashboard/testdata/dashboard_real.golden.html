@@ -551,7 +551,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   <span class="cell__label">06 · Coverage &amp; Confidence</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--good">SOLID</span>
-    <span class="prov">Prov.</span>
+    
   </div>
   <div class="cell__foot">
     <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
@@ -1020,7 +1020,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="entry__label">Coverage &amp; Confidence</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--good">SOLID</span>
-      <span class="prov">Prov.</span>
+      
       <span class="conf conf--high">high</span>
     </div>
   </div>
@@ -1070,7 +1070,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       
     </div>
     
-    <p class="entry__caveat">Cost-only tools (Gemini CLI, Cline, plugins) contribute tokens and cost but no line or edit signals -- see ROADMAP.</p>
+    
     <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">Most usage carries full activity and price data -- the other figures rest on solid coverage.</p>
   </div>
@@ -1096,7 +1096,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       
     </div>
     
-    <p class="entry__caveat">Prov.: 0% of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified -- run `backfill` to restate them. Tools that name no tool calls (Gemini CLI, Cline) record none, so they neither raise nor lower this.</p>
+    <p class="entry__caveat">Prov.: 0% of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified -- run `backfill` to restate them. A source that names no tool calls records none, so it neither raises nor lowers this -- `assaio-agent signals coverage` says which do.</p>
     <p class="entry__conf">Confidence — insufficient — nothing to measure in this window</p>
     <p class="entry__takeaway">No tool in this window records what its tool calls were for.</p>
   </div>
@@ -1138,7 +1138,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     
-    <p class="entry__caveat">Prov.: 0% of tool calls record whether they failed. Only Claude Code marks the outcome of every call, and only for sessions ingested by a build that captures it -- run `backfill` after upgrading. Codex reports it for file edits alone, so its calls are excluded from these rates rather than counted as successes.</p>
+    <p class="entry__caveat">Prov.: 0% of tool calls record whether they failed, and only for sessions ingested by a build that captures it -- run `backfill` after upgrading. A source that marks only some outcomes is excluded from these rates rather than counted as successes; `assaio-agent signals coverage` says which does what.</p>
     <p class="entry__conf">Confidence — insufficient — nothing to measure in this window</p>
     <p class="entry__takeaway">No tool call in this window records whether it failed, so no failure rate can be read from it.</p>
   </div>
@@ -1273,7 +1273,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
   </div>
   <div>
-    <p class="entry__howto">Reasoning tokens are billed as output. A high share means much of the model&#39;s work is internal deliberation, which can be overkill on routine tasks. Only some tools report reasoning (Codex and Gemini CLI today), so the coverage figure says how much of your output this even covers.</p>
+    <p class="entry__howto">Reasoning tokens are billed as output. A high share means much of the model&#39;s work is internal deliberation, which can be overkill on routine tasks. Only some sources report it at all, so the coverage figure says how much of your output this even covers.</p>
     
     <div class="entry__stats">
       
@@ -1298,7 +1298,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     
-    <p class="entry__caveat">Only Codex and Gemini CLI report reasoning tokens; Claude Code doesn&#39;t, so this covers part of your output.</p><p class="entry__caveat">Reasoning is a subset of output (already billed there); this is a composition signal, not extra cost.</p>
+    <p class="entry__caveat">Reasoning is reported by codex, copilot-cli, gemini-cli; the rest of your output comes from sources that never surface it.</p><p class="entry__caveat">Reasoning is a subset of output (already billed there); this is a composition signal, not extra cost.</p>
     <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">Reasoning is a modest share of reported output -- the thinking budget looks proportionate.</p>
   </div>
@@ -1726,7 +1726,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   <span class="cell__label">06 · Coverage &amp; Confidence</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--good">SOLID</span>
-    <span class="prov">Prov.</span>
+    
   </div>
   <div class="cell__foot">
     <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
@@ -1882,7 +1882,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   <p class="footnote">Cost basis · <strong class="tnum">$17 / last 30 days · $6 per active day</strong> · the denominator, not the grade.</p>
 
   <footer class="colophon">
-    <p>Directional assay -- aggregate and pseudonymized by default; per-person requires an explicit opt-in (team mode).</p><p>AI-line signals: Claude Code and Codex today -- Gemini CLI and Cline contribute cost but not line counts (see ROADMAP).</p><p>Quality signals (survival in main, bug impact) need git/issue correlation -- server stage.</p><p>Cost is an estimate at public pay-as-you-go API prices -- not your actual spend; subscription plans bill a flat rate and differ.</p>
+    <p>Directional assay -- aggregate and pseudonymized by default; per-person requires an explicit opt-in (team mode).</p><p>AI-line signals come only from sources that record changed lines; the rest contribute cost but no line counts -- run `assaio-agent signals coverage`.</p><p>Quality signals (survival in main, bug impact) need git/issue correlation -- server stage.</p><p>Cost is an estimate at public pay-as-you-go API prices -- not your actual spend; subscription plans bill a flat rate and differ.</p>
   </footer>
 
 </main>

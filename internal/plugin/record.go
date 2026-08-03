@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/usage"
 )
 
@@ -61,7 +62,7 @@ func (w *wireRecord) toRecord(pluginName string) (usage.Record, error) {
 		return usage.Record{}, fmt.Errorf("bad timestamp %q: %w", w.Timestamp, err)
 	}
 	return usage.Record{
-		Tool:             "plugin:" + pluginName,
+		Tool:             parser.PluginPrefix + pluginName,
 		SessionID:        w.SessionID,
 		Timestamp:        ts,
 		Model:            w.Model,

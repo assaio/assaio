@@ -42,7 +42,7 @@ var catalog = []Signal{
 		ID: "ai.tokens.reasoning", Title: "Reasoning tokens", Unit: "tokens",
 		Status: Observed, Grains: perTurn,
 		ZeroMeans: "this source does not report reasoning separately -- not that none was spent",
-		Describe:  "The thinking portion already counted inside output. Codex reports it; Claude Code does not.",
+		Describe:  "The thinking portion already counted inside output, for the sources that surface one.",
 	},
 	{
 		ID: "ai.cost.estimated", Title: "Estimated cost", Unit: "usd",
@@ -78,7 +78,7 @@ var catalog = []Signal{
 		ID: "ai.tool_errors.count", Title: "Failed tool calls", Unit: "count",
 		Status: Observed, Grains: perTurn,
 		ZeroMeans: "this source does not mark call outcomes -- absent, not a clean run",
-		Describe:  "Calls that came back an error. Claude Code marks every call; Codex marks only file edits.",
+		Describe:  "Calls that came back an error, counted only where a source marks the outcome of every call.",
 	},
 	{
 		ID: "ai.rework.lines", Title: "Rework lines", Unit: "lines",
@@ -108,13 +108,13 @@ var catalog = []Signal{
 		ID: "ai.skill.tokens", Title: "Tokens per skill", Unit: "tokens",
 		Status: Observed, Grains: []string{GrainWindow},
 		ZeroMeans: "this source does not label turns with a skill -- absent from the split, not zero",
-		Describe:  "Tokens the tool itself attributed to a named skill. Claude Code only today.",
+		Describe:  "Tokens the tool itself attributed to a named skill.",
 	},
 	{
 		ID: "ai.agent.tokens", Title: "Tokens per sub-agent", Unit: "tokens",
 		Status: Observed, Grains: []string{GrainWindow},
 		ZeroMeans: "this source has no sub-agents, or does not label them -- absent, not zero",
-		Describe:  "Tokens spent inside a named sub-agent type. Claude Code only today.",
+		Describe:  "Tokens spent inside a named sub-agent type.",
 	},
 }
 

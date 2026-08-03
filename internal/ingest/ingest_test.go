@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/assaio/assaio/internal/config"
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 	"github.com/assaio/assaio/internal/usage"
 )
@@ -301,5 +302,34 @@ func TestRunPluginFailureCountsAsFailedAndContinues(t *testing.T) {
 	}
 	if byTool["plugin:good"].Inserted != 2 {
 		t.Fatalf("plugin:good Inserted = %d, want 2 (run continues past the failed plugin)", byTool["plugin:good"].Inserted)
+	}
+}
+
+// Every source the depth matrix publishes has to be a source ingest actually reads, and the
+// other way round. This is the binding that was missing when the Copilot CLI parser shipped:
+// it was wired here and absent from three consumer lists, so its records were unsyncable and
+// undeletable while its depth row claimed it was fully supported.
+func TestRunReadsExactlyTheSourcesTheMatrixPublishes(t *testing.T) {
+	st, err := store.Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = st.Close() }()
+	results, err := Run(context.Background(), t.TempDir(), st, config.Sources{}, nil, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, r := range results {
+		got[r.Tool] = true
+	}
+	for _, tool := range parser.Tools() {
+		if !got[tool] {
+			t.Errorf("%s publishes a depth row but ingest never discovers it", tool)
+		}
+		delete(got, tool)
+	}
+	for tool := range got {
+		t.Errorf("ingest reads %s but it publishes no depth row, so no surface knows it exists", tool)
 	}
 }

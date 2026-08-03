@@ -15,7 +15,7 @@ import (
 const effCaveat = "Efficiency is directional: task type (greenfield vs. debugging) drives lines-per-cost; this is a diagnostic per project, never a performance metric."
 
 // effCoverageNote discloses which tools' AI-line counts are real today.
-const effCoverageNote = "AI-line activity is captured for Claude Code and Codex today; Gemini CLI and Cline contribute cost but not line counts (see ROADMAP)."
+const effCoverageNote = "Not every source records changed lines; the ones that do not contribute cost but no line counts -- run `assaio-agent signals coverage` for what your own data supports."
 
 // RenderEffectivenessTable writes rows to w as a human-readable efficiency table
 // grouped by by, with a totals footer and the honesty caveats every effectiveness view

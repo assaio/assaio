@@ -33,15 +33,19 @@ type LabelFilter struct {
 // Empty reports whether the filter constrains nothing.
 func (f LabelFilter) Empty() bool { return f.Task == "" && f.Outcome == "" && f.Difficulty == "" }
 
-// labelSubquery restricts a usage_record query to annotated sessions. It is a fixed
+// labelSubquery restricts a usage_record query to annotated sessions. It correlates on
+// (session_id, member) -- the label's own primary key -- because on a central store a bare
+// session_id would let one member's annotation select another member's usage. It is a fixed
 // fragment appended to a fixed base query, and every value it compares is bound, never
 // interpolated -- no caller input reaches the SQL text. An empty LabelFilter selects the
 // unfiltered base query instead of this one, so the subquery never silently narrows a
 // window to "sessions that happen to be annotated".
 const labelSubquery = `
-          AND session_id IN (
-              SELECT session_id FROM session_label
-              WHERE (? = '' OR task = ?)
+          AND EXISTS (
+              SELECT 1 FROM session_label
+              WHERE session_label.session_id = usage_record.session_id
+                AND session_label.member = usage_record.member
+                AND (? = '' OR task = ?)
                 AND (? = '' OR outcome = ?)
                 AND (? = '' OR difficulty = ?)
           )`
@@ -50,9 +54,11 @@ const labelSubquery = `
 // a bare session_id would be ambiguous across the joined tables. Spelled out rather than
 // built from a shared fragment, for the reason attribution.go states.
 const aliasedLabelSubquery = `
-          AND r.session_id IN (
-              SELECT session_id FROM session_label
-              WHERE (? = '' OR task = ?)
+          AND EXISTS (
+              SELECT 1 FROM session_label
+              WHERE session_label.session_id = r.session_id
+                AND session_label.member = r.member
+                AND (? = '' OR task = ?)
                 AND (? = '' OR outcome = ?)
                 AND (? = '' OR difficulty = ?)
           )`

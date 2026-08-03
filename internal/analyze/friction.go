@@ -3,6 +3,7 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -85,11 +86,10 @@ func buildFriction(rows []store.UsageRow) friction {
 }
 
 // failureCapableTool reports whether a tool marks the outcome of every tool call, not just
-// some. Claude Code flags each tool result with is_error. Codex reports success only for
-// file-edit applications -- a shell command that exits non-zero looks identical to one that
-// succeeded -- so including it would put calls in the denominator that can never appear in
-// the numerator. Widen this the moment a tool's logs support it.
-func failureCapableTool(tool string) bool { return tool == "claude-code" }
+// some -- asked of the depth matrix, so widening it is a change to that one row rather than
+// to a name repeated here. A source that marks only some outcomes answers no error signal:
+// its calls would sit in a denominator they can never appear in the numerator of.
+func failureCapableTool(tool string) bool { return parser.Answers(tool, "ai.tool_errors.count") }
 
 // Coherent reports whether the error count can be read as a share of the calls it was
 // counted over. A tool may record a failure for work that never registered as a counted
@@ -135,7 +135,7 @@ func frictionRateFigure(label string, n int64, f friction) Figure {
 // frictionCoverageCaveat states how much of the window could report a failure at all, so a
 // zero error count is never mistaken for "nothing failed" when it means "nothing recorded".
 func frictionCoverageCaveat(f friction) string {
-	return "Prov.: " + formatPercent(f.Coverage(), 0) + " of tool calls record whether they failed. Only Claude Code marks the outcome of every call, and only for sessions ingested by a build that captures it -- run `backfill` after upgrading. Codex reports it for file edits alone, so its calls are excluded from these rates rather than counted as successes."
+	return "Prov.: " + formatPercent(f.Coverage(), 0) + " of tool calls record whether they failed, and only for sessions ingested by a build that captures it -- run `backfill` after upgrading. A source that marks only some outcomes is excluded from these rates rather than counted as successes; `assaio-agent signals coverage` says which does what."
 }
 
 func frictionTakeaway(sufficient, smooth bool, f friction) string {

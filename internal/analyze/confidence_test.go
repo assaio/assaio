@@ -76,6 +76,41 @@ func TestConfidenceLabelFollowsTheWeakestAxis(t *testing.T) {
 	}
 }
 
+// A source that records changed lines and nothing else answers no edit, tool-call or rework
+// signal, so it cannot make an activity-covered window. The three-axis Activity bit reads
+// true for it, which is why the envelope asks the per-signal question instead (ADR 0008).
+func TestPartialActivityDoesNotCountAsActivityCoverage(t *testing.T) {
+	tests := []struct {
+		name string
+		rows []store.UsageRow
+		want float64
+	}{
+		{
+			name: "a lines-only source covers no activity figure",
+			rows: []store.UsageRow{
+				{Tool: "copilot-cli", Model: "claude-sonnet-4-5", Granularity: "session", In: 1000, LinesAdded: 50},
+			},
+			want: 0,
+		},
+		{
+			name: "it lowers the share rather than passing for full capture",
+			rows: []store.UsageRow{
+				{Tool: "claude-code", Model: "claude-sonnet-4-5", Granularity: "turn", In: 700},
+				{Tool: "copilot-cli", Model: "claude-sonnet-4-5", Granularity: "session", In: 300},
+			},
+			want: 0.7,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := window(t, tt.rows)
+			if got := Evaluate(stub{samples: 10}, &in).Confidence.Activity; got != tt.want {
+				t.Fatalf("Activity = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestConfidenceIsInsufficientWhenNothingWasCounted separates "the data says no" from
 // "there was nothing to say it about" -- the distinction a caveat cannot carry.
 func TestConfidenceIsInsufficientWhenNothingWasCounted(t *testing.T) {

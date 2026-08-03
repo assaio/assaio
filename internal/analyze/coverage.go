@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
@@ -18,10 +19,10 @@ const (
 
 func init() { Register(coverageValidator{}) }
 
-// coverageValidator reports how much of the window rests on high-confidence data: the
-// share of tokens from tools with full activity extraction (Claude Code, Codex) versus
-// cost-only sources, and the share of tokens on priced models. It is the provenance meter
-// the other validators' honesty leans on.
+// coverageValidator reports how much of the window rests on high-confidence data: the share
+// of tokens from sources answering every activity signal, the share contributing no lines at
+// all, and the share on priced models. It is the provenance meter the other validators'
+// honesty leans on.
 type coverageValidator struct{}
 
 func (coverageValidator) Name() string     { return coverageName }
@@ -38,8 +39,9 @@ func (coverageValidator) Analyze(in Input) Result {
 	}
 
 	r.restsOn(activeDays(&in), "active days")
-	_, byTool := tokensByTool(in.Usage)
+	byTool := tokensByTool(in.Usage)
 	activityShare, pricedShare, _ := coverageShares(&in)
+	lineShare := fracOf(capableTokens(byTool, parser.HasLineOutput), in.Totals.Tokens)
 	solid := activityShare >= coverageStrongFloor && pricedShare >= coverageStrongFloor
 
 	r.Read = readFor(solid, "Solid")
@@ -47,7 +49,7 @@ func (coverageValidator) Analyze(in Input) Result {
 	r.Figures = []Figure{
 		{Label: "activity coverage", Value: honestPercent(activityShare), Note: "lines/edits captured"},
 		{Label: "priced coverage", Value: honestPercent(pricedShare), Note: "cost known"},
-		{Label: "cost-only tokens", Value: honestPercent(1 - activityShare), Note: "no line signals"},
+		{Label: "cost-only tokens", Value: honestPercent(1 - lineShare), Note: "no line signals"},
 	}
 	if turnShare, mixed := turnGranularityShare(in.Usage); mixed {
 		r.Figures = append(r.Figures, Figure{
@@ -57,10 +59,38 @@ func (coverageValidator) Analyze(in Input) Result {
 			"Session-granularity records cover a whole session, so per-turn figures describe only the turn-level share above.")
 	}
 	r.Bars = toolCoverageBars(byTool, in.Totals.Tokens)
-	r.Takeaway = coverageTakeaway(activityShare, pricedShare)
-	r.Caveats = append(r.Caveats,
-		"Cost-only tools (Gemini CLI, Cline, plugins) contribute tokens and cost but no line or edit signals -- see ROADMAP.")
+	r.Takeaway = coverageTakeaway(activityShare, pricedShare, lineShare)
+	r.Caveats = append(r.Caveats, sourceGapCaveats(byTool)...)
 	return r
+}
+
+// sourceGapCaveats names the window's own sources rather than a list written into prose that
+// goes stale the next time a parser lands: which of them contribute cost but no lines, and
+// which contribute lines but answer no edit, tool-call or rework signal.
+func sourceGapCaveats(byTool map[string]int64) []string {
+	var out []string
+	if costOnly := toolsWhere(byTool, func(t string) bool { return !parser.HasLineOutput(t) }); len(costOnly) > 0 {
+		out = append(out, "Cost-only sources ("+strings.Join(costOnly, ", ")+
+			") contribute tokens and cost but no line or edit signals.")
+	}
+	partial := toolsWhere(byTool, func(t string) bool { return parser.HasLineOutput(t) && !parser.HasFullActivity(t) })
+	if len(partial) > 0 {
+		out = append(out, "Partial activity ("+strings.Join(partial, ", ")+
+			"): changed lines but no edit, tool-call or rework counts, so those figures cover less of this window than the line figures.")
+	}
+	return out
+}
+
+// toolsWhere names the window's tools matching want, alphabetically.
+func toolsWhere(byTool map[string]int64, want func(string) bool) []string {
+	var out []string
+	for tool, n := range byTool {
+		if n > 0 && want(tool) {
+			out = append(out, tool)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // turnGranularityShare returns the share of the window's tokens that came from per-turn
@@ -88,12 +118,17 @@ func turnGranularityShare(rows []store.UsageRow) (share float64, mixed bool) {
 	return fracOf(turn, known), true
 }
 
-func coverageTakeaway(activityShare, pricedShare float64) string {
+// coverageTakeaway names the reason activity coverage is thin, which is not one reason: a
+// window can be short of line signals entirely, or carry lines from a source that records
+// nothing else. Saying "cost-only tools" for the second contradicts the caveat below it.
+func coverageTakeaway(activityShare, pricedShare, lineShare float64) string {
 	switch {
 	case activityShare >= coverageStrongFloor && pricedShare >= coverageStrongFloor:
 		return "Most usage carries full activity and price data -- the other figures rest on solid coverage."
+	case activityShare < coverageStrongFloor && lineShare < coverageStrongFloor:
+		return "A large share of tokens comes from cost-only sources, so line and edit figures cover only part of your usage."
 	case activityShare < coverageStrongFloor:
-		return "A large share of tokens comes from cost-only tools, so line and edit figures cover only part of your usage."
+		return "Lines are covered, but much of this window comes from a source recording no edit or tool-call counts, so those figures cover less than the line figures do."
 	default:
 		return "Some tokens run on unpriced models, so cost is a floor here, not the full total."
 	}
@@ -107,23 +142,27 @@ func rowTokens(r *store.UsageRow) int64 {
 
 // TokensByTool totals the window's tokens per tool. Exported so the signal catalog's coverage
 // command reads the same arithmetic this validator does rather than keeping its own.
-func TokensByTool(rows []store.UsageRow) map[string]int64 {
-	_, byTool := tokensByTool(rows)
+func TokensByTool(rows []store.UsageRow) map[string]int64 { return tokensByTool(rows) }
+
+// tokensByTool sums tokens per tool.
+func tokensByTool(rows []store.UsageRow) map[string]int64 {
+	byTool := make(map[string]int64)
+	for i := range rows {
+		byTool[rows[i].Tool] += rowTokens(&rows[i])
+	}
 	return byTool
 }
 
-// tokensByTool sums tokens per tool and, separately, the subtotal for activity-capable
-// tools.
-func tokensByTool(rows []store.UsageRow) (activity int64, byTool map[string]int64) {
-	byTool = make(map[string]int64)
-	for i := range rows {
-		t := rowTokens(&rows[i])
-		byTool[rows[i].Tool] += t
-		if parser.HasActivity(rows[i].Tool) {
-			activity += t
+// capableTokens totals the tokens from tools that satisfy can, so every coverage share is one
+// question asked of the depth matrix rather than a bit each caller interprets for itself.
+func capableTokens(byTool map[string]int64, can func(string) bool) int64 {
+	var sum int64
+	for tool, n := range byTool {
+		if can(tool) {
+			sum += n
 		}
 	}
-	return activity, byTool
+	return sum
 }
 
 // pricedTokenSum totals the tokens on priced models across ByModel.
@@ -157,7 +196,7 @@ func toolCoverageBars(byTool map[string]int64, total int64) []Bar {
 	bars := make([]Bar, len(tools))
 	for i, t := range tools {
 		label := t
-		if !parser.HasActivity(t) {
+		if !parser.HasLineOutput(t) {
 			label += " (cost only)"
 		}
 		bars[i] = Bar{Label: label, Value: honestPercent(fracOf(byTool[t], total)), Frac: fracOf(byTool[t], maxTok)}

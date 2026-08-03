@@ -181,10 +181,10 @@ func toolMixBars(m toolMix) []Bar {
 
 // exploreCoverageCaveat states what share of the window's tool calls carry a purpose, so a
 // split computed from part of the data never reads as covering all of it. The gap is
-// history: tools that name no calls (Gemini CLI, Cline) record no tool calls at all and so
-// cannot lower it -- what does is usage ingested before the purpose split was captured.
+// history: a source that names no calls records none at all and so cannot lower it -- what
+// does is usage ingested before the purpose split was captured.
 func exploreCoverageCaveat(m toolMix) string {
-	return "Prov.: " + formatPercent(m.Coverage(), 0) + " of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified -- run `backfill` to restate them. Tools that name no tool calls (Gemini CLI, Cline) record none, so they neither raise nor lower this."
+	return "Prov.: " + formatPercent(m.Coverage(), 0) + " of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified -- run `backfill` to restate them. A source that names no tool calls records none, so it neither raises nor lowers this -- `assaio-agent signals coverage` says which do."
 }
 
 func exploreTakeaway(sufficient, balanced bool) string {
