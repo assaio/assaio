@@ -135,6 +135,13 @@ Read it as a trend over weeks: a survival rate that stays high as a repo ages is
 local answer to "is the AI-written code sticking?" — directional, never a per-line
 attribution (assaio counts lines, it does not store code).
 
+Beside the rate, each run prints what the window's commits changed by **category** —
+test / source / docs / config / generated / other — and how many of them git itself labelled a
+revert. Those come from the commit observations the run collects
+([ADR 0009](adr/0009-local-git-evidence-collector.md)), and are the same numbers the evidence
+graph will build on. The categories are a naming heuristic, and no path, branch name or commit
+message ever leaves the repository.
+
 ## The company server
 
 Run one `serve` instance on trusted infrastructure and point every agent's `sync` at it:

@@ -26,7 +26,7 @@ mattering the moment a second release exists.
 | `status` | v0.1 | Terminal overview: inventory, headline `$`/100 lines, hot / going-stale projects, session stats. |
 | `statusline` | v0.4 | One ambient line for a status bar: today's tokens, AI lines, cost basis, and data age. Local day (timestamp range, not a UTC bucket); read-only; never fails loudly. See [automation](docs/automation.md). |
 | `explain` | v0.4 | The long-form page for a metric — what it measures, how to read it, what to do about it, its limits. Needs no store; no argument lists every metric. |
-| `survival` | v0.2 | Directional local outcome check: how much of a git repo's window survives in `HEAD` (`git blame`), beside the AI lines the store recorded. See [automation](docs/automation.md). |
+| `survival` | v0.2 | Directional local outcome check: how much of a git repo's window survives in `HEAD` (`git blame`), beside the AI lines the store recorded. Since v0.8 it reads commit observations, so it also reports what the window changed by file category and how many commits were reverts. See [automation](docs/automation.md). |
 | `signals` | v0.7 | What assaio can report and what your own data supports. `list` names every signal; `describe <id>` says what it counts, where it is honest, and **what a zero means**; `coverage` reads your store and reports per signal whether it is fully, partly or not at all supported, naming the sources that can answer it. |
 | `mark` | v0.6 | Labels a session with a task class, outcome and difficulty — category values only, never free text, never synced. Defaults to the newest session in the current repository; `--last`, an id prefix, `--list`, `--unmark`. |
 | `clear` | v0.1 | Deletes stored data; requires an explicit scope and `--yes`. Reports what stays held by the store afterwards. Session labels survive `--all` and are removed only by `--labels` (v0.6). |
@@ -90,7 +90,7 @@ same questions as one that reports both. Every source therefore publishes its **
 | Claude Code | v0.1 | **deep** | ✔ (incl. sub-agent turns) | ✔ full, incl. rejections | ✔ |
 | OpenAI Codex CLI | v0.1 | standard | ✔ (exact, delta-based) | ✔ except rejections | — |
 | Gemini CLI | v0.1 | standard | ✔ | — (cost only, see ROADMAP) | — |
-| GitHub Copilot CLI | v0.6 | standard | ✔ (exact, per model) | ✔ lines added/removed per session | — |
+| GitHub Copilot CLI | v0.6 | standard | ✔ (exact, per model, incl. reasoning) | ✔ lines added/removed per session, no edit or tool-call counts | — |
 | Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (cost only, see ROADMAP) | — |
 | Exec parser plugins | v0.1 | declared per record | ✔ (validated at the boundary) | — (protocol carries tokens only) | — |
 
@@ -102,6 +102,12 @@ same questions as one that reports both. Every source therefore publishes its **
 
 A plugin is absent from the tiers by design: its depth is whatever its author implemented,
 so it is read from the records it emits rather than promised by a table assaio maintains.
+
+Within a tier the answer is per signal, not per column: reasoning tokens are reported by
+Codex, Gemini CLI and Copilot CLI and by neither Claude Code nor Cline, and Copilot's
+per-session totals carry changed lines but no edit, tool-call, turn or rework count. Run
+`assaio-agent signals coverage` for what your own mix supports; that matrix row is also what
+makes a source syncable and targetable by `clear --tool`.
 
 Shared parser guarantees: skip-and-count on corrupt lines, deterministic dedupe keys
 (re-runs never double-count), `Granularity` honesty (session-level data never

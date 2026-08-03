@@ -146,6 +146,7 @@ internal/signal/         the catalog of what assaio can report, and what data su
 internal/store/          embedded SQLite persistence for usage records
 internal/survival/       directional local outcome check against git blame
 internal/usage/          normalized representation of AI-tool usage events
+internal/vcs/            the local git evidence collector: content-free commit observations
 internal/version/        build-time version metadata
 docs/adr/                Architecture Decision Records
 ```

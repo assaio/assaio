@@ -62,12 +62,23 @@ does not ship.
   — the git evidence collector (`B91`) — rather than being guessed at now. Ships with a
   deprecation window and a conformance fixture, and is a candidate to land with the protocol
   freeze (`B23`) rather than before it. See [ADR 0008](docs/adr/0008-signal-catalog.md).
-- [ ] **B91 · local git evidence collector v1** — M · both — content-free commit
-  observations for configured repositories: hash or keyed pseudonymous digest, timestamps,
-  parents, branch/repo identity, added/removed counts, files changed **by category**
-  (test/source/docs/config/generated) rather than by path, and revert indicators. Path-level
-  storage stays an explicit local-only opt-in, never a server default. Converts today's
-  `survival` git code into observations rather than a one-off report.
+  **Three requirements came out of building the git collector** rather than being guessed at:
+  (1) a validator receives `[]store.UsageRow`, so there is no shape in which it could read a
+  commit observation at all — the context has to serve *heterogeneous* observation streams
+  keyed by type, which is a bigger job than swapping the row types; (2) `signals coverage`
+  weights support by tokens (`analyze.TokensByTool`), so a source that has no tokens cannot
+  appear in it, which is why no `vcs.*` signal is registered yet and what a presence notion
+  would have to replace; (3) capability lives on `parser.Answers`, and a collector is not a
+  parser — the registry has to move out of `internal/parser` or learn about non-parser
+  sources before the first `vcs.*` signal is declared.
+- [ ] **B103 · commit observations that outlive one pass** — M · both — the half of `B91`
+  deliberately not shipped: a configured repository list (rather than one `--repo` at a time),
+  a keyed pseudonymous commit digest for the syncable case, and durable storage. Each waits
+  for the consumer that decides its shape — `B85` needs commits queryable *across* passes to
+  link a session to one, `B100` decides what identity may leave the machine — and each costs a
+  migration, a size bound and a cleanup path, so none is worth guessing at. Path-level storage
+  stays out entirely until something needs it: `B91` never records a path, so there is no
+  opt-in to design yet. See [ADR 0009](docs/adr/0009-local-git-evidence-collector.md).
 - [ ] **B92 · GitHub connector v1** — L · both — read-only, least-privilege metadata only:
   PR lifecycle, commits in a PR, review states and requested-changes rounds, check suites and
   runs, merge time and method, detectable revert relations. GitHub Cloud first, with the

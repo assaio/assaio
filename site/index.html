@@ -236,7 +236,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- HERO ────────────────────────────────────────────────────────────── -->
   <section class="wrap hero">
     <div>
-      <p class="eyebrow">Assay report · v0.7.0</p>
+      <p class="eyebrow">Assay report · v0.8.0</p>
       <h1>Is it <em>delivering?</em></h1>
       <p class="lede">
         Teams pour real money into AI coding tools and can't answer the one question that
@@ -323,7 +323,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
             <li><b>Bug impact</b> — whether it caused bugs, only ever against age-matched human code.</li>
             <li><b>Quality</b> — maintainability, alongside DORA- and DX-style signals.</li>
           </ul>
-          <p style="margin:1.15rem 0 0; color:var(--faint); font-size:.875rem; line-height:1.55">These need correlating usage with git and issue history — the deeper server work ahead. The local <code>survival</code> command (v0.2) is the first honest step.</p>
+          <p style="margin:1.15rem 0 0; color:var(--faint); font-size:.875rem; line-height:1.55">These need correlating usage with git and issue history — the deeper server work ahead. The local <code>survival</code> command (v0.2) is the first honest step, and v0.8 puts a git evidence collector under it: every commit in the window becomes a content-free observation — counts and a file-category split, never a path or a message — which is what an attribution edge will eventually point at.</p>
         </div>
       </div>
     </div>
@@ -332,7 +332,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- ANALYZE / VALIDATORS ───────────────────────────────────────────────── -->
   <section class="sec" id="analyze">
     <div class="wrap">
-      <div class="sec-head"><h2>Eighteen reads, one faceplate</h2><p class="eyebrow">analyze · one file each</p></div>
+      <div class="sec-head"><h2>Nineteen reads, one faceplate</h2><p class="eyebrow">analyze · one file each</p></div>
       <p class="intro">
         <code>analyze</code> reads what actually moves the needle — <strong>model fit, context
         health, adoption, token efficiency</strong> — and prints a directional verdict for each,
@@ -357,6 +357,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="cell"><span class="cn">Friction</span><span class="cv">Low</span><div class="bar"><i data-p=".88"></i></div></div>
         <div class="cell"><span class="cn">Work rhythm</span><span class="cv neutral">Mostly hours</span><div class="bar"><i data-p=".65"></i></div></div>
         <div class="cell"><span class="cn">Skill economics</span><span class="cv">Proportionate</span><div class="bar"><i data-p=".8"></i></div></div>
+        <div class="cell"><span class="cn">Task intent</span><span class="cv neutral">Building</span><div class="bar"><i data-p=".45"></i></div></div>
       </div>
       <p class="more">Since v0.5 every verdict carries a <b>confidence envelope</b> — activity, pricing and turn-level coverage, the sample it rests on, how fresh the data is, and which build read it — so a thin read cannot be quoted as a solid one. Since v0.6 every one of them can also be read <b>per kind of work</b>: label a session with <code>mark</code> and <code>$</code>/100 lines on bugfixes stops being averaged in with research and greenfield features. Write your own <b>metric plugin</b> in any language and it renders right beside the built-ins, carrying the same envelope.</p>
     </div>
@@ -394,7 +395,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="cmd"><b>analyze</b><span>Run the metric validators (and any metric plugins); print each one's directional read. <code>--task|--outcome|--difficulty</code> recompute every one over just the sessions you labeled that way.</span></div>
         <div class="cmd"><b>mark</b><span>Label a session with what the work actually was — task class, outcome, difficulty. Category values only, never free text, never synced; the one fact the logs cannot contain.</span></div>
         <div class="cmd"><b>signals</b><span>What assaio can report, and what <em>your</em> data supports. <code>describe</code> says what one signal counts and what a zero means; <code>coverage</code> reads your store and reports each signal as fully, partly or not at all supported — because "no rework happened" and "this source never recorded rework" are different facts.</span></div>
-        <div class="cmd"><b>survival</b><span>Directional local outcome: how much of a repo's window still lives in <code>HEAD</code>, beside its AI lines.</span></div>
+        <div class="cmd"><b>survival</b><span>Directional local outcome: how much of a repo's window still lives in <code>HEAD</code>, beside its AI lines — and, since v0.8, what those commits changed by <em>category</em> (test / source / docs / config / generated) plus how many were reverts. Read from content-free commit observations: no path, branch name, message or diff leaves the repository.</span></div>
         <div class="cmd"><b>dashboard</b><span>Write the self-contained offline HTML Assay report; pseudonymized by default.</span></div>
         <div class="cmd"><b>check</b><span>Exit non-zero over a token (or API-equivalent $) budget — a CI / pre-push gate. Also runs your <b>rule plugins</b>: an <code>error</code> alert, or a rule that could not be evaluated, fails the gate.</span></div>
         <div class="cmd"><b>explain</b><span>The long-form page for a metric — what it measures, how to read it, what to do, and its limits. Needs no store.</span></div>
@@ -418,9 +419,9 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="tool"><b>GitHub Copilot CLI</b><code>~/.copilot/session-state/&lt;id&gt;/events.jsonl</code><span class="cap full">tokens + lines · per session</span></div>
         <div class="tool"><b>Cline</b><code>globalStorage/saoudrizwan.claude-dev · ~/.cline</code><span class="cap">tokens · cost only</span></div>
       </div>
-      <p class="intro" style="margin-top:1.5rem">"Supports Gemini CLI" is misleading when it means tokens but no edits. Since v0.5 each source publishes its real <strong>depth</strong> — <em>deep</em> (tokens + activity), <em>standard</em> (reliable usage, documented activity gaps), <em>import-only</em> — and <code>doctor</code> prints the matrix for the tools found on your machine. Since v0.7 a source declares that <strong>per signal</strong> rather than per tier, because "has activity" is one bit over a tool that records changed lines and no edit count, no tool calls and no turns — so <code>signals coverage</code> tells you which of the eighteen figures your own data can actually carry.</p>
+      <p class="intro" style="margin-top:1.5rem">"Supports Gemini CLI" is misleading when it means tokens but no edits. Since v0.5 each source publishes its real <strong>depth</strong> — <em>deep</em> (tokens + activity), <em>standard</em> (reliable usage, documented activity gaps), <em>import-only</em> — and <code>doctor</code> prints the matrix for the tools found on your machine. Since v0.7 a source declares that <strong>per signal</strong> rather than per tier, because "has activity" is one bit over a tool that records changed lines and no edit count, no tool calls and no turns — so <code>signals coverage</code> tells you which of the eighteen figures your own data can actually carry. The first thing that bought, in v0.8: the catalog had been claiming every source reports reasoning tokens, where only three of five do.</p>
       <ul class="caveats">
-        <li>AI-line activity (lines, edits, rework) is captured for Claude Code and Codex today; Gemini CLI and Cline contribute cost but not line counts yet.</li>
+        <li>AI-line activity (lines, edits, rework) is captured in full for Claude Code and Codex; Copilot CLI carries changed lines only, and Gemini CLI and Cline contribute cost but no line counts yet. <code>signals coverage</code> reports which of the eighteen figures your own mix supports.</li>
         <li>Copilot CLI totals a session only when it ends, so its records cover a whole session rather than a turn: they carry lines added and removed, are marked <code>‡</code> in reports, and lower the turn-level coverage every verdict declares.</li>
         <li>Format drift is detected rather than silently absorbed: four per-source canaries compare each import against a baseline of recent runs and warn when a vendor changes a log format under you.</li>
         <li>Cline is discovered across VS Code, Insiders, VSCodium, and Cursor. Costs come from a vendored snapshot of the LiteLLM price table.</li>

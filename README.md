@@ -154,7 +154,7 @@ $ assaio-agent effectiveness --since 30d --by project
 | TOTAL    |      358 |     3 |   1 | 3.4136 | 0.9535      |
 +----------+----------+-------+-----+--------+-------------+
 Efficiency is directional: task type (greenfield vs. debugging) drives lines-per-cost; this is a diagnostic per project, never a performance metric.
-AI-line activity is captured for Claude Code and Codex today; Gemini CLI and Cline contribute cost but not line counts (see ROADMAP).
+Not every source records changed lines; the ones that do not contribute cost but no line counts -- run `assaio-agent signals coverage` for what your own data supports.
 Cost is an estimate at public pay-as-you-go API prices -- not your actual spend; subscription plans bill a flat rate and differ.
 ```
 
@@ -228,9 +228,9 @@ usage; it does not yet reach into your repos):
 So today's answer is *"how much is AI producing, how efficiently, and with how much
 friction"* — a per-project diagnostic. *"Did it actually work, and was it worth it in
 quality terms"* is the roadmap. Two more honesty limits already baked in: AI-line signals
-are captured for **Claude Code and Codex** today (Gemini CLI and Cline contribute cost
-but not line counts yet), and any usage on a model missing from the price table is shown
-blank, never faked.
+come only from the sources that record changed lines, and what each one can answer is
+published per signal rather than per tool (`assaio-agent signals coverage` reads your own
+mix), and any usage on a model missing from the price table is shown blank, never faked.
 
 ## Commands
 

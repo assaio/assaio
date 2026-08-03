@@ -1384,8 +1384,20 @@ report sixteen of eighteen signals as fully supported when the truth was ten.
 The rule is one question per signal: **would a figure computed from my records be right, or
 merely non-empty?** If the log does not carry it, leave it out — an absent signal is reported
 as "this source cannot answer it", which is a useful fact, while a claimed one becomes a
-number someone trusts. A test asserts the ids you list are real and that they do not
-contradict the tier axes ([ADR 0008](adr/0008-signal-catalog.md)).
+number someone trusts. That applies inside the token group too: `ai.tokens.reasoning` is
+declared per source rather than inherited, because Claude Code and Cline never surface a
+thinking count and claiming it for them reported full support for a figure their records can
+only leave at zero. A test asserts the ids you list are real and that they do not contradict
+the tier axes ([ADR 0008](adr/0008-signal-catalog.md)).
+
+The row does more than describe your source. `parser.Tools()` and `parser.Answers()` are how
+everything downstream asks what exists and what it can do — sync validation, `clear --tool`,
+the confidence envelope on every verdict, and every caveat that used to spell out tool names.
+Wiring your parser into `internal/ingest` and `doctor`'s scan is still a separate step, and
+two tests bind the three together: the set ingest reads, the set doctor scans, and the set the
+matrix publishes must be identical. A parser that ships without its row is not merely
+undocumented — its records get rejected by the team server and its data cannot be deleted per
+source, which is exactly what happened to Copilot CLI between v0.6.0 and v0.8.0.
 
 #### Corrupt-line policy: skip and count
 
@@ -1459,8 +1471,9 @@ where its source genuinely exposes edit/diff data, and **MUST** leave them at `0
 it does not — an honest zero, never a guess. When you do count lines, count only the
 `+`/`-` diff markers; the content of the line is never stored.
 
-**Today the Claude Code and Codex parsers both populate `LinesAdded`, `LinesRemoved`,
-`Edits`, `ToolCalls`, `Compactions`, and `ReworkLines`** (Claude Code from structured edit
+**Today the Claude Code and Codex parsers are the two that populate the full set —
+`LinesAdded`, `LinesRemoved`, `Edits`, `ToolCalls`, `Compactions`, and `ReworkLines`**
+(Copilot CLI carries the two line counts per session and none of the rest) (Claude Code from structured edit
 results, sub-agent tool stats, and compaction-boundary lines; Codex from
 `patch_apply_end` diffs, function/custom tool-call events, and `compacted` events — both
 share the [`internal/parser.Rework`](../internal/parser/rework.go) helper for rework
