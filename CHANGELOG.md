@@ -21,6 +21,59 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-04
+
+### Added
+- **Every verdict now says how much of your window it actually describes.** The confidence
+  envelope gained a fourth axis beside coverage, pricing and granularity: `signalCoverage`,
+  the share of the window a metric's own subject reaches. The three existing axes describe the
+  *window*; this one describes the *question*, and only the metric can answer it. `analyze`
+  names it when it is the weakest one — `Confidence: low · 43 active days · signal coverage
+  <1%` — and a metric declaring it covers none of the window reads `insufficient`, which is a
+  different fact from a thin answer. Exec metric plugins declare it with the same key, and one
+  that omits it keeps claiming the whole window, exactly as before
+  ([docs/extending.md](docs/extending.md#write-a-metric-plugin-any-language)).
+- **`survival` reports what merges hold.** `git log --numstat` prints no diff for a merge, so
+  a conflict resolution is a hole in git's own reporting rather than a change of size zero.
+  The report now names it: `merges: 1 commit(s) holding 50 line(s) in HEAD, counted in neither
+  figure below`.
+- **The attribution conformance corpus** (`B93`, [ADR 0010](docs/adr/0010-attribution-conformance-corpus.md)).
+  Ten scenarios — 1:1, N:1, 1:N, wrong branch, overlapping users, delayed commit, sub-agent,
+  genuinely ambiguous, manual correction, replay after an algorithm change — each building a
+  real git repository read back through the real collector, each stating what any attribution
+  engine (`B85`) must conclude and where it must refuse to. Ambiguous fixtures are verified to
+  be *structurally* ambiguous rather than merely declared so, and two stand-in engines run
+  against the corpus in its own tests: the nearest-commit heuristic, which must fail, and an
+  honest one, which must pass. Nothing user-facing yet; it is the specification the engine
+  will be built against.
+
+### Fixed
+- **`survival` counted merge lines as survivors that were never counted as added.** `git
+  blame` names a merge for every line of a hand-resolved conflict while `numstat` reports none
+  of them, so the rate divided a number by a total it was never part of — on a fixture with a
+  50-line resolution that printed `50 surviving of 3 added (100%)`. Both sides now count the
+  same commits, the merge is reported separately, and the clamp that hid the contradiction
+  behind a flat 100% is gone.
+- **A figure computed from a sliver of the window carried a confident envelope.** On real data
+  `reasoning-share` read a 20% share off under 1% of the output and reported `high`, while
+  `signals coverage` called the same signal partially supported — two surfaces disagreeing
+  about one number. `reasoning-share`, `friction` and `explore-produce` now declare their own
+  reach, and a window where no source can answer at all reads `insufficient` instead of `high`.
+- **A real coverage share no longer rounds to an absent-looking `0%`** in the confidence line;
+  it reads `<1%`, the same honest rounding every other percentage in the reports already used.
+- **The README's headline and the exec-plugin schema table omitted GitHub Copilot CLI**, which
+  has been a supported source since v0.6.0 — the README said "five sources" three paragraphs
+  further down.
+
+### Compatibility
+- `analyze --format json` gains an optional `confidence.signalCoverage` field. It is absent
+  when a metric does not declare one, so a consumer reading the envelope keeps working.
+- Exec metric plugins (ADR 0004) may set the same key. Omitting it means what it meant before,
+  so every released plugin is unaffected.
+- Survival rates change for repositories containing merge commits: the figure was previously
+  inflated by blamed merge lines and is now computed over non-merge commits only. No stored
+  data changes — `survival` reads git directly and persists nothing.
+
 ## [0.8.0] - 2026-08-03
 
 ### Added
@@ -741,7 +794,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/assaio/assaio/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/assaio/assaio/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/assaio/assaio/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/assaio/assaio/compare/v0.5.0...v0.6.0
