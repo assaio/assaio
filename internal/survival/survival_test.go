@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,6 +22,16 @@ func runGit(t *testing.T, dir string, args ...string) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
+}
+
+// tryGit runs git and reports whether it succeeded, for the one command a test wants to
+// fail: a merge that conflicts.
+func tryGit(t *testing.T, dir string, args ...string) bool {
+	t.Helper()
+	//nolint:gosec // test-only git driver over a t.TempDir() path, not user input
+	cmd := exec.CommandContext(context.Background(), "git", append([]string{"-C", dir}, args...)...)
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
+	return cmd.Run() == nil
 }
 
 func writeFile(t *testing.T, dir, name, content string) {
@@ -122,6 +134,58 @@ func TestAnalyzeReportsWhatTheWindowChanged(t *testing.T) {
 	}
 	if res.Reverts != 1 {
 		t.Errorf("Reverts = %d, want the one git labelled", res.Reverts)
+	}
+}
+
+// conflictMergeRepo builds the one history where git's own reporting is asymmetric: a merge
+// resolved by hand. `git log --numstat` prints no diff for a merge, so its 50 resolved lines
+// are never counted as added -- but `git blame` names the merge for every one of them.
+func conflictMergeRepo(t *testing.T) string {
+	t.Helper()
+	dir := newRepo(t)
+	writeFile(t, dir, "f.txt", "x\n")
+	runGit(t, dir, "add", "f.txt")
+	runGit(t, dir, "commit", "-m", "base")
+
+	runGit(t, dir, "checkout", "-b", "side")
+	writeFile(t, dir, "f.txt", "S\n")
+	runGit(t, dir, "commit", "-am", "side")
+	runGit(t, dir, "checkout", "-")
+	writeFile(t, dir, "f.txt", "M\n")
+	runGit(t, dir, "commit", "-am", "main")
+
+	if tryGit(t, dir, "merge", "side") {
+		t.Fatal("merge was expected to conflict, so the resolution below is what git cannot report")
+	}
+	var resolved strings.Builder
+	for i := range 50 {
+		resolved.WriteString("resolved-" + strconv.Itoa(i) + "\n")
+	}
+	writeFile(t, dir, "f.txt", resolved.String())
+	runGit(t, dir, "add", "f.txt")
+	runGit(t, dir, "commit", "-m", "merge side")
+	return dir
+}
+
+// A merge's conflict resolution is a hole in git's own reporting, and the rate must not be
+// computed across it: counting blamed merge lines as survivors while numstat never counted
+// them as added produced 50 surviving out of 3 added, rendered as a flat "100%". Both sides
+// now count the same commits, and what the merge holds is reported separately instead.
+func TestAnalyzeExcludesMergesFromBothSidesOfTheRate(t *testing.T) {
+	res := analyzed(t, conflictMergeRepo(t), 0)
+
+	if res.Merges != 1 {
+		t.Fatalf("Merges = %d, want the one merge commit in the window", res.Merges)
+	}
+	if res.MergeLines != 50 {
+		t.Errorf("MergeLines = %d, want the 50 resolved lines blame attributes to the merge", res.MergeLines)
+	}
+	if res.Surviving > res.GitAdded {
+		t.Errorf("Surviving = %d exceeds GitAdded = %d: a line git never reported as added cannot survive",
+			res.Surviving, res.GitAdded)
+	}
+	if res.SurvivalRate > 1 {
+		t.Errorf("SurvivalRate = %v, want a rate no clamp had to rescue", res.SurvivalRate)
 	}
 }
 

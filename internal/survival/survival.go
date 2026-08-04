@@ -32,6 +32,13 @@ type Result struct {
 	Changed event.FileCategories
 	// Reverts is how many of the window's commits git itself labelled a revert.
 	Reverts int
+	// Merges is how many of the window's commits have more than one parent, and MergeLines
+	// how many lines in HEAD blame attributes to them. Both sit outside the rate: `git log
+	// --numstat` prints no diff for a merge, so a conflict resolution is never counted as
+	// added, while blame names the merge for every line of it. Counting one side and not the
+	// other reported more surviving lines than were ever added.
+	Merges     int
+	MergeLines int64
 }
 
 // Analyze reads the survival picture from the window's commit observations and the paths
@@ -39,60 +46,88 @@ type Result struct {
 // local-only by construction (see vcs.TouchedFiles) and never reaches the Result.
 func Analyze(ctx context.Context, root string, commits []event.Event, files []string, aiLines int64) (Result, error) {
 	res := Result{Project: vcs.Project(root), AILines: aiLines}
-	inWindow := make(map[string]struct{}, len(commits))
+	inWindow := res.tally(commits)
+
+	blame, err := survivingLines(ctx, root, files, inWindow)
+	if err != nil {
+		return Result{}, err
+	}
+	res.Surviving, res.MergeLines, res.Files = blame.surviving, blame.merged, blame.files
+	res.SurvivalRate = rate(res.Surviving, res.GitAdded)
+	return res, nil
+}
+
+// tally reads the window's observations into res and returns each commit's hash mapped to
+// whether git called it a merge. A merge contributes neither added lines nor a category
+// split, because `git log --numstat` prints no diff for one -- so it is counted as a commit,
+// kept out of the rate, and answered for separately by blame.
+func (r *Result) tally(commits []event.Event) map[string]bool {
+	inWindow := make(map[string]bool, len(commits))
 	for i := range commits {
 		c, ok := commits[i].Payload.(event.Commit)
 		if !ok {
 			continue // a mixed observation stream is what the contract is for; read only ours
 		}
-		res.Commits++
-		inWindow[commits[i].ID] = struct{}{}
-		res.GitAdded += c.LinesAdded
-		res.Changed = add(res.Changed, c.Files)
+		r.Commits++
 		if c.Revert {
-			res.Reverts++
+			r.Reverts++
 		}
+		if c.Parents > 1 {
+			r.Merges++
+			inWindow[commits[i].ID] = true
+			continue
+		}
+		inWindow[commits[i].ID] = false
+		r.GitAdded += c.LinesAdded
+		r.Changed = add(r.Changed, c.Files)
 	}
+	return inWindow
+}
 
-	surviving, blamed, err := survivingLines(ctx, root, files, inWindow)
-	if err != nil {
-		return Result{}, err
-	}
-	res.Surviving, res.Files = surviving, blamed
-	res.SurvivalRate = rate(surviving, res.GitAdded)
-	return res, nil
+// blameTally is what one pass over the touched files found: lines still in HEAD from the
+// window's ordinary commits, lines from its merges, and how many files could be blamed.
+type blameTally struct {
+	surviving, merged int64
+	files             int
 }
 
 // survivingLines blames each still-present touched file at HEAD and counts the lines whose
-// commit is in the window -- window-authored lines still in the tree. A file git cannot
-// blame (deleted or renamed away) is skipped; its lines legitimately did not survive.
-func survivingLines(ctx context.Context, root string, files []string, inWindow map[string]struct{}) (surviving int64, blamed int, err error) {
+// commit is in the window -- window-authored lines still in the tree. A merge's lines are
+// counted apart from the rest: numstat never reported them as added, so counting them as
+// survivors would divide by a total they were never in. A file git cannot blame (deleted or
+// renamed away) is skipped; its lines legitimately did not survive.
+func survivingLines(ctx context.Context, root string, files []string, inWindow map[string]bool) (blameTally, error) {
+	var t blameTally
 	for _, f := range files {
 		hashes, blameErr := vcs.Blame(ctx, root, f)
 		if blameErr != nil {
 			if ctx.Err() != nil {
-				return surviving, blamed, ctx.Err()
+				return t, ctx.Err()
 			}
 			continue // a deleted, renamed-away or binary path cannot be blamed: it did not survive
 		}
-		blamed++
+		t.files++
 		for _, h := range hashes {
-			if _, ok := inWindow[h]; ok {
-				surviving++
+			merge, ok := inWindow[h]
+			switch {
+			case !ok:
+			case merge:
+				t.merged++
+			default:
+				t.surviving++
 			}
 		}
 	}
-	return surviving, blamed, nil
+	return t, nil
 }
 
 // rate is Surviving/GitAdded, or -1 when nothing was added -- an undefined rate rather than a
-// zero one, since a window that added nothing neither survived nor failed to.
+// zero one, since a window that added nothing neither survived nor failed to. Both sides
+// count the same commits, so the ratio cannot exceed 1; it is deliberately left uncorrected
+// rather than clamped, because a clamp would print a wrong figure as a confident 100%.
 func rate(surviving, added int64) float64 {
 	if added <= 0 {
 		return -1
-	}
-	if surviving > added {
-		return 1
 	}
 	return float64(surviving) / float64(added)
 }

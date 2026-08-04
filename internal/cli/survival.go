@@ -88,6 +88,10 @@ func renderSurvival(cmd *cobra.Command, res *survival.Result, since string, skip
 	if res.Reverts > 0 {
 		cmd.Printf("  reverts:             %d commit(s) git itself labelled a revert\n", res.Reverts)
 	}
+	if res.Merges > 0 {
+		cmd.Printf("  merges:              %d commit(s) holding %d line(s) in HEAD, counted in neither figure below\n",
+			res.Merges, res.MergeLines)
+	}
 	cmd.Println()
 	cmd.Printf("  AI lines (assaio):   %d\n", res.AILines)
 	cmd.Printf("  Lines added (git):   %d\n", res.GitAdded)
@@ -96,6 +100,8 @@ func renderSurvival(cmd *cobra.Command, res *survival.Result, since string, skip
 	cmd.Println("  so this is repo-wide survival of the window's commits shown beside your AI usage -- a")
 	cmd.Println("  correlation to read, not a per-line AI-survival number. File categories come from a")
 	cmd.Println("  naming heuristic, and no path, branch name or commit message leaves the repository.")
+	cmd.Println("  git reports no line counts for a merge, so a conflict resolution sits outside both")
+	cmd.Println("  the added and the surviving figure rather than inflating either.")
 	cmd.Println("  Age-matched bug/quality impact and team-wide DORA signals are the server stage.")
 	return nil
 }
