@@ -25,8 +25,21 @@ any good. Closing that gap — without ever fabricating a number to do it — is
 of everything below.
 
 What that makes `assaio`, stated once so the rest of this document has a subject: **the
-open-source, privacy-first evidence layer for AI-assisted software engineering — connecting
-activity and cost across coding agents to commits, review, CI and durable outcomes.**
+open-source, privacy-first evidence layer for AI-assisted software engineering — reading
+what the agents on your machine already recorded, and connecting it to commits, review, CI
+and durable outcomes.**
+
+Those are two halves and they are not equal. Correlation is what makes an outcome claim
+possible; **the analysis of the logs themselves is what makes any of it worth reading**, and
+it is the half that has to be strongest. A perfect link from a session to a merged pull
+request says nothing useful if the session was parsed shallowly, if a format change silently
+halved the numbers, or if the tool read three fields out of a log carrying twenty. The local
+half also has properties the correlated half never will: it works with no server, no
+credentials, no network and no repository access, it is where the majority of users will
+stay, and it is the part a competitor cannot copy by wiring up one more API. So the order of
+priority is: read the logs exhaustively and prove the reading is correct, then connect what
+was read to what shipped. Both get built; when they compete for attention, depth of analysis
+wins.
 
 That framing is a deliberate correction. `$ per 100 AI lines` is a useful ratio and it is
 staying, but it was carrying too much weight as the headline answer to "is AI delivering".
@@ -65,15 +78,43 @@ two of them, and pre-assigning `v0.7` to a promise would make this document sche
 explicitly says it does not schedule. `v1.0` is the exception, because there it is the
 promise: the semver stability guarantee itself.
 
+The first two unshipped rows are the exception to "one at a time": **evidence graph** and
+**everything the logs already say** run in parallel, because they improve different things
+and one of them is the floor under the other. When the two compete for a release's attention,
+depth of analysis wins — see [why](#why-local-analysis-is-the-stronger-half-not-the-smaller-one)
+below.
+
 | Milestone | Promise | Done when |
 |---|---|---|
 | **Trust the dataset** ✓ | Before `assaio` advises anything, it shows what it read, what it missed, and how sure it is | shipped in v0.5: every validator carries coverage + confidence as data, format drift is detected instead of silently under-reporting, `doctor --strict` fails a cron job, every source publishes its real depth, and a first run needs no config (`B58`, `B59`, `B69`, `B81`, `B82`, `B83`) |
 | **Intent** ✓ | Metrics can be read per kind of work | shipped in v0.6: a session can be labeled task class / outcome / difficulty, any metric stratified by it, and unlabeled data stays fully counted (`B80`) |
-| **Evidence graph** | You can see which AI sessions produced commits and pull requests, what happened in review and CI, and how sure `assaio` is about every link | the canonical event contract ([ADR 0007](docs/adr/0007-canonical-event-contract.md)) and the signal catalog ([ADR 0008](docs/adr/0008-signal-catalog.md)) exist, both shipped; local git commit metadata is a content-free observation, shipped, and GitHub PR/review/check metadata is not yet; attribution edges carry method, confidence, alternatives and ambiguity; ambiguous stays ambiguous; `outcomes` shows the funnel with its unattributed share and `evidence explain` says why a link was or was not made (`B92`–`B94`, `B85`, `B18`, `B21`, `B100`–`B103`) |
+| **Evidence graph** | You can see which AI sessions produced commits and pull requests, what happened in review and CI, and how sure `assaio` is about every link | the canonical event contract ([ADR 0007](docs/adr/0007-canonical-event-contract.md)) and the signal catalog ([ADR 0008](docs/adr/0008-signal-catalog.md)) exist, both shipped; local git commit metadata is a content-free observation, shipped, and GitHub PR/review/check metadata is not yet; the conformance corpus that defines what an honest link is, shipped ahead of the engine ([ADR 0010](docs/adr/0010-attribution-conformance-corpus.md)); attribution edges carry method, confidence, alternatives and ambiguity; ambiguous stays ambiguous; `outcomes` shows the funnel with its unattributed share and `evidence explain` says why a link was or was not made (`B92`, `B94`, `B85`, `B18`, `B21`, `B100`–`B104`) |
+| **Everything the logs already say** | Without a server, a repository or a credential, `assaio` reads every signal the local logs carry, proves the reading is right, and turns it into more conclusions than any vendor dashboard draws from the same file | every source's unread fields are inventoried and either extracted or documented as deliberately skipped; the activity gap closes where a log carries the data (`B39`, `B72`); the local-view metrics land as one file each with their caveats (`B28`–`B37`, `B02`, `B78`, `B79`); and a parser proves itself against captured real-world samples rather than only against fixtures, so a format change fails a test before it reaches a report (`B105`, `B20`) |
 | **Harness intelligence** | You learn which agent configuration and workflow changes actually helped, and each finding comes with one reversible experiment | agent config artifacts are inventoried without storing their content; cohorts can be compared before and after a harness version changed; recommendations are deterministic rules carrying evidence, one action, a follow-up metric and a review window, and abstain when outcome coverage is thin — never an LLM narrating a dashboard (`B95`, `B96`, `B84`, `B97`, `B87`, `B17`, `B44`) |
 | **Team, without surveillance** | A team self-hosts it, sees adoption and delivery outcomes, and cannot build a leaderboard from it | authenticated, resumable sync with retention and roles; adoption read as activation → retention → breadth, in bands with a cohort floor (`B22`, `B09`, `B40`, `B41`) |
 | **Cost truth & interoperability** | The `$` figure can be reconciled against what was actually billed, and the data speaks a standard | opt-in vendor billing reconciliation shows the estimate-vs-actual delta with a confidence band; pricing models long-context and cache tiers; canonical fields map to OpenTelemetry GenAI conventions with content dropped by default; a connector SDK makes a community source possible without touching core (`B19`, `B16`, `B98`, `B99`) |
 | **v1.0 · Stable platform** | Plugin authors and a managed cloud can build on it without breakage | plugin protocols, the event and signal contracts, the sync API and the schema frozen under semver, with conformance fixtures (`B23`) |
+
+### Why local analysis is the stronger half, not the smaller one
+
+It would be easy to read the milestone table as "the local part is done, now for the
+interesting work". It is not done. Every source publishes a depth row precisely because each
+one leaves something on the table, and the honest reading of that matrix is that `assaio`
+today extracts a fraction of what these logs contain — a Codex rollout, a Claude transcript
+and a Cline task directory each carry structure no report has ever rendered. Closing that is
+cheap, needs nobody's permission, ships as one self-registering file at a time, and improves
+every existing figure rather than adding a new page beside them.
+
+It is also where the honesty rules bite hardest. Correlation is the part that most obviously
+*could* fabricate, so it gets the ADRs and the conformance corpus — but a shallow parse
+fabricates too, more quietly: a metric computed over a field that turned out to mean
+something else looks exactly like a metric that works. That is why this milestone's "done
+when" includes proving the reading against captured real samples, not only counting new
+signals.
+
+The two halves reinforce each other in one direction more than the other. Better parsing
+makes every attribution method better, because a link is only as good as the activity it
+links. A better attribution engine does not improve the parsing at all.
 
 ### Why outcome attribution moved ahead of recommendations
 
@@ -155,15 +196,35 @@ the real depth of each source it read.
   context-length pricing** (long-context and distinct cache read/write rates a single
   per-model number can't capture — `B16`).
 
-### 3. Richer local views
+### 3. Deeper local analysis — the half that has to be strongest
 
-A large shortlist of metrics can be honestly supported from data already stored — no git, no
-issue tracker, no schema change. These are the fast, frequent wins: throughput per focused
-hour, rework/thrash bursts over time, the full day × hour rhythm heatmap (never an attendance
-view), long- versus short-session efficiency, entrypoint mix, model freshness and lock-in,
-sub-agent delegation economics, and a self-relative "skill curve" progress panel (you vs you
-four weeks ago, never cross-person). Each is one self-registering file and each carries the
-caveat that keeps it honest — see the `B28`–`B37` cluster in the backlog.
+Three layers, in the order they pay off.
+
+**Read what is already in the file.** Every parser turns a rich log into a fixed record, and
+each one currently drops fields it does not yet know what to do with. Nobody has systematically
+asked what those are — `B105` is that audit, source by source, ending in one of two outcomes
+per field: extracted, or documented as deliberately skipped with the reason. Where a log
+carries activity the parser does not extract yet, closing it multiplies every activity metric
+at once rather than adding a figure: Cline-family logs carry the diffs needed for line
+extraction (`B39`), and Gemini's OpenTelemetry path is the honest route to its missing edits
+(`B72`).
+
+**Turn it into conclusions.** A large shortlist of metrics is honestly supportable from data
+already stored — no git, no issue tracker, no schema change: throughput per focused hour,
+rework/thrash bursts over time, the full day × hour rhythm heatmap (never an attendance view),
+long- versus short-session efficiency, entrypoint mix, model freshness and lock-in, sub-agent
+delegation economics and its tool-call split, compaction recovery cost, and a self-relative
+"skill curve" panel (you vs you four weeks ago, never cross-person). Each is one
+self-registering file carrying the caveat that keeps it honest — the `B28`–`B37` cluster,
+plus `B02`, `B20`, `B78` and `B79`.
+
+**Prove the reading is right.** This is the part that separates depth from guesswork. Format
+drift canaries and per-source depth shipped in v0.5, every parser ships a fuzz target and a
+golden corpus, and the signal catalog states what a zero means for each figure. What is still
+thin: goldens are captured samples chosen by hand, so a vendor's format change in a shape
+nobody captured stays invisible until a number moves. Widening that corpus, and asserting a
+parser's output against it rather than against fixtures written from the same reading, is
+what makes "we extract twenty signals" a claim rather than a count.
 
 ### 4. Team & server hardening
 

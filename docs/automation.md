@@ -20,6 +20,10 @@ network step is `sync` (pseudonymized by default). A managed cloud is roadmap; t
 - **`survival`** — the directional, local outcome check: how much of a repo's window
   survives in `HEAD`, beside the AI lines the store recorded. It shells out to `git blame`,
   so it is heavier than the others — run it periodically (e.g. weekly), not per commit.
+  Merge commits are reported apart from the rate: git publishes no line counts for a merge,
+  so a hand-resolved conflict is counted in neither the added nor the surviving figure. On a
+  merge-heavy repository expect that line to be large, and read the rate as covering the
+  ordinary commits only.
 
 ## Option A — scheduled refresh + push (recommended)
 

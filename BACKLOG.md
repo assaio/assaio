@@ -79,6 +79,17 @@ does not ship.
   migration, a size bound and a cleanup path, so none is worth guessing at. Path-level storage
   stays out entirely until something needs it: `B91` never records a path, so there is no
   opt-in to design yet. See [ADR 0009](docs/adr/0009-local-git-evidence-collector.md).
+- [ ] **B104 · the usage→event adapter still has no caller** — S/M · solo — `deadcode
+  ./cmd/...` reports seven unreachable functions, all of them the AI half of the canonical
+  contract: `event.FromRecord`, `Event.with`, and both `Usage` and `Edit` payloads. `B91` gave
+  `internal/event` its first real consumer, but only for `vcs.commit.observed`; nothing in the
+  binary ever adapts a parsed usage record into an observation. Two things hang on this rather
+  than on taste. The error posture is still split — the collector skips and counts, while
+  `FromRecord` fails a whole batch on the first rejected record — and [ADR 0009](docs/adr/0009-local-git-evidence-collector.md)
+  says explicitly that having both is not defensible and the log parsers' skip-and-count is
+  the precedent; that is a decision the adapter's first caller gets to make. And the contract's
+  claim that an analyzer reads AI usage and git commits the same way is currently unproven for
+  half of it. The likely first caller is `B85`, which needs sessions and commits in one stream.
 - [ ] **B92 · GitHub connector v1** — L · both — read-only, least-privilege metadata only:
   PR lifecycle, commits in a PR, review states and requested-changes rounds, check suites and
   runs, merge time and method, detectable revert relations. GitHub Cloud first, with the
@@ -94,11 +105,12 @@ does not ship.
   reference was deliberately cut from session annotations rather than shipped as a bare
   string, because a session→change pointer is a claim that must carry its method and
   confidence, not a category label — see [ADR 0006](docs/adr/0006-session-annotations.md).
-- [ ] **B93 · attribution conformance corpus** — M · both — synthetic git/PR histories that
-  define honesty before any UI does: 1:1, N:1, 1:N, wrong-branch candidate, overlapping users,
-  delayed commit, sub-agent contribution, genuinely ambiguous, manual correction, and replay
-  after an algorithm change. Ambiguous fixtures must stay ambiguous — that assertion is the
-  point of the corpus.
+  **The conformance corpus (`B93`, shipped) is the specification to build against**, and
+  writing it surfaced a requirement that was not obvious: "identity compatibility" is not an
+  available method today, because a commit observation carries no author at all. The
+  `overlapping-users` scenario therefore *requires* ambiguity, and separating those sessions
+  means changing what an observation carries — a privacy decision belonging with `B100`,
+  not a better ranking. See [ADR 0010](docs/adr/0010-attribution-conformance-corpus.md).
 - [ ] **B94 · `outcomes` funnel + `evidence explain`** — M · both — the first visible path:
   sessions → sessions with edits → linked commits → linked PRs → passing CI → merged →
   surviving, sliced by tool, model, project, task annotation and confidence band, always
@@ -218,6 +230,24 @@ Plugin authors and any future managed cloud can build on it without breakage.
   WebAssembly/WASI component instead — it brings capability limits and resource budgets — and
   keep exec plugins as the universal baseline either way. Deliverable is a decision record,
   not code.
+
+## Next — "Everything the logs already say"
+
+Depth before breadth, and before correlation. This milestone is the half of the product that
+needs no server, no credential and no repository — and the half every other conclusion rests
+on, since a link to a merged pull request is only as good as the session it links.
+
+- [ ] **B105 · the unread-field audit, source by source** — M · solo — every parser turns a
+  rich log into a fixed record and silently drops the rest; nobody has asked, per source, what
+  is being dropped. This is that audit, and it ends with each field in exactly one of two
+  states: **extracted**, or **documented as deliberately skipped with the reason** — the same
+  posture `parser.Depth.Answers` already takes for signals, applied one level down to the raw
+  input. Deliverable is a table per source in [docs/extending.md](docs/extending.md) plus the
+  backlog items the audit turns up, not a code change on its own. Two rules keep it honest:
+  a field is only "extracted" once a signal in the catalog can be computed from it and a
+  golden covers it, and a field whose meaning is not documented by the vendor is skipped with
+  that stated, never guessed at. Run it against the captured corpus rather than one machine's
+  logs, since a field that never appears locally is exactly the one most likely to be missed.
 
 ## Pool — validators from data already stored (unscheduled)
 

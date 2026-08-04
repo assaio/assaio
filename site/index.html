@@ -236,7 +236,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- HERO ────────────────────────────────────────────────────────────── -->
   <section class="wrap hero">
     <div>
-      <p class="eyebrow">Assay report · v0.8.0</p>
+      <p class="eyebrow">Assay report · v0.9.0</p>
       <h1>Is it <em>delivering?</em></h1>
       <p class="lede">
         Teams pour real money into AI coding tools and can't answer the one question that
@@ -323,7 +323,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
             <li><b>Bug impact</b> — whether it caused bugs, only ever against age-matched human code.</li>
             <li><b>Quality</b> — maintainability, alongside DORA- and DX-style signals.</li>
           </ul>
-          <p style="margin:1.15rem 0 0; color:var(--faint); font-size:.875rem; line-height:1.55">These need correlating usage with git and issue history — the deeper server work ahead. The local <code>survival</code> command (v0.2) is the first honest step, and v0.8 puts a git evidence collector under it: every commit in the window becomes a content-free observation — counts and a file-category split, never a path or a message — which is what an attribution edge will eventually point at.</p>
+          <p style="margin:1.15rem 0 0; color:var(--faint); font-size:.875rem; line-height:1.55">These need correlating usage with git and issue history — the deeper server work ahead. The local <code>survival</code> command (v0.2) is the first honest step, and v0.8 puts a git evidence collector under it: every commit in the window becomes a content-free observation — counts and a file-category split, never a path or a message — which is what an attribution edge will eventually point at. v0.9 adds the conformance corpus that defines what an honest link is <em>before</em> the engine exists: ten scenarios — including two where the evidence genuinely cannot decide — asserting that ambiguous stays ambiguous and that a human’s correction wins.</p>
         </div>
       </div>
     </div>
@@ -359,7 +359,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="cell"><span class="cn">Skill economics</span><span class="cv">Proportionate</span><div class="bar"><i data-p=".8"></i></div></div>
         <div class="cell"><span class="cn">Task intent</span><span class="cv neutral">Building</span><div class="bar"><i data-p=".45"></i></div></div>
       </div>
-      <p class="more">Since v0.5 every verdict carries a <b>confidence envelope</b> — activity, pricing and turn-level coverage, the sample it rests on, how fresh the data is, and which build read it — so a thin read cannot be quoted as a solid one. Since v0.6 every one of them can also be read <b>per kind of work</b>: label a session with <code>mark</code> and <code>$</code>/100 lines on bugfixes stops being averaged in with research and greenfield features. Write your own <b>metric plugin</b> in any language and it renders right beside the built-ins, carrying the same envelope.</p>
+      <p class="more">Since v0.5 every verdict carries a <b>confidence envelope</b> — activity, pricing and turn-level coverage, the sample it rests on, how fresh the data is, and which build read it — so a thin read cannot be quoted as a solid one. Since v0.9 it carries a fourth axis, <b>signal coverage</b>: how much of your window that particular figure actually reaches. A reasoning share read off under 1% of your output now says so instead of reporting <code>high</code>, and a metric nothing in the window can answer reads <code>insufficient</code> rather than confident. Since v0.6 every one of them can also be read <b>per kind of work</b>: label a session with <code>mark</code> and <code>$</code>/100 lines on bugfixes stops being averaged in with research and greenfield features. Write your own <b>metric plugin</b> in any language and it renders right beside the built-ins, carrying the same envelope.</p>
     </div>
   </section>
 
@@ -395,7 +395,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="cmd"><b>analyze</b><span>Run the metric validators (and any metric plugins); print each one's directional read. <code>--task|--outcome|--difficulty</code> recompute every one over just the sessions you labeled that way.</span></div>
         <div class="cmd"><b>mark</b><span>Label a session with what the work actually was — task class, outcome, difficulty. Category values only, never free text, never synced; the one fact the logs cannot contain.</span></div>
         <div class="cmd"><b>signals</b><span>What assaio can report, and what <em>your</em> data supports. <code>describe</code> says what one signal counts and what a zero means; <code>coverage</code> reads your store and reports each signal as fully, partly or not at all supported — because "no rework happened" and "this source never recorded rework" are different facts.</span></div>
-        <div class="cmd"><b>survival</b><span>Directional local outcome: how much of a repo's window still lives in <code>HEAD</code>, beside its AI lines — and, since v0.8, what those commits changed by <em>category</em> (test / source / docs / config / generated) plus how many were reverts. Read from content-free commit observations: no path, branch name, message or diff leaves the repository.</span></div>
+        <div class="cmd"><b>survival</b><span>Directional local outcome: how much of a repo's window still lives in <code>HEAD</code>, beside its AI lines — and, since v0.8, what those commits changed by <em>category</em> (test / source / docs / config / generated) plus how many were reverts. Read from content-free commit observations: no path, branch name, message or diff leaves the repository. Since v0.9 merge commits are reported apart from the rate — git publishes no line counts for a merge, so a hand-resolved conflict is counted in neither figure rather than inflating survival.</span></div>
         <div class="cmd"><b>dashboard</b><span>Write the self-contained offline HTML Assay report; pseudonymized by default.</span></div>
         <div class="cmd"><b>check</b><span>Exit non-zero over a token (or API-equivalent $) budget — a CI / pre-push gate. Also runs your <b>rule plugins</b>: an <code>error</code> alert, or a rule that could not be evaluated, fails the gate.</span></div>
         <div class="cmd"><b>explain</b><span>The long-form page for a metric — what it measures, how to read it, what to do, and its limits. Needs no store.</span></div>

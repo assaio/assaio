@@ -4,8 +4,8 @@
 
 **Is your AI coding spend delivering? `assaio` shows which projects turn AI budget into
 code — and where the same spend would go further — fully offline today, across Claude
-Code, Codex, Gemini CLI, and Cline. The first piece of a self-hosted AI-engineering
-analytics platform.**
+Code, Codex, Gemini CLI, Copilot CLI, and Cline. The first piece of a self-hosted
+AI-engineering analytics platform.**
 
 [![CI](https://github.com/assaio/assaio/actions/workflows/ci.yml/badge.svg)](https://github.com/assaio/assaio/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/assaio/assaio)](https://goreportcard.com/report/github.com/assaio/assaio)
