@@ -45,6 +45,11 @@ func (reasoningValidator) Analyze(in Input) Result {
 		reasoning += u.Reasoning
 		reportingOutput += u.Out
 	}
+	// Share is of output from tools that actually report reasoning, so a Claude-heavy
+	// window (Claude doesn't surface it) isn't diluted to a meaningless near-zero -- which is
+	// exactly why the verdict has to carry how much of the window that reporting output is.
+	coverage := fracOf(reportingOutput, in.Totals.Output)
+	r.covering(coverage)
 	if reportingOutput == 0 {
 		r.Read = noDataRead
 		r.Figures = []Figure{{Label: "reporting coverage", Value: "0%", Note: "no tool here reports reasoning"}}
@@ -53,10 +58,7 @@ func (reasoningValidator) Analyze(in Input) Result {
 		return r
 	}
 
-	// Share is of output from tools that actually report reasoning, so a Claude-heavy
-	// window (Claude doesn't surface it) isn't diluted to a meaningless near-zero.
 	share := fracOf(reasoning, reportingOutput)
-	coverage := fracOf(reportingOutput, in.Totals.Output)
 
 	r.Read = readFor(share < reasoningWatchShare, "Lean")
 	r.Purity = clamp01(1 - share)

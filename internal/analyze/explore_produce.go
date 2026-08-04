@@ -40,6 +40,7 @@ func (exploreValidator) Analyze(in Input) Result {
 	}
 	m := buildToolMix(in.Usage)
 	r.restsOn(int(m.Classified), "classified tool calls")
+	r.covering(m.Coverage())
 	if m.Classified == 0 {
 		r.Read = noDataRead
 		r.Purity = 0.5

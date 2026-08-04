@@ -20,6 +20,36 @@ func frictionInput(calls, errs, rejected int64) Input {
 	return BuildInput([]store.UsageRow{row}, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
 }
 
+// The error rate divides by the calls whose failure state was recorded, which can be a small
+// part of the window's calls. The figure already says so; the envelope has to as well, or a
+// rate read off a tenth of the calls travels as a fully covered verdict.
+func TestFrictionCarriesItsFailureCaptureCoverage(t *testing.T) {
+	rows := []store.UsageRow{
+		{
+			Day: "2026-07-08", Tool: "claude-code", Model: "claude-sonnet-4-5", Granularity: "turn", Project: "web",
+			In: 1000, Out: 500, ToolCalls: 40, ToolErrors: 2, ToolReads: 20, ToolWrites: 20,
+		},
+		{
+			Day: "2026-07-09", Tool: "codex", Model: "claude-sonnet-4-5", Granularity: "turn", Project: "web",
+			In: 1000, Out: 500, ToolCalls: 360,
+		},
+		{
+			Day: "2026-07-10", Tool: "codex", Model: "claude-sonnet-4-5", Granularity: "turn", Project: "web",
+			In: 1000, Out: 500, ToolCalls: 360,
+		},
+	}
+	in := BuildInput(rows, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
+	got := Evaluate(mustGet(t, frictionName), &in)
+
+	if got.Confidence.signalShare() >= 1 {
+		t.Fatalf("Signal = %v, want the failure-capture share of the window's calls", got.Confidence.signalShare())
+	}
+	if got.Confidence.Label == ConfidenceHigh {
+		t.Errorf("Label = %q for a rate read off %.0f%% of the calls, want it held down",
+			got.Confidence.Label, got.Confidence.signalShare()*100)
+	}
+}
+
 // TestFrictionSmoothOnOrdinaryFailureRate asserts occasional failures -- an agent probing
 // and adapting -- do not read as systematic friction.
 func TestFrictionSmoothOnOrdinaryFailureRate(t *testing.T) {

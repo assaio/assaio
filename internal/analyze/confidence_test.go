@@ -20,6 +20,74 @@ func (s stub) Analyze(Input) Result {
 	return Result{Name: "stub", Confidence: Confidence{Samples: s.samples, Unit: "sessions"}}
 }
 
+// coveringStub declares how much of the window its own subject covers, which is the one
+// axis the framework cannot compute for a validator.
+type coveringStub struct{ share float64 }
+
+func (coveringStub) Name() string     { return "covering-stub" }
+func (coveringStub) Title() string    { return "Covering Stub" }
+func (coveringStub) Describe() string { return "test double" }
+
+func (s coveringStub) Analyze(Input) Result {
+	r := Result{Name: "covering-stub"}
+	r.restsOn(10, "sessions")
+	r.covering(s.share)
+	return r
+}
+
+// A figure can rest on a sliver of a perfectly covered window: reasoning-share read 20% off
+// under 1% of the output and still carried "high", while `signals coverage` called the very
+// same signal partially supported. Only the validator knows how much of the window its own
+// subject describes, so it is the one axis it has to declare.
+func TestSignalCoverageLowersTheLabelOnAnOtherwiseCoveredWindow(t *testing.T) {
+	in := window(t, []store.UsageRow{
+		{Tool: "claude-code", Model: "claude-sonnet-4-5", Granularity: "turn", In: 1000},
+	})
+
+	if got := Evaluate(stub{samples: 10}, &in); got.Confidence.Label != ConfidenceHigh {
+		t.Fatalf("a validator declaring no signal coverage = %q, want %q unchanged",
+			got.Confidence.Label, ConfidenceHigh)
+	}
+
+	got := Evaluate(coveringStub{share: 0.008}, &in)
+	if got.Confidence.Label != ConfidenceLow {
+		t.Errorf("Label = %q, want %q for a figure covering under 1%% of the window",
+			got.Confidence.Label, ConfidenceLow)
+	}
+	if summary := ConfidenceSummary(&got.Confidence); !strings.Contains(summary, "signal coverage") {
+		t.Errorf("summary = %q, want it to name the axis holding the label down", summary)
+	}
+}
+
+// Covering none of the window is not a thin verdict, it is no verdict: nothing in this
+// window could answer the question, which is exactly what insufficient means.
+func TestSignalCoverageOfNoneReadsInsufficient(t *testing.T) {
+	in := window(t, []store.UsageRow{
+		{Tool: "claude-code", Model: "claude-sonnet-4-5", Granularity: "turn", In: 1000},
+	})
+
+	got := Evaluate(coveringStub{share: 0}, &in)
+	if got.Confidence.Label != ConfidenceInsufficient {
+		t.Fatalf("Label = %q, want %q when no source in the window can answer at all",
+			got.Confidence.Label, ConfidenceInsufficient)
+	}
+}
+
+// A coverage share that rounds to zero is not zero. "signal coverage 0%" reads as an absent
+// figure where the truth is a real one describing a sliver -- the exact rounding edge the
+// share formatter already refuses everywhere else a percentage is printed.
+func TestConfidenceSummaryNeverRoundsARealShareDownToZero(t *testing.T) {
+	c := Confidence{Label: ConfidenceLow, Samples: 5, Unit: "sessions", Activity: 1, Priced: 1, Turn: 1}
+	c.Covering(0.001)
+	got := ConfidenceSummary(&c)
+	if strings.Contains(got, "0%") {
+		t.Fatalf("summary = %q, want a real share not rounded to an absent-looking 0%%", got)
+	}
+	if !strings.Contains(got, "<1%") {
+		t.Errorf("summary = %q, want it to read <1%%", got)
+	}
+}
+
 // window builds an Input whose coverage axes are controllable: claude-code carries
 // activity, gemini-cli does not, and an unpriced model lowers priced coverage.
 func window(t *testing.T, rows []store.UsageRow) Input {

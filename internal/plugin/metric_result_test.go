@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/assaio/assaio/internal/analyze"
+	"github.com/assaio/assaio/internal/store"
 )
 
 func validMetricResult() analyze.Result {
@@ -26,6 +28,45 @@ func mustDoc(t *testing.T, r *analyze.Result) []byte {
 		t.Fatal(err)
 	}
 	return doc
+}
+
+// A plugin's verdict can describe part of the window just as a built-in's can -- a metric
+// over one source's records in a five-source window is the ordinary case. Declaring it has
+// to survive the boundary, or the plugin is judged as resting on data it never read.
+func TestParseMetricResultCarriesDeclaredSignalCoverage(t *testing.T) {
+	r := validMetricResult()
+	r.Confidence = analyze.Confidence{Samples: 12, Unit: "sessions"}
+	r.Confidence.Covering(0.05)
+
+	got, violations, err := parseMetricResult(mustDoc(t, &r), "demo")
+	if err != nil {
+		t.Fatalf("parseMetricResult() err = %v (violations %v)", err, violations)
+	}
+	in := analyze.BuildInput(nil, nil, nil, time.Time{}, 0, analyze.Delegation{})
+	analyze.Stamp(&got, &in)
+	if got.Confidence.Label != analyze.ConfidenceLow {
+		t.Fatalf("Label = %q, want %q: a plugin covering 5%% of the window must not read as covering all of it",
+			got.Confidence.Label, analyze.ConfidenceLow)
+	}
+}
+
+// A plugin that declares no signal coverage keeps describing the whole window, which is what
+// every plugin released before the axis existed meant.
+func TestParseMetricResultWithoutSignalCoverageStillCoversTheWindow(t *testing.T) {
+	r := validMetricResult()
+	r.Confidence = analyze.Confidence{Samples: 12, Unit: "sessions"}
+
+	got, _, err := parseMetricResult(mustDoc(t, &r), "demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	in := analyze.BuildInput([]store.UsageRow{
+		{Day: "2026-07-10", Tool: "claude-code", Model: "claude-sonnet-4-5", Granularity: "turn", In: 100},
+	}, nil, nil, time.Time{}, 0, analyze.Delegation{})
+	analyze.Stamp(&got, &in)
+	if got.Confidence.Label == analyze.ConfidenceInsufficient {
+		t.Fatalf("Label = %q: an undeclared axis must not be read as covering nothing", got.Confidence.Label)
+	}
 }
 
 func TestParseMetricResultValid(t *testing.T) {

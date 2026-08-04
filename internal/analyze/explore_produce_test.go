@@ -8,6 +8,36 @@ import (
 	"github.com/assaio/assaio/internal/store"
 )
 
+// The split is taken over calls a source names, which can be a fraction of the window's
+// calls; a caveat already says so, and the envelope has to agree rather than reporting the
+// verdict as resting on the whole window.
+func TestExploreProduceCarriesItsClassifiedShare(t *testing.T) {
+	rows := []store.UsageRow{
+		{
+			Day: "2026-07-08", Tool: "claude-code", Model: "claude-sonnet-4-5", Granularity: "turn", Project: "web",
+			In: 1000, Out: 500, ToolReads: 40, ToolWrites: 40, ToolCalls: 80,
+		},
+		{
+			Day: "2026-07-09", Tool: "codex", Model: "claude-sonnet-4-5", Granularity: "turn", Project: "web",
+			In: 1000, Out: 500, ToolCalls: 500,
+		},
+		{
+			Day: "2026-07-10", Tool: "codex", Model: "claude-sonnet-4-5", Granularity: "turn", Project: "web",
+			In: 1000, Out: 500, ToolCalls: 500,
+		},
+	}
+	in := BuildInput(rows, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
+	got := Evaluate(mustGet(t, exploreName), &in)
+
+	if got.Confidence.signalShare() >= 1 {
+		t.Fatalf("Signal = %v, want the classified share of the window's calls", got.Confidence.signalShare())
+	}
+	if got.Confidence.Label == ConfidenceHigh {
+		t.Errorf("Label = %q for a split read off %.0f%% of the calls, want it held down",
+			got.Confidence.Label, got.Confidence.signalShare()*100)
+	}
+}
+
 // toolMixInput seeds one usage row whose tool-call taxonomy is exactly the counts given.
 // ToolCalls is set to their sum, the invariant the parsers guarantee.
 func toolMixInput(reads, searches, commands, writes, other int64) Input {

@@ -914,6 +914,26 @@ that omits the field reads as `insufficient` — the honest label for "did not s
 rests on" — so declare it even when the number is large. Count observations, not the
 buckets you report: "3 models" is a shape, "31 active days" is evidence.
 
+**Declare how much of the window your figure describes** (v0.9), if it is not all of it:
+
+```json
+"confidence": {"samples": 12, "samplesUnit": "sessions", "signalCoverage": 0.05}
+```
+
+The three stamped axes describe the *window*; this one describes your *question*, and only
+your metric can answer it. A figure computed from one source's records in a five-source
+window is real and describes a sliver, and nothing at window level can see the difference —
+`reasoning-share` read a 20% share off under 1% of a store's output and carried `high` until
+it started declaring this. Omit the key and you claim the whole window, which is what every
+plugin released before the axis existed meant and stays true for most metrics. Declare `0`
+and the verdict reads `insufficient`: nothing in this window could answer, which is a
+different fact from a thin answer. The share sets the label alongside the other axes, and
+`assaio analyze` names it when it is the weakest one:
+
+```
+Confidence: low · 43 active days · signal coverage <1%
+```
+
 ### What the boundary enforces
 
 The honesty rules are enforced, not requested. A result that fails **any** check is
@@ -1222,7 +1242,7 @@ One table holds your data, `usage_record`
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | `INTEGER PRIMARY KEY` | Row id. |
-| `tool` | `TEXT` | Source, e.g. `claude-code`, `codex`, `gemini-cli`, `cline`. |
+| `tool` | `TEXT` | Source, e.g. `claude-code`, `codex`, `gemini-cli`, `copilot-cli`, `cline`. |
 | `session_id` | `TEXT` | The tool's session/conversation ID. |
 | `ts` | `TEXT` | UTC RFC3339 timestamp. Day is `substr(ts,1,10)`. |
 | `model` | `TEXT` | Model name as recorded by the tool. |

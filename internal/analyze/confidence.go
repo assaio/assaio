@@ -42,6 +42,13 @@ type Confidence struct {
 	Activity float64 `json:"activityCoverage"`
 	Priced   float64 `json:"pricedCoverage"`
 	Turn     float64 `json:"turnCoverage"`
+	// Signal is the share of the window this verdict's own subject actually covers, 0..1.
+	// The three axes above describe the window; this one describes the question, and only
+	// the metric can answer it -- reasoning-share computed off under 1% of the output is a
+	// real figure about a sliver, and nothing at window level can see that. It is a pointer
+	// because "covers none of the window" and "did not say" are different answers and only
+	// the first one is insufficient; absent means the whole window, the common case.
+	Signal *float64 `json:"signalCoverage,omitempty"`
 	// Samples is how many observations this verdict rests on and Unit names what they are
 	// ("sessions", "active days"). Set by the validator, the only thing that knows what it
 	// counted; a validator that counted nothing reports zero and reads as insufficient.
@@ -76,15 +83,16 @@ func Stamp(r *Result, in *Input) {
 	r.Confidence.Label = r.Confidence.derive()
 }
 
-// derive reduces the components to one word, weakest axis first.
+// derive reduces the components to one word, weakest axis first. Counting nothing and
+// covering none of the window are the same answer: there was not enough data to ask.
 func (c *Confidence) derive() string {
-	if c.Samples <= 0 {
+	if c.Samples <= 0 || (c.Signal != nil && *c.Signal <= 0) {
 		return ConfidenceInsufficient
 	}
 	if c.Samples < confidenceSampleFloor {
 		return ConfidenceLow
 	}
-	switch weakest := min(c.Activity, c.Priced, c.Turn); {
+	switch weakest := min(c.Activity, c.Priced, c.Turn, c.signalShare()); {
 	case weakest >= confidenceStrongFloor:
 		return ConfidenceHigh
 	case weakest >= confidenceWeakFloor:
@@ -117,6 +125,26 @@ func (r *Result) restsOn(n int, unit string) {
 	r.Confidence.Samples, r.Confidence.Unit = n, unit
 }
 
+// covering is Confidence.Covering for a validator holding a Result, matching restsOn above.
+func (r *Result) covering(share float64) { r.Confidence.Covering(share) }
+
+// Covering records how much of the window this verdict's subject describes, 0..1. A metric
+// whose figure is computed from part of the window declares that part; leaving it undeclared
+// claims the whole window, which is what most metrics honestly do. Exported for the same
+// reason Stamp is: a metric plugin's verdict answers for its reach like a built-in's does.
+func (c *Confidence) Covering(share float64) {
+	s := clamp01(share)
+	c.Signal = &s
+}
+
+// signalShare is the declared coverage, or the whole window when none was declared.
+func (c *Confidence) signalShare() float64 {
+	if c.Signal == nil {
+		return 1
+	}
+	return *c.Signal
+}
+
 // activeDays is the observation count for every window-share metric: the number of days
 // the window actually contains usage for, not the number of days it spans.
 func activeDays(in *Input) int { return len(tokensPerDay(in.Usage)) }
@@ -131,7 +159,7 @@ func ConfidenceSummary(c *Confidence) string {
 	}
 	line := fmt.Sprintf("%s · %d %s", c.Label, c.Samples, c.Unit)
 	if axis, share, weak := weakestAxis(c); weak {
-		line += fmt.Sprintf(" · %s coverage %s", axis, formatPercent(share, 0))
+		line += fmt.Sprintf(" · %s coverage %s", axis, honestPercent(share))
 	}
 	return line
 }
@@ -142,7 +170,7 @@ func weakestAxis(c *Confidence) (name string, share float64, weak bool) {
 	axes := []struct {
 		name  string
 		share float64
-	}{{"activity", c.Activity}, {"priced", c.Priced}, {"turn-level", c.Turn}}
+	}{{"activity", c.Activity}, {"priced", c.Priced}, {"turn-level", c.Turn}, {"signal", c.signalShare()}}
 	name, share = axes[0].name, axes[0].share
 	for _, a := range axes[1:] {
 		if a.share < share {
