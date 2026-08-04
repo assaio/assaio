@@ -120,6 +120,7 @@ is deliberate (see `docs/adr/0002-code-standards-and-enforcement.md`).
 ```
 cmd/assaio-agent/        CLI entrypoint (report, analyze, dashboard, serve, sync, …)
 internal/analyze/        one-file-per-metric validator framework behind assaio analyze
+internal/attribution/    the conformance corpus defining an honest session→commit link (ADR 0010)
 internal/cli/            command wiring and flag handling; one file per command
 internal/config/         defaults + YAML file + ASSAIO_-prefixed env vars
 internal/dashboard/      builds + renders the offline Assay HTML dashboard
