@@ -40,8 +40,7 @@ func (subscriptionValidator) WindowScoped() {}
 func (subscriptionValidator) Analyze(in Input) Result {
 	r := Result{Name: subscriptionName, Title: subscriptionTitle, Describe: subscriptionDescribe, HowToRead: subscriptionHowToRead}
 	if in.Totals.Tokens == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("active days", "No usage in this window.")
 		return r
 	}
 
@@ -57,6 +56,9 @@ func (subscriptionValidator) Analyze(in Input) Result {
 		return r
 	}
 	if !priced {
+		// Nothing in the window carries a price, so the comparison the verdict is about has
+		// no side to stand on -- a declared zero reach, not a thin one.
+		r.covering(0)
 		r.Read = noDataRead
 		r.Takeaway = "No priced usage this window to compare against the plan."
 		return r

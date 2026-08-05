@@ -100,11 +100,11 @@ func TestModelFitDelegationUsesRealInputNotCheaperShare(t *testing.T) {
 // must also surface the median for sessions that actually produced code.
 func TestContextActiveWorkReportsCodeSessionMedianSeparately(t *testing.T) {
 	sessions := []store.SessionRow{
-		{SessionID: "quick1", FirstTs: validatorsTestNow, Turns: 1, ActiveMinutes: 0, Edits: 0},
-		{SessionID: "quick2", FirstTs: validatorsTestNow, Turns: 1, ActiveMinutes: 1, Edits: 0},
-		{SessionID: "quick3", FirstTs: validatorsTestNow, Turns: 1, ActiveMinutes: 0, Edits: 0},
-		{SessionID: "code1", FirstTs: validatorsTestNow, Turns: 10, ActiveMinutes: 14, Edits: 3},
-		{SessionID: "code2", FirstTs: validatorsTestNow, Turns: 12, ActiveMinutes: 18, Edits: 5},
+		{Tool: "claude-code", SessionID: "quick1", FirstTs: validatorsTestNow, Turns: 1, ActiveMinutes: 0, Edits: 0},
+		{Tool: "claude-code", SessionID: "quick2", FirstTs: validatorsTestNow, Turns: 1, ActiveMinutes: 1, Edits: 0},
+		{Tool: "claude-code", SessionID: "quick3", FirstTs: validatorsTestNow, Turns: 1, ActiveMinutes: 0, Edits: 0},
+		{Tool: "claude-code", SessionID: "code1", FirstTs: validatorsTestNow, Turns: 10, ActiveMinutes: 14, Edits: 3},
+		{Tool: "claude-code", SessionID: "code2", FirstTs: validatorsTestNow, Turns: 12, ActiveMinutes: 18, Edits: 5},
 	}
 	in := BuildInput(nil, sessions, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
 	v, _ := Get("context")

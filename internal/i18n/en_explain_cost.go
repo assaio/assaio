@@ -43,7 +43,8 @@ What to do about it
   write premium and got none of the discount.
 
 Limits
-  Vendor cache lifetimes are invisible in the logs, so reuse is approximated at day grain.
+  The cache lifetime a write bought is in some logs but not read yet, so reuse is
+  approximated at day grain.
   The price table is flat per model and does not model the 1h-cache premium, so heavily
   cached sessions are costed slightly low.`
 

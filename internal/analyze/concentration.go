@@ -1,6 +1,11 @@
 package analyze
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/assaio/assaio/internal/parser"
+	"github.com/assaio/assaio/internal/store"
+)
 
 const (
 	concentrationName     = "concentration"
@@ -37,8 +42,7 @@ func (concentrationValidator) Describe() string { return concentrationDescribe }
 func (concentrationValidator) Analyze(in Input) Result {
 	r := Result{Name: concentrationName, Title: concentrationTitle, Describe: concentrationDescribe, HowToRead: concentrationHowToRead}
 	if len(in.ByProject) == 0 || in.Totals.Tokens == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("projects", "No usage in this window.")
 		return r
 	}
 	all := projectShares(in.ByProject, in.Totals.Lines)
@@ -47,7 +51,11 @@ func (concentrationValidator) Analyze(in Input) Result {
 	// project count and the concentration score alike. Its size is disclosed as a caveat.
 	named := namedProjects(all)
 	r.restsOn(len(named), "projects")
-	gap, gapFound := widestSpendGap(named)
+	// A project whose tokens all come from a source that records no lines writes zero lines by
+	// construction, so its whole token share would read as the widest spend-to-output gap in
+	// the window. That is the source's silence, not a project failing to convert spend.
+	lineBlind := lineBlindProjects(in.Usage)
+	gap, gapFound := widestSpendGap(named, lineBlind)
 	// A gap has to have been computed for "aligned" to mean anything: with every project
 	// below the size floor there is nothing to align, and calling that a pass is a green
 	// check for an examination that never ran.
@@ -69,7 +77,38 @@ func (concentrationValidator) Analyze(in Input) Result {
 	if unattributed := unattributedShare(all); unattributed >= concentrationUnattributedFloor {
 		r.Caveats = append(r.Caveats, "Prov.: "+formatPercent(unattributed, 0)+" of tokens are unattributed -- a source that logs no working directory cannot be assigned to a project.")
 	}
+	if len(lineBlind) > 0 {
+		r.Caveats = append(r.Caveats, strconv.Itoa(len(lineBlind))+
+			" project(s) run entirely on sources that record no lines, so they are excluded from the spend-versus-output gap rather than counted as producing nothing.")
+	}
 	return r
+}
+
+// lineBlindProjects names the projects whose every token came from a source that records no
+// changed lines. Read from the window's own rows, since the prepared per-project view carries
+// no tool and so cannot tell a project that wrote nothing from one nobody was watching.
+func lineBlindProjects(rows []store.UsageRow) map[string]bool {
+	seen := make(map[string]bool)
+	for i := range rows {
+		if rowTokens(&rows[i]) == 0 {
+			continue
+		}
+		project := rows[i].Project
+		if parser.HasLineOutput(rows[i].Tool) {
+			seen[project] = false
+			continue
+		}
+		if _, ok := seen[project]; !ok {
+			seen[project] = true
+		}
+	}
+	blind := make(map[string]bool, len(seen))
+	for project, isBlind := range seen {
+		if isBlind {
+			blind[project] = true
+		}
+	}
+	return blind
 }
 
 // concentrationRead reports the neutral no-verdict Read when a single project makes the

@@ -60,10 +60,10 @@ What to do about it
   missing conventions, or a task described too vaguely to act on.
 
 Limits
-  Only tools that name their tool calls contribute (Claude Code and Codex today);
-  everything else reports zeros and is excluded rather than counted as no activity. A
-  Claude sub-agent's aggregate record carries no tool-call split, so delegated work is
-  under-represented here.`
+  Only tools that name their tool calls contribute; everything else is excluded rather
+  than counted as no activity, and 'assaio-agent signals coverage' names which sources
+  those are on your machine. A Claude sub-agent's aggregate record carries no tool-call
+  split, so delegated work is under-represented here.`
 
 const explainFriction = `Friction
 

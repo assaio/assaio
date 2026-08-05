@@ -34,8 +34,7 @@ func (exploreValidator) Describe() string { return exploreDescribe }
 func (exploreValidator) Analyze(in Input) Result {
 	r := Result{Name: exploreName, Title: exploreTitle, Describe: exploreDescribe, HowToRead: exploreHowToRead}
 	if len(in.Usage) == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("classified tool calls", "No usage in this window.")
 		return r
 	}
 	m := buildToolMix(in.Usage)
@@ -185,7 +184,7 @@ func toolMixBars(m toolMix) []Bar {
 // history: a source that names no calls records none at all and so cannot lower it -- what
 // does is usage ingested before the purpose split was captured.
 func exploreCoverageCaveat(m toolMix) string {
-	return "Prov.: " + formatPercent(m.Coverage(), 0) + " of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified -- run `backfill` to restate them. A source that names no tool calls records none, so it neither raises nor lowers this -- `assaio-agent signals coverage` says which do."
+	return "Prov.: " + honestPercent(m.Coverage()) + " of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified -- run `backfill` to restate them. A source that names no tool calls records none, so it neither raises nor lowers this -- `assaio-agent signals coverage` says which do."
 }
 
 func exploreTakeaway(sufficient, balanced bool) string {

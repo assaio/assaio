@@ -33,9 +33,9 @@ const oldSchemaDDL = `CREATE TABLE usage_record (
 
 // seedOldSchemaDB creates, at path, a database whose usage_record predates every
 // post-original column and whose schema_migration already records 0001_init.sql as
-// applied. That is exactly the state migrate() leaves behind for a database created by
-// an older build once 0001_init.sql has since been edited in place: migrate() sees
-// "0001_init.sql" already applied and skips it, so the edited CREATE TABLE never runs.
+// applied. That is the state a database created before the first release was left in, when
+// 0001_init.sql was still edited in place: migrate() sees "0001_init.sql" already applied
+// and skips it, so the edited CREATE TABLE never runs on it.
 func seedOldSchemaDB(t *testing.T, path string) {
 	t.Helper()
 	ctx := context.Background()

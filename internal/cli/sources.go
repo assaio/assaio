@@ -22,6 +22,10 @@ type sourceScan struct {
 	found      int
 	configured []string
 	roots      []string
+	// err is the discovery failure this scan hit, if any. It is carried rather than dropped
+	// because "nothing is there" and "we could not look" are different answers, and ingest
+	// reports the second as an error while doctor used to print it as the first.
+	err error
 }
 
 // scanSources counts every built-in source's inputs under its effective roots.
@@ -39,13 +43,17 @@ func scanSources(home string, s *config.Sources) []sourceScan {
 func scanSource(tool, noun string, configured []string, discover func(string) ([]string, error), defaults ...string) sourceScan {
 	roots := paths.Resolve(configured, defaults...)
 	found := 0
+	var firstErr error
 	for _, root := range roots {
-		f, _ := discover(root)
+		f, err := discover(root)
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
 		found += len(f)
 	}
 	return sourceScan{
 		tool: tool, activity: toolActivityLabel(found, noun), found: found,
-		configured: configured, roots: roots,
+		configured: configured, roots: roots, err: firstErr,
 	}
 }
 
@@ -56,9 +64,16 @@ func scanSource(tool, noun string, configured []string, discover func(string) ([
 func scanClaude(configured []string, defaults ...string) sourceScan {
 	roots := paths.Resolve(configured, defaults...)
 	var main, sub int
+	var firstErr error
 	for _, root := range roots {
-		m, _ := claude.Discover(root)
-		s, _ := claude.DiscoverSubagents(root)
+		m, err := claude.Discover(root)
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+		s, err := claude.DiscoverSubagents(root)
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
 		main += len(m)
 		sub += len(s)
 	}
@@ -68,7 +83,7 @@ func scanClaude(configured []string, defaults ...string) sourceScan {
 	}
 	return sourceScan{
 		tool: "claude-code", activity: activity, found: main + sub,
-		configured: configured, roots: roots,
+		configured: configured, roots: roots, err: firstErr,
 	}
 }
 

@@ -155,13 +155,29 @@ func activeDays(in *Input) int { return len(tokensPerDay(in.Usage)) }
 // the text report and the dashboard render the same sentence rather than two that can drift.
 func ConfidenceSummary(c *Confidence) string {
 	if c.Label == ConfidenceInsufficient {
-		return ConfidenceInsufficient + " — nothing to measure in this window"
+		return ConfidenceInsufficient + " — " + c.insufficientReason()
 	}
 	line := fmt.Sprintf("%s · %d %s", c.Label, c.Samples, c.Unit)
 	if axis, share, weak := weakestAxis(c); weak {
 		line += fmt.Sprintf(" · %s coverage %s", axis, honestPercent(share))
 	}
 	return line
+}
+
+// insufficientReason says which of the three ways a verdict can rest on nothing applies.
+// They are different facts about different things: the window may be full of usage none of
+// which can answer this question, the metric may have counted none of its own observations,
+// or it may never have said what it rests on -- which is what an exec metric plugin that
+// omits its sample basis means. One sentence for all three read a full store as an empty one.
+func (c *Confidence) insufficientReason() string {
+	switch {
+	case c.Signal != nil && *c.Signal <= 0:
+		return "nothing in this window can answer it"
+	case c.Unit != "":
+		return "0 " + c.Unit
+	default:
+		return "no stated basis"
+	}
 }
 
 // weakestAxis names the coverage component holding the label back, if any is below the

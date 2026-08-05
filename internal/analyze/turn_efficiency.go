@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/parser"
 )
 
 const (
@@ -33,10 +34,15 @@ func (turnEffValidator) Describe() string { return turnEffDescribe }
 //nolint:gocritic // Input is required by the Validator interface; analyzed once per run, not a hot path.
 func (turnEffValidator) Analyze(in Input) Result {
 	r := Result{Name: turnEffName, Title: turnEffTitle, Describe: turnEffDescribe, HowToRead: turnEffHowToRead}
+	// A session only counts here if its source records edits at all: elsewhere a zero edit
+	// count is the tool's silence, and skipping those sessions as "not code-producing" would
+	// judge prompting from a field the tool never kept.
+	edited, coverage := sessionsAnswering(in.Sessions, parser.SignalEditsCount)
+	r.covering(coverage)
 	var codeSessions, oneShot int64
 	var codeTurns, outPerTurn []float64
-	for i := range in.Sessions {
-		s := &in.Sessions[i]
+	for i := range edited {
+		s := &edited[i]
 		if s.Edits == 0 {
 			continue
 		}
@@ -50,8 +56,7 @@ func (turnEffValidator) Analyze(in Input) Result {
 		}
 	}
 	if codeSessions == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No code-producing sessions in this window."
+		r.noData("code-producing sessions", turnEffEmptyTakeaway(len(edited)))
 		return r
 	}
 	r.restsOn(int(codeSessions), "code-producing sessions")
@@ -73,6 +78,15 @@ func (turnEffValidator) Analyze(in Input) Result {
 	r.Takeaway = turnEffTakeaway(enough, oneShotRate)
 	r.Caveats = []string{"Task size is invisible in logs, so a low one-shot rate can mean hard problems, not weak prompting -- directional only."}
 	return r
+}
+
+// turnEffEmptyTakeaway separates a window whose sessions edited nothing from one whose
+// sources never record an edit -- the second says nothing about how anyone prompts.
+func turnEffEmptyTakeaway(edited int) string {
+	if edited == 0 {
+		return "No source in this window records file edits, so prompting efficiency cannot be read from it."
+	}
+	return "No code-producing sessions in this window."
 }
 
 // medianOutputPerTurn renders the median output-tokens-per-turn, or "—" when no session had turns.

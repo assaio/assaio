@@ -34,8 +34,7 @@ func (throughputValidator) Describe() string { return throughputDescribe }
 func (throughputValidator) Analyze(in Input) Result {
 	r := Result{Name: throughputName, Title: throughputTitle, Describe: throughputDescribe, HowToRead: throughputHowToRead}
 	if len(in.Usage) == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("active days", "No usage in this window.")
 		return r
 	}
 	// inv is still needed for Days (Totals carries no distinct-day count); TotalLinesAdded

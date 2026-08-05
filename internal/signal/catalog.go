@@ -81,6 +81,18 @@ var catalog = []Signal{
 		Describe:  "Calls that came back an error, counted only where a source marks the outcome of every call.",
 	},
 	{
+		ID: "ai.rejected.count", Title: "Declined tool calls", Unit: "count",
+		Status: Observed, Grains: perTurn,
+		ZeroMeans: "this source does not record a human declining a call -- absent, not a run nobody stopped",
+		Describe:  "Tool proposals a person refused, counted only where a source records the refusal at all.",
+	},
+	{
+		ID: "ai.compactions.count", Title: "Context compactions", Unit: "count",
+		Status: Observed, Grains: perTurn,
+		ZeroMeans: "this source does not mark a context overflow -- absent, not a session that never overflowed",
+		Describe:  "Times a session's context overflowed and was auto-summarized, counted from the tool's own boundary marker.",
+	},
+	{
 		ID: "ai.rework.lines", Title: "Rework lines", Unit: "lines",
 		Status: Derived, Grains: perTurn,
 		ZeroMeans: "no added line was undone later in the same transcript, or the source records no edits",

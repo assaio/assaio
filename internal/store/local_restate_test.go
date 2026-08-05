@@ -108,3 +108,97 @@ func TestInsertLeavesAHalfAttributedTurnAlone(t *testing.T) {
 		t.Fatalf("stored = (reads %d, errors %d, lines %d), want the first write (3, 0, 12) untouched", reads, errors, lines)
 	}
 }
+
+// A build that learns a record summarizes a whole run rather than one request has to be able
+// to say so on rows already stored -- the sub-agent aggregate, mislabelled as a turn until
+// v0.10. MAX would keep 'turn' forever, since it sorts above 'session'.
+func TestInsertLocalRelabelsGranularityFromTheCurrentParse(t *testing.T) {
+	ctx := context.Background()
+	st := openTempStore(t)
+
+	if _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(1, 0, 5)}); err != nil {
+		t.Fatal(err)
+	}
+	aggregate := liveTurn(1, 0, 5)
+	aggregate.Granularity = "session"
+	if _, err := st.InsertLocal(ctx, []usage.Record{aggregate}); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := storedGranularity(t, st); got != "session" {
+		t.Fatalf("granularity = %q, want session after re-reading the file that owns it", got)
+	}
+}
+
+// The sync path stays first-write-wins: a teammate's push must never relabel what another
+// member's own parse recorded.
+func TestInsertLeavesAStoredGranularityAlone(t *testing.T) {
+	ctx := context.Background()
+	st := openTempStore(t)
+
+	if _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(1, 0, 5)}); err != nil {
+		t.Fatal(err)
+	}
+	aggregate := liveTurn(1, 0, 5)
+	aggregate.Granularity = "session"
+	if _, err := st.Insert(ctx, []usage.Record{aggregate}); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := storedGranularity(t, st); got != "turn" {
+		t.Fatalf("granularity = %q, want turn: a synced record may not restate a local one", got)
+	}
+}
+
+func storedGranularity(t *testing.T, st *Store) string {
+	t.Helper()
+	var g string
+	row := st.db.QueryRowContext(context.Background(),
+		`SELECT granularity FROM usage_record WHERE dedupe_key = 'k1'`)
+	if err := row.Scan(&g); err != nil {
+		t.Fatal(err)
+	}
+	return g
+}
+
+// Migration 0006 is the half a re-parse cannot reach: once a sub-agent has its own
+// transcript the parent's aggregate is suppressed, so the row already stored is never
+// offered again and keeps claiming to be one turn.
+func TestMigration0006RelabelsStoredSubAgentAggregates(t *testing.T) {
+	ctx := context.Background()
+	st := openTempStore(t)
+
+	rows := []usage.Record{
+		{Tool: "claude-code", SessionID: "s", Timestamp: time.Now().UTC(), Model: "m", DedupeKey: "agent:a1", Granularity: "turn", OutputTokens: 9},
+		{Tool: "claude-code", SessionID: "s", Timestamp: time.Now().UTC(), Model: "m", DedupeKey: "bob:agent:a2", Granularity: "turn", OutputTokens: 9},
+		{Tool: "claude-code", SessionID: "s", Timestamp: time.Now().UTC(), Model: "m", DedupeKey: "plain-uuid", Granularity: "turn", OutputTokens: 9},
+		{Tool: "cline", SessionID: "agent", Timestamp: time.Now().UTC(), Model: "m", DedupeKey: "agent:0", Granularity: "turn", OutputTokens: 9},
+	}
+	if _, err := st.Insert(ctx, rows); err != nil {
+		t.Fatal(err)
+	}
+	// The migration ran at Open, before these rows existed; re-running it is what the test is.
+	body, err := migrations.ReadFile("migrations/0006_subagent_session_grain.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.db.ExecContext(ctx, string(body)); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct{ key, want string }{
+		{"agent:a1", "session"},
+		{"bob:agent:a2", "session"},
+		{"plain-uuid", "turn"},
+		{"agent:0", "turn"}, // another tool's key scheme must not be matched by coincidence
+	} {
+		var got string
+		row := st.db.QueryRowContext(ctx, `SELECT granularity FROM usage_record WHERE dedupe_key = ?`, tc.key)
+		if err := row.Scan(&got); err != nil {
+			t.Fatal(err)
+		}
+		if got != tc.want {
+			t.Errorf("%s granularity = %q, want %q", tc.key, got, tc.want)
+		}
+	}
+}

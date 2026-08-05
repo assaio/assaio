@@ -1,6 +1,11 @@
 package analyze
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+
+	"github.com/assaio/assaio/internal/parser"
+)
 
 const (
 	taxonomyName      = "session-taxonomy"
@@ -27,14 +32,26 @@ func (taxonomyValidator) Describe() string { return taxonomyDescribe }
 func (taxonomyValidator) Analyze(in Input) Result {
 	r := Result{Name: taxonomyName, Title: taxonomyTitle, Describe: taxonomyDescribe, HowToRead: taxonomyHowToRead}
 	if len(in.Sessions) == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No sessions in this window."
+		r.noData("sessions", "No sessions in this window.")
 		return r
 	}
-	r.restsOn(len(in.Sessions), "sessions")
+	// Only sessions from a source that records file edits can be bucketed: elsewhere a zero
+	// edit count means the tool never wrote one down, and calling that conversational states
+	// what kind of work someone did from a field their tool does not keep.
+	edited, coverage := sessionsAnswering(in.Sessions, parser.SignalEditsCount)
+	r.restsOn(len(edited), "sessions with edit capture")
+	r.covering(coverage)
+	if len(edited) == 0 {
+		r.Read = noDataRead
+		r.Purity = 0.5
+		r.Bars = []Bar{}
+		r.Takeaway = "No source in this window records file edits, so the session mix cannot be read from it."
+		r.Caveats = []string{taxonomyCoverageCaveat(coverage)}
+		return r
+	}
 	var conv, light, heavy int64
-	for i := range in.Sessions {
-		switch e := in.Sessions[i].Edits; {
+	for i := range edited {
+		switch e := edited[i].Edits; {
 		case e == 0:
 			conv++
 		case e <= taxonomyLightMax:
@@ -43,7 +60,7 @@ func (taxonomyValidator) Analyze(in Input) Result {
 			heavy++
 		}
 	}
-	total := int64(len(in.Sessions))
+	total := int64(len(edited))
 	editing := light + heavy
 	enough := total >= taxonomyMinSessions
 
@@ -68,7 +85,19 @@ func (taxonomyValidator) Analyze(in Input) Result {
 		"Conversational sessions are real work (design, debugging, planning) -- not idle time.",
 		"A thrash bucket needs per-session rework, which isn't stored yet, so it isn't split out here.",
 	}
+	if coverage < 1 {
+		r.Caveats = append(r.Caveats, taxonomyCoverageCaveat(coverage))
+	}
 	return r
+}
+
+// taxonomyCoverageCaveat states how much of the window this mix describes, so the sessions
+// left out read as absent rather than as the conversational bucket they would otherwise
+// silently join.
+func taxonomyCoverageCaveat(coverage float64) string {
+	return "Prov.: " + honestPercent(coverage) + " of this window's sessions come from a source that records file edits (" +
+		strings.Join(sourcesAnswering(parser.SignalEditsCount), ", ") +
+		"); the rest are absent from this mix, not conversational."
 }
 
 func taxonomyBar(label string, n, total int64) Bar {

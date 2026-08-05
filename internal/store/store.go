@@ -46,7 +46,7 @@ func Open(path string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	// Invariant: every column 0001_init.sql gains after its original set must carry a constant DEFAULT, or ADD COLUMN below fails on upgrade (post-1.0, real migrations replace this file entirely).
+	// Every usage_record column needs a constant DEFAULT: reconcileColumns installs a missing one with ADD COLUMN, which SQLite rejects without one.
 	if err := reconcileColumns(context.Background(), db); err != nil {
 		_ = db.Close()
 		return nil, err

@@ -46,8 +46,7 @@ func (burnValidator) Analyze(in Input) Result {
 	r := Result{Name: burnName, Title: burnTitle, Describe: burnDescribe, HowToRead: burnHowToRead}
 	days := tokensPerDay(in.Usage)
 	if len(days) == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("active days", "No usage in this window.")
 		return r
 	}
 	r.restsOn(len(days), "active days")

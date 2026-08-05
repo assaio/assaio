@@ -37,8 +37,7 @@ func (adoptionValidator) Describe() string { return adoptionDescribe }
 func (adoptionValidator) Analyze(in Input) Result {
 	r := Result{Name: adoptionName, Title: adoptionTitle, Describe: adoptionDescribe, HowToRead: adoptionHowToRead}
 	if len(in.Usage) == 0 && len(in.Sessions) == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("active days", "No usage in this window.")
 		return r
 	}
 	// topN=0: dormant counts must reflect every stale project/tool, never a top-N cap.

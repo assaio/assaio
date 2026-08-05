@@ -294,3 +294,29 @@ func withSignals(in *Input, turns []store.ModelTurns, skills, agents []store.Att
 	in.TurnSizing, in.Skills, in.Agents = turns, skills, agents
 	return *in
 }
+
+// A verdict can rest on nothing in three unrelated ways, and one sentence for all three read
+// a store holding 119,896 records as an empty window -- explore-produce, friction and
+// skill-economics all printed it beside their own caveat saying the opposite.
+func TestInsufficientNamesWhichWayTheVerdictRestsOnNothing(t *testing.T) {
+	zero := 0.0
+	for _, tc := range []struct {
+		name string
+		c    Confidence
+		want string
+	}{
+		{"no signal in the window", Confidence{Samples: 40, Unit: "active days", Signal: &zero}, "nothing in this window can answer it"},
+		{"counted none of its own unit", Confidence{Unit: "tool calls"}, "0 tool calls"},
+		{"never said what it rests on", Confidence{}, "no stated basis"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.c.Label = tc.c.derive()
+			if tc.c.Label != ConfidenceInsufficient {
+				t.Fatalf("Label = %q, want %q", tc.c.Label, ConfidenceInsufficient)
+			}
+			if got := ConfidenceSummary(&tc.c); !strings.Contains(got, tc.want) {
+				t.Fatalf("summary = %q, want it to say %q", got, tc.want)
+			}
+		})
+	}
+}

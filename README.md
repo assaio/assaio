@@ -232,6 +232,12 @@ come only from the sources that record changed lines, and what each one can answ
 published per signal rather than per tool (`assaio-agent signals coverage` reads your own
 mix), and any usage on a model missing from the price table is shown blank, never faked.
 
+That second limit is enforced, not just documented: **a figure is computed only over the
+sources that record its field.** A tool that never writes an edit count is absent from the
+session mix rather than counted as a window full of conversations, the reach is stated as the
+verdict's signal coverage, and a figure nothing in your window can answer prints `—` and
+withholds its verdict ([ADR 0011](docs/adr/0011-capability-gated-metrics.md)).
+
 ## Commands
 
 | Command    | What it does |

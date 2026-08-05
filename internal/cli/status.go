@@ -82,5 +82,6 @@ func runStatus(cmd *cobra.Command, since *string) error {
 	if err := report.RenderChurnLine(cmd.OutOrStdout(), report.BuildChurn(usageRows)); err != nil {
 		return err
 	}
-	return report.RenderSessionsBlock(cmd.OutOrStdout(), report.BuildSessionStats(sessionRows, time.Now()))
+	stats := report.BuildSessionStats(sessionRows, time.Now())
+	return report.RenderSessionsBlock(cmd.OutOrStdout(), &stats)
 }

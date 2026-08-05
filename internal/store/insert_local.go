@@ -13,8 +13,16 @@ import (
 // attributed yet, and a log is append-only, so the later read is the more complete one.
 // MAX on the text columns keeps a captured skill or agent from being cleared by a re-read
 // that saw none, since an empty string sorts below any name.
+//
+// granularity is the one column assigned rather than maximised. It is a claim about what a
+// record *is*, and the current parse is the authority on that: a build that learns a record
+// summarizes a whole run rather than one turn has to be able to say so, and MAX would keep
+// 'turn' forever because it sorts above 'session'. Re-labelling coarser is the documented
+// direction (docs/format-resilience.md); it is never a way to claim finer detail, because
+// only a re-read of the same file can set it.
 const restateActivitySQL = `
         UPDATE usage_record SET
+            granularity = ?,
             lines_added = MAX(lines_added, ?), lines_removed = MAX(lines_removed, ?),
             edits = MAX(edits, ?), tool_calls = MAX(tool_calls, ?),
             rejected = MAX(rejected, ?), compactions = MAX(compactions, ?),
@@ -36,6 +44,7 @@ func (s *Store) InsertLocal(ctx context.Context, recs []usage.Record) (int, erro
 // activityRestateArgs binds r to restateActivitySQL's placeholders.
 func activityRestateArgs(r *usage.Record) []any {
 	return []any{
+		r.Granularity,
 		r.LinesAdded, r.LinesRemoved, r.Edits, r.ToolCalls, r.Rejected, r.Compactions,
 		r.ReworkLines,
 		r.ToolReads, r.ToolSearches, r.ToolCommands, r.ToolWrites, r.ToolOther, r.ToolErrors,

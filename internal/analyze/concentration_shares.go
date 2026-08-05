@@ -39,13 +39,17 @@ func projectShares(projects []ProjectStat, totalLines int64) []projectShare {
 // widestSpendGap returns the largest token-share-minus-line-share gap among projects big
 // enough to matter (concentrationMinTokenShare). found is false when no project clears
 // that floor, so a window of many tiny projects reports no gap rather than a loud one
-// computed off noise.
-func widestSpendGap(shares []projectShare) (gap float64, found bool) {
+// computed off noise. lineBlind names the projects no source could have reported lines for;
+// they are skipped, since their gap measures the source rather than the project.
+func widestSpendGap(shares []projectShare, lineBlind map[string]bool) (gap float64, found bool) {
 	for i := range shares {
 		// The unattributed bucket is not a project: it is every tool that logs no working
 		// directory, pooled. It writes no lines by construction, so scoring it would make
 		// its whole token share the widest gap and blame a project that does not exist.
 		if shares[i].Project == "" || shares[i].TokenShare < concentrationMinTokenShare {
+			continue
+		}
+		if lineBlind[shares[i].Project] {
 			continue
 		}
 		if d := shares[i].TokenShare - shares[i].LineShare; !found || d > gap {

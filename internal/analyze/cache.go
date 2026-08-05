@@ -8,7 +8,7 @@ const (
 	cacheName      = "cache-hygiene"
 	cacheTitle     = "Cache Hygiene"
 	cacheDescribe  = "Prompt-cache reuse: how much billed input was served from cache vs re-sent, and whether cache writes are being reused."
-	cacheHowToRead = "High cache reuse means repeated context is served cheaply from cache instead of re-billed as fresh input. It is a cost signal, not a quality one -- a big one-shot task legitimately shows low reuse, and vendor cache lifetimes are invisible here."
+	cacheHowToRead = "High cache reuse means repeated context is served cheaply from cache instead of re-billed as fresh input. It is a cost signal, not a quality one -- a big one-shot task legitimately shows low reuse, and assaio does not read the cache lifetime a write bought, so reuse is measured at day grain."
 	// cacheGoodReuse is the cache-read share above which reuse reads as healthy.
 	cacheGoodReuse = 0.5
 )
@@ -28,8 +28,7 @@ func (cacheValidator) Analyze(in Input) Result {
 	r := Result{Name: cacheName, Title: cacheTitle, Describe: cacheDescribe, HowToRead: cacheHowToRead}
 	t := in.Totals
 	if t.Input == 0 && t.CacheRead == 0 && t.CacheWrite == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("active days", "No usage in this window.")
 		return r
 	}
 
@@ -47,7 +46,7 @@ func (cacheValidator) Analyze(in Input) Result {
 	r.Takeaway = cacheTakeaway(healthy, t.CacheRead, t.CacheWrite)
 	r.Caveats = []string{
 		"High reuse is cheaper, not better work -- a large one-shot task legitimately shows low reuse.",
-		"Vendor cache lifetimes (TTLs) are invisible, so this is a day-grain approximation.",
+		"The cache lifetime a write bought is recorded by some sources but not read yet, so this is a day-grain approximation.",
 	}
 	return r
 }

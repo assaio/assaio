@@ -1,11 +1,7 @@
 package analyze
 
 import (
-	"sort"
-	"strconv"
-
 	"github.com/assaio/assaio/internal/report"
-	"github.com/assaio/assaio/internal/store"
 )
 
 const (
@@ -37,31 +33,33 @@ func (contextValidator) Describe() string { return contextDescribe }
 func (contextValidator) Analyze(in Input) Result {
 	r := Result{Name: contextName, Title: contextTitle, Describe: contextDescribe, HowToRead: contextHowToRead}
 	if len(in.Sessions) == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("sessions", "No usage in this window.")
 		return r
 	}
+	// The verdict is the compaction rate, so the metric reaches exactly as far as compaction
+	// capture does: a source that never marks a context overflow reports none, and averaging
+	// that silence in would read as a window whose sessions all sat comfortably inside it.
 	stats := report.BuildSessionStats(in.Sessions, in.Now)
-	r.restsOn(stats.Count, "sessions")
+	r.restsOn(stats.Compacting, "sessions with compaction capture")
+	r.covering(shareOf(int64(stats.Compacting), int64(stats.Count)))
+	r.Figures = contextFigures(&stats, in.Sessions)
+	if stats.Compacting == 0 {
+		r.Read = noDataRead
+		r.Purity = 0.5
+		r.Takeaway = "No source in this window marks a context compaction, so context health cannot be read from it."
+		r.Caveats = []string{contextCoverageCaveat(&stats)}
+		return r
+	}
 	compactionOK := stats.CompactionRate <= contextWatchCeiling
-	sufficientSample := stats.Count >= contextMinSessionsForHealthy
+	sufficientSample := stats.Compacting >= contextMinSessionsForHealthy
 	healthy := compactionOK && sufficientSample
-	codeMedian, codeMedianOK := medianActiveMinutesForCodeSessions(in.Sessions)
 
 	r.Read = readFor(healthy, "Healthy")
 	r.Purity = contextPurity(stats.CompactionRate, sufficientSample)
-	r.Figures = []Figure{
-		{Label: "sessions", Value: strconv.Itoa(stats.Count)},
-		{Label: "median turns", Value: strconv.FormatInt(stats.MedianTurns, 10)},
-		{Label: "peak context", Value: strconv.FormatInt(stats.MedianPeakContextTokens, 10) + " tokens"},
-		activeWorkFigure(stats.MedianActiveMinutes, codeMedian, codeMedianOK),
-		{Label: "compaction rate", Value: formatPercent(stats.CompactionRate, 0)},
-		{
-			Label: "code sessions", Value: formatPercent(stats.CodeSessionShare, 0),
-			Note: formatPercent(1-stats.CodeSessionShare, 0) + " conversational",
-		},
-	}
 	r.Takeaway = contextTakeaway(healthy, compactionOK, sufficientSample)
+	if narrowestBasis(&stats) < stats.Count {
+		r.Caveats = []string{contextCoverageCaveat(&stats)}
+	}
 	return r
 }
 
@@ -85,41 +83,3 @@ func contextPurity(compactionRate float64, sufficientSample bool) float64 {
 	}
 	return clamp01(1 - compactionRate)
 }
-
-// activeWorkFigure reports both the overall median active minutes and, when at least one
-// session made an edit, the median for code sessions alone. The overall median is
-// usually pulled down near zero by many quick, non-code sessions, so showing it bare,
-// without the code-session contrast, misrepresents how long focused work sessions run.
-func activeWorkFigure(overallMedian, codeMedian float64, codeMedianOK bool) Figure {
-	f := Figure{Label: "active work", Value: minutesLabel(overallMedian) + " median"}
-	if codeMedianOK {
-		f.Note = "code sessions: ~" + minutesLabel(codeMedian)
-	}
-	return f
-}
-
-func minutesLabel(m float64) string {
-	return strconv.FormatFloat(m, 'f', 0, 64) + " min"
-}
-
-// medianActiveMinutesForCodeSessions returns the median ActiveMinutes across sessions
-// with at least one edit -- the code-producing subset, isolated from the many quick,
-// non-code sessions that pull the overall median down near zero. ok is false when no
-// session in sessions made an edit.
-func medianActiveMinutesForCodeSessions(sessions []store.SessionRow) (median float64, ok bool) {
-	var actives []float64
-	for i := range sessions {
-		if sessions[i].Edits > 0 {
-			actives = append(actives, sessions[i].ActiveMinutes)
-		}
-	}
-	if len(actives) == 0 {
-		return 0, false
-	}
-	sort.Float64s(actives)
-	return medianAt50(actives), true
-}
-
-// medianAt50 returns the median of sorted (ascending), so this figure is directly
-// comparable to SessionStats.MedianActiveMinutes.
-func medianAt50(sorted []float64) float64 { return percentileAt(sorted, 0.5) }

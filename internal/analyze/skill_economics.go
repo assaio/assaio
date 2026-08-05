@@ -2,10 +2,9 @@ package analyze
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/assaio/assaio/internal/humanize"
-
-	"github.com/assaio/assaio/internal/store"
 )
 
 const (
@@ -42,11 +41,13 @@ func (skillValidator) WindowScoped() {}
 func (skillValidator) Analyze(in Input) Result {
 	r := Result{Name: skillName, Title: skillTitle, Describe: skillDescribe, HowToRead: skillHowToRead}
 	if len(in.Skills) == 0 && len(in.Agents) == 0 {
-		r.Read = noDataRead
+		// A window can be full of usage and still carry no label: the reach is zero, which is
+		// a different statement from "the window was empty" and has to read as one.
+		r.covering(0)
+		r.noData("labeled skills and sub-agents", attributionEmptyTakeaway(len(in.Usage)))
 		r.Purity = 0.5
 		r.Bars = []Bar{}
-		r.Takeaway = attributionEmptyTakeaway(len(in.Usage))
-		r.Caveats = append(r.Caveats, skillCoverageCaveat)
+		r.Caveats = append(r.Caveats, skillCoverageCaveat())
 		return r
 	}
 	// The share and the total it is a share of must come from the same dimension: reading
@@ -54,6 +55,9 @@ func (skillValidator) Analyze(in Input) Result {
 	// side that cannot both be true, and points the reader at a skill worth 1% of the window.
 	r.restsOn(len(in.Skills)+len(in.Agents), "labeled skills and sub-agents")
 	topShareOf, attributed, comparable := topAttributionShare(in.Skills, in.Agents)
+	// The share is of attributed tokens, which are a slice of the window: an 80% share of 3%
+	// of the tokens is a real figure about almost nothing, and only this metric can say so.
+	r.covering(fracOf(attributedTokens(in.Skills, in.Agents), in.Totals.Tokens))
 	// Concentration needs something to concentrate against: with one label its share is
 	// 100% by construction, which is arithmetic, not a finding.
 	measurable := attributed >= skillMinTokens && comparable
@@ -64,79 +68,31 @@ func (skillValidator) Analyze(in Input) Result {
 	r.Figures = []Figure{
 		{Label: "skills seen", Value: strconv.Itoa(len(in.Skills))},
 		{Label: "sub-agent types", Value: strconv.Itoa(len(in.Agents))},
-		{Label: "attributed tokens", Value: humanize.Count(attributed), Note: "in the dimension below"},
-		{Label: "largest single share", Value: formatPercent(topShareOf, 0), Note: "of that dimension"},
+		{Label: "attributed tokens", Value: humanize.Count(attributedTokens(in.Skills, in.Agents)), Note: "in the dimension below"},
+		skillShareFigure(topShareOf, comparable),
 	}
 	r.Bars = attributionBars(in.Skills, in.Agents, skillTopN)
 	r.BarsPseudonym = PseudonymSkill
 	r.Takeaway = skillTakeaway(measurable, spread)
-	r.Caveats = append(r.Caveats, skillCoverageCaveat)
+	r.Caveats = append(r.Caveats, skillCoverageCaveat())
 	return r
 }
 
-// skillCoverageCaveat states the single-tool coverage limit this metric carries.
-const skillCoverageCaveat = "Prov.: only Claude Code labels turns with a skill or sub-agent today; usage from other tools is absent from this split, not zero."
-
-// attributionTokens sums one attribution dimension's tokens.
-func attributionTokens(rows []store.AttributionRow) int64 {
-	var sum int64
-	for i := range rows {
-		sum += rows[i].Tokens
+// skillShareFigure renders the largest single share, "—" when no dimension holds two entries
+// to compare: a lone label owns 100% of itself, and printing that as a finding is arithmetic
+// dressed as evidence.
+func skillShareFigure(topShare float64, comparable bool) Figure {
+	if !comparable {
+		return Figure{Label: "largest single share", Value: "—", Note: "needs two labels to compare"}
 	}
-	return sum
+	return Figure{Label: "largest single share", Value: formatPercent(topShare, 0), Note: "of that dimension"}
 }
 
-// topAttributionShare is the largest single skill's or sub-agent's share of its own
-// dimension -- the concentration this metric reads -- together with that dimension's own
-// token total, so a caller can never render the share against the other dimension's sum.
-// Only a dimension holding at least two entries counts: with one, the share is 100%
-// whatever happened. ok is false when neither dimension has two, so the caller reports no
-// verdict instead of a guaranteed one. Rows arrive sorted by Tokens descending.
-func topAttributionShare(skills, agents []store.AttributionRow) (share float64, total int64, ok bool) {
-	for _, rows := range [][]store.AttributionRow{skills, agents} {
-		if len(rows) < skillMinEntries {
-			continue
-		}
-		dimension := attributionTokens(rows)
-		if s := shareOf(rows[0].Tokens, dimension); !ok || s > share {
-			share, total, ok = s, dimension, true
-		}
-	}
-	return share, total, ok
-}
-
-// attributionBars ranks skills and sub-agents together, each labelled by dimension so a
-// skill is never mistaken for an agent. topN caps each dimension separately.
-func attributionBars(skills, agents []store.AttributionRow, topN int) []Bar {
-	bars := make([]Bar, 0, 2*topN)
-	bars = append(bars, dimensionBars(skills, "skill", topN)...)
-	bars = append(bars, dimensionBars(agents, "agent", topN)...)
-	return bars
-}
-
-// dimensionBars renders one attribution dimension's top entries, scaled against that
-// dimension's own largest so the two dimensions stay independently readable. The name is
-// the Label alone -- skill and sub-agent names are user-authored, so --anonymize replaces
-// the whole Label; carrying the dimension in Value keeps it legible once that happens.
-func dimensionBars(rows []store.AttributionRow, kind string, topN int) []Bar {
-	kept := rows
-	if topN > 0 && len(kept) > topN {
-		kept = kept[:topN]
-	}
-	var maxTokens int64
-	if len(kept) > 0 {
-		maxTokens = kept[0].Tokens
-	}
-	total := attributionTokens(rows)
-	out := make([]Bar, 0, len(kept))
-	for i := range kept {
-		out = append(out, Bar{
-			Label: kept[i].Name,
-			Value: kind + " · " + humanize.Count(kept[i].Tokens) + " tokens · " + formatPercent(shareOf(kept[i].Tokens, total), 0) + " · " + strconv.FormatInt(kept[i].Lines, 10) + " lines",
-			Frac:  fracOf(kept[i].Tokens, maxTokens),
-		})
-	}
-	return out
+// skillCoverageCaveat names the sources that label a turn at all, read from the depth matrix
+// so the sentence cannot outlive the list it used to spell out by hand.
+func skillCoverageCaveat() string {
+	return "Prov.: turns are labeled with a skill or sub-agent by " + strings.Join(attributionSources(), ", ") +
+		"; usage from other sources is absent from this split, not zero."
 }
 
 // skillRead reports the neutral no-verdict Read while the window cannot support a

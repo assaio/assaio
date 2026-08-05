@@ -10,11 +10,13 @@ import (
 )
 
 // reconcileColumns adds any usage_record column that 0001_init.sql defines but an
-// already-migrated database is still missing. Pre-1.0, schema changes are made by
-// editing 0001_init.sql in place (see RELEASING.md), so a database that recorded
-// "0001_init.sql" as applied under an older build never gets the columns added since;
-// this self-heals it. Post-1.0, schema changes ship as new immutable migration files
-// and this function becomes a no-op for every column.
+// already-migrated database is still missing. That gap can only predate the first release:
+// a shipped migration is immutable (RELEASING.md), so every schema change since has arrived
+// as its own file and this finds nothing to do. What it heals is a database created while
+// 0001_init.sql was still being edited in place, when there were no users to migrate -- the
+// runner skips a filename it has already recorded, so the edited CREATE TABLE never ran
+// there. It is not a licence to edit a shipped migration: doing so still leaves every other
+// object (a new table, an index, a backfilled value) missing on an upgraded database.
 func reconcileColumns(ctx context.Context, db *sql.DB) error {
 	want, err := schemaColumns()
 	if err != nil {
@@ -93,9 +95,8 @@ func schemaColumns() ([]column, error) {
 
 // parseColumnLine parses one usage_record column-definition line from 0001_init.sql into
 // a column, reporting false for a blank line or a UNIQUE(...) table constraint. def keeps
-// everything after the column name verbatim, save for trimming the whitespace that
-// separates them -- splitting on strings.Fields and rejoining, as this used to, would
-// collapse any internal whitespace inside a quoted DEFAULT instead of preserving it.
+// everything after the column name verbatim: a quoted DEFAULT can contain whitespace that
+// splitting into fields and rejoining would collapse.
 func parseColumnLine(line string) (column, bool) {
 	line = strings.TrimSuffix(strings.TrimSpace(line), ",")
 	if line == "" || strings.HasPrefix(strings.ToUpper(line), "UNIQUE") {

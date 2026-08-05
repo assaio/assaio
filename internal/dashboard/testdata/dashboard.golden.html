@@ -849,7 +849,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
   </div>
   <div>
-    <p class="entry__howto">High cache reuse means repeated context is served cheaply from cache instead of re-billed as fresh input. It is a cost signal, not a quality one -- a big one-shot task legitimately shows low reuse, and vendor cache lifetimes are invisible here.</p>
+    <p class="entry__howto">High cache reuse means repeated context is served cheaply from cache instead of re-billed as fresh input. It is a cost signal, not a quality one -- a big one-shot task legitimately shows low reuse, and assaio does not read the cache lifetime a write bought, so reuse is measured at day grain.</p>
     
     <div class="entry__stats">
       
@@ -874,7 +874,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     
-    <p class="entry__caveat">High reuse is cheaper, not better work -- a large one-shot task legitimately shows low reuse.</p><p class="entry__caveat">Vendor cache lifetimes (TTLs) are invisible, so this is a day-grain approximation.</p>
+    <p class="entry__caveat">High reuse is cheaper, not better work -- a large one-shot task legitimately shows low reuse.</p><p class="entry__caveat">The cache lifetime a write bought is recorded by some sources but not read yet, so this is a day-grain approximation.</p>
     <p class="entry__conf">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">Little input is served from cache this window -- expected for one-shot or exploratory work.</p>
   </div>
@@ -1009,7 +1009,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     
-    <p class="entry__conf">Confidence — low · 2 sessions</p>
+    <p class="entry__conf">Confidence — low · 2 sessions with compaction capture</p>
     <p class="entry__takeaway">Compaction is rare so far, but too few sessions this window to call context health confidently.</p>
   </div>
 </article>
@@ -1097,7 +1097,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     <p class="entry__caveat">Prov.: 0% of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified -- run `backfill` to restate them. A source that names no tool calls records none, so it neither raises nor lowers this -- `assaio-agent signals coverage` says which do.</p>
-    <p class="entry__conf">Confidence — insufficient — nothing to measure in this window</p>
+    <p class="entry__conf">Confidence — insufficient — nothing in this window can answer it</p>
     <p class="entry__takeaway">No tool in this window records what its tool calls were for.</p>
   </div>
 </article>
@@ -1132,14 +1132,14 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <div class="stat">
         <span class="stat__value">2.9%</span>
         <span class="stat__label">rejection rate</span>
-        <span class="stat__note">1 declined by a human, of all calls</span>
+        <span class="stat__note">1 declined by a human, of calls that record one</span>
       </div>
       
     </div>
     
     
     <p class="entry__caveat">Prov.: 0% of tool calls record whether they failed, and only for sessions ingested by a build that captures it -- run `backfill` after upgrading. A source that marks only some outcomes is excluded from these rates rather than counted as successes; `assaio-agent signals coverage` says which does what.</p>
-    <p class="entry__conf">Confidence — insufficient — nothing to measure in this window</p>
+    <p class="entry__conf">Confidence — insufficient — nothing in this window can answer it</p>
     <p class="entry__takeaway">No tool call in this window records whether it failed, so no failure rate can be read from it.</p>
   </div>
 </article>
@@ -1257,7 +1257,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     
-    <p class="entry__conf">Confidence — insufficient — nothing to measure in this window</p>
+    <p class="entry__conf">Confidence — insufficient — 0 premium-model turns</p>
     <p class="entry__takeaway">No premium-model turns in this window.</p>
   </div>
 </article>
@@ -1328,7 +1328,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <div class="stat">
         <span class="stat__value">3%</span>
         <span class="stat__label">rejection rate</span>
-        <span class="stat__note">1 of 35 tool calls declined</span>
+        <span class="stat__note">1 of 35 calls that record a refusal</span>
       </div>
       
     </div>
@@ -1416,7 +1416,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     <p class="entry__caveat">Prov.: hours are read in this machine&#39;s local timezone; sessions recorded in another zone land in the wrong band.</p><p class="entry__caveat">Aggregate workload signal -- not an input to evaluating an individual.</p>
     <p class="entry__conf">Confidence — low · 2 sessions</p>
-    <p class="entry__takeaway">Too few sessions this window to call the rhythm -- the timing shares above are shown without a verdict.</p>
+    <p class="entry__takeaway">Too few sessions this window to call the rhythm -- the shares above are shown without a verdict.</p>
   </div>
 </article>
 
@@ -1483,7 +1483,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     <p class="entry__caveat">Conversational sessions are real work (design, debugging, planning) -- not idle time.</p><p class="entry__caveat">A thrash bucket needs per-session rework, which isn&#39;t stored yet, so it isn&#39;t split out here.</p>
-    <p class="entry__conf">Confidence — low · 2 sessions</p>
+    <p class="entry__conf">Confidence — low · 2 sessions with edit capture</p>
     <p class="entry__takeaway">Too few sessions this window to characterize the mix.</p>
   </div>
 </article>
@@ -1508,8 +1508,8 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       
     </div>
     
-    <p class="entry__caveat">Prov.: only Claude Code labels turns with a skill or sub-agent today; usage from other tools is absent from this split, not zero.</p>
-    <p class="entry__conf">Confidence — insufficient — nothing to measure in this window</p>
+    <p class="entry__caveat">Prov.: turns are labeled with a skill or sub-agent by claude-code; usage from other sources is absent from this split, not zero.</p>
+    <p class="entry__conf">Confidence — insufficient — nothing in this window can answer it</p>
     <p class="entry__takeaway">No usage in this window carried a skill or sub-agent label.</p>
   </div>
 </article>

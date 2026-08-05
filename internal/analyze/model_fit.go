@@ -34,8 +34,7 @@ func (modelFitValidator) Describe() string { return modelFitDescribe }
 func (modelFitValidator) Analyze(in Input) Result {
 	r := Result{Name: modelFitName, Title: modelFitTitle, Describe: modelFitDescribe, HowToRead: modelFitHowToRead}
 	if len(in.Usage) == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("active days", "No usage in this window.")
 		return r
 	}
 	r.restsOn(activeDays(&in), "active days")

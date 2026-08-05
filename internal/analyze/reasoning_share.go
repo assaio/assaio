@@ -1,7 +1,6 @@
 package analyze
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/assaio/assaio/internal/humanize"
@@ -31,8 +30,7 @@ func (reasoningValidator) Describe() string { return reasoningDescribe }
 func (reasoningValidator) Analyze(in Input) Result {
 	r := Result{Name: reasoningName, Title: reasoningTitle, Describe: reasoningDescribe, HowToRead: reasoningHowToRead}
 	if in.Totals.Output == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No output tokens in this window."
+		r.noData("active days", "No output tokens in this window.")
 		return r
 	}
 	r.restsOn(activeDays(&in), "active days")
@@ -75,27 +73,14 @@ func (reasoningValidator) Analyze(in Input) Result {
 	return r
 }
 
-// reportsReasoning asks the depth matrix rather than keeping a list of tool names, which is
-// how Copilot CLI's reasoning tokens sat in the store unread from v0.6.0.
-func reportsReasoning(tool string) bool { return parser.Answers(tool, "ai.tokens.reasoning") }
+// reportsReasoning asks the depth matrix rather than keeping a list of tool names.
+func reportsReasoning(tool string) bool { return parser.Answers(tool, parser.SignalTokensReasoning) }
 
 // reasoningCoverageCaveat names the sources that report reasoning from the depth matrix, so
 // the sentence cannot outlive the list it used to spell out.
 func reasoningCoverageCaveat() string {
-	return "Reasoning is reported by " + strings.Join(reasoningSources(), ", ") +
+	return "Reasoning is reported by " + strings.Join(sourcesAnswering(parser.SignalTokensReasoning), ", ") +
 		"; the rest of your output comes from sources that never surface it."
-}
-
-// reasoningSources names every in-tree source answering the reasoning signal, alphabetically.
-func reasoningSources() []string {
-	var out []string
-	for _, d := range parser.Depths() {
-		if reportsReasoning(d.Tool) {
-			out = append(out, d.Tool)
-		}
-	}
-	sort.Strings(out)
-	return out
 }
 
 func reasoningTakeaway(share float64) string {

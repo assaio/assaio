@@ -34,8 +34,7 @@ func (frictionValidator) Describe() string { return frictionDescribe }
 func (frictionValidator) Analyze(in Input) Result {
 	r := Result{Name: frictionName, Title: frictionTitle, Describe: frictionDescribe, HowToRead: frictionHowToRead}
 	if len(in.Usage) == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("tool calls", "No usage in this window.")
 		return r
 	}
 	f := buildFriction(in.Usage)
@@ -50,10 +49,10 @@ func (frictionValidator) Analyze(in Input) Result {
 	r.Figures = []Figure{
 		{Label: "calls with failure capture", Value: strconv.FormatInt(f.Observed, 10), Note: "of " + strconv.FormatInt(f.Calls, 10) + " tool calls"},
 		frictionRateFigure("error rate", f.Errors, f),
-		// Rejections are counted on every tool call, including history ingested before
-		// failure capture existed, so their denominator is every call -- not the
-		// failure-observed subset the error rate divides by.
-		{Label: "rejection rate", Value: shareOrDash(f.Rejected, f.Calls, 1), Note: strconv.FormatInt(f.Rejected, 10) + " declined by a human, of all calls"},
+		// Rejections have their own denominator: a source that never records a refusal is
+		// excluded rather than counted as a call nobody stopped, and history ingested before
+		// failure capture existed still contributes here, since the two are captured apart.
+		{Label: "rejection rate", Value: shareOrDash(f.Rejected, f.Refusable, 1), Note: strconv.FormatInt(f.Rejected, 10) + " declined by a human, of calls that record one"},
 	}
 	r.Takeaway = frictionTakeaway(sufficient, smooth, f)
 	r.Caveats = append(r.Caveats, frictionCoverageCaveat(f))
@@ -61,10 +60,11 @@ func (frictionValidator) Analyze(in Input) Result {
 }
 
 // friction is the window's tool-call outcome counts. Observed is the subset of Calls whose
-// failure state was actually recorded; a rate over Calls would count rows that cannot fail
-// by construction and report the resulting zero as a finding.
+// failure state was actually recorded and Refusable the subset whose source records a human
+// declining one; a rate over Calls would count rows that cannot fail or be refused by
+// construction and report the resulting zero as a finding.
 type friction struct {
-	Calls, Observed, Errors, Rejected int64
+	Calls, Observed, Errors, Refusable, Rejected int64
 }
 
 // buildFriction sums the window's tool-call outcomes. A row joins Observed -- and
@@ -76,7 +76,10 @@ func buildFriction(rows []store.UsageRow) friction {
 	var f friction
 	for i := range rows {
 		f.Calls += rows[i].ToolCalls
-		f.Rejected += rows[i].Rejected
+		if refusalCapableTool(rows[i].Tool) {
+			f.Refusable += rows[i].ToolCalls
+			f.Rejected += rows[i].Rejected
+		}
 		if !failureCapableTool(rows[i].Tool) || classifiedCalls(&rows[i]) == 0 {
 			continue
 		}
@@ -86,11 +89,16 @@ func buildFriction(rows []store.UsageRow) friction {
 	return f
 }
 
+// refusalCapableTool reports whether a tool records a human declining a call. A source that
+// does not cannot contribute a refusal, so counting its calls in the denominator would push
+// the rate toward zero with work nobody could have stopped.
+func refusalCapableTool(tool string) bool { return parser.Answers(tool, parser.SignalRejectedCount) }
+
 // failureCapableTool reports whether a tool marks the outcome of every tool call, not just
 // some -- asked of the depth matrix, so widening it is a change to that one row rather than
 // to a name repeated here. A source that marks only some outcomes answers no error signal:
 // its calls would sit in a denominator they can never appear in the numerator of.
-func failureCapableTool(tool string) bool { return parser.Answers(tool, "ai.tool_errors.count") }
+func failureCapableTool(tool string) bool { return parser.Answers(tool, parser.SignalToolErrorsCount) }
 
 // Coherent reports whether the error count can be read as a share of the calls it was
 // counted over. A tool may record a failure for work that never registered as a counted
@@ -136,7 +144,7 @@ func frictionRateFigure(label string, n int64, f friction) Figure {
 // frictionCoverageCaveat states how much of the window could report a failure at all, so a
 // zero error count is never mistaken for "nothing failed" when it means "nothing recorded".
 func frictionCoverageCaveat(f friction) string {
-	return "Prov.: " + formatPercent(f.Coverage(), 0) + " of tool calls record whether they failed, and only for sessions ingested by a build that captures it -- run `backfill` after upgrading. A source that marks only some outcomes is excluded from these rates rather than counted as successes; `assaio-agent signals coverage` says which does what."
+	return "Prov.: " + honestPercent(f.Coverage()) + " of tool calls record whether they failed, and only for sessions ingested by a build that captures it -- run `backfill` after upgrading. A source that marks only some outcomes is excluded from these rates rather than counted as successes; `assaio-agent signals coverage` says which does what."
 }
 
 func frictionTakeaway(sufficient, smooth bool, f friction) string {

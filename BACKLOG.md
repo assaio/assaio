@@ -201,7 +201,9 @@ speak a standard rather than only its own dialect.
   report. Network- and credential-gated; pulls vendor aggregates only, never uploads logs.
 - [ ] **B16 · context-utilization** — M · both — vendored model context-window table (like
   the price table) → peak context vs model limit, near-limit share, and honest right-sizing
-  hints. Prerequisite for pricing long-context and cache tiers instead of one flat rate.
+  hints. Prerequisite for pricing long-context and cache tiers instead of one flat rate. For
+  Codex the table is unnecessary: the log states `model_context_window` on every `token_count`
+  (`B114`), which is a stronger source than a snapshot assaio maintains.
 - [ ] **B98 · OpenTelemetry GenAI mapping + content-free ingest** — M/L · both — publish a
   field mapping between assaio's canonical events and the OTel GenAI semantic conventions
   (model, tokens, tool calls, agent and operation identity, session), then ingest only the
@@ -237,17 +239,60 @@ Depth before breadth, and before correlation. This milestone is the half of the 
 needs no server, no credential and no repository — and the half every other conclusion rests
 on, since a link to a merged pull request is only as good as the session it links.
 
-- [ ] **B105 · the unread-field audit, source by source** — M · solo — every parser turns a
-  rich log into a fixed record and silently drops the rest; nobody has asked, per source, what
-  is being dropped. This is that audit, and it ends with each field in exactly one of two
-  states: **extracted**, or **documented as deliberately skipped with the reason** — the same
-  posture `parser.Depth.Answers` already takes for signals, applied one level down to the raw
-  input. Deliverable is a table per source in [docs/extending.md](docs/extending.md) plus the
-  backlog items the audit turns up, not a code change on its own. Two rules keep it honest:
-  a field is only "extracted" once a signal in the catalog can be computed from it and a
-  golden covers it, and a field whose meaning is not documented by the vendor is skipped with
-  that stated, never guessed at. Run it against the captured corpus rather than one machine's
-  logs, since a field that never appears locally is exactly the one most likely to be missed.
+- [ ] **B107 · Codex cache-write tokens are never read** — S · solo — the audit's clearest
+  gap: `payload.info.total_token_usage.cache_write_input_tokens` is reported on every Codex
+  `token_count` and `usage.Record` gets no value for it, so Codex cost is a floor rather than an
+  estimate and `cache-hygiene` cannot see a Codex cache write at all. One field on the token
+  struct, one delta, one golden — and a `backfill --full` to restate history.
+- [ ] **B108 · Claude's cache is explainable, not opaque** — M · solo — two fields the audit
+  found on every assistant turn: `message.usage.cache_creation.ephemeral_5m_input_tokens` /
+  `ephemeral_1h_input_tokens` (the TTL tier a write bought) and
+  `message.diagnostics.cache_miss_reason.type` (a six-value vocabulary: `messages_changed`,
+  `model_changed`, `previous_message_not_found`, `system_changed`, `tools_changed`,
+  `unavailable`). `cache-hygiene` currently ships the caveat "vendor cache TTLs are invisible"
+  (`B02`); they are not. Turns a cache-read share into a cause a person can act on, and the
+  1-hour tier is priced differently from the 5-minute one, so it also sharpens cost.
+- [ ] **B109 · Copilot CLI is deeper than its matrix row** — M · both — the audit found named
+  tool calls (`data.toolRequests[].name`), per-call line counts
+  (`data.toolTelemetry.metrics.linesAdded`/`linesRemoved`), per-model request counts
+  (`data.modelMetrics.<model>.requests.count`), a published cache TTL
+  (`data.modelCacheState[].cacheTtlSeconds`) and sub-agent parentage
+  (`data.parentAgentTaskId`) — every one of them a signal its depth row currently declares it
+  cannot answer. Per-call lines are the interesting half: they would end the "credited whole to
+  the model with the most requests" compromise. The corpus behind this is three sessions, so
+  verify against a real one before writing the row.
+- [ ] **B110 · Gemini CLI: the parsed shape is missing from a current install** — S/M · solo —
+  the two files matching the discovery glob on the audited machine contain no token field at
+  all (`files=2 records=0`), and the wider `~/.gemini` tree carries a different vocabulary
+  (`CHECKPOINT`, `PLANNER_RESPONSE`, `CONVERSATION_HISTORY`) with no `tokens` object anywhere.
+  Either the recording moved or these files were never the token source; settle which against a
+  fresh session before touching the parser. **The second half is ours, not Gemini's**: a source
+  this small is invisible to every drift canary, since each needs a 20-file sample floor. A
+  source that has always had a handful of files needs a canary that can fire on "discovered
+  files, parsed zero records", which none of the four does.
+- [ ] **B111 · the human correction, recorded rather than proxied** — S · solo —
+  `toolUseResult.userModified` marks an edit the person changed after the AI wrote it, on a
+  meaningful share of Claude edit results. `rework` today infers correction from add-then-remove
+  churn within a transcript and says it is a proxy; this is the thing itself. Ships as its own
+  signal beside `ai.rework.lines`, never folded into it — they mean different things.
+- [ ] **B112 · attribution beyond skill and sub-agent, and the build that wrote the line** — M ·
+  solo — Claude stamps `attributionPlugin` and `attributionMcpServer`/`attributionMcpTool` on a
+  large share of turns, which would widen `skill-economics` from two dimensions to four and give
+  MCP servers a cost of their own. Alongside it, `version` on every line is the harness-version
+  cohort input `B96` assumes needs a server — it is already on disk, offline, per turn.
+- [ ] **B113 · how a turn ended** — S/M · both — three fields for one signal: Claude's
+  `message.stop_reason` (`max_tokens` marks a truncated answer), `toolUseResult.interrupted` (a
+  command the human cut short), and Codex's `turn_aborted` with `reason: interrupted`. Together
+  they distinguish a turn that finished from one that was stopped, which every efficiency figure
+  currently averages together. Codex's `changes.<path>.{type,move_path}` belongs here too: an
+  add, an update and a rename are one undifferentiated edit today.
+- [ ] **B114 · Codex states its own limits** — M · both — `payload.info.model_context_window` is
+  the model's context limit on every `token_count`, which is what `B16` proposes to vendor a
+  table for; and `payload.rate_limits.{plan_type,primary.used_percent,primary.resets_at,credits}`
+  is the only place any source says how close a session ran to a plan's ceiling. That is the
+  subscription question `subscription-fit` answers from a configured number today, answered
+  from the vendor's own accounting instead. Both are per-session state rather than usage, so the
+  storage shape needs deciding first.
 
 ## Pool — validators from data already stored (unscheduled)
 
@@ -279,8 +324,10 @@ on, since a link to a merged pull request is only as good as the session it link
   branches; a process signal (direct-to-main AI work), local only.
 - [ ] **B02 · cache-hygiene trend** — S · both — add the day-over-day cache-read-share
   trend to the shipped `cache-hygiene` validator, which already reports the current-window
-  share and the cache-write-waste flag. Caveat: vendor cache TTLs are invisible; day-grain
-  approximation.
+  share and the cache-write-waste flag. The caveat this item used to carry — "vendor cache TTLs
+  are invisible" — turned out to be false: Claude splits a cache write by TTL tier and Copilot
+  publishes the TTL in seconds (`B105` audit, now `B108` and `B109`). Day-grain approximation
+  stands.
 
 ## Pool — needs a schema or parser extension
 
@@ -297,7 +344,11 @@ on, since a link to a merged pull request is only as good as the session it link
 - [ ] **B78 · sub-agent tool-call split** — S · solo — a Claude sub-agent's aggregate record
   keeps `ToolCalls=0` and an all-zero purpose split, so its `toolStats` read/search/bash/edit
   counts never reach `explore-produce`. Populating them means also setting `ToolCalls`, which
-  today would double-count against the parent turn — needs the accounting decided first.
+  today would double-count against the parent turn — needs the accounting decided first. The
+  `B105` audit named the fields and confirmed they are always present together:
+  `toolUseResult.toolStats.{readCount,searchCount,bashCount,editFileCount,otherToolCount}`
+  beside the `linesAdded`/`linesRemoved` already read, plus `totalToolUseCount`. Nothing is
+  missing but the decision.
 - [ ] **B39 · Cline activity extraction** — M · both — close the "cost but no lines" gap
   for Cline: `ui_messages.json` `say:"tool"` payloads (`newFileCreated` /
   `editedExistingFile` / `appliedDiff`) and `api_conversation_history.json` tool_use blocks
@@ -444,6 +495,13 @@ they wait behind features but keep the growing metric surface maintainable.
 - [ ] **B77 · readWhenEnough** — S · both — factor the "gate the favorable read behind a
   minimum-sample floor, else neutral" block shared verbatim by session-taxonomy,
   turn-efficiency, and model-right-sizing into one helper beside `readFor`.
+- [ ] **B106 · three files past the size budget outside the analysis packages** — S · both —
+  `internal/plugin/metric_input.go` (217), `internal/i18n/en_explain_work.go` (221) and
+  `internal/cli/analyze.go` (208) each carry more than one responsibility at more than the
+  ~200-line budget. The i18n one is the interesting case rather than the largest: it is a
+  block of prose per metric, so splitting it by metric group is a different judgement from
+  splitting code, and doing it badly makes the catalog harder to translate (`B08`), not
+  easier.
 
 ## Refusals (will not build, regardless of demand)
 

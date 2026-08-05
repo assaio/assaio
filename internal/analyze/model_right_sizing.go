@@ -42,8 +42,7 @@ func (rightSizeValidator) Analyze(in Input) Result {
 		smallPremium += m.SmallTurns
 	}
 	if premiumTurns == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No premium-model turns in this window."
+		r.noData("premium-model turns", "No premium-model turns in this window.")
 		return r
 	}
 	r.restsOn(int(premiumTurns), "premium-model turns")

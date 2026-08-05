@@ -222,7 +222,7 @@ func TestReworkDashOnZeroToolCalls(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "rejection rate: — (0 of 0 tool calls declined)") {
+	if !strings.Contains(out, "rejection rate: — (0 of 0 calls that record a refusal)") {
 		t.Fatalf("rework output with zero tool calls = %q", out)
 	}
 }

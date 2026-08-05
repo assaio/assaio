@@ -8,13 +8,14 @@ import (
 
 func TestRenderSessionsBlockWithData(t *testing.T) {
 	stats := SessionStats{
-		Count: 770, MedianTurns: 13, P90Turns: 47,
+		Count: 770, Turned: 770, Paced: 770, Edited: 770, Compacting: 770,
+		MedianTurns: 13, P90Turns: 47,
 		MedianOutputTokens: 3120, MedianPeakContextTokens: 85000,
 		MedianActiveMinutes: 12, CodeSessionShare: 0.18,
 		CompactionRate: 0.01, SessionsPerActiveDay: 20.8,
 	}
 	var buf bytes.Buffer
-	if err := RenderSessionsBlock(&buf, stats); err != nil {
+	if err := RenderSessionsBlock(&buf, &stats); err != nil {
 		t.Fatal(err)
 	}
 	out := buf.String()
@@ -37,8 +38,11 @@ func TestRenderSessionsBlockWithData(t *testing.T) {
 
 func TestRenderSessionsBlockCompactTokens(t *testing.T) {
 	var buf bytes.Buffer
-	stats := SessionStats{Count: 1, MedianPeakContextTokens: 1_250_000, MedianOutputTokens: 900}
-	if err := RenderSessionsBlock(&buf, stats); err != nil {
+	stats := SessionStats{
+		Count: 1, Turned: 1, Paced: 1, Edited: 1, Compacting: 1,
+		MedianPeakContextTokens: 1_250_000, MedianOutputTokens: 900,
+	}
+	if err := RenderSessionsBlock(&buf, &stats); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(buf.String(), "~1.2M tokens") {
@@ -48,11 +52,33 @@ func TestRenderSessionsBlockCompactTokens(t *testing.T) {
 
 func TestRenderSessionsBlockEmptyIsHonest(t *testing.T) {
 	var buf bytes.Buffer
-	if err := RenderSessionsBlock(&buf, SessionStats{}); err != nil {
+	if err := RenderSessionsBlock(&buf, &SessionStats{}); err != nil {
 		t.Fatal(err)
 	}
 	out := buf.String()
 	if !strings.Contains(out, "Sessions") || !strings.Contains(out, "No sessions in this window.") {
 		t.Fatalf("empty session stats must render an honest empty state: %s", out)
+	}
+}
+
+// A window whose figures rest on fewer sessions than it holds has to say so, and a figure no
+// source records must read as unrecorded rather than as a confident zero.
+func TestRenderSessionsBlockStatesANarrowerBasis(t *testing.T) {
+	var buf bytes.Buffer
+	stats := SessionStats{
+		Count: 10, Turned: 10, Paced: 10, Edited: 6, Compacting: 0,
+		MedianTurns: 5, P90Turns: 9, MedianOutputTokens: 800,
+		MedianPeakContextTokens: 40000, MedianActiveMinutes: 9,
+		CodeSessionShare: 0.5, SessionsPerActiveDay: 2,
+	}
+	if err := RenderSessionsBlock(&buf, &stats); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "compaction not recorded") {
+		t.Fatalf("a figure no source records must say so, not print 0%%: %s", out)
+	}
+	if !strings.Contains(out, "the 0 of 10 sessions whose source records them") {
+		t.Fatalf("a narrower basis must be stated: %s", out)
 	}
 }

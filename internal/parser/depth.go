@@ -1,10 +1,5 @@
 package parser
 
-import (
-	"slices"
-	"strings"
-)
-
 // The depth tiers, ordered by what a source can support. Deep is separated from Standard by
 // attribution; Standard from ImportOnly by whether the figures can be attributed to a
 // session at all. Granularity is a documented gap within Standard rather than a tier of its
@@ -47,19 +42,23 @@ type Depth struct {
 // repeating a list. Ids are internal/signal's; a test there asserts every one is declared.
 var (
 	costSignals = []string{
-		"ai.tokens.total", "ai.tokens.input", "ai.tokens.output",
-		"ai.tokens.cache_read", "ai.tokens.cache_write",
-		"ai.cost.estimated", "ai.sessions.count",
+		SignalTokensTotal, SignalTokensInput, SignalTokensOutput,
+		SignalTokensCacheRead, SignalTokensCacheWrite,
+		SignalCostEstimated, SignalSessionsCount,
 	}
 	// reasoningSignals are declared per source rather than bundled with cost: Claude Code
 	// and Cline never surface a thinking count, so claiming it for them would report support
 	// for a figure their records can only ever leave at zero.
-	reasoningSignals = []string{"ai.tokens.reasoning"}
+	reasoningSignals = []string{SignalTokensReasoning}
 	// perTurnSignals need records at turn grain: a source that totals a whole session has
 	// no second timestamp to measure a gap or a turn against.
-	perTurnSignals = []string{"ai.turns.count", "ai.session.active_minutes"}
-	lineSignals    = []string{"ai.lines.added", "ai.lines.removed"}
-	editSignals    = []string{"ai.edits.count", "ai.tool_calls.count", "ai.rework.lines"}
+	perTurnSignals = []string{SignalTurnsCount, SignalActiveMinutes}
+	lineSignals    = []string{SignalLinesAdded, SignalLinesRemoved}
+	editSignals    = []string{SignalEditsCount, SignalToolCallsCount, SignalReworkLines}
+	// compactionSignals need the tool to mark a context overflow of its own accord. A source
+	// that writes no boundary line reports none, and a rate computed over it would read that
+	// silence as a session whose context never overflowed.
+	compactionSignals = []string{SignalCompactionsCount}
 )
 
 func answers(groups ...[]string) []string {
@@ -74,8 +73,8 @@ var depths = []Depth{
 	{
 		Tool: "claude-code", Tier: Deep,
 		Tokens: true, Activity: true, Attribution: true,
-		Answers: answers(costSignals, perTurnSignals, lineSignals, editSignals,
-			[]string{"ai.tool_errors.count", "ai.skill.tokens", "ai.agent.tokens"}),
+		Answers: answers(costSignals, perTurnSignals, lineSignals, editSignals, compactionSignals,
+			[]string{SignalToolErrorsCount, SignalRejectedCount, SignalSkillTokens, SignalAgentTokens}),
 	},
 	{
 		Tool: "codex", Tier: Standard,
@@ -83,7 +82,7 @@ var depths = []Depth{
 		// tool_errors is absent deliberately: Codex marks failures only for file edits, so
 		// counting it would read partial coverage as a clean run -- the same reason the
 		// friction validator excludes it rather than treating silence as success.
-		Answers: answers(costSignals, reasoningSignals, perTurnSignals, lineSignals, editSignals),
+		Answers: answers(costSignals, reasoningSignals, perTurnSignals, lineSignals, editSignals, compactionSignals),
 		Gaps: []string{
 			"no skill or sub-agent labels, so its turns are absent from the attribution split",
 			"tool-use denials are not recorded, and call failures only for file edits",
@@ -118,86 +117,4 @@ var depths = []Depth{
 			"its own per-request cost is recorded but recomputed from tokens for cross-tool consistency",
 		},
 	},
-}
-
-// PluginPrefix namespaces an out-of-tree exec parser's records, so a plugin can never
-// impersonate a built-in source (internal/plugin, ADR 0003).
-const PluginPrefix = "plugin:"
-
-// pluginDepth is what any out-of-tree exec parser can be assumed to support. Its record
-// shape (ADR 0003) has no line, edit or tool-call field at all, and it declares turn or
-// session grain per record -- so a per-turn signal cannot be assumed either, for the same
-// reason a session-total source answers none.
-var pluginDepth = Depth{
-	Tier: Standard, Tokens: true,
-	Answers: answers(costSignals, reasoningSignals),
-	Gaps: []string{
-		"the exec parser protocol carries no line, edit or tool-call fields",
-		"grain is declared per record, so per-turn signals cannot be assumed",
-	},
-}
-
-// Depths returns the matrix, deepest first.
-func Depths() []Depth {
-	out := make([]Depth, len(depths))
-	copy(out, depths)
-	return out
-}
-
-// Tools names every in-tree source, deepest first. Every surface that has to know which
-// tools exist -- sync validation, `clear --tool`, the docs -- reads this instead of keeping
-// its own list, which is how a new parser used to ship half-wired.
-func Tools() []string {
-	out := make([]string, len(depths))
-	for i := range depths {
-		out[i] = depths[i].Tool
-	}
-	return out
-}
-
-// Answers reports whether tool produces the data behind signal id -- the one capability
-// question every surface asks, so no metric keeps a second opinion about a source. A name
-// outside the matrix answers the exec protocol's floor only when it is a plugin: a collector
-// that is not a usage source at all (internal/vcs) answers none of these.
-func Answers(tool, id string) bool {
-	d, ok := DepthOf(tool)
-	switch {
-	case ok:
-	case strings.HasPrefix(tool, PluginPrefix):
-		d = pluginDepth
-	default:
-		return false
-	}
-	return slices.Contains(d.Answers, id)
-}
-
-// DepthOf returns tool's declared depth. An out-of-tree exec plugin is absent by design:
-// its depth is whatever its author implemented, so it is read from the records it actually
-// emits rather than promised by a table assaio maintains.
-func DepthOf(tool string) (Depth, bool) {
-	for i := range depths {
-		if depths[i].Tool == tool {
-			return depths[i], true
-		}
-	}
-	return Depth{}, false
-}
-
-// HasFullActivity reports whether tool answers every activity signal -- lines, edits, tool
-// calls and rework -- rather than merely one of them. Deliberately not named for the Activity
-// axis above: that axis is the tier table's one-bit summary and reads true for a source that
-// records changed lines and nothing else, so the two would disagree under one name (ADR 0008).
-func HasFullActivity(tool string) bool { return answersAll(tool, answers(lineSignals, editSignals)) }
-
-// HasLineOutput reports whether tool contributes changed-line counts at all. That is the
-// question behind "cost only", and it is not the same one as full activity capture.
-func HasLineOutput(tool string) bool { return answersAll(tool, lineSignals) }
-
-func answersAll(tool string, ids []string) bool {
-	for _, id := range ids {
-		if !Answers(tool, id) {
-			return false
-		}
-	}
-	return true
 }

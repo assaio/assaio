@@ -21,6 +21,97 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+- **The unread-field audit, source by source** (`B105`) — a table per source in
+  [docs/extending.md](docs/extending.md#what-each-sources-log-carries-and-what-assaio-reads)
+  putting every field a tool writes into exactly one of two states: **extracted** (a catalog
+  signal is computed from it and a golden covers it) or **skipped, with the reason written
+  down**. A field the vendor does not document is skipped with that stated, never guessed at
+  from its name. Each table names the corpus it was built from, because a field the corpus does
+  not contain is the one most likely to be missing from the table — and two of the five say
+  outright that their corpus is too thin to be conclusive.
+
+  What it found, now tracked: Codex reports a token class assaio never reads (`B107`); the
+  cache TTL tiers and miss reasons `cache-hygiene` calls invisible are in the Claude log
+  (`B108`); Copilot CLI names its tool calls, counts lines per call and records the commit its
+  session started at, none of which its depth row claims (`B109`); the human's own correction
+  of an AI edit is recorded rather than needing the churn proxy (`B111`); and the Claude Code
+  build that wrote each line is on disk, which is the harness-cohort input a later milestone
+  assumed would need a server (`B112`). It also found Gemini CLI producing **zero records from
+  two discovered files** on a current install, invisible to every drift canary because each
+  needs a twenty-file sample floor a two-file source can never reach (`B110`).
+
+### Fixed
+- **A metric no longer reads a source's silence as a zero.** Four validators and the `status`
+  Sessions block read per-session fields — edits, turns, focused minutes, compaction — that
+  three of the five in-tree sources never record, and counted every one of those sessions as a
+  zero. A Gemini CLI, Cline or Copilot CLI window therefore read as **100% conversational, 0%
+  produced code, 0 marathons, 0% compaction** and carried a verdict on all four; on a Claude
+  window the two Copilot sessions did the same in miniature. Each figure is now computed over
+  the sessions whose source can answer it, declares that reach as its signal coverage, prints
+  `—` where nothing in the window records it, and withholds the verdict rather than certifying
+  a silence. Affects `session-taxonomy`, `context`, `rhythm` and `turn-efficiency`; `status`
+  names the narrower basis on its own line.
+- **`insufficient` now says which of the three ways a verdict rests on nothing.** One sentence
+  covered all of them, so `explore-produce`, `friction` and `skill-economics` printed
+  "nothing to measure in this window" over a store holding 119,896 records — directly beneath
+  their own caveat saying the opposite. The three are different facts and now read as such:
+  *nothing in this window can answer it* (the metric declared zero reach), *0 tool calls* (it
+  counted none of its own unit), and *no stated basis* — which is what an exec metric plugin
+  omitting `confidence.samples` means.
+- **A completed Claude sub-agent is a session total, not a turn.** One record summarizes a
+  whole sub-agent run, and labelling it `turn` made every per-turn figure count it as a single
+  very large one — 1,015 such rows on the maintainer's machine, averaging 2.4× a real turn's
+  output. It is now `session` grain, so `coverage` reports the mixed window it always was and
+  `model-right-sizing` stops counting an aggregate as a turn.
+- **The rejection rate gets its own denominator.** It divided by every tool call in the
+  window, including calls from sources that record no refusal at all, so a Codex-heavy window
+  read as calmer than it was. `friction` and `rework` now divide by the calls whose source
+  records a refusal, and say so.
+- **`concentration` stops blaming a project for a source that writes no lines.** A project
+  running entirely on a cost-only source writes zero lines by construction, so its whole token
+  share read as the widest spend-versus-output gap in the window. Those projects are excluded
+  from the gap and counted in a caveat instead.
+- **`skill-economics` states its reach, and a lone label no longer reads as zero tokens.** The
+  concentration share is of attributed tokens, which are a slice of the window — 18% of it on
+  the maintainer's store — and that is now the metric's declared signal coverage. A window with
+  a single skill prints `—` for the largest share rather than a share of nothing beside
+  "attributed tokens: 0".
+- **`doctor` reports a failed discovery instead of printing it as "not detected".** A root it
+  could not read counted as zero files, while `backfill` reported the same condition as an
+  error.
+- **`make fuzz` runs the Copilot CLI parser's fuzzer.** It shipped one in v0.6.0 and the target
+  never listed it, so the guarantee that every parser is fuzzed was true of the code and not of
+  the gate. It passes; no crasher was found.
+
+### Changed
+- **Two signals join the catalog**: `ai.compactions.count` and `ai.rejected.count`, both
+  answered by Claude Code (compaction also by Codex). They existed as stored columns and as
+  the subject of two verdicts without ever being declarable, which is why the metrics over
+  them could not tell absence from zero. `signals list|describe|coverage` cover them like any
+  other.
+- **Every remaining hardcoded tool list in user-facing text now reads from the depth matrix**:
+  `skill-economics`'s provenance caveat and the `explore-produce` explain page named tools in
+  prose that the next parser would have made wrong.
+- **[ADR 0011](docs/adr/0011-capability-gated-metrics.md)** records the rule the fixes above
+  share, because a future validator could undo it by reading a session field directly: a metric
+  computes only over the sources that record its field, and a generic test asserts every
+  registered validator returns the same result whether or not those fields carry a value for a
+  source that cannot fill them.
+
+### Compatibility
+- **Migration `0006_subagent_session_grain.sql`** relabels stored Claude sub-agent aggregates
+  from `turn` to `session`. A re-parse cannot reach them: once a sub-agent has its own
+  transcript file the parent's aggregate is suppressed at parse time, so the row already
+  written is never offered to the store again. The migration is an `UPDATE` over
+  `dedupe_key LIKE 'agent:%'` (and the sync server's `<member>:agent:%`) scoped to
+  `claude-code` — no row is added and no column widened, so the store does not grow and there
+  is nothing to clean up afterwards.
+- `InsertLocal` now restates `granularity` from the current parse rather than keeping the
+  stored value. It is the one column assigned instead of maximised, because a build that
+  learns a record summarizes a whole run has to be able to say so; `Insert` — the sync path —
+  stays first-write-wins and never relabels another member's record.
+
 ## [0.9.0] - 2026-08-04
 
 ### Added

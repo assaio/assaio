@@ -162,7 +162,7 @@ server](#the-team-server)) the served endpoint.
 | Field | Type | What it is |
 |-------|------|------------|
 | `Usage` | `[]store.UsageRow` | The window's usage, **pre-aggregated** by `(day, tool, model, project, entrypoint, member)` — one row per combination, tokens and activity counts summed (`internal/store/store.go`'s `Usage` query). Not one row per raw event: there is no per-record or per-file detail left at this point (see the [say-so-when-approximating](#honesty-constraints-for-every-extension) rule). Each row carries `Day` (`"YYYY-MM-DD"`), `Tool`, `Model`, `Project`, `Entrypoint`, `Member`; token fields `In, Out, CacheRead, CacheWrite, Reasoning`; and activity fields `LinesAdded, LinesRemoved, Edits, ToolCalls, Rejected, Compactions, ReworkLines` (see the [`usage.Record` contract](#the-usagerecord-contract) for what each counts). It also carries the tool-call purpose split `ToolReads, ToolSearches, ToolCommands, ToolWrites, ToolOther` — which sums to `ToolCalls` for tools that name their tool calls and is all-zero for tools that do not — and `ToolErrors`, calls that came back an error. Because that split is populated by only some tools, a metric reading it must report its own coverage rather than treating zero as "nothing happened". |
-| `Sessions` | `[]store.SessionRow` | One row per `(session_id, member)` in the window: `Project`, `Tool`, `Model`, `FirstTs`/`LastTs`, `Turns`, `OutputTokens`, `PeakContextTokens`, `Edits`, `Compactions`, and `ActiveMinutes` (focused time — inter-turn gaps over 30 minutes are excluded, so a resumed session's idle time never counts as work; `internal/store/sessions.go`). Also `Task`, `Outcome` and `Difficulty`: the closed-vocabulary labels a person attached with `assaio-agent mark`, `""` on every axis nobody set — which is most sessions. Treat unlabeled as "not stated", never as a failure or a zero, and report your own label coverage if your metric depends on them ([ADR 0006](adr/0006-session-annotations.md)). |
+| `Sessions` | `[]store.SessionRow` | One row per `(session_id, member)` in the window: `Project`, `Tool`, `Model`, `FirstTs`/`LastTs`, `Turns`, `OutputTokens`, `PeakContextTokens`, `Edits`, `Compactions`, and `ActiveMinutes` (focused time — inter-turn gaps over 30 minutes are excluded, so a resumed session's idle time never counts as work; `internal/store/sessions.go`). **Every one of those counts except the timestamps is zero for a source that does not record it**, so a metric reading one must first keep the sessions whose `Tool` answers the matching signal — see [Reading a field only the sources that record it carry](#reading-a-field-only-the-sources-that-record-it-carry). Also `Task`, `Outcome` and `Difficulty`: the closed-vocabulary labels a person attached with `assaio-agent mark`, `""` on every axis nobody set — which is most sessions. Treat unlabeled as "not stated", never as a failure or a zero, and report your own label coverage if your metric depends on them ([ADR 0006](adr/0006-session-annotations.md)). |
 | `Prices` | `pricing.Table` | `map[string]pricing.Price{Input, Output, CacheWrite, CacheRead float64}`, USD per token, the vendored LiteLLM snapshot. Indexing a model absent from the table returns a zero-value `Price` with **no error** — check the map's `ok` return if an unpriced model must be excluded from a cost figure rather than silently priced at $0. |
 | `Now` | `time.Time` | Wall-clock at CLI invocation. Use this, never call `time.Now()` yourself. |
 | `Recent` | `time.Duration` | The recent-vs-prior comparison window (7 days from the CLI today) — use it for trend/staleness splits the way `adoption` and `throughput` do. |
@@ -173,6 +173,36 @@ server](#the-team-server)) the served endpoint.
 | `PlanMonthlyCost` | `float64` | The user's configured flat monthly plan price (`pricing.monthly_subscription_cost`); `0` means unset — prompt to configure it rather than comparing against nothing. |
 | `Skills` / `Agents` | `[]store.AttributionRow` | The window's per-skill and per-sub-agent totals (`Name`, `Tokens`, `Lines`, `Records`, `Sessions`), each sorted by `Tokens` descending. `Name` is a category label the tool assigned — never a prompt or any content. Empty when no tool in the window reports attribution (only Claude Code does today), so a metric over them must state its own coverage. |
 | `TurnSizing` | `[]store.ModelTurns` | Per-model raw turn counts (`Turns`, `SmallTurns`) for metrics that need the per-turn grain the daily `Usage` aggregate hides. Empty in the drill and in tests that do not set it. |
+
+#### Reading a field only the sources that record it carry
+
+Most fields on `Usage` and `Sessions` are optional at the parser (see [Activity fields are
+optional](#activity-fields-are-optional-honesty-note)), which means a zero has two meanings:
+nothing happened, or nothing was written down. Averaging the two produces a number nobody
+measured — the mistake that made a Cline-only window read as *100% conversational sessions*,
+because Cline records no edit count and every session sat at zero edits.
+
+The rule for any metric over such a field: **keep the rows whose source answers the signal,
+compute over those, and declare the reach.**
+
+```go
+// sessionsAnswering keeps the sessions whose source can answer the signal, and the share of
+// the window's sessions they are.
+edited, coverage := sessionsAnswering(in.Sessions, parser.SignalEditsCount)
+r.restsOn(len(edited), "sessions with edit capture")
+r.covering(coverage)
+if len(edited) == 0 {
+	r.Read = noDataRead // no source here records it: withhold the verdict, do not certify a silence
+	...
+}
+```
+
+Three consequences worth stating: a figure whose subset is empty prints `—` rather than `0`;
+the verdict is withheld rather than earned from a silence; and `covering()` makes the
+confidence envelope say how much of the window the figure describes. Spell the signal with
+the `parser.Signal*` constant, and if the field you need has no signal id yet, add one — a
+catalog entry plus the matrix rows that answer it ([ADR 0008](adr/0008-signal-catalog.md)) —
+rather than testing the tool name.
 
 #### Opting a metric out of the project drill
 
@@ -934,6 +964,19 @@ different fact from a thin answer. The share sets the label alongside the other 
 Confidence: low · 43 active days · signal coverage <1%
 ```
 
+**A verdict resting on nothing says which nothing it is** (v0.10). `insufficient` has three
+causes and they are different facts about different things, so the summary line names the one
+that applies:
+
+| Line | What you declared |
+|---|---|
+| `insufficient — nothing in this window can answer it` | `signalCoverage: 0` — the window may be full of usage, none of which reaches your question |
+| `insufficient — 0 sessions` | `samples: 0` with a unit — you counted none of your own observations |
+| `insufficient — no stated basis` | no `samples` at all — the honest reading of a plugin that did not say what it rests on |
+
+Declaring `samples: 0` with a unit is therefore better than omitting the field: "zero
+sessions" is a measurement, "no stated basis" is an absence of one.
+
 ### What the boundary enforces
 
 The honesty rules are enforced, not requested. A result that fails **any** check is
@@ -1401,6 +1444,10 @@ records changed lines and no edit count, no tool calls, no turns and no rework, 
 two activity signals and not the other four; declaring the axis alone made `signals coverage`
 report sixteen of eighteen signals as fully supported when the truth was ten.
 
+What your source writes but you choose *not* to read belongs in the audit below — [What each
+source's log carries](#what-each-sources-log-carries-and-what-assaio-reads) — with the reason,
+so the next reader can tell a deliberate omission from an oversight.
+
 The rule is one question per signal: **would a figure computed from my records be right, or
 merely non-empty?** If the log does not carry it, leave it out — an absent signal is reported
 as "this source cannot answer it", which is a useful fact, while a claimed one becomes a
@@ -1409,6 +1456,15 @@ declared per source rather than inherited, because Claude Code and Cline never s
 thinking count and claiming it for them reported full support for a figure their records can
 only leave at zero. A test asserts the ids you list are real and that they do not contradict
 the tier axes ([ADR 0008](adr/0008-signal-catalog.md)).
+
+**A metric reads this row before it reads your records.** A validator that reports a
+per-session figure — the session mix, context health, how long sessions run, the rejection
+rate — first asks `parser.Answers(tool, id)` and keeps only the sessions your source can
+answer for, because a field you never write is not a zero: it is a silence, and averaging it
+in reports a fact about someone's work that came from your parser's gap. Leaving a signal out
+therefore *removes* your sessions from that figure rather than dragging it down. Spell the id
+with the `parser.Signal*` constant, never as a literal — a typo answers false for every tool
+and empties a metric instead of failing a build.
 
 The row does more than describe your source. `parser.Tools()` and `parser.Answers()` are how
 everything downstream asks what exists and what it can do — sync validation, `clear --tool`,
@@ -1525,6 +1581,12 @@ summary), you **must** set `Granularity: "session"`. Emit `"turn"` only when eac
 genuinely corresponds to one request/response. When in doubt, choose `"session"` — an
 honest coarse label beats a precise-looking lie.
 
+The rule bites inside a source, not only between them: a Claude Code transcript is per-turn
+throughout except for the one record summarizing a completed sub-agent, which totals a whole
+run and is therefore `"session"`. It was labelled `"turn"` until v0.10, which let every
+per-turn figure count it as a single very large turn. If one shape in your log aggregates,
+label that shape — the field is per record, not per parser.
+
 ### Golden-file testing
 
 Parsers are tested against captured fixtures under the package's `testdata/` directory,
@@ -1593,6 +1655,142 @@ That sample becomes the synthetic fixture, and the discussion settles the token-
 questions (does input include cache? how is reasoning billed?) before they turn into
 wrong numbers. A connector is a well-scoped first contribution; the issue is where it
 starts.
+
+---
+
+## What each source's log carries, and what assaio reads
+
+Every parser turns a rich log into one fixed record and drops the rest. This is the inventory
+of that drop, source by source: each field a source writes ends in exactly one of two states —
+**extracted**, meaning a signal in the catalog is computed from it and a golden covers it, or
+**skipped**, with the reason written down. A field whose meaning the vendor does not document
+is skipped *with that stated*; it is never guessed at from its name.
+
+**How it was produced.** Key paths were inventoried from real logs on one machine plus each
+parser's synthetic fixture — names and counts only, never a value, except for discriminator
+keys (`type`, `say`, `role`, `status`, `stop_reason`, …) whose values are the format's own
+vocabulary. The corpus is stated per source below, because it is the honest limit of this
+table: **a field that does not appear in the corpus is exactly the one most likely to be
+missing from it.** Re-run the audit when a vendor ships a major version.
+
+None of these formats is documented as an interface. Every "meaning" below is either stated by
+the vendor or inferred from a name that leaves no room — and where it does leave room, the
+field is skipped for that reason.
+
+### Claude Code
+
+*Corpus: 5,602 transcripts · 703,320 lines · 2,284 distinct key paths, plus
+`testdata/session.jsonl`.*
+
+| Field | State | Notes |
+|---|---|---|
+| `uuid`, `sessionId`, `timestamp`, `cwd`, `gitBranch`, `entrypoint` | extracted | Record identity, dedupe key and dimensions. |
+| `message.model`, `message.usage.{input_tokens,output_tokens,cache_read_input_tokens,cache_creation_input_tokens}` | extracted | Every token signal and the cost estimate. |
+| `message.content[].type` = `tool_use` / `tool_result` + `.name` / `.is_error` | extracted | Tool-call count, the purpose split, and `ai.tool_errors.count`. |
+| `toolUseResult.structuredPatch[].lines` | extracted | `ai.lines.added` / `.removed` and, via the shared helper, `ai.rework.lines`. |
+| `toolUseResult.{agentId,agentType,resolvedModel,usage,toolStats.linesAdded,toolStats.linesRemoved}` | extracted | The completed sub-agent's own record. |
+| `toolDenialKind` | extracted | `ai.rejected.count`. |
+| `isCompactSummary`, `subtype` = `compact_boundary` | extracted | `ai.compactions.count`. |
+| `isSidechain`, `attributionSkill`, `attributionAgent` | extracted | Delegation share and the skill / sub-agent split. |
+| `message.usage.cache_creation.ephemeral_5m_input_tokens` / `ephemeral_1h_input_tokens` | **skipped — worth extracting** | The cache TTL tier, on every assistant turn. `cache-hygiene` currently caveats that "vendor cache TTLs are invisible"; they are not (`B108`). |
+| `message.diagnostics.cache_miss_reason.type` | **skipped — worth extracting** | Six documented-by-vocabulary reasons a prompt cache missed (`messages_changed`, `model_changed`, `previous_message_not_found`, `system_changed`, `tools_changed`, `unavailable`). Turns a cache rate into a cause (`B108`). |
+| `toolUseResult.userModified` | **skipped — worth extracting** | The human edited what the AI wrote. A direct correction signal where `rework` has only a proxy (`B111`). |
+| `toolUseResult.toolStats.{readCount,searchCount,bashCount,editFileCount,otherToolCount}` | **skipped — accounting undecided** | The sub-agent's own purpose split, already in the log. Populating it means also setting `ToolCalls`, which would double-count against the parent turn — the open half of `B78`. |
+| `attributionPlugin`, `attributionMcpServer`, `attributionMcpTool` | **skipped — worth extracting** | Two more attribution dimensions beside skill and sub-agent, on a third of all turns (`B112`). |
+| `version` | **skipped — worth extracting** | The Claude Code build that wrote the line, on every turn. The harness-version cohort input (`B96`) is already on disk (`B112`). |
+| `message.stop_reason` | **skipped — worth extracting** | Why generation stopped; `max_tokens` marks a truncated answer (`B113`). |
+| `toolUseResult.interrupted` | **skipped — worth extracting** | A command the human cut short (`B113`). |
+| `message.content[].thinking` | skipped — no count exists | Thinking blocks are present, but Claude publishes no thinking **token** count, and inferring one from text length would be a fabricated number. What is honestly derivable is a share of turns that carried one — a different signal from `ai.tokens.reasoning`, and not one the catalog declares today. |
+| `effort` | skipped — undocumented | Appears on most turns; the vendor documents neither its vocabulary nor whether it is a request or an outcome. Named in `B113` as research, not as an extraction. |
+| `message.usage.server_tool_use.{web_search_requests,web_fetch_requests}` | skipped — undocumented billing | Server-side tool calls the vendor bills on its own terms; folding them into any token figure would state a price we cannot compute. |
+| `message.usage.{speed,inference_geo,iterations,service_tier}` | skipped — undocumented | No published meaning. `service_tier` reads `standard` on every line here, which is a constant, not a signal. |
+| `slug`, `promptId`, `requestId`, `messageId`, `leafUuid`, `parentUuid`, `sourceToolAssistantUUID` | skipped — identity, no measure | Threading and request identifiers. `parentUuid` would let a fork be detected; nothing measures forks yet, so it stays out rather than being stored speculatively. |
+| `attachment.*`, `snapshot.*`, `backup.*`, `trackingPath`, `lastPrompt`, `aiTitle`, `content`, `message.content[].text`, `toolUseResult.{file,content,oldString,newString,originalFile,stdout,stderr}` | skipped — content, by construction | Prompts, code, file contents, command output, editor backups and the file-history snapshots. These are what PRIVACY.md promises are never collected; they are read transiently at most (diff markers, a path used only to key rework in memory) and never stored. |
+| `attachment.type` = `hook_*`, `skill_listing`, `invoked_skills`, `mcp_instructions_delta`, `queued_command`, `max_turns_reached`, `plan_mode*` | skipped — harness inventory, not usage | Hook outcomes, skill and MCP availability, mode changes. These belong to the harness inventory (`B95`), which stores an artifact's *shape*, not a usage record. |
+
+### Codex CLI
+
+*Corpus: 21 rollouts · 3,599 lines · 273 distinct key paths, plus `testdata/rollout.jsonl`.*
+
+| Field | State | Notes |
+|---|---|---|
+| `timestamp`, `type`, `payload.type` | extracted | Line routing and every record's own timestamp. |
+| `payload` of `session_meta`: `id`, `cwd`, `model`, `timestamp` | extracted | Session identity and dimensions. |
+| `turn_context.model` | extracted | Model carried forward across a mid-session switch. |
+| `token_count` → `payload.info.total_token_usage.{input_tokens,cached_input_tokens,output_tokens,reasoning_output_tokens}` | extracted | Cumulative totals, differenced into per-turn records. |
+| `patch_apply_end` → `success`, `changes.<path>.unified_diff` | extracted | Lines, edits, rework, and the tool error on a failed apply. |
+| `response_item` → `type` = `function_call` / `custom_tool_call`, `name`, `status` | extracted | Tool-call count, purpose split and call failures. |
+| `compacted` | extracted | `ai.compactions.count`. |
+| `payload.info.total_token_usage.cache_write_input_tokens` | **skipped — a real gap** | Codex reports cache writes and the parser has no field for them, so Codex cost is a floor and `cache-hygiene` cannot see its cache writes at all (`B107`). |
+| `payload.info.model_context_window` | **skipped — worth extracting** | The model's own context limit, on every `token_count`. `B16` proposes vendoring a context-window table; for Codex the log states it (`B114`). |
+| `payload.rate_limits.{plan_type,primary.used_percent,primary.window_minutes,primary.resets_at,credits.*}` | **skipped — worth extracting** | How close the session ran to the plan's limit, and on which plan. The only place any source states a subscription's real constraint (`B114`). |
+| `payload.info.last_token_usage.*` | skipped — redundant, kept as a check | The vendor's own per-turn figure. assaio differences the cumulative totals instead, which survives a missed line; this field is the cross-check that would prove that arithmetic on real data. |
+| `payload.changes.<path>.{type,move_path}` | **skipped — worth extracting** | Whether a file was added, updated or renamed. Today every change is one undifferentiated edit (`B113`). |
+| `turn_aborted` → `payload.reason` | **skipped — worth extracting** | A turn the human interrupted (`B113`). |
+| `payload.thread_settings.reasoning_effort` | skipped — setting, not usage | A configuration value; it belongs to the harness inventory (`B95`) rather than to a usage record. |
+| `world_state` → `payload.state.{model,permissions,personality,multi_agent_mode,host_skills,collaboration_mode,git_attribution}` | skipped — harness inventory | The agent's configuration at a point in time. Same reason (`B95`). |
+| `payload.{content,input,output,arguments,text,summary,message,encrypted_content}`, `payload.action.{queries,url}`, `base_instructions.text`, `state.agents_md.text` | skipped — content, by construction | Prompts, completions, tool inputs and outputs, search queries, instruction files. |
+| `payload.{id,call_id,turn_id,window_id,internal_chat_message_metadata_passthrough.turn_id}` | skipped — identity, no measure | Codex assigns its own turn id; assaio keys on a file fingerprint plus a positional counter, which is stable across a resumed session. Adopting the vendor's id would change a shipped dedupe contract for no new figure. |
+| `payload.{approval_policy,approvals_reviewer,sandbox_policy.writable_roots,phase}` | skipped — undocumented | No published meaning, and each reads as a policy setting rather than an observation. |
+
+### GitHub Copilot CLI
+
+*Corpus: 3 sessions · 43 lines · 145 distinct key paths, plus `testdata/session.jsonl`. This is
+the thinnest corpus of the five and the table should be read as provisional.*
+
+| Field | State | Notes |
+|---|---|---|
+| `session.start` → `data.sessionId`, `data.context.cwd`, `timestamp` | extracted | Session identity, project and date. |
+| `session.shutdown` → `data.modelMetrics.<model>.tokenDetails.{input,cache_read,cache_write,output}.tokenCount`, `.usage.reasoningTokens` | extracted | Per-model tokens and the cost estimate. |
+| `session.shutdown` → `data.codeChanges.{linesAdded,linesRemoved}` | extracted | Session line counts, credited whole to the model with the most requests. |
+| `data.toolRequests[].name`, `data.toolName` | **skipped — the depth row understates the source** | Copilot names its tool calls. Its matrix row says it carries no tool-call count, which was true of the parser and not of the log (`B109`). |
+| `data.toolTelemetry.metrics.{linesAdded,linesRemoved}` | **skipped — the depth row understates the source** | Per-tool-call line counts. Today only the session total is read, which is why the whole session's changes are credited to one model (`B109`). |
+| `data.modelMetrics.<model>.requests.count` | **skipped — worth extracting** | Requests per model — a turn count for a source the matrix says has none (`B109`). |
+| `data.context.{branch,gitRoot,baseCommit,headCommit}` | **skipped — deliberate, pending a privacy decision** | The only source that records the commit its session started and ended at. That is attribution evidence of a quality no heuristic reaches (`B85`), and also exactly what the correlation threat model (`B100`) exists to decide about. It is not extracted ahead of that decision. |
+| `data.modelCacheState[].{cacheTtlSeconds,cacheExpiresAt}` | **skipped — worth extracting** | A published cache TTL, which `cache-hygiene` states it cannot see (`B109`). |
+| `data.parentAgentTaskId` | **skipped — worth extracting** | Sub-agent parentage, the delegation signal Claude Code has and Copilot's matrix row does not claim (`B109`). |
+| `data.modelMetrics.<model>.{requests.cost,totalNanoAiu}` | skipped — a different unit | Copilot's own billing units. assaio recomputes cost from tokens for cross-tool consistency (the same decision as Cline's `cost`); this is useful only as an external check on the price table. |
+| `data.{currentTokens,conversationTokens,systemTokens,toolDefinitionsTokens}` | skipped — undocumented composition | Context composition at a moment; how these overlap the billed counts is not documented, and adding them to a token total would double-count. |
+| `data.{content,arguments,result,attachments,reasoningText,reasoningOpaque}`, `toolRequests[].{arguments,intentionSummary}`, `shellToolInfo.{displayCommand,possiblePaths}`, `codeChanges.filesModified` | skipped — content, by construction | Prompts, completions, tool arguments, command lines and file paths. |
+| `data.{allowAllPermissions,previousAllowAllPermissions,remoteSteerable,copilotVersion,reasoningEffort,contextTier}` | skipped — harness inventory | Permission and version state (`B95`). |
+| `data.{apiCallId,clientRequestId,requestId,serviceRequestId,interactionId,messageId,toolCallId}` | skipped — identity, no measure | Request correlation identifiers. |
+
+### Gemini CLI
+
+*Corpus: 355 files under `~/.gemini` · 2,045 lines · 27 distinct key paths — of which only **2
+files** match the discovery glob, and neither contains a token field.*
+
+| Field | State | Notes |
+|---|---|---|
+| `sessionId`, `timestamp`, `model`, `tokens.{input,output,cached,thoughts,tool,total}` | extracted | Every token signal, per the shape `testdata/session.jsonl` captures. |
+| `type`, `source`, `status`, `step_index`, `content`, `thinking`, `error`, `error_code`, `truncated_fields`, `projectHash`, `startTime`, `workspace`, `$set.*` | **not classified — the corpus does not contain the parsed shape** | The chat files this install writes carry none of the token fields above. Either the recording moved, or these files were never the token source. Until that is settled the fields are not classified, because guessing which of two formats is current is exactly what this audit refuses to do (`B110`). |
+
+The honest reading of that second row is a warning about assaio, not about Gemini: this source
+produces **2 discovered files and 0 records** here, and no drift canary fires, because every
+canary needs a sample floor (20 files) a two-file source can never reach. `B110` covers both
+halves.
+
+### Cline
+
+*Corpus: no Cline install on the audited machine — `testdata/ui_messages.json` and
+`testdata/task_metadata.json` only. This table is the weakest of the five and says so.*
+
+| Field | State | Notes |
+|---|---|---|
+| `ui_messages[].{ts,type,say}` and the `api_req_started` payload's `{tokensIn,tokensOut,cacheReads,cacheWrites}` | extracted | Every token signal, per request. |
+| `task_metadata.model_usage[].{ts,model_id}` | extracted | The model in force at each request, carried forward across a mid-task switch. |
+| `api_req_started` payload `cost` | skipped — recomputed | Cline's own per-request cost. Record has no cost field by design; cost is computed from tokens for cross-tool consistency. Useful only as an external check on the price table. |
+| `api_req_started` payload `request` | skipped — content, by construction | The prompt. |
+| `task_metadata.model_usage[].{mode,model_provider_id}` | skipped — unverified against a real install | `mode` looks like Cline's plan/act distinction, which would be a genuine work-kind signal, and `model_provider_id` would separate the same model served by two providers. Neither is confirmed against a real corpus, so both stay skipped rather than being read from a fixture the project wrote itself. |
+| `task_metadata.{files_in_context,environment_history}` | skipped — content and paths | File paths and environment snapshots. |
+| `ui_messages[]` `say` = `tool` payloads | **skipped — the known activity gap** | The diffs that would give Cline line counts (`B39`). |
+
+### What this audit is not
+
+It does not claim the five formats have no other fields — only that these are the fields the
+corpus above contains. Two of the five tables rest on a corpus too thin to be conclusive and
+say so in their own heading. Widening that is the same work as widening the golden corpus
+(`B20`), and the two should be re-run together.
 
 ---
 

@@ -69,8 +69,8 @@ func FuzzParse(f *testing.F) {
 			if r.DedupeKey == "" {
 				t.Fatalf("DedupeKey empty: %+v", r)
 			}
-			if r.Granularity != "turn" {
-				t.Fatalf("Granularity = %q, want turn", r.Granularity)
+			if r.Granularity != "turn" && r.Granularity != "session" {
+				t.Fatalf("Granularity = %q, want turn or session", r.Granularity)
 			}
 			if !utf8.ValidString(r.DedupeKey) {
 				t.Fatalf("DedupeKey not valid UTF-8: %+v", r)

@@ -118,6 +118,9 @@ func doctorLine(sc *sourceScan) string {
 		origin = "config-overridden"
 	}
 	line := fmt.Sprintf("%-14s%s under %v (%s)\n", sc.tool+":", sc.activity, sc.roots, origin)
+	if sc.err != nil {
+		line += fmt.Sprintf("  warning: discovery failed, so the count above is not what is there: %v\n", sc.err)
+	}
 	if len(sc.configured) > 0 {
 		if missing := paths.Missing(sc.roots); len(missing) > 0 {
 			line += fmt.Sprintf("  hint: configured path(s) not found: %v\n", missing)

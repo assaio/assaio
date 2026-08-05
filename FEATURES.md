@@ -22,8 +22,8 @@ mattering the moment a second release exists.
 | `dashboard` | v0.1 | Writes the self-contained offline Assay HTML report; pseudonymized by default, `--no-anonymize` opt-out. |
 | `serve` | v0.1 | Self-hosted team server: collects pushed usage, serves the aggregated team dashboard. |
 | `sync` | v0.1 | Pushes local usage to a team server; pseudonymous by default, `--member` is an explicit opt-in. |
-| `doctor` | v0.1 | Detected tools, resolved log roots, store inventory and size, health, format-drift canaries, accuracy caveats. `--strict` (v0.5) exits non-zero on suspected drift or a configured source with no inputs, for cron/CI. |
-| `status` | v0.1 | Terminal overview: inventory, headline `$`/100 lines, hot / going-stale projects, session stats. |
+| `doctor` | v0.1 | Detected tools, resolved log roots, store inventory and size, health, format-drift canaries, accuracy caveats. `--strict` (v0.5) exits non-zero on suspected drift or a configured source with no inputs, for cron/CI. Since v0.10 a root it could not read is reported as a failed discovery rather than counted as zero files. |
+| `status` | v0.1 | Terminal overview: inventory, headline `$`/100 lines, hot / going-stale projects, session stats. Since v0.10 each session figure reads only the sources that record it, says so when that is fewer sessions than the window holds, and prints "not recorded" rather than a zero nobody measured. |
 | `statusline` | v0.4 | One ambient line for a status bar: today's tokens, AI lines, cost basis, and data age. Local day (timestamp range, not a UTC bucket); read-only; never fails loudly. See [automation](docs/automation.md). |
 | `explain` | v0.4 | The long-form page for a metric — what it measures, how to read it, what to do about it, its limits. Needs no store; no argument lists every metric. |
 | `survival` | v0.2 | Directional local outcome check: how much of a git repo's window survives in `HEAD` (`git blame`), beside the AI lines the store recorded. Since v0.8 it reads commit observations, so it also reports what the window changed by file category and how many commits were reverts. Since v0.9 merge commits are reported apart from the rate — git publishes no line counts for a merge, so a hand-resolved conflict is counted in neither figure rather than inflating survival. See [automation](docs/automation.md). |
@@ -46,8 +46,8 @@ generically by the CLI, JSON output, and the dashboard.
 | `adoption` | v0.1 | How broad is AI usage (sessions, active days, project/tool breadth) and is it growing? | Breadth, not quality. |
 | `burn-anomaly` | v0.3 | Which days burned far outside the window's typical day (robust median/MAD outlier test) — catching a runaway loop or an agent left running. | A spike is a prompt to look, not a fault; needs 7+ active days for a baseline. |
 | `cache-hygiene` | v0.2 | Prompt-cache reuse: cache-read share of billed input, and whether cache writes are reused. | Cost signal, not quality; a big one-shot task legitimately shows low reuse. |
-| `concentration` | v0.3 | How token spend spreads across projects, and where a project's share of tokens outruns its share of AI-written lines. | Concentration itself is neither good nor bad; undefined below 2 projects. Project-level only, never people. |
-| `context` | v0.1 | Are sessions healthy: turns, peak context, focused minutes, compaction rate? | Neutral below 3 sessions — no verdict from thin data. |
+| `concentration` | v0.3 | How token spend spreads across projects, and where a project's share of tokens outruns its share of AI-written lines. | Concentration itself is neither good nor bad; undefined below 2 projects. A project running entirely on a source that records no lines is excluded from the gap rather than read as producing nothing. Project-level only, never people. |
+| `context` | v0.1 | Are sessions healthy: turns, peak context, focused minutes, compaction rate? | Neutral below 3 sessions — no verdict from thin data. Since v0.10 each figure is read only from the sessions whose source records it, the reach is stated, and a window whose sources never mark a compaction gets no health verdict at all. |
 | `coverage` | v0.2 | How much of the window is high-confidence data: token share from tools with full activity capture, share priced, and — when a window mixes them — the share from per-turn rather than whole-session records. | Says how complete the data is, never whether the work was good. |
 | `explore-produce` | v0.3 | What the tool calls were for: reading and searching the codebase vs writing code in it, with reads-per-write. | Exploring earns the right to write; only flags the extreme. Covers Claude Code and Codex; states its own coverage, and un-backfilled history reads as unclassified. |
 | `intent` | v0.6 | How much of the window carries a task label, and whether enough classes have enough sessions to compare kinds of work at all. | Reads readiness to stratify, never diligence: it has no unfavorable verdict, and unlabeled sessions stay fully counted everywhere. |
@@ -55,13 +55,13 @@ generically by the CLI, JSON output, and the dashboard.
 | `model-fit` | v0.1 | Premium vs cheaper token share (by real price tier), lines-per-token contrast, sub-agent delegation share, upper-bound routing savings. | Savings figure is an upper bound, never a switch recommendation. |
 | `model-right-sizing` | v0.2 | Premium-model turns that produced little output — downgrade candidates a cheaper/faster model might handle. | Task difficulty is invisible; a prompt to review, not a verdict. On a flat plan it's about speed/limits, not $. |
 | `reasoning-share` | v0.2 | Extended-thinking (reasoning) share of output among tools that report it, and how much of your output that covers. | Only Codex/reasoning models report it today; Claude Code doesn't. |
-| `rework` | v0.1 | Within-session churn (AI lines undone in the same transcript) and human rejection rate. | Directional friction proxy; healthy iteration churns too. |
-| `rhythm` | v0.3 | When sessions run: off-hours and weekend share, the time-of-day shape of the work, and how long the longest focused sessions last (p95). | Aggregate workload signal, not an individual measure; hours read in the machine's local timezone. |
-| `session-taxonomy` | v0.2 | The mix of session kinds: conversational (no edits), light-edit, heavy-edit — how you actually use AI. | Descriptive, not a scorecard; conversational is real work. A thrash bucket needs per-session rework (not stored yet). |
-| `skill-economics` | v0.3 | Which skills and sub-agents the tokens went to, and how much code each produced — where shared tooling quietly concentrates spend. | Only Claude Code labels turns with a skill/sub-agent today; other tools are absent from the split, not zero. |
+| `rework` | v0.1 | Within-session churn (AI lines undone in the same transcript) and human rejection rate. | Directional friction proxy; healthy iteration churns too. The rejection rate divides only by calls whose source records a refusal. |
+| `rhythm` | v0.3 | When sessions run: off-hours and weekend share, the time-of-day shape of the work, and how long the longest focused sessions last (p95). | Aggregate workload signal, not an individual measure; hours read in the machine's local timezone. Session length reads only the sources that record focused minutes; timing still covers every session. |
+| `session-taxonomy` | v0.2 | The mix of session kinds: conversational (no edits), light-edit, heavy-edit — how you actually use AI. | Descriptive, not a scorecard; conversational is real work. Only sessions whose source records edits are bucketed — elsewhere a zero is the tool's silence, not a conversation. A thrash bucket needs per-session rework (not stored yet). |
+| `skill-economics` | v0.3 | Which skills and sub-agents the tokens went to, and how much code each produced — where shared tooling quietly concentrates spend. | Only Claude Code labels turns with a skill/sub-agent today; other tools are absent from the split, not zero. The share is of attributed tokens, and how small a slice of the window those are is declared as its signal coverage. |
 | `subscription-fit` | v0.2 | For flat-plan users: the window's API-equivalent projected to a month vs the configured plan cost — a value multiple and an "is it paying off?" verdict. | API-equivalent is an estimate at public prices, not your bill; needs `pricing.monthly_subscription_cost`. |
 | `throughput` | v0.1 | Total AI lines, lines per active day, top projects, week-over-week trend. | Activity rate, never a productivity score. |
-| `turn-efficiency` | v0.2 | Getting more per prompt: one-shot rate, median turns per code-producing session, output tokens per turn. | Task size is invisible; directional, never a per-person score. |
+| `turn-efficiency` | v0.2 | Getting more per prompt: one-shot rate, median turns per code-producing session, output tokens per turn. | Task size is invisible; directional, never a per-person score. Reads only sessions whose source records edits, so "no code-producing sessions" never means "no source that could tell". |
 
 Exec **metric plugins** (below) render beside these, namespaced `plugin:<name>`.
 
@@ -90,7 +90,7 @@ same questions as one that reports both. Every source therefore publishes its **
 | Claude Code | v0.1 | **deep** | ✔ (incl. sub-agent turns) | ✔ full, incl. rejections | ✔ |
 | OpenAI Codex CLI | v0.1 | standard | ✔ (exact, delta-based) | ✔ except rejections | — |
 | Gemini CLI | v0.1 | standard | ✔ | — (cost only, see ROADMAP) | — |
-| GitHub Copilot CLI | v0.6 | standard | ✔ (exact, per model, incl. reasoning) | ✔ lines added/removed per session, no edit or tool-call counts | — |
+| GitHub Copilot CLI | v0.6 | standard | ✔ (exact, per model, incl. reasoning) | ✔ lines added/removed per session; edit and tool-call counts are in the log but not extracted yet ([audit](docs/extending.md#what-each-sources-log-carries-and-what-assaio-reads)) | — |
 | Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (cost only, see ROADMAP) | — |
 | Exec parser plugins | v0.1 | declared per record | ✔ (validated at the boundary) | — (protocol carries tokens only) | — |
 
@@ -104,7 +104,8 @@ A plugin is absent from the tiers by design: its depth is whatever its author im
 so it is read from the records it emits rather than promised by a table assaio maintains.
 
 Within a tier the answer is per signal, not per column: reasoning tokens are reported by
-Codex, Gemini CLI and Copilot CLI and by neither Claude Code nor Cline, and Copilot's
+Codex, Gemini CLI and Copilot CLI and by neither Claude Code nor Cline, a declined tool call
+only by Claude Code and a context compaction only by Claude Code and Codex, and Copilot's
 per-session totals carry changed lines but no edit, tool-call, turn or rework count. Run
 `assaio-agent signals coverage` for what your own mix supports; that matrix row is also what
 makes a source syncable and targetable by `clear --tool`.
@@ -150,6 +151,11 @@ discovered across VS Code, VS Code Insiders, VSCodium, and Cursor.
 
 - No network at runtime for local analysis; no telemetry; prompts and code are never
   read — counts only ([PRIVACY.md](PRIVACY.md)).
+- A figure is computed only over the sources that record its field, states how much of the
+  window that reaches, and withholds its verdict rather than averaging in a source's silence
+  (v0.10, [ADR 0011](docs/adr/0011-capability-gated-metrics.md)). What each source's log
+  carries and what is deliberately skipped is inventoried per source
+  ([the audit](docs/extending.md#what-each-sources-log-carries-and-what-assaio-reads), v0.10).
 - Aggregate and pseudonymized by default; per-person is a deliberate, governed opt-in;
   never a leaderboard.
 - Plugins (parser, metric, and rule) are config-declared only — never PATH-scanned, never

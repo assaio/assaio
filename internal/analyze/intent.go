@@ -41,8 +41,7 @@ func (intentValidator) Describe() string { return intentDescribe }
 func (intentValidator) Analyze(in Input) Result {
 	r := Result{Name: intentName, Title: intentTitle, Describe: intentDescribe, HowToRead: intentHowToRead}
 	if len(in.Sessions) == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No sessions in this window."
+		r.noData("sessions", "No sessions in this window.")
 		return r
 	}
 	tally := tallyIntent(in.Sessions)

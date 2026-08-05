@@ -1,9 +1,9 @@
 package report
 
 import (
-	"sort"
 	"time"
 
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -13,9 +13,18 @@ import (
 // sessions produce code versus stay conversational. Every field is a signal the
 // day/project aggregate throws away; none is a misleading cumulative-cache or
 // resume-polluted wall-clock number.
+//
+// Each group is computed over the sessions whose source can record it, never over all of
+// them: a whole-session record has no second turn to measure a gap against, and a source
+// that never marks a context overflow reports no compaction. The four basis counts below
+// say how many sessions each group rests on, so a caller states the reach rather than
+// implying the window.
 type SessionStats struct {
 	// Count is the number of sessions the stats were computed from.
 	Count int
+	// Turned, Paced, Edited and Compacting are how many of Count could answer each group:
+	// turn depth and peak context, focused minutes, edits, and context compaction.
+	Turned, Paced, Edited, Compacting int
 	// MedianTurns and P90Turns are conversation depth: the typical and tail turn count.
 	MedianTurns, P90Turns int64
 	// MedianOutputTokens is the median output tokens per session: work produced, not
@@ -46,39 +55,25 @@ func BuildSessionStats(rows []store.SessionRow, now time.Time) SessionStats {
 	if len(rows) == 0 {
 		return SessionStats{}
 	}
-
-	turns := make([]int64, len(rows))
-	outputs := make([]int64, len(rows))
-	peaks := make([]int64, len(rows))
-	actives := make([]float64, len(rows))
-	codeSessions, compacted := 0, 0
-	activeDays := make(map[string]struct{}, len(rows))
-	for i := range rows {
-		r := &rows[i]
-		turns[i] = r.Turns
-		outputs[i] = r.OutputTokens
-		peaks[i] = r.PeakContextTokens
-		actives[i] = r.ActiveMinutes
-		if r.Edits > 0 {
-			codeSessions++
-		}
-		if r.Compactions > 0 {
-			compacted++
-		}
-		activeDays[r.FirstTs.UTC().Format("2006-01-02")] = struct{}{}
-	}
-	sort.Float64s(actives)
-	n := float64(len(rows))
+	turned := SessionsAnswering(rows, parser.SignalTurnsCount)
+	paced := SessionsAnswering(rows, parser.SignalActiveMinutes)
+	edited := SessionsAnswering(rows, parser.SignalEditsCount)
+	compacting := SessionsAnswering(rows, parser.SignalCompactionsCount)
+	turns := fieldInt64(turned, func(r *store.SessionRow) int64 { return r.Turns })
 
 	return SessionStats{
 		Count:                   len(rows),
+		Turned:                  len(turned),
+		Paced:                   len(paced),
+		Edited:                  len(edited),
+		Compacting:              len(compacting),
 		MedianTurns:             percentileInt64(turns, 50),
 		P90Turns:                percentileInt64(turns, 90),
-		MedianOutputTokens:      percentileInt64(outputs, 50),
-		MedianPeakContextTokens: percentileInt64(peaks, 50),
-		MedianActiveMinutes:     percentile(actives, 50),
-		CodeSessionShare:        float64(codeSessions) / n,
-		CompactionRate:          float64(compacted) / n,
-		SessionsPerActiveDay:    n / float64(len(activeDays)),
+		MedianOutputTokens:      percentileInt64(fieldInt64(rows, func(r *store.SessionRow) int64 { return r.OutputTokens }), 50),
+		MedianPeakContextTokens: percentileInt64(fieldInt64(turned, func(r *store.SessionRow) int64 { return r.PeakContextTokens }), 50),
+		MedianActiveMinutes:     medianFloat(fieldFloat(paced, func(r *store.SessionRow) float64 { return r.ActiveMinutes })),
+		CodeSessionShare:        shareWhere(edited, func(r *store.SessionRow) bool { return r.Edits > 0 }),
+		CompactionRate:          shareWhere(compacting, func(r *store.SessionRow) bool { return r.Compactions > 0 }),
+		SessionsPerActiveDay:    float64(len(rows)) / float64(activeDayCount(rows)),
 	}
 }

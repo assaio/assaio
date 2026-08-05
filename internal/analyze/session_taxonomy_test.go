@@ -12,11 +12,11 @@ import (
 // conversational-majority window reads as chat-led (design/debug work), not waste.
 func TestSessionTaxonomyBucketsByEdits(t *testing.T) {
 	sessions := []store.SessionRow{
-		{SessionID: "a", Edits: 0, Turns: 3},
-		{SessionID: "b", Edits: 0, Turns: 2},
-		{SessionID: "c", Edits: 0, Turns: 1},
-		{SessionID: "d", Edits: 3, Turns: 5},
-		{SessionID: "e", Edits: 25, Turns: 12},
+		{Tool: "claude-code", SessionID: "a", Edits: 0, Turns: 3},
+		{Tool: "claude-code", SessionID: "b", Edits: 0, Turns: 2},
+		{Tool: "claude-code", SessionID: "c", Edits: 0, Turns: 1},
+		{Tool: "claude-code", SessionID: "d", Edits: 3, Turns: 5},
+		{Tool: "claude-code", SessionID: "e", Edits: 25, Turns: 12},
 	}
 	in := BuildInput(nil, sessions, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
 	got := mustGet(t, taxonomyName).Analyze(in)

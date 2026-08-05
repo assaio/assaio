@@ -31,14 +31,19 @@ func (reworkValidator) Describe() string { return reworkDescribe }
 func (reworkValidator) Analyze(in Input) Result {
 	r := Result{Name: reworkName, Title: reworkTitle, Describe: reworkDescribe, HowToRead: reworkHowToRead}
 	if len(in.Usage) == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("active days", "No usage in this window.")
 		return r
 	}
 	r.restsOn(activeDays(&in), "active days")
 	churn := report.BuildChurn(in.Usage)
+	// Only calls from a source that records a refusal can be divided by: elsewhere the zero
+	// is the tool's silence, and folding it in would report a low rejection rate for work
+	// nobody was ever asked about.
 	var rejected, toolCalls int64
 	for i := range in.Usage {
+		if !refusalCapableTool(in.Usage[i].Tool) {
+			continue
+		}
 		rejected += in.Usage[i].Rejected
 		toolCalls += in.Usage[i].ToolCalls
 	}
@@ -58,7 +63,7 @@ func (reworkValidator) Analyze(in Input) Result {
 		},
 		{
 			Label: "rejection rate", Value: shareOrDash(rejected, toolCalls, 0),
-			Note: strconv.FormatInt(rejected, 10) + " of " + strconv.FormatInt(toolCalls, 10) + " tool calls declined",
+			Note: strconv.FormatInt(rejected, 10) + " of " + strconv.FormatInt(toolCalls, 10) + " calls that record a refusal",
 		},
 	}
 	r.Caveats = reworkCaveats(rejectionKnown)
@@ -86,7 +91,7 @@ func reworkPurity(reworkRate, rejectionRate float64, rejectionKnown bool) float6
 func reworkCaveats(rejectionKnown bool) []string {
 	caveats := []string{"Evidence on AI churn's real-world impact is contested; bug/survival impact needs the server stage."}
 	if !rejectionKnown {
-		caveats = append(caveats, "No tool calls recorded this window -- rejection rate is unconfirmed, not zero.")
+		caveats = append(caveats, "No source in this window records a declined tool call -- the rejection rate is unconfirmed, not zero.")
 	}
 	return caveats
 }

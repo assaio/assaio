@@ -17,15 +17,51 @@ func almostEqual(a, b float64) bool {
 // sessionsFixtureRows are 5 sessions with known turns (1..5), output tokens (100..500),
 // peak context (1000..5000), and active minutes (0,5,12,30,60). Edits are set on 3 of 5
 // (code sessions), compactions on 2 of 5, and the first two share a calendar day so there
-// are 4 distinct active days.
+// are 4 distinct active days. Every row names a source that records all of it: a figure is
+// only ever computed over the sessions whose tool can answer for it.
 func sessionsFixtureRows() []store.SessionRow {
 	base := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
 	return []store.SessionRow{
-		{FirstTs: base, Turns: 1, OutputTokens: 100, PeakContextTokens: 1000, ActiveMinutes: 0, Edits: 0, Compactions: 0},
-		{FirstTs: base.Add(time.Hour), Turns: 2, OutputTokens: 200, PeakContextTokens: 2000, ActiveMinutes: 5, Edits: 1, Compactions: 1},
-		{FirstTs: base.AddDate(0, 0, 1), Turns: 3, OutputTokens: 300, PeakContextTokens: 3000, ActiveMinutes: 12, Edits: 2, Compactions: 0},
-		{FirstTs: base.AddDate(0, 0, 2), Turns: 4, OutputTokens: 400, PeakContextTokens: 4000, ActiveMinutes: 30, Edits: 0, Compactions: 1},
-		{FirstTs: base.AddDate(0, 0, 3), Turns: 5, OutputTokens: 500, PeakContextTokens: 5000, ActiveMinutes: 60, Edits: 3, Compactions: 0},
+		{Tool: deepTool, FirstTs: base, Turns: 1, OutputTokens: 100, PeakContextTokens: 1000, ActiveMinutes: 0, Edits: 0, Compactions: 0},
+		{Tool: deepTool, FirstTs: base.Add(time.Hour), Turns: 2, OutputTokens: 200, PeakContextTokens: 2000, ActiveMinutes: 5, Edits: 1, Compactions: 1},
+		{Tool: deepTool, FirstTs: base.AddDate(0, 0, 1), Turns: 3, OutputTokens: 300, PeakContextTokens: 3000, ActiveMinutes: 12, Edits: 2, Compactions: 0},
+		{Tool: deepTool, FirstTs: base.AddDate(0, 0, 2), Turns: 4, OutputTokens: 400, PeakContextTokens: 4000, ActiveMinutes: 30, Edits: 0, Compactions: 1},
+		{Tool: deepTool, FirstTs: base.AddDate(0, 0, 3), Turns: 5, OutputTokens: 500, PeakContextTokens: 5000, ActiveMinutes: 60, Edits: 3, Compactions: 0},
+	}
+}
+
+// The three source shapes a session figure has to tell apart: one recording everything, one
+// recording turns but no edits or compaction, and one that totals a whole session and so
+// records none of it.
+const (
+	deepTool         = "claude-code"
+	costOnlyTool     = "cline"
+	sessionTotalTool = "copilot-cli"
+)
+
+// A source that cannot record a thing must be absent from the figure rather than averaged
+// into it as a zero -- the shares below stay exactly what the five recording sessions say.
+func TestBuildSessionStatsExcludesSourcesThatRecordNothing(t *testing.T) {
+	base := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+	rows := append(
+		sessionsFixtureRows(),
+		store.SessionRow{Tool: costOnlyTool, FirstTs: base, Turns: 4, OutputTokens: 900, ActiveMinutes: 20},
+		store.SessionRow{Tool: sessionTotalTool, FirstTs: base, Turns: 1, OutputTokens: 900},
+	)
+
+	stats := BuildSessionStats(rows, sessionsNow)
+	if stats.Count != 7 {
+		t.Fatalf("Count = %d, want 7 (every session is still counted)", stats.Count)
+	}
+	if stats.Turned != 6 || stats.Paced != 6 {
+		t.Fatalf("turn basis = %d turned / %d paced, want 6 / 6 (the session-total source records neither)", stats.Turned, stats.Paced)
+	}
+	if stats.Edited != 5 || stats.Compacting != 5 {
+		t.Fatalf("activity basis = %d edited / %d compacting, want 5 / 5", stats.Edited, stats.Compacting)
+	}
+	if !almostEqual(stats.CodeSessionShare, 0.6) || !almostEqual(stats.CompactionRate, 0.4) {
+		t.Fatalf("shares moved to code %v / compaction %v: sources that record neither must not dilute them",
+			stats.CodeSessionShare, stats.CompactionRate)
 	}
 }
 
@@ -70,7 +106,7 @@ func TestBuildSessionStatsEmptyInputIsZeroValue(t *testing.T) {
 func TestBuildSessionStatsSingleSessionEdge(t *testing.T) {
 	base := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
 	rows := []store.SessionRow{
-		{FirstTs: base, Turns: 8, OutputTokens: 1200, PeakContextTokens: 85000, ActiveMinutes: 15, Edits: 4, Compactions: 1},
+		{Tool: deepTool, FirstTs: base, Turns: 8, OutputTokens: 1200, PeakContextTokens: 85000, ActiveMinutes: 15, Edits: 4, Compactions: 1},
 	}
 
 	stats := BuildSessionStats(rows, sessionsNow)
@@ -97,8 +133,8 @@ func TestBuildSessionStatsSingleSessionEdge(t *testing.T) {
 func TestBuildSessionStatsAllConversationalZeroCodeShare(t *testing.T) {
 	base := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
 	rows := []store.SessionRow{
-		{FirstTs: base, Turns: 2, OutputTokens: 100, PeakContextTokens: 500, ActiveMinutes: 3, Edits: 0, Compactions: 0},
-		{FirstTs: base.Add(time.Hour), Turns: 3, OutputTokens: 150, PeakContextTokens: 700, ActiveMinutes: 4, Edits: 0, Compactions: 0},
+		{Tool: deepTool, FirstTs: base, Turns: 2, OutputTokens: 100, PeakContextTokens: 500, ActiveMinutes: 3, Edits: 0, Compactions: 0},
+		{Tool: deepTool, FirstTs: base.Add(time.Hour), Turns: 3, OutputTokens: 150, PeakContextTokens: 700, ActiveMinutes: 4, Edits: 0, Compactions: 0},
 	}
 	stats := BuildSessionStats(rows, sessionsNow)
 	if stats.CodeSessionShare != 0 {

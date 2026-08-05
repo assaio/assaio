@@ -96,7 +96,9 @@ func parseToolResult(raw json.RawMessage) (toolResult, bool) {
 // subAgentRecord builds the additional usage record for a completed sub-agent call.
 // DedupeKey is the agentId: unique and stable, so re-parsing a transcript is idempotent.
 // The work it aggregates ran inside a sub-agent even though the line reporting it sits in
-// the parent transcript, so Sidechain is 1 regardless of the line's own marker.
+// the parent transcript, so Sidechain is 1 regardless of the line's own marker. Granularity
+// is "session": this one record totals a whole sub-agent run, and the honesty rule is that a
+// summary of many requests is never labelled as one of them (docs/extending.md).
 func subAgentRecord(l *line, t *toolResult, cf *carryForward) usage.Record {
 	r := usage.Record{
 		Tool:             tool,
@@ -112,7 +114,7 @@ func subAgentRecord(l *line, t *toolResult, cf *carryForward) usage.Record {
 		Project:          cf.project(),
 		GitBranch:        cf.gitBranch,
 		Entrypoint:       cf.entrypoint,
-		Granularity:      "turn",
+		Granularity:      "session",
 		Sidechain:        1,
 		Agent:            t.AgentType,
 	}

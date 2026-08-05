@@ -1,10 +1,10 @@
 package analyze
 
 import (
-	"sort"
+	"fmt"
 	"strconv"
 
-	"github.com/assaio/assaio/internal/store"
+	"github.com/assaio/assaio/internal/parser"
 )
 
 const (
@@ -46,13 +46,19 @@ func (rhythmValidator) Analyze(in Input) Result {
 	r := Result{Name: rhythmName, Title: rhythmTitle, Describe: rhythmDescribe, HowToRead: rhythmHowToRead}
 	timed := timedSessions(in.Sessions)
 	if len(timed) == 0 {
-		r.Read = noDataRead
-		r.Takeaway = "No usage in this window."
+		r.noData("sessions", "No usage in this window.")
 		return r
 	}
+	// When work starts is readable from any source that stamps a session; how long it ran is
+	// not. Focused minutes are the gaps between turns, so a whole-session record has none to
+	// measure and its structural zero would read as a session that finished in an instant.
+	paced, pacedShare := sessionsAnswering(timed, parser.SignalActiveMinutes)
 	r.restsOn(len(timed), "sessions")
-	p := buildRhythm(timed)
-	sufficient := len(timed) >= rhythmMinSessions
+	r.covering(pacedShare)
+	p := buildRhythm(timed, paced)
+	// Both halves need the floor, not just the window: a marathon share read off two timed
+	// sessions is the same coin flip as an off-hours share read off two.
+	sufficient := len(timed) >= rhythmMinSessions && len(paced) >= rhythmMinSessions
 	calm := p.OffHoursShare <= rhythmOffHoursCeiling && p.MarathonShare <= rhythmMarathonCeiling
 	steady := calm && sufficient
 
@@ -61,111 +67,29 @@ func (rhythmValidator) Analyze(in Input) Result {
 	r.Figures = []Figure{
 		{Label: "sessions timed", Value: strconv.Itoa(len(timed))},
 		{Label: "off-hours", Value: formatPercent(p.OffHoursShare, 0), Note: formatPercent(p.WeekendShare, 0) + " on weekends"},
-		{Label: "longest sessions", Value: minutesLabel(p.P95ActiveMinutes) + " p95", Note: "focused work"},
-		{Label: "marathons", Value: formatPercent(p.MarathonShare, 0), Note: "over " + strconv.Itoa(rhythmMarathonMinutes) + " min focused"},
+		basisFigure("longest sessions", minutesLabel(p.P95ActiveMinutes)+" p95", "focused work", len(paced)),
+		basisFigure("marathons", formatPercent(p.MarathonShare, 0), "over "+strconv.Itoa(rhythmMarathonMinutes)+" min focused", len(paced)),
 	}
 	r.Bars = rhythmBands(p.Bands)
-	r.Takeaway = rhythmTakeaway(steady, sufficient)
+	r.Takeaway = rhythmTakeaway(steady, sufficient, len(paced))
 	r.Caveats = append(
 		r.Caveats,
 		"Prov.: hours are read in this machine's local timezone; sessions recorded in another zone land in the wrong band.",
 		"Aggregate workload signal -- not an input to evaluating an individual.",
 	)
+	if pacedShare < 1 {
+		r.Caveats = append(r.Caveats, rhythmCoverageCaveat(len(paced), len(timed)))
+	}
 	return r
 }
 
-// rhythmProfile is the window's timing picture: how much work fell outside ordinary
-// hours, and how long the longest focused sessions ran.
-type rhythmProfile struct {
-	OffHoursShare    float64
-	WeekendShare     float64
-	MarathonShare    float64
-	P95ActiveMinutes float64
-	// Bands counts session starts per time-of-day band, indexed by rhythmBandOrder.
-	Bands map[string]int
-}
-
-// rhythmBandOrder is the chronological order the time-of-day bands render in, so the bars
-// read as a day rather than as a ranking.
-var rhythmBandOrder = []string{"night", "morning", "afternoon", "evening"}
-
-// timedSessions keeps only sessions carrying a start timestamp; a zero FirstTs cannot be
-// placed in a band and would otherwise silently count as midnight.
-func timedSessions(sessions []store.SessionRow) []store.SessionRow {
-	out := make([]store.SessionRow, 0, len(sessions))
-	for i := range sessions {
-		if !sessions[i].FirstTs.IsZero() {
-			out = append(out, sessions[i])
-		}
-	}
-	return out
-}
-
-// buildRhythm computes the window's timing shares. Session starts are read in the
-// reporting machine's local timezone -- the developer's own working day -- which the
-// Result caveats, since a team spanning zones needs the server stage to do this right.
-func buildRhythm(sessions []store.SessionRow) rhythmProfile {
-	p := rhythmProfile{Bands: make(map[string]int, len(rhythmBandOrder))}
-	actives := make([]float64, 0, len(sessions))
-	var offHours, weekend, marathons int
-	for i := range sessions {
-		start := sessions[i].FirstTs.Local()
-		hour := start.Hour()
-		isWeekend := start.Weekday() == 0 || start.Weekday() == 6
-		if isWeekend {
-			weekend++
-		}
-		if isWeekend || hour < rhythmDayStart || hour >= rhythmDayEnd {
-			offHours++
-		}
-		p.Bands[bandForHour(hour)]++
-		actives = append(actives, sessions[i].ActiveMinutes)
-		if sessions[i].ActiveMinutes >= rhythmMarathonMinutes {
-			marathons++
-		}
-	}
-	n := float64(len(sessions))
-	p.OffHoursShare = float64(offHours) / n
-	p.WeekendShare = float64(weekend) / n
-	p.MarathonShare = float64(marathons) / n
-	sort.Float64s(actives)
-	p.P95ActiveMinutes = percentileAt(actives, 0.95)
-	return p
-}
-
-// bandForHour maps a local hour to its time-of-day band.
-func bandForHour(hour int) string {
-	switch {
-	case hour < rhythmDayStart:
-		return "night"
-	case hour < 12:
-		return "morning"
-	case hour < rhythmDayEnd:
-		return "afternoon"
-	default:
-		return "evening"
-	}
-}
-
-// rhythmBands renders session starts per time-of-day band in chronological order, so the
-// bars show the shape of a working day rather than a league table.
-func rhythmBands(bands map[string]int) []Bar {
-	var maxCount int
-	for _, n := range bands {
-		if n > maxCount {
-			maxCount = n
-		}
-	}
-	out := make([]Bar, 0, len(rhythmBandOrder))
-	for _, name := range rhythmBandOrder {
-		n := bands[name]
-		out = append(out, Bar{
-			Label: name,
-			Value: strconv.Itoa(n) + " sessions",
-			Frac:  fracOf(int64(n), int64(maxCount)),
-		})
-	}
-	return out
+// rhythmCoverageCaveat states how many sessions the length figures rest on, so the ones a
+// source could not time read as absent rather than as instant.
+func rhythmCoverageCaveat(paced, timed int) string {
+	return fmt.Sprintf(
+		"Prov.: session length reads the %d of %d sessions whose source records focused minutes; the rest are absent from it, not zero-length.",
+		paced, timed,
+	)
 }
 
 // rhythmRead reports the neutral no-verdict Read while too few timed sessions exist to
@@ -190,10 +114,12 @@ func rhythmPurity(p rhythmProfile, sufficient bool) float64 {
 
 // rhythmTakeaway makes no workload judgement below the session floor: it prints verbatim
 // beside a Read that withholds its verdict there.
-func rhythmTakeaway(steady, sufficient bool) string {
+func rhythmTakeaway(steady, sufficient bool, paced int) string {
 	switch {
+	case paced == 0:
+		return "No source in this window records focused minutes, so how long sessions run cannot be read -- the timing shares above are shown without a verdict."
 	case !sufficient:
-		return "Too few sessions this window to call the rhythm -- the timing shares above are shown without a verdict."
+		return "Too few sessions this window to call the rhythm -- the shares above are shown without a verdict."
 	case steady:
 		return "Sessions sit inside ordinary hours and stay a reasonable length."
 	default:

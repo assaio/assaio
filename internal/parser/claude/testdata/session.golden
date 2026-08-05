@@ -117,7 +117,7 @@
     "Subpath": "",
     "GitBranch": "main",
     "Entrypoint": "cli",
-    "Granularity": "turn",
+    "Granularity": "session",
     "LinesAdded": 12,
     "LinesRemoved": 3,
     "Edits": 0,

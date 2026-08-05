@@ -58,8 +58,8 @@ func TestParseDedupesAndFilters(t *testing.T) {
 		t.Fatalf("got %d records, want 5 (4 assistant turns deduped + 1 sub-agent record, non-assistant lines otherwise filtered)", len(recs))
 	}
 	for _, r := range recs {
-		if r.Project != "app" || r.GitBranch != "main" || r.Entrypoint != "cli" || r.Granularity != "turn" {
-			t.Fatalf("dimensions = %+v, want Project=app GitBranch=main Entrypoint=cli Granularity=turn", r)
+		if r.Project != "app" || r.GitBranch != "main" || r.Entrypoint != "cli" {
+			t.Fatalf("dimensions = %+v, want Project=app GitBranch=main Entrypoint=cli", r)
 		}
 		// Cwd is excluded from the golden file (json:"-", never persisted); assert it here instead.
 		if r.Cwd != "/home/dev/app" {
@@ -168,8 +168,10 @@ func TestParseSubAgentAndActivity(t *testing.T) {
 	if subAgent.Edits != 0 || subAgent.ToolCalls != 0 {
 		t.Fatalf("sub-agent Edits/ToolCalls = %d/%d, want 0/0 (its own tool calls are not double-counted)", subAgent.Edits, subAgent.ToolCalls)
 	}
-	if subAgent.Granularity != "turn" {
-		t.Fatalf("sub-agent Granularity = %q, want turn", subAgent.Granularity)
+	// One record for a whole sub-agent run is a session total, and labelling a summary of
+	// many requests as one of them is the granularity rule's exact case.
+	if subAgent.Granularity != "session" {
+		t.Fatalf("sub-agent Granularity = %q, want session", subAgent.Granularity)
 	}
 	if subAgent.Sidechain != 1 || subAgent.Agent != "general-purpose" {
 		t.Fatalf("sub-agent Sidechain/Agent = %d/%q, want 1/general-purpose (the work it aggregates ran inside a sub-agent)", subAgent.Sidechain, subAgent.Agent)

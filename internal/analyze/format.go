@@ -10,6 +10,16 @@ import (
 // noDataRead is the shared Read for a validator whose window had no data to analyze.
 var noDataRead = Read{Key: "neutral", Label: "—"}
 
+// noData ends a verdict whose window held none of what it needs: the neutral read, the
+// takeaway saying so, and a basis of zero stated in the metric's own unit. Stating the unit
+// is the part that matters -- a basis left unsaid means something else entirely (see
+// Confidence.insufficientReason).
+func (r *Result) noData(unit, takeaway string) {
+	r.Read = noDataRead
+	r.restsOn(0, unit)
+	r.Takeaway = takeaway
+}
+
 // readFor returns the favorable Read (Key "good", favorableLabel upper-cased) when ok,
 // else the shared "WATCH" fallback (Key "watch") every validator uses for its
 // non-favorable state.
@@ -162,6 +172,10 @@ func percentileAt(sorted []float64, p float64) float64 {
 	}
 	return sorted[lo] + (rank-float64(lo))*(sorted[lo+1]-sorted[lo])
 }
+
+// medianAt50 returns the median of sorted (ascending), so a figure computed here stays
+// directly comparable to report.SessionStats's own medians.
+func medianAt50(sorted []float64) float64 { return percentileAt(sorted, 0.5) }
 
 // clamp01 constrains x to [0,1], the valid range for Result.Purity.
 func clamp01(x float64) float64 {
