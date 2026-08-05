@@ -239,11 +239,17 @@ Depth before breadth, and before correlation. This milestone is the half of the 
 needs no server, no credential and no repository — and the half every other conclusion rests
 on, since a link to a merged pull request is only as good as the session it links.
 
-- [ ] **B107 · Codex cache-write tokens are never read** — S · solo — the audit's clearest
-  gap: `payload.info.total_token_usage.cache_write_input_tokens` is reported on every Codex
-  `token_count` and `usage.Record` gets no value for it, so Codex cost is a floor rather than an
-  estimate and `cache-hygiene` cannot see a Codex cache write at all. One field on the token
-  struct, one delta, one golden — and a `backfill --full` to restate history.
+- [ ] **B107 · Codex cache-write tokens are never read** — S · solo —
+  `payload.info.total_token_usage.cache_write_input_tokens` is reported on every Codex
+  `token_count` and `usage.Record` gets no value for it. **Measure before claiming a
+  correction**: on the audited corpus the field carried a value on 238 events and was zero on
+  every one, so this fixes no number here — the reason to read it is that a zero nobody looked
+  at and a zero the vendor reported are different facts, and a different plan or model may not
+  share it. Two things have to be settled first, and neither is guessable from that corpus:
+  whether `input_tokens` already contains the write (it does contain `cached_input_tokens`,
+  which the parser subtracts), and how history gets the value, since the local restate covers
+  activity and granularity but deliberately not tokens. A `backfill --full` alone will not do
+  it.
 - [ ] **B108 · Claude's cache is explainable, not opaque** — M · solo — two fields the audit
   found on every assistant turn: `message.usage.cache_creation.ephemeral_5m_input_tokens` /
   `ephemeral_1h_input_tokens` (the TTL tier a write bought) and

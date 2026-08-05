@@ -21,6 +21,14 @@ Discussion.
 
 ## [Unreleased]
 
+### Fixed
+- **The field audit's Codex cache-write row overstated its own consequence.** It said Codex cost
+  is a floor because the cache-write count is unread. The count is unread, but on the audited
+  corpus it carried a value on 238 events and was **zero on every one**, so no figure is
+  currently wrong. The row and `B107` now say what was measured rather than what would follow if
+  it were non-zero — the same standard the audit applies to a vendor's fields applies to its own
+  claims.
+
 ## [0.10.0] - 2026-08-05
 
 ### Added
