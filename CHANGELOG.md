@@ -21,6 +21,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-08-06
+
 ### Fixed
 - **A real signal no longer rounds away to "0%".** `rework` printed its rejection rate at
   whole-number precision, so 102 recorded human refusals of 65,098 calls read as **`0%`** —
@@ -979,7 +981,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/assaio/assaio/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/assaio/assaio/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/assaio/assaio/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/assaio/assaio/compare/v0.7.0...v0.8.0

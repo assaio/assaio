@@ -236,7 +236,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- HERO ────────────────────────────────────────────────────────────── -->
   <section class="wrap hero">
     <div>
-      <p class="eyebrow">Assay report · v0.10.0</p>
+      <p class="eyebrow">Assay report · v0.11.0</p>
       <h1>Is it <em>delivering?</em></h1>
       <p class="lede">
         Teams pour real money into AI coding tools and can't answer the one question that
@@ -313,7 +313,10 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         — a sentence about how someone worked, drawn from a column their tool does not keep.
         Since v0.10 that cannot happen: every figure is computed only over the sources that
         record its field, says how much of your window that reaches, and withholds the verdict
-        rather than certifying a silence.
+        rather than certifying a silence. v0.11 finished the job on the half that was still
+        open — a churn rate that divided by a source's lines while it recorded no undone one,
+        and two denominators counting tool calls a source never names — and a test now holds
+        the rule for every future metric rather than a review catching it.
       </p>
       <div class="split">
         <div class="panel">
@@ -428,7 +431,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="tool"><b>GitHub Copilot CLI</b><code>~/.copilot/session-state/&lt;id&gt;/events.jsonl</code><span class="cap full">tokens + lines · per session</span></div>
         <div class="tool"><b>Cline</b><code>globalStorage/saoudrizwan.claude-dev · ~/.cline</code><span class="cap">tokens · cost only</span></div>
       </div>
-      <p class="intro" style="margin-top:1.5rem">"Supports Gemini CLI" is misleading when it means tokens but no edits. Since v0.5 each source publishes its real <strong>depth</strong> — <em>deep</em> (tokens + activity), <em>standard</em> (reliable usage, documented activity gaps), <em>import-only</em> — and <code>doctor</code> prints the matrix for the tools found on your machine. Since v0.7 a source declares that <strong>per signal</strong> rather than per tier, because "has activity" is one bit over a tool that records changed lines and no edit count, no tool calls and no turns — so <code>signals coverage</code> tells you which of the twenty figures your own data can actually carry. The first thing that bought, in v0.8: the catalog had been claiming every source reports reasoning tokens, where only three of five do. In v0.10 it became a rule the metrics obey rather than a table they sit beside — a figure is computed only over the sources that record its field, so a tool that never writes an edit count is <em>absent</em> from the session mix instead of counted as a conversation.</p>
+      <p class="intro" style="margin-top:1.5rem">"Supports Gemini CLI" is misleading when it means tokens but no edits. Since v0.5 each source publishes its real <strong>depth</strong> — <em>deep</em> (tokens + activity), <em>standard</em> (reliable usage, documented activity gaps), <em>import-only</em> — and <code>doctor</code> prints the matrix for the tools found on your machine. Since v0.7 a source declares that <strong>per signal</strong> rather than per tier, because "has activity" is one bit over a tool that records changed lines and no edit count, no tool calls and no turns — so <code>signals coverage</code> tells you which of the twenty figures your own data can actually carry. The first thing that bought, in v0.8: the catalog had been claiming every source reports reasoning tokens, where only three of five do. In v0.10 it became a rule the metrics obey rather than a table they sit beside — a figure is computed only over the sources that record its field, so a tool that never writes an edit count is <em>absent</em> from the session mix instead of counted as a conversation. Since v0.11 an out-of-tree <b>metric plugin</b> is told the same thing on the wire, so a metric you write yourself can tell a measurement from a silence too.</p>
       <ul class="caveats">
         <li>AI-line activity (lines, edits, rework) is captured in full for Claude Code and Codex; Copilot CLI carries changed lines only — its log names tool calls too, which v0.10&rsquo;s field audit found and assaio does not read yet — and Gemini CLI and Cline contribute cost but no line counts. <code>signals coverage</code> reports which of the twenty figures your own mix supports.</li>
         <li>Copilot CLI totals a session only when it ends, so its records cover a whole session rather than a turn: they carry lines added and removed, are marked <code>‡</code> in reports, and lower the turn-level coverage every verdict declares.</li>
