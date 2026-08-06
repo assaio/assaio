@@ -4,6 +4,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/assaio/assaio/internal/humanize"
+
 	"github.com/assaio/assaio/internal/parser"
 )
 
@@ -45,13 +47,13 @@ func (coverageValidator) Analyze(in Input) Result {
 	r.Read = readFor(solid, "Solid")
 	r.Purity = clamp01(min(activityShare, pricedShare))
 	r.Figures = []Figure{
-		{Label: "activity coverage", Value: honestPercent(activityShare), Note: "lines/edits captured"},
-		{Label: "priced coverage", Value: honestPercent(pricedShare), Note: "cost known"},
-		{Label: "cost-only tokens", Value: honestPercent(1 - lineShare), Note: "no line signals"},
+		{Label: "activity coverage", Value: humanize.Percent(activityShare), Note: "lines/edits captured"},
+		{Label: "priced coverage", Value: humanize.Percent(pricedShare), Note: "cost known"},
+		{Label: "cost-only tokens", Value: humanize.Percent(1 - lineShare), Note: "no line signals"},
 	}
 	if turnShare, mixed := turnGranularityShare(in.Usage); mixed {
 		r.Figures = append(r.Figures, Figure{
-			Label: "turn-level records", Value: honestPercent(turnShare), Note: "rest are session aggregates",
+			Label: "turn-level records", Value: humanize.Percent(turnShare), Note: "rest are session aggregates",
 		})
 		r.Caveats = append(r.Caveats,
 			"Session-granularity records cover a whole session, so per-turn figures describe only the turn-level share above.")

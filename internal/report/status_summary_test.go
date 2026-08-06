@@ -86,7 +86,7 @@ func TestRenderStatusSummaryUnpricedTotalMarksAsterisk(t *testing.T) {
 
 func TestRenderChurnLineShowsCountAndRate(t *testing.T) {
 	var buf bytes.Buffer
-	c := ChurnStat{LinesAdded: 200, ReworkLines: 40, ReworkRate: 0.2}
+	c := ChurnStat{LinesAdded: 200, ReworkLines: 40, ReworkRate: 0.2, Rows: 2}
 	if err := RenderChurnLine(&buf, c); err != nil {
 		t.Fatal(err)
 	}
@@ -100,14 +100,29 @@ func TestRenderChurnLineShowsCountAndRate(t *testing.T) {
 
 func TestRenderChurnLineZeroIsHonest(t *testing.T) {
 	var buf bytes.Buffer
+	if err := RenderChurnLine(&buf, ChurnStat{Rows: 3}); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	for _, want := range []string{"rework: 0 lines reworked", "—"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("zero churn line missing %q: %s", want, out)
+		}
+	}
+}
+
+// A measured zero and a window nothing could measure must not print the same line.
+func TestRenderChurnLineSaysWhenNoSourceRecordsIt(t *testing.T) {
+	var buf bytes.Buffer
 	if err := RenderChurnLine(&buf, ChurnStat{}); err != nil {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	for _, want := range []string{"rework: 0 lines reworked", "0%"} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("zero churn line missing %q: %s", want, out)
-		}
+	if !strings.Contains(out, "not recorded by any source") {
+		t.Fatalf("churn line must name the missing capture, got: %s", out)
+	}
+	if strings.Contains(out, "0%") {
+		t.Fatalf("churn line must not print a rate nothing measured, got: %s", out)
 	}
 }
 

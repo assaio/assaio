@@ -90,7 +90,7 @@ func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table) {
 	g.Edits += u.Edits
 	g.ToolCalls += u.ToolCalls
 	g.Rejected += u.Rejected
-	g.TokensTotal += u.In + u.Out + u.CacheRead + u.CacheWrite
+	g.TokensTotal += RowTokens(u)
 
 	cost, ok := t.CostTokens(u.Model, u.In, u.Out, u.CacheWrite, u.CacheRead)
 	if !ok {

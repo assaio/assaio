@@ -161,8 +161,8 @@ server](#the-team-server)) the served endpoint.
 
 | Field | Type | What it is |
 |-------|------|------------|
-| `Usage` | `[]store.UsageRow` | The window's usage, **pre-aggregated** by `(day, tool, model, project, entrypoint, member)` — one row per combination, tokens and activity counts summed (`internal/store/store.go`'s `Usage` query). Not one row per raw event: there is no per-record or per-file detail left at this point (see the [say-so-when-approximating](#honesty-constraints-for-every-extension) rule). Each row carries `Day` (`"YYYY-MM-DD"`), `Tool`, `Model`, `Project`, `Entrypoint`, `Member`; token fields `In, Out, CacheRead, CacheWrite, Reasoning`; and activity fields `LinesAdded, LinesRemoved, Edits, ToolCalls, Rejected, Compactions, ReworkLines` (see the [`usage.Record` contract](#the-usagerecord-contract) for what each counts). It also carries the tool-call purpose split `ToolReads, ToolSearches, ToolCommands, ToolWrites, ToolOther` — which sums to `ToolCalls` for tools that name their tool calls and is all-zero for tools that do not — and `ToolErrors`, calls that came back an error. Because that split is populated by only some tools, a metric reading it must report its own coverage rather than treating zero as "nothing happened". |
-| `Sessions` | `[]store.SessionRow` | One row per `(session_id, member)` in the window: `Project`, `Tool`, `Model`, `FirstTs`/`LastTs`, `Turns`, `OutputTokens`, `PeakContextTokens`, `Edits`, `Compactions`, and `ActiveMinutes` (focused time — inter-turn gaps over 30 minutes are excluded, so a resumed session's idle time never counts as work; `internal/store/sessions.go`). **Every one of those counts except the timestamps is zero for a source that does not record it**, so a metric reading one must first keep the sessions whose `Tool` answers the matching signal — see [Reading a field only the sources that record it carry](#reading-a-field-only-the-sources-that-record-it-carry). Also `Task`, `Outcome` and `Difficulty`: the closed-vocabulary labels a person attached with `assaio-agent mark`, `""` on every axis nobody set — which is most sessions. Treat unlabeled as "not stated", never as a failure or a zero, and report your own label coverage if your metric depends on them ([ADR 0006](adr/0006-session-annotations.md)). |
+| `Usage` | `[]store.UsageRow` | The window's usage, **pre-aggregated** by `(day, tool, model, project, entrypoint, member)` — one row per combination, tokens and activity counts summed (`internal/store/store.go`'s `Usage` query). Not one row per raw event: there is no per-record or per-file detail left at this point (see the [say-so-when-approximating](#honesty-constraints-for-every-extension) rule). Each row carries `Day` (`"YYYY-MM-DD"`), `Tool`, `Model`, `Project`, `Entrypoint`, `Member`; token fields `In, Out, CacheRead, CacheWrite, Reasoning`; and activity fields `LinesAdded, LinesRemoved, Edits, ToolCalls, Rejected, Compactions, ReworkLines` (see the [`usage.Record` contract](#the-usagerecord-contract) for what each counts). It also carries the tool-call purpose split `ToolReads, ToolSearches, ToolCommands, ToolWrites, ToolOther` — which sums to `ToolCalls` for tools that name their tool calls and is all-zero for tools that do not — and `ToolErrors`, calls that came back an error. **Every activity count here is zero for a source that does not record it**, exactly as on `Sessions`: keep the rows whose `Tool` answers the matching signal with `report.UsageAnswering` before computing a rate over one — see [Reading a field only the sources that record it carry](#reading-a-field-only-the-sources-that-record-it-carry). That applies to the tool-call purpose split too, which is populated by only some tools. |
+| `Sessions` | `[]store.SessionRow` | One row per `(session_id, member)` in the window: `Project`, `Tool`, `Model`, `FirstTs`/`LastTs`, `Turns`, `OutputTokens`, `PeakContextTokens`, `Edits`, `Compactions`, and `ActiveMinutes` (focused time — inter-turn gaps over 30 minutes are excluded, so a resumed session's idle time never counts as work; `internal/store/sessions.go`). `Turns`, `PeakContextTokens` and the gaps behind `ActiveMinutes` read only `turn`-grain rows, so a whole sub-agent run stored as one session-grain record is never counted as a single very large turn. **Every one of those counts except the timestamps is zero for a source that does not record it**, so a metric reading one must first keep the sessions whose `Tool` answers the matching signal — see [Reading a field only the sources that record it carry](#reading-a-field-only-the-sources-that-record-it-carry). Also `Task`, `Outcome` and `Difficulty`: the closed-vocabulary labels a person attached with `assaio-agent mark`, `""` on every axis nobody set — which is most sessions. Treat unlabeled as "not stated", never as a failure or a zero, and report your own label coverage if your metric depends on them ([ADR 0006](adr/0006-session-annotations.md)). |
 | `Prices` | `pricing.Table` | `map[string]pricing.Price{Input, Output, CacheWrite, CacheRead float64}`, USD per token, the vendored LiteLLM snapshot. Indexing a model absent from the table returns a zero-value `Price` with **no error** — check the map's `ok` return if an unpriced model must be excluded from a cost figure rather than silently priced at $0. |
 | `Now` | `time.Time` | Wall-clock at CLI invocation. Use this, never call `time.Now()` yourself. |
 | `Recent` | `time.Duration` | The recent-vs-prior comparison window (7 days from the CLI today) — use it for trend/staleness splits the way `adoption` and `throughput` do. |
@@ -203,6 +203,13 @@ confidence envelope say how much of the window the figure describes. Spell the s
 the `parser.Signal*` constant, and if the field you need has no signal id yet, add one — a
 catalog entry plus the matrix rows that answer it ([ADR 0008](adr/0008-signal-catalog.md)) —
 rather than testing the tool name.
+
+**Both row shapes need it.** `report.UsageAnswering` is `SessionsAnswering` for
+`[]store.UsageRow`, and the same rule applies to a rate over a stored column: a source
+recording changed lines but no rework contributed its whole output to the churn denominator
+against a structural zero, which lowered the rate with code nobody watched being undone. The
+generic test in `internal/analyze/capability_test.go` varies both shapes for exactly that
+reason — a hole on either grain is the same bug.
 
 #### Opting a metric out of the project drill
 
@@ -897,9 +904,40 @@ parser protocol's `assaio_plugin`):
   "totals":    {"tokens":0,"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"lines":0,
                 "cost":null,"priced":false,"cacheEfficiency":0.9},
   "prices":    {"claude-opus-4-8":{"input":0.000015,"output":0.000075,
-                "cacheRead":0.0000015,"cacheWrite":0.00001875}}
+                "cacheRead":0.0000015,"cacheWrite":0.00001875}},
+  "answers":   {"claude-code":["ai.compactions.count","ai.edits.count","..."],
+                "copilot-cli":["ai.cost.estimated","ai.lines.added","..."]}
 }
 ```
+
+#### `answers` — which zeros are measurements and which are silence
+
+Every count on a `usage` or `sessions` row is **zero for a source that does not record it**,
+and "nothing happened" and "nothing was written down" are different facts. A metric that
+averages the two states what it did not measure — the mistake that made a Cline-only window
+read as *100% conversational sessions* ([ADR 0011](adr/0011-capability-gated-metrics.md)).
+
+`answers` maps every tool present in this window to the
+[signal](adr/0008-signal-catalog.md) ids it can produce
+(`assaio-agent signals list`; an out-of-tree parser gets the exec protocol's floor, since its
+capability is whatever its author implemented). The rule is the same one an in-tree validator
+follows: **keep the rows whose tool answers the signal, compute over those, and declare the
+reach** — a figure with no rows left prints nothing rather than a zero, and the verdict is
+withheld rather than earned from a silence.
+
+```python
+capable = [r for r in inp["usage"] if "ai.rework.lines" in inp["answers"].get(r["tool"], [])]
+if not capable:
+    result["read"] = {"key": "neutral", "label": "—"}     # withhold, never certify a silence
+    result["takeaway"] = "No source in this window records an undone line."
+else:
+    reach = sum(tokens(r) for r in capable) / max(inp["totals"]["tokens"], 1)
+    result["confidence"] = {"signalCoverage": reach, "samples": len(capable),
+                            "samplesUnit": "usage rows"}
+```
+
+Only the tools actually in the window are sent: a plugin needs the capability of the data it
+was handed, and shipping the whole matrix would make the envelope a second publication of it.
 
 **Session labels are deliberately absent from this document.** In-tree validators can read
 the task/outcome/difficulty a person attached with `assaio-agent mark`, but the plugin wire

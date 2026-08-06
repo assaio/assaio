@@ -5,6 +5,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/assaio/assaio/internal/report"
 )
 
 // noDataRead is the shared Read for a validator whose window had no data to analyze.
@@ -114,21 +116,6 @@ func writeBar(w io.Writer, b Bar) error {
 	return err
 }
 
-// formatPercent renders a 0-1 share as a percentage at the given decimal precision,
-// e.g. formatPercent(0.999, 1) -> "99.9%".
-func formatPercent(share float64, decimals int) string {
-	return strconv.FormatFloat(share*100, 'f', decimals, 64) + "%"
-}
-
-// shareOrDash divides num by den as a percentage at the given decimal precision, "—"
-// when den is zero -- never a divide-by-zero substitute for a real ratio.
-func shareOrDash(num, den int64, decimals int) string {
-	if den == 0 {
-		return "—"
-	}
-	return formatPercent(float64(num)/float64(den), decimals)
-}
-
 // perActiveDay divides n by days to one decimal place, "—" when days is zero.
 func perActiveDay(n, days int64) string {
 	if days == 0 {
@@ -154,27 +141,15 @@ func fracOf(n, maxN int64) float64 {
 	return float64(n) / float64(maxN)
 }
 
-// percentileAt returns the p-quantile (p in 0..1) of sorted, ascending, by linear
-// interpolation between adjacent ranks -- the same method report.BuildSessionStats uses
-// for its medians, so a figure computed here stays directly comparable to its own.
+// percentileAt returns the p-quantile (p in 0..1) of sorted, ascending. The interpolation
+// itself is report.Percentile's, so a figure computed here and one in a session summary are
+// the same method rather than two that merely claim to be; only the 0..1 spelling differs,
+// which is how a validator says "p95" without a stray hundred in the call.
 func percentileAt(sorted []float64, p float64) float64 {
-	n := len(sorted)
-	switch n {
-	case 0:
-		return 0
-	case 1:
-		return sorted[0]
-	}
-	rank := clamp01(p) * float64(n-1)
-	lo := int(rank)
-	if lo >= n-1 {
-		return sorted[n-1]
-	}
-	return sorted[lo] + (rank-float64(lo))*(sorted[lo+1]-sorted[lo])
+	return report.Percentile(sorted, clamp01(p)*100)
 }
 
-// medianAt50 returns the median of sorted (ascending), so a figure computed here stays
-// directly comparable to report.SessionStats's own medians.
+// medianAt50 returns the median of sorted (ascending).
 func medianAt50(sorted []float64) float64 { return percentileAt(sorted, 0.5) }
 
 // clamp01 constrains x to [0,1], the valid range for Result.Purity.

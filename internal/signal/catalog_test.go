@@ -82,7 +82,7 @@ func TestEverySourceAnswersOnlyDeclaredSignals(t *testing.T) {
 	for _, s := range Catalog() {
 		declared[s.ID] = true
 	}
-	for _, d := range parser.Depths() {
+	for _, d := range depthRows() {
 		for _, id := range d.Answers {
 			if !declared[id] {
 				t.Errorf("%s claims to answer %s, which no signal declares", d.Tool, id)
@@ -97,7 +97,7 @@ func TestEverySourceAnswersOnlyDeclaredSignals(t *testing.T) {
 func TestDepthAxesAgreeWithAnswers(t *testing.T) {
 	activity := []string{"ai.lines.added", "ai.lines.removed", "ai.edits.count", "ai.tool_calls.count"}
 	attribution := []string{"ai.skill.tokens", "ai.agent.tokens"}
-	for _, d := range parser.Depths() {
+	for _, d := range depthRows() {
 		if got := answersAny(d.Answers, activity); got != d.Activity {
 			t.Errorf("%s declares Activity=%v but answers activity signals=%v", d.Tool, d.Activity, got)
 		}
@@ -116,4 +116,17 @@ func answersAny(have, want []string) bool {
 		}
 	}
 	return false
+}
+
+// depthRows reads the matrix one row at a time through the two questions the package
+// publishes, so the contract tests need no bulk accessor nothing in the binary calls.
+func depthRows() []parser.Depth {
+	tools := parser.Tools()
+	out := make([]parser.Depth, 0, len(tools))
+	for _, tool := range tools {
+		if d, ok := parser.DepthOf(tool); ok {
+			out = append(out, d)
+		}
+	}
+	return out
 }

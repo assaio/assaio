@@ -3,7 +3,7 @@ package analyze
 import (
 	"strconv"
 
-	"github.com/assaio/assaio/internal/store"
+	"github.com/assaio/assaio/internal/humanize"
 )
 
 const (
@@ -56,8 +56,8 @@ func (exploreValidator) Analyze(in Input) Result {
 	r.Purity = explorePurity(m, sufficient)
 	r.Figures = []Figure{
 		{Label: "classified calls", Value: strconv.FormatInt(m.Classified, 10)},
-		{Label: "produce share", Value: formatPercent(m.ProduceShare(), 0), Note: "writes, of classified calls"},
-		{Label: "explore share", Value: formatPercent(m.ExploreShare(), 0), Note: "reads + searches"},
+		{Label: "produce share", Value: humanize.PercentAt(m.ProduceShare(), 0), Note: "writes, of classified calls"},
+		{Label: "explore share", Value: humanize.PercentAt(m.ExploreShare(), 0), Note: "reads + searches"},
 		{Label: "reads per write", Value: exploreRatio(m.Reads+m.Searches, m.Writes)},
 	}
 	r.Bars = toolMixBars(m)
@@ -66,53 +66,6 @@ func (exploreValidator) Analyze(in Input) Result {
 		r.Caveats = append(r.Caveats, exploreCoverageCaveat(m))
 	}
 	return r
-}
-
-// toolMix is the window's tool calls split by purpose, beside the total tool calls seen so
-// coverage can be stated honestly.
-type toolMix struct {
-	Reads, Searches, Commands, Writes, Other int64
-	// Classified is the sum of the five buckets: calls from tools that name their calls.
-	Classified int64
-	// AllCalls is every tool call in the window, including tools that record no names.
-	AllCalls int64
-}
-
-// buildToolMix sums the per-purpose tool-call counts across the window's usage rows.
-func buildToolMix(rows []store.UsageRow) toolMix {
-	var m toolMix
-	for i := range rows {
-		m.Reads += rows[i].ToolReads
-		m.Searches += rows[i].ToolSearches
-		m.Commands += rows[i].ToolCommands
-		m.Writes += rows[i].ToolWrites
-		m.Other += rows[i].ToolOther
-		m.AllCalls += rows[i].ToolCalls
-	}
-	m.Classified = m.Reads + m.Searches + m.Commands + m.Writes + m.Other
-	return m
-}
-
-// classifiedCalls is one row's tool calls that carry a purpose. Zero means the row predates
-// the capture or came from a tool that names no calls -- either way, nothing about what its
-// calls did can be read from it.
-func classifiedCalls(r *store.UsageRow) int64 {
-	return r.ToolReads + r.ToolSearches + r.ToolCommands + r.ToolWrites + r.ToolOther
-}
-
-// ProduceShare is the share of classified calls that wrote code.
-func (m toolMix) ProduceShare() float64 { return shareOf(m.Writes, m.Classified) }
-
-// ExploreShare is the share of classified calls that read or searched.
-func (m toolMix) ExploreShare() float64 { return shareOf(m.Reads+m.Searches, m.Classified) }
-
-// Coverage is the share of the window's tool calls that carry a purpose, 1 when every call
-// came from a tool that names its calls.
-func (m toolMix) Coverage() float64 {
-	if m.AllCalls == 0 {
-		return 0
-	}
-	return shareOf(m.Classified, m.AllCalls)
 }
 
 // shareOf divides n by total as a 0..1 share, 0 when total is zero.
@@ -172,7 +125,7 @@ func toolMixBars(m toolMix) []Bar {
 	for _, b := range buckets {
 		bars = append(bars, Bar{
 			Label: b.label,
-			Value: strconv.FormatInt(b.n, 10) + " calls · " + formatPercent(shareOf(b.n, m.Classified), 0),
+			Value: strconv.FormatInt(b.n, 10) + " calls · " + humanize.PercentAt(shareOf(b.n, m.Classified), 0),
 			Frac:  fracOf(b.n, maxN),
 		})
 	}
@@ -184,7 +137,7 @@ func toolMixBars(m toolMix) []Bar {
 // history: a source that names no calls records none at all and so cannot lower it -- what
 // does is usage ingested before the purpose split was captured.
 func exploreCoverageCaveat(m toolMix) string {
-	return "Prov.: " + honestPercent(m.Coverage()) + " of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified -- run `backfill` to restate them. A source that names no tool calls records none, so it neither raises nor lowers this -- `assaio-agent signals coverage` says which do."
+	return "Prov.: " + humanize.Percent(m.Coverage()) + " of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified -- run `backfill` to restate them. A source that names no tool calls records none, so it neither raises nor lowers this -- `assaio-agent signals coverage` says which do."
 }
 
 func exploreTakeaway(sufficient, balanced bool) string {

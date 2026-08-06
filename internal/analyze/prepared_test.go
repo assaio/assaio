@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/assaio/assaio/internal/humanize"
+
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -220,8 +222,8 @@ func TestModelFitReadsByModelDirectly(t *testing.T) {
 
 	premiumTokens, cheaperTokens := int64(4000), int64(2000) // 1000+3000, 1000+1000
 	total := premiumTokens + cheaperTokens
-	wantPremiumShare := shareOrDash(premiumTokens, total, 1)
-	wantCheaperShare := shareOrDash(cheaperTokens, total, 1)
+	wantPremiumShare := humanize.PercentOrDash(premiumTokens, total, 1)
+	wantCheaperShare := humanize.PercentOrDash(cheaperTokens, total, 1)
 
 	joined := figureValues(got.Figures)
 	if !strings.Contains(joined, wantPremiumShare) {

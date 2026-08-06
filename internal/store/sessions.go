@@ -65,6 +65,13 @@ const activeGapCeilingMinutes = 30
 // window function over each group's ordered turns, only the inter-turn gaps <=
 // activeGapCeilingMinutes; ts is sliced to its second-precision prefix so julianday
 // parses it without depending on the driver's timezone-suffix support.
+//
+// Every per-turn figure -- Turns, PeakContextTokens and the gaps ActiveMinutes sums -- reads
+// only the rows this build labelled 'turn'. A session-grain row summarizes many requests
+// (a completed Claude sub-agent is one, migration 0006), and counting it as a turn is the
+// exact misread the granularity rule exists to prevent. Whole-session figures -- the
+// timestamps, output tokens, edits and compactions -- keep every row, because those are
+// honest at either grain.
 func (s *Store) Sessions(ctx context.Context, since time.Time) ([]SessionRow, error) {
 	return s.sessions(ctx, since, LabelFilter{})
 }
@@ -86,7 +93,7 @@ const (
                     - LAG(julianday(substr(ts, 1, 19)))
                         OVER (PARTITION BY session_id, member ORDER BY ts)) * 1440.0 AS gap_min
             FROM usage_record
-            WHERE ts >= ?
+            WHERE ts >= ? AND granularity = 'turn'
         ),
         active AS (
             SELECT session_id, member, SUM(gap_min) AS active_min
@@ -95,9 +102,11 @@ const (
             GROUP BY session_id, member
         )
         SELECT r.session_id, MAX(r.project), MAX(r.tool), MAX(r.model), r.member,
-               MIN(r.ts), MAX(r.ts), COUNT(*),
+               MIN(r.ts), MAX(r.ts),
+               SUM(CASE WHEN r.granularity = 'turn' THEN 1 ELSE 0 END),
                SUM(r.output_tokens),
-               MAX(r.cache_read_tokens + r.input_tokens),
+               COALESCE(MAX(CASE WHEN r.granularity = 'turn'
+                                 THEN r.cache_read_tokens + r.input_tokens END), 0),
                SUM(r.edits), SUM(r.compactions),
                COALESCE(MAX(a.active_min), 0.0),
                COALESCE(MAX(sl.task), ''), COALESCE(MAX(sl.outcome), ''), COALESCE(MAX(sl.difficulty), '')

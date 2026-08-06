@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/assaio/assaio/internal/parser"
+
 	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
@@ -160,4 +162,62 @@ func TestMetricInputCarriesGranularity(t *testing.T) {
 	if row["granularity"] != "session" {
 		t.Fatalf("usage row = %+v, want granularity=session", row)
 	}
+}
+
+// TestMetricInputCarriesSourceCapability gives an out-of-tree metric the one thing the
+// envelope withheld: which of the zeros on a row are measurements and which are silence.
+// A plugin that cannot ask this is exposed to exactly the bug ADR 0011 fixed in-tree.
+func TestMetricInputCarriesSourceCapability(t *testing.T) {
+	in := analyze.BuildInput([]store.UsageRow{
+		{Day: "2026-07-16", Tool: "claude-code", Model: "m-priced", Granularity: "turn", In: 100, Out: 200},
+		{Day: "2026-07-16", Tool: "copilot-cli", Model: "m-priced", Granularity: "session", In: 10, Out: 20},
+	}, nil, pricing.Table{}, metricInputTestNow, 7*24*time.Hour, analyze.Delegation{})
+	got := roundTrip(t, &in)
+
+	answers, ok := got["answers"].(map[string]any)
+	if !ok {
+		t.Fatalf("answers = %v (%T), want a JSON object", got["answers"], got["answers"])
+	}
+	if len(answers) != 2 {
+		t.Fatalf("answers = %v, want one entry per tool in the window", answers)
+	}
+	if !answersContain(answers, "claude-code", parser.SignalReworkLines) {
+		t.Errorf("answers[claude-code] = %v, want the rework signal it records", answers["claude-code"])
+	}
+	if answersContain(answers, "copilot-cli", parser.SignalReworkLines) {
+		t.Errorf("answers[copilot-cli] = %v, want no rework claim for a source that records none", answers["copilot-cli"])
+	}
+	if !answersContain(answers, "copilot-cli", parser.SignalLinesAdded) {
+		t.Errorf("answers[copilot-cli] = %v, want the line signals it does record", answers["copilot-cli"])
+	}
+}
+
+// An out-of-tree parser's records must carry a capability too, and it is the exec
+// protocol's floor rather than a table assaio maintains for someone else's tool.
+func TestMetricInputCapabilityForPluginSources(t *testing.T) {
+	in := analyze.BuildInput([]store.UsageRow{
+		{Day: "2026-07-16", Tool: "plugin:acme", Model: "m-priced", Granularity: "turn", In: 100, Out: 200},
+	}, nil, pricing.Table{}, metricInputTestNow, 7*24*time.Hour, analyze.Delegation{})
+	got := roundTrip(t, &in)
+	answers, _ := got["answers"].(map[string]any)
+
+	if !answersContain(answers, "plugin:acme", parser.SignalTokensTotal) {
+		t.Errorf("answers[plugin:acme] = %v, want the exec protocol's token floor", answers["plugin:acme"])
+	}
+	if answersContain(answers, "plugin:acme", parser.SignalEditsCount) {
+		t.Errorf("answers[plugin:acme] = %v, want no activity claim the protocol cannot carry", answers["plugin:acme"])
+	}
+}
+
+func answersContain(answers map[string]any, tool, id string) bool {
+	ids, ok := answers[tool].([]any)
+	if !ok {
+		return false
+	}
+	for _, v := range ids {
+		if v == id {
+			return true
+		}
+	}
+	return false
 }

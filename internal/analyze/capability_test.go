@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/assaio/assaio/internal/parser"
+
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -127,34 +129,82 @@ func figureFor(figures []Figure, label string) Figure {
 }
 
 // The invariant ADR 0011 exists for, asserted generically because a twentieth validator is
-// exactly what would break it: a source that answers none of the per-session signals must
-// contribute no value to any figure over them, so the same window with those fields filled
-// in and with them at zero has to produce identical results.
+// exactly what would break it: a field a source cannot record must contribute nothing to any
+// figure, so the same window with those fields filled in and with them at zero has to produce
+// identical results.
+//
+// Both row shapes are varied, and both shapes of silent source. Keeping the usage row
+// constant is how the rework rate went on dividing by a silent source's lines while the
+// session half was already gated; keeping to one source is how `context` went on reading an
+// edit count Cline never writes, because the other silent source records lines and hid it.
+// Which fields to fill is read from the matrix rather than listed per tool, so a parser
+// landing tomorrow is covered by this without touching it.
+//
+// `LinesAdded` is deliberately left out: a source that records no line contributes a true
+// zero to a line *total*, and whether a per-day or per-token line *rate* may keep its
+// denominator is an open question with its own entry (`B118`), not one this test should
+// freeze either way.
 func TestNoValidatorReadsAFieldItsSourceCannotRecord(t *testing.T) {
-	silent := sessionsFrom(sessionTotalTool, 6)
-	filled := sessionsFrom(sessionTotalTool, 6)
-	for i := range filled {
-		filled[i].Turns = 40
-		filled[i].ActiveMinutes = 300
-		filled[i].PeakContextTokens = 900_000
-		filled[i].Edits = 25
-		filled[i].Compactions = 4
-	}
-	usage := []store.UsageRow{{
-		Day: validatorsTestNow.Format("2006-01-02"), Tool: sessionTotalTool,
-		Model: "claude-sonnet-4-5", Project: "p", Granularity: "session",
-		In: 1000, Out: 1000, LinesAdded: 300,
-	}}
-
-	quiet := BuildInput(usage, silent, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
-	loud := BuildInput(usage, filled, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
-	for _, v := range Validators() {
-		got, want := render(t, v, &loud), render(t, v, &quiet)
-		if got != want {
-			t.Errorf("%s reads a field %s does not record:\n with values:\n%s\n with zeros:\n%s",
-				v.Name(), sessionTotalTool, got, want)
+	for _, tool := range []string{sessionTotalTool, costOnlyTool} {
+		quiet, loud := silentAndFilledWindow(tool)
+		for _, v := range Validators() {
+			got, want := render(t, v, &loud), render(t, v, &quiet)
+			if got != want {
+				t.Errorf("%s reads a field %s does not record:\n with values:\n%s\n with zeros:\n%s",
+					v.Name(), tool, got, want)
+			}
 		}
 	}
+}
+
+// silentAndFilledWindow builds the same window twice: once with every field tool cannot
+// record left at zero, once with all of them filled. An honest validator cannot tell them
+// apart, because it never read one.
+func silentAndFilledWindow(tool string) (quiet, loud Input) {
+	cannot := func(id string) bool { return !parser.Answers(tool, id) }
+	silent, filled := sessionsFrom(tool, 6), sessionsFrom(tool, 6)
+	for i := range filled {
+		s := &filled[i]
+		if cannot(parser.SignalTurnsCount) {
+			s.Turns, s.PeakContextTokens = 40, 900_000
+		}
+		if cannot(parser.SignalActiveMinutes) {
+			s.ActiveMinutes = 300
+		}
+		if cannot(parser.SignalEditsCount) {
+			s.Edits = 25
+		}
+		if cannot(parser.SignalCompactionsCount) {
+			s.Compactions = 4
+		}
+	}
+	quietRow := store.UsageRow{
+		Day: validatorsTestNow.Format("2006-01-02"), Tool: tool,
+		Model: "claude-sonnet-4-5", Project: "p", Granularity: "session",
+		In: 1000, Out: 1000, LinesAdded: 300,
+	}
+	loudRow := quietRow
+	if cannot(parser.SignalEditsCount) {
+		loudRow.Edits = 40
+	}
+	if cannot(parser.SignalToolCallsCount) {
+		loudRow.ToolCalls = 500
+		loudRow.ToolReads, loudRow.ToolSearches, loudRow.ToolWrites = 200, 200, 100
+	}
+	if cannot(parser.SignalToolErrorsCount) {
+		loudRow.ToolErrors = 90
+	}
+	if cannot(parser.SignalRejectedCount) {
+		loudRow.Rejected = 60
+	}
+	if cannot(parser.SignalCompactionsCount) {
+		loudRow.Compactions = 7
+	}
+	if cannot(parser.SignalReworkLines) {
+		loudRow.ReworkLines = 250
+	}
+	return BuildInput([]store.UsageRow{quietRow}, silent, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{}),
+		BuildInput([]store.UsageRow{loudRow}, filled, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
 }
 
 func render(t *testing.T, v Validator, in *Input) string {

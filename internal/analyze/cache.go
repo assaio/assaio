@@ -39,7 +39,7 @@ func (cacheValidator) Analyze(in Input) Result {
 	r.Read = readFor(healthy, "Efficient")
 	r.Purity = clamp01(reuse)
 	r.Figures = []Figure{
-		{Label: "cache-read share", Value: honestPercent(reuse), Note: "of billed input"},
+		{Label: "cache-read share", Value: humanize.Percent(reuse), Note: "of billed input"},
 		{Label: "cache reads", Value: humanize.Count(t.CacheRead)},
 		{Label: "cache writes", Value: humanize.Count(t.CacheWrite), Note: cacheWriteNote(t.CacheRead, t.CacheWrite)},
 	}

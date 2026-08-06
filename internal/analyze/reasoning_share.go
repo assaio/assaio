@@ -61,9 +61,9 @@ func (reasoningValidator) Analyze(in Input) Result {
 	r.Read = readFor(share < reasoningWatchShare, "Lean")
 	r.Purity = clamp01(1 - share)
 	r.Figures = []Figure{
-		{Label: "reasoning share", Value: honestPercent(share), Note: "of reporting output"},
+		{Label: "reasoning share", Value: humanize.Percent(share), Note: "of reporting output"},
 		{Label: "reasoning tokens", Value: humanize.Count(reasoning)},
-		{Label: "reporting coverage", Value: honestPercent(coverage), Note: "output from tools that report it"},
+		{Label: "reporting coverage", Value: humanize.Percent(coverage), Note: "output from tools that report it"},
 	}
 	r.Takeaway = reasoningTakeaway(share)
 	r.Caveats = []string{

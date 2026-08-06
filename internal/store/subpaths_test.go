@@ -14,19 +14,19 @@ func TestSubpathsGroupsByProjectAndSubpath(t *testing.T) {
 	ts := time.Date(2026, 7, 10, 10, 0, 0, 0, time.UTC)
 	_, err := s.Insert(ctx, []usage.Record{
 		{
-			Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", DedupeKey: "a1",
+			Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", DedupeKey: "a1", Granularity: "turn",
 			Project: "web", Subpath: "apps/mobile", LinesAdded: 100,
 		},
 		{
-			Tool: "claude-code", SessionID: "s1", Timestamp: ts.Add(time.Minute), Model: "m", DedupeKey: "a2",
+			Tool: "claude-code", SessionID: "s1", Timestamp: ts.Add(time.Minute), Model: "m", DedupeKey: "a2", Granularity: "turn",
 			Project: "web", Subpath: "apps/mobile", LinesAdded: 50,
 		},
 		{
-			Tool: "claude-code", SessionID: "s2", Timestamp: ts, Model: "m", DedupeKey: "a3",
+			Tool: "claude-code", SessionID: "s2", Timestamp: ts, Model: "m", DedupeKey: "a3", Granularity: "turn",
 			Project: "web", Subpath: "", LinesAdded: 10,
 		},
 		{
-			Tool: "claude-code", SessionID: "s3", Timestamp: ts, Model: "m", DedupeKey: "a4",
+			Tool: "claude-code", SessionID: "s3", Timestamp: ts, Model: "m", DedupeKey: "a4", Granularity: "turn",
 			Project: "other", Subpath: "ignored", LinesAdded: 999,
 		},
 	})
@@ -55,10 +55,10 @@ func TestSubpathsExcludesOtherProjectsAndOldRows(t *testing.T) {
 	ctx := context.Background()
 	ts := time.Date(2026, 7, 10, 10, 0, 0, 0, time.UTC)
 	_, err := s.Insert(ctx, []usage.Record{
-		{Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", DedupeKey: "a1", Project: "web", Subpath: "x", LinesAdded: 5},
-		{Tool: "claude-code", SessionID: "s2", Timestamp: ts, Model: "m", DedupeKey: "a2", Project: "other", Subpath: "x", LinesAdded: 5},
+		{Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", DedupeKey: "a1", Granularity: "turn", Project: "web", Subpath: "x", LinesAdded: 5},
+		{Tool: "claude-code", SessionID: "s2", Timestamp: ts, Model: "m", DedupeKey: "a2", Granularity: "turn", Project: "other", Subpath: "x", LinesAdded: 5},
 		{
-			Tool: "claude-code", SessionID: "s3", Timestamp: ts.Add(-24 * time.Hour), Model: "m", DedupeKey: "a3",
+			Tool: "claude-code", SessionID: "s3", Timestamp: ts.Add(-24 * time.Hour), Model: "m", DedupeKey: "a3", Granularity: "turn",
 			Project: "web", Subpath: "x", LinesAdded: 5,
 		},
 	})
@@ -80,9 +80,9 @@ func TestSubpathsDistinctSessionCountNotRowCount(t *testing.T) {
 	ctx := context.Background()
 	ts := time.Date(2026, 7, 10, 10, 0, 0, 0, time.UTC)
 	_, err := s.Insert(ctx, []usage.Record{
-		{Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", DedupeKey: "a1", Project: "web", Subpath: "x", LinesAdded: 1},
-		{Tool: "claude-code", SessionID: "s1", Timestamp: ts.Add(time.Minute), Model: "m", DedupeKey: "a2", Project: "web", Subpath: "x", LinesAdded: 1},
-		{Tool: "claude-code", SessionID: "s1", Timestamp: ts.Add(2 * time.Minute), Model: "m", DedupeKey: "a3", Project: "web", Subpath: "x", LinesAdded: 1},
+		{Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", DedupeKey: "a1", Granularity: "turn", Project: "web", Subpath: "x", LinesAdded: 1},
+		{Tool: "claude-code", SessionID: "s1", Timestamp: ts.Add(time.Minute), Model: "m", DedupeKey: "a2", Granularity: "turn", Project: "web", Subpath: "x", LinesAdded: 1},
+		{Tool: "claude-code", SessionID: "s1", Timestamp: ts.Add(2 * time.Minute), Model: "m", DedupeKey: "a3", Granularity: "turn", Project: "web", Subpath: "x", LinesAdded: 1},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -107,11 +107,11 @@ func TestSubpathsKeepsMembersSeparate(t *testing.T) {
 	ts := time.Date(2026, 7, 10, 10, 0, 0, 0, time.UTC)
 	_, err := s.Insert(ctx, []usage.Record{
 		{
-			Tool: "claude-code", SessionID: "shared", Timestamp: ts, Model: "m", DedupeKey: "alice:1",
+			Tool: "claude-code", SessionID: "shared", Timestamp: ts, Model: "m", DedupeKey: "alice:1", Granularity: "turn",
 			Project: "web", Subpath: "apps/api", LinesAdded: 100, Member: "alice",
 		},
 		{
-			Tool: "claude-code", SessionID: "shared", Timestamp: ts, Model: "m", DedupeKey: "bob:1",
+			Tool: "claude-code", SessionID: "shared", Timestamp: ts, Model: "m", DedupeKey: "bob:1", Granularity: "turn",
 			Project: "web", Subpath: "apps/api", LinesAdded: 50, Member: "bob",
 		},
 	})

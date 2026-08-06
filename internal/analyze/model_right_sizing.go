@@ -1,6 +1,10 @@
 package analyze
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/assaio/assaio/internal/humanize"
+)
 
 const (
 	rightSizeName      = "model-right-sizing"
@@ -57,7 +61,7 @@ func (rightSizeValidator) Analyze(in Input) Result {
 	r.Purity = clamp01(1 - smallShare)
 	r.Figures = []Figure{
 		{Label: "premium turns", Value: strconv.FormatInt(premiumTurns, 10)},
-		{Label: "small-output premium", Value: shareOrDash(smallPremium, premiumTurns, 0), Note: "<" + strconv.Itoa(RightSizeSmallOutput) + " output tokens"},
+		{Label: "small-output premium", Value: humanize.PercentOrDash(smallPremium, premiumTurns, 0), Note: "<" + strconv.Itoa(RightSizeSmallOutput) + " output tokens"},
 		{Label: "downgrade candidates", Value: strconv.FormatInt(smallPremium, 10), Note: "worth a cheaper/faster model"},
 	}
 	r.Takeaway = rightSizeTakeaway(enough, smallShare)

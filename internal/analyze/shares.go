@@ -7,6 +7,9 @@ package analyze
 import (
 	"sort"
 
+	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/report"
+
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -36,11 +39,9 @@ func turnGranularityShare(rows []store.UsageRow) (share float64, mixed bool) {
 	return fracOf(turn, known), true
 }
 
-// rowTokens is a row's billable token total, matching Totals.Tokens -- reasoning tokens
-// are a subset of output (usage.Record) and are never re-added.
-func rowTokens(r *store.UsageRow) int64 {
-	return r.In + r.Out + r.CacheRead + r.CacheWrite
-}
+// rowTokens is a row's billable token total, matching Totals.Tokens. The sum itself lives
+// in report so no package keeps a second opinion about what a window cost.
+func rowTokens(r *store.UsageRow) int64 { return report.RowTokens(r) }
 
 // TokensByTool totals the window's tokens per tool. Exported so the signal catalog's coverage
 // command reads the same arithmetic this validator does rather than keeping its own.
@@ -101,26 +102,7 @@ func toolCoverageBars(byTool map[string]int64, total int64) []Bar {
 		if !parser.HasLineOutput(t) {
 			label += " (cost only)"
 		}
-		bars[i] = Bar{Label: label, Value: honestPercent(fracOf(byTool[t], total)), Frac: fracOf(byTool[t], maxTok)}
+		bars[i] = Bar{Label: label, Value: humanize.Percent(fracOf(byTool[t], total)), Frac: fracOf(byTool[t], maxTok)}
 	}
 	return bars
-}
-
-// HonestPercent is honestPercent for callers outside this package -- the signal catalog's
-// coverage command renders shares through it so a partial verdict can never print "100%".
-func HonestPercent(share float64) string { return honestPercent(share) }
-
-// honestPercent renders a share without the two dishonest rounding edges: a small but
-// nonzero share reads "<1%" (not "0%", which looks absent -- e.g. a few real Codex sessions
-// dwarfed by Claude's cache-read volume), and a share just under whole reads ">99%" (not
-// "100%", which would hide a real gap). The share formatter for honesty-first figures.
-func honestPercent(share float64) string {
-	switch {
-	case share > 0 && share < 0.005:
-		return "<1%"
-	case share < 1 && share >= 0.995:
-		return ">99%"
-	default:
-		return formatPercent(share, 0)
-	}
 }

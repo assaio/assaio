@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/assaio/assaio/internal/humanize"
+
 	"github.com/assaio/assaio/internal/parser"
 )
 
@@ -71,9 +73,9 @@ func (taxonomyValidator) Analyze(in Input) Result {
 	}
 	r.Purity = fracOf(editing, total)
 	r.Figures = []Figure{
-		{Label: "conversational", Value: shareOrDash(conv, total, 0), Note: "no file edits"},
-		{Label: "light-edit", Value: shareOrDash(light, total, 0), Note: "1-" + strconv.Itoa(taxonomyLightMax) + " edits"},
-		{Label: "heavy-edit", Value: shareOrDash(heavy, total, 0), Note: ">" + strconv.Itoa(taxonomyLightMax) + " edits"},
+		{Label: "conversational", Value: humanize.PercentOrDash(conv, total, 0), Note: "no file edits"},
+		{Label: "light-edit", Value: humanize.PercentOrDash(light, total, 0), Note: "1-" + strconv.Itoa(taxonomyLightMax) + " edits"},
+		{Label: "heavy-edit", Value: humanize.PercentOrDash(heavy, total, 0), Note: ">" + strconv.Itoa(taxonomyLightMax) + " edits"},
 	}
 	r.Bars = []Bar{
 		taxonomyBar("conversational", conv, total),
@@ -95,13 +97,13 @@ func (taxonomyValidator) Analyze(in Input) Result {
 // left out read as absent rather than as the conversational bucket they would otherwise
 // silently join.
 func taxonomyCoverageCaveat(coverage float64) string {
-	return "Prov.: " + honestPercent(coverage) + " of this window's sessions come from a source that records file edits (" +
+	return "Prov.: " + humanize.Percent(coverage) + " of this window's sessions come from a source that records file edits (" +
 		strings.Join(sourcesAnswering(parser.SignalEditsCount), ", ") +
 		"); the rest are absent from this mix, not conversational."
 }
 
 func taxonomyBar(label string, n, total int64) Bar {
-	return Bar{Label: label, Value: strconv.FormatInt(n, 10) + " (" + shareOrDash(n, total, 0) + ")", Frac: fracOf(n, total)}
+	return Bar{Label: label, Value: strconv.FormatInt(n, 10) + " (" + humanize.PercentOrDash(n, total, 0) + ")", Frac: fracOf(n, total)}
 }
 
 // taxonomyLabel names the dominant bucket for the faceplate, short enough for the label slot.

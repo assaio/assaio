@@ -22,12 +22,96 @@ Discussion.
 ## [Unreleased]
 
 ### Fixed
+- **A real signal no longer rounds away to "0%".** `rework` printed its rejection rate at
+  whole-number precision, so 102 recorded human refusals of 65,098 calls read as **`0%`** —
+  while `friction`, one screen down, printed **`0.2%`** for the same 102 refusals. One
+  measurement, two answers, and the more prominent one said a signal that exists is absent.
+  Both now render through a single share formatter that refuses the two dishonest roundings at
+  any precision: a small but nonzero share reads `<1%` (or `<0.1%`), and a share just under
+  whole reads `>99%` rather than hiding a real remainder behind `100%`. The formatter is
+  `internal/humanize`'s, so `analyze`, `status` and the dashboard cannot drift apart on it.
+  The `status` session line is the one this mattered most on: it rounded with an integer
+  `+0.5` and could print *"100% produced code, 0% conversational"* for a 99.6% share — the
+  sentence shape [ADR 0011](docs/adr/0011-capability-gated-metrics.md) exists to prevent.
+- **`rework` averaged a source's silence into the churn rate.** The rate summed added and
+  reworked lines across *every* source, but `ai.rework.lines` is answered by Claude Code and
+  Codex only — a source recording changed lines and no undone one (Copilot CLI) put its whole
+  output in the denominator against a structural zero, lowering the rate with code nobody
+  watched being undone, and the verdict read `LOW` for it. It was the one validator ADR 0011
+  did not reach. The gate now lives inside `report.BuildChurn`, so `analyze` and `status` read
+  one number; the figure prints `—` and the verdict is withheld where no source records an
+  undone line; and the reach is declared as `signalCoverage`. **Measured, not assumed:** the
+  audited store holds only Claude Code and Codex, both of which record rework, so no shipped
+  figure was wrong here — this closes the hole before a Copilot- or Cline-heavy window meets it.
+- **Two more denominators counted work their source never recorded.** `friction`'s "of N tool
+  calls" and `explore-produce`'s coverage share both summed `ToolCalls` across every source,
+  including ones that name no tool call at all — so a source that records none would have read
+  as a gap in a capture that was never attempted. `explore-produce`'s own caveat already said
+  this ("a source that names no calls records none, so it neither raises nor lowers this"); the
+  arithmetic now agrees with it. Both were found by the widened invariant test below, not by
+  hand.
+- **A whole sub-agent run stopped counting as one turn.** Migration `0006` relabelled stored
+  Claude sub-agent aggregates `session`, and `TurnSizing` and the granularity-coverage figure
+  respected the label — but `store.Sessions`, which every per-session turn figure reads, still
+  counted every row with `COUNT(*)`. On the audited store 65 of 779 sessions carried 1,015 such
+  rows, one of them inflated by **89 phantom turns**; `turn-efficiency`'s median turns per code
+  session moved 724 → 718 and the `status` p90 647 → 635. Turn count, peak context and the gaps
+  behind focused minutes now read only `turn`-grain rows; whole-session figures (timestamps,
+  output tokens, edits, compactions) still read every row, because those are honest at either
+  grain. Peak context was checked before the claim: it was **not** inflated in practice, since a
+  sub-agent aggregate carries its last request's usage rather than a run's sum.
+- **`context`'s code-session median read an edit count Cline never writes.** The
+  "active work — code sessions: ~N min" contrast picked its subset with `Edits > 0` across
+  *every* session rather than the ones whose source records an edit, so a Cline or Gemini
+  window would have drawn that figure from sessions nobody counted an edit in. It now reads
+  the sessions answering both signals it needs — the edit count that selects the subset and
+  the focused minutes it takes the median of.
+- **`rhythm`'s confidence line contradicted its own figures.** With no source recording focused
+  minutes it declared zero signal coverage, printing *"insufficient — nothing in this window can
+  answer it"* directly beneath an off-hours share computed from 100% of the window. The reach is
+  now declared only while there is a length half to narrow; the withheld verdict and the takeaway
+  carry that half's absence instead.
 - **The field audit's Codex cache-write row overstated its own consequence.** It said Codex cost
   is a floor because the cache-write count is unread. The count is unread, but on the audited
   corpus it carried a value on 238 events and was **zero on every one**, so no figure is
   currently wrong. The row and `B107` now say what was measured rather than what would follow if
   it were non-zero — the same standard the audit applies to a vendor's fields applies to its own
   claims.
+
+### Changed
+- **The ADR 0011 invariant test now varies both row shapes and both shapes of silent source.**
+  It flipped only `SessionRow` fields on a single source, which is how two of the holes above
+  survived a release that was specifically about capability: a validator reading a `UsageRow`
+  column was invisible to it, and so was one reading an edit count, because its one silent
+  source records lines and masked it. Which fields to fill is now read from the depth matrix
+  rather than listed per tool, so a parser landing tomorrow is covered without touching the
+  test. It caught three live cases across its first two runs. `LinesAdded` is deliberately
+  still out: whether a cross-source line *rate* may keep its denominator is an open decision
+  (`B118`), and a test should not freeze it either way.
+- **`turn-efficiency` gates on both fields it reads.** It kept the sessions whose source records
+  edits, then divided by `Turns`. No source today records one without the other, so nothing was
+  wrong; the invariant was held by coincidence rather than by the gate, and a source that totals
+  a session would have made every session read as landing in zero turns.
+- **One implementation per shared question.** "Which sources answer this signal" had three
+  (`parser.Answers`, a walk in `internal/analyze`, and a third in `cli/signals.go` that bypassed
+  `parser.Answers` entirely) — it is now `parser.SourcesAnswering`, in the package whose doc
+  says capability is answered there and only there. The percentile used by session medians and
+  by validator figures was two implementations each claiming to match the other's method, and is
+  now one (`report.Percentile`). A token count reads the same everywhere: `report.RowTokens` is
+  the one billable sum, and the `status` peak-context figure renders through `humanize.Count`
+  like every other count rather than through a second compact formatter (`85k` → `85.0K`).
+
+### Compatibility
+- **The exec metric envelope (`assaio_metric_input: 1`) gains an `answers` field**, mapping each
+  tool in the window to the signal ids it can produce. Every activity count on the wire is zero
+  for a source that does not record it, and until now a plugin had no way to tell that from a
+  measurement — so every out-of-tree metric was structurally exposed to the bug ADR 0011 fixed
+  in-tree. This is an added field within version 1, not a reshape: a released plugin that
+  ignores it keeps working unchanged. [`docs/extending.md`](docs/extending.md#answers--which-zeros-are-measurements-and-which-are-silence)
+  documents the rule and a worked example.
+- No schema change and no migration. `store.Sessions` narrows three of its columns to `turn`-grain
+  rows, which moves per-turn session figures on any store holding Claude sub-agent aggregates; no
+  stored row is rewritten and re-running `backfill` is not required.
 
 ## [0.10.0] - 2026-08-05
 

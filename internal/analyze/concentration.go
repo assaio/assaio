@@ -3,6 +3,8 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/humanize"
+
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -66,8 +68,8 @@ func (concentrationValidator) Analyze(in Input) Result {
 	r.Purity = concentrationPurity(measurable, gap, gapFound)
 	r.Figures = []Figure{
 		{Label: "projects", Value: strconv.Itoa(len(named))},
-		{Label: "top project", Value: formatPercent(topShare(named), 0), Note: "of tokens"},
-		{Label: "top 3", Value: formatPercent(topNShare(named, 3), 0), Note: "of tokens"},
+		{Label: "top project", Value: humanize.PercentAt(topShare(named), 0), Note: "of tokens"},
+		{Label: "top 3", Value: humanize.PercentAt(topNShare(named, 3), 0), Note: "of tokens"},
 		{Label: "concentration", Value: strconv.FormatFloat(giniOfShares(named), 'f', 2, 64), Note: "0 even · 1 concentrated"},
 		concentrationGapFigure(gap, gapFound),
 	}
@@ -75,7 +77,7 @@ func (concentrationValidator) Analyze(in Input) Result {
 	r.BarsPseudonym = PseudonymProject
 	r.Takeaway = concentrationTakeaway(measurable, aligned, gapFound)
 	if unattributed := unattributedShare(all); unattributed >= concentrationUnattributedFloor {
-		r.Caveats = append(r.Caveats, "Prov.: "+formatPercent(unattributed, 0)+" of tokens are unattributed -- a source that logs no working directory cannot be assigned to a project.")
+		r.Caveats = append(r.Caveats, "Prov.: "+humanize.PercentAt(unattributed, 0)+" of tokens are unattributed -- a source that logs no working directory cannot be assigned to a project.")
 	}
 	if len(lineBlind) > 0 {
 		r.Caveats = append(r.Caveats, strconv.Itoa(len(lineBlind))+
@@ -161,7 +163,7 @@ func concentrationBars(shares []projectShare, topN int) []Bar {
 		}
 		bars[i] = Bar{
 			Label: groupLabel(kept[i].Project),
-			Value: formatPercent(kept[i].TokenShare, 0) + " tokens · " + formatPercent(kept[i].LineShare, 0) + " lines",
+			Value: humanize.PercentAt(kept[i].TokenShare, 0) + " tokens · " + humanize.PercentAt(kept[i].LineShare, 0) + " lines",
 			Frac:  frac,
 		}
 	}

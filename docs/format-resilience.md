@@ -17,7 +17,7 @@ gets caught, and the detect → triage → fix → release loop.
 | Golden files | each parser's `testdata/` | Any change in **our** parsing of a captured shape shows up as a reviewable diff. |
 | Fuzzing (`make fuzz`) | every parser + the metric-result decoder | No panic on arbitrary bytes; invariants hold on whatever is accepted. |
 | Granularity rule | `usage.Record` contract | A format change that degrades detail must be re-labeled `session`, never silently kept as `turn` — and a report marks a mixed total rather than reading session data as per-turn. Re-reading a local file restates the label on rows already stored, so a correction reaches history instead of only new records. |
-| Capability gate on every metric | `parser.Depth.Answers` + `analyze` | A figure is computed only over the sources that record its field, so a source that never writes one is absent from it rather than averaged in at zero. |
+| Capability gate on every metric | `parser.Depth.Answers` + `analyze` + the metric-plugin wire's `answers` | A figure is computed only over the sources that record its field — per-session figures and rates over stored columns alike — so a source that never writes one is absent from it rather than averaged in at zero. A generic test varies both row shapes, so a new validator reading an ungated column fails rather than shipping a quiet dilution. |
 | Deterministic dedupe keys | parser contract + golden tests | Re-importing after a fix never double-counts old records. |
 | Drift canaries | `internal/drift`, after every `backfill` | The two failure modes below: numbers that shrink without anything erroring. |
 

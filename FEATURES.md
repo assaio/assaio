@@ -153,9 +153,14 @@ discovered across VS Code, VS Code Insiders, VSCodium, and Cursor.
   read — counts only ([PRIVACY.md](PRIVACY.md)).
 - A figure is computed only over the sources that record its field, states how much of the
   window that reaches, and withholds its verdict rather than averaging in a source's silence
-  (v0.10, [ADR 0011](docs/adr/0011-capability-gated-metrics.md)). What each source's log
-  carries and what is deliberately skipped is inventoried per source
+  (v0.10, [ADR 0011](docs/adr/0011-capability-gated-metrics.md)). Since v0.11 that holds for
+  rates over stored columns as well as per-session figures, and an out-of-tree metric plugin
+  is told each source's capability on the wire (`answers`) so it can apply the same rule.
+  What each source's log carries and what is deliberately skipped is inventoried per source
   ([the audit](docs/extending.md#what-each-sources-log-carries-and-what-assaio-reads), v0.10).
+- Shares never round in the direction that hides a signal: a small but nonzero share reads
+  `<1%` rather than `0%`, and a share just under whole reads `>99%` rather than `100%`
+  (v0.11). A whole sub-agent run is never counted as one turn (v0.11).
 - Aggregate and pseudonymized by default; per-person is a deliberate, governed opt-in;
   never a leaderboard.
 - Plugins (parser, metric, and rule) are config-declared only — never PATH-scanned, never

@@ -1,11 +1,11 @@
 package plugin
 
 import (
-	"encoding/json"
 	"time"
 
+	"github.com/assaio/assaio/internal/parser"
+
 	"github.com/assaio/assaio/internal/analyze"
-	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -29,6 +29,13 @@ type metricInput struct {
 	ByProject  []metricProjectStat    `json:"byProject"`
 	Totals     metricTotals           `json:"totals"`
 	Prices     map[string]metricPrice `json:"prices"`
+	// Answers maps every tool present in this window to the signal ids it can produce
+	// (internal/signal, `assaio-agent signals list`). Every count on a row below is zero
+	// for a source that does not record it, and "nothing happened" and "nothing was
+	// written down" are different facts: a metric over one of those columns must keep only
+	// the rows whose tool answers the matching signal, exactly as a built-in validator does
+	// (ADR 0011). Without this the wire made that impossible to get right.
+	Answers map[string][]string `json:"answers"`
 }
 
 type metricUsageRow struct {
@@ -134,84 +141,24 @@ func buildMetricInput(in *analyze.Input) metricInput {
 			Lines: in.Totals.Lines, Cost: in.Totals.Cost, Priced: in.Totals.Priced,
 			CacheEfficiency: in.Totals.CacheEfficiency,
 		},
-		Prices: pricesWire(in.Usage, in.Prices),
+		Prices:  pricesWire(in.Usage, in.Prices),
+		Answers: answersWire(in.Usage, in.Sessions),
 	}
 }
 
-func (mi *metricInput) marshal() ([]byte, error) { return json.Marshal(mi) }
-
-func usageWire(rows []store.UsageRow) []metricUsageRow {
-	out := make([]metricUsageRow, 0, len(rows))
-	for i := range rows {
-		r := &rows[i]
-		out = append(out, metricUsageRow{
-			Day: r.Day, Tool: r.Tool, Model: r.Model, Project: r.Project,
-			Entrypoint: r.Entrypoint, Member: r.Member, Granularity: r.Granularity,
-			In: r.In, Out: r.Out, CacheRead: r.CacheRead, CacheWrite: r.CacheWrite,
-			Reasoning: r.Reasoning, LinesAdded: r.LinesAdded, LinesRemoved: r.LinesRemoved,
-			Edits: r.Edits, ToolCalls: r.ToolCalls, Rejected: r.Rejected,
-			Compactions: r.Compactions, ReworkLines: r.ReworkLines,
-		})
+// answersWire declares what every tool in this window can record. Only the tools actually
+// present are sent: a plugin needs the capability of the data it was handed, and shipping
+// the whole matrix would make the envelope a second publication of internal/parser.
+func answersWire(usage []store.UsageRow, sessions []store.SessionRow) map[string][]string {
+	out := make(map[string][]string)
+	for i := range usage {
+		out[usage[i].Tool] = nil
 	}
-	return out
-}
-
-func sessionWire(rows []store.SessionRow) []metricSessionRow {
-	out := make([]metricSessionRow, 0, len(rows))
-	for i := range rows {
-		s := &rows[i]
-		out = append(out, metricSessionRow{
-			SessionID: s.SessionID, Project: s.Project, Tool: s.Tool, Model: s.Model,
-			Member: s.Member, FirstTs: s.FirstTs, LastTs: s.LastTs, Turns: s.Turns,
-			OutputTokens: s.OutputTokens, PeakContextTokens: s.PeakContextTokens,
-			Edits: s.Edits, Compactions: s.Compactions, ActiveMinutes: s.ActiveMinutes,
-		})
+	for i := range sessions {
+		out[sessions[i].Tool] = nil
 	}
-	return out
-}
-
-func modelWire(stats []analyze.ModelStat) []metricModelStat {
-	out := make([]metricModelStat, 0, len(stats))
-	for _, m := range stats {
-		out = append(out, metricModelStat{
-			Model: m.Model, Tier: m.Tier, Tokens: m.Tokens, Input: m.Input,
-			Output: m.Output, CacheRead: m.CacheRead, CacheWrite: m.CacheWrite,
-			Lines: m.Lines, Cost: m.Cost, Priced: m.Priced, TokenShare: m.TokenShare,
-		})
-	}
-	return out
-}
-
-func projectWire(stats []analyze.ProjectStat) []metricProjectStat {
-	out := make([]metricProjectStat, 0, len(stats))
-	for _, p := range stats {
-		out = append(out, metricProjectStat{
-			Project: p.Project, Lines: p.Lines, Cost: p.Cost, Priced: p.Priced,
-			TokenShare: p.TokenShare,
-		})
-	}
-	return out
-}
-
-// pricesWire resolves a price for every distinct model present in the window's usage,
-// exact name first then pricing.NormalizeModel -- the same lookup CostTokens applies --
-// and emits it under the raw model name. An unpriced model is absent, never a zero
-// price.
-func pricesWire(rows []store.UsageRow, prices pricing.Table) map[string]metricPrice {
-	out := make(map[string]metricPrice)
-	for i := range rows {
-		model := rows[i].Model
-		if _, done := out[model]; done {
-			continue
-		}
-		p, ok := prices[model]
-		if !ok {
-			p, ok = prices[pricing.NormalizeModel(model)]
-		}
-		if !ok {
-			continue
-		}
-		out[model] = metricPrice{Input: p.Input, Output: p.Output, CacheRead: p.CacheRead, CacheWrite: p.CacheWrite}
+	for tool := range out {
+		out[tool] = parser.SignalsAnsweredBy(tool)
 	}
 	return out
 }

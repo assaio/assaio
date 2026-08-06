@@ -5,6 +5,9 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/parser"
+
 	"github.com/assaio/assaio/internal/report"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -19,7 +22,7 @@ func contextFigures(stats *report.SessionStats, sessions []store.SessionRow) []F
 		basisFigure("median turns", strconv.FormatInt(stats.MedianTurns, 10), "", stats.Turned),
 		basisFigure("peak context", strconv.FormatInt(stats.MedianPeakContextTokens, 10)+" tokens", "", stats.Turned),
 		activeWorkFigure(stats, codeMedian, codeMedianOK),
-		basisFigure("compaction rate", formatPercent(stats.CompactionRate, 0), "", stats.Compacting),
+		basisFigure("compaction rate", humanize.PercentAt(stats.CompactionRate, 0), "", stats.Compacting),
 		codeSessionsFigure(stats),
 	}
 }
@@ -38,8 +41,8 @@ func codeSessionsFigure(stats *report.SessionStats) Figure {
 		return Figure{Label: "code sessions", Value: "—", Note: "no source here records edits"}
 	}
 	return Figure{
-		Label: "code sessions", Value: formatPercent(stats.CodeSessionShare, 0),
-		Note: formatPercent(1-stats.CodeSessionShare, 0) + " conversational",
+		Label: "code sessions", Value: humanize.PercentAt(stats.CodeSessionShare, 0),
+		Note: humanize.PercentAt(1-stats.CodeSessionShare, 0) + " conversational",
 	}
 }
 
@@ -64,13 +67,18 @@ func minutesLabel(m float64) string {
 
 // medianActiveMinutesForCodeSessions returns the median ActiveMinutes across sessions with
 // at least one edit -- the code-producing subset, isolated from the many quick, non-code
-// sessions that pull the overall median down near zero. ok is false when no session in
-// sessions made an edit.
+// sessions that pull the overall median down near zero. ok is false when no session made an
+// edit.
+//
+// It reads both capabilities it needs, not one: a source recording no edit would put every
+// session in the non-code group, and one recording no focused minutes would contribute a
+// structural zero to the median of a figure about how long focused work runs.
 func medianActiveMinutesForCodeSessions(sessions []store.SessionRow) (median float64, ok bool) {
+	measurable, _ := sessionsAnswering(sessions, parser.SignalEditsCount, parser.SignalActiveMinutes)
 	var actives []float64
-	for i := range sessions {
-		if sessions[i].Edits > 0 {
-			actives = append(actives, sessions[i].ActiveMinutes)
+	for i := range measurable {
+		if measurable[i].Edits > 0 {
+			actives = append(actives, measurable[i].ActiveMinutes)
 		}
 	}
 	if len(actives) == 0 {

@@ -3,6 +3,8 @@ package analyze
 import (
 	"fmt"
 	"strconv"
+
+	"github.com/assaio/assaio/internal/humanize"
 )
 
 const (
@@ -53,17 +55,17 @@ func (modelFitValidator) Analyze(in Input) Result {
 	r.Read = readFor(!watch, "Healthy")
 	r.Purity = modelFitPurity(premiumShare, known > 0)
 	r.Figures = []Figure{
-		{Label: premiumTierLabel(), Value: shareOrDash(premiumTokens, total, 1), Note: linesPerMTok(premiumLines, premiumTokens) + " lines/1M tok"},
-		{Label: cheaperTierLabel(), Value: shareOrDash(cheaperTokens, total, 1), Note: linesPerMTok(cheaperLines, cheaperTokens) + " lines/1M tok"},
+		{Label: premiumTierLabel(), Value: humanize.PercentOrDash(premiumTokens, total, 1), Note: linesPerMTok(premiumLines, premiumTokens) + " lines/1M tok"},
+		{Label: cheaperTierLabel(), Value: humanize.PercentOrDash(cheaperTokens, total, 1), Note: linesPerMTok(cheaperLines, cheaperTokens) + " lines/1M tok"},
 	}
 	if otherTokens > 0 {
 		r.Figures = append(r.Figures, Figure{
-			Label: "unpriced (unknown model)", Value: shareOrDash(otherTokens, total, 1),
+			Label: "unpriced (unknown model)", Value: humanize.PercentOrDash(otherTokens, total, 1),
 			Note: "excluded from the premium/cheaper split above",
 		})
 	}
 	r.Figures = append(r.Figures, Figure{
-		Label: "sub-agent delegation", Value: shareOrDash(in.Delegation.Sub, in.Delegation.Total, 1), Note: "of tokens run inside Task sub-agents",
+		Label: "sub-agent delegation", Value: humanize.PercentOrDash(in.Delegation.Sub, in.Delegation.Total, 1), Note: "of tokens run inside Task sub-agents",
 	})
 	r.Bars = modelBars(in.ByModel)
 	if unpriceable {

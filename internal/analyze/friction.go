@@ -3,6 +3,8 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/humanize"
+
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -52,7 +54,7 @@ func (frictionValidator) Analyze(in Input) Result {
 		// Rejections have their own denominator: a source that never records a refusal is
 		// excluded rather than counted as a call nobody stopped, and history ingested before
 		// failure capture existed still contributes here, since the two are captured apart.
-		{Label: "rejection rate", Value: shareOrDash(f.Rejected, f.Refusable, 1), Note: strconv.FormatInt(f.Rejected, 10) + " declined by a human, of calls that record one"},
+		{Label: "rejection rate", Value: humanize.PercentOrDash(f.Rejected, f.Refusable, 1), Note: strconv.FormatInt(f.Rejected, 10) + " declined by a human, of calls that record one"},
 	}
 	r.Takeaway = frictionTakeaway(sufficient, smooth, f)
 	r.Caveats = append(r.Caveats, frictionCoverageCaveat(f))
@@ -67,14 +69,19 @@ type friction struct {
 	Calls, Observed, Errors, Refusable, Rejected int64
 }
 
-// buildFriction sums the window's tool-call outcomes. A row joins Observed -- and
-// contributes its errors -- only when its tool records the outcome of every call it makes
-// and the row was actually parsed by a build that captured it. Anything else stays in Calls
-// alone: counting a call that cannot report a failure would dilute the rate toward zero and
-// let the caveat claim coverage the window does not have.
+// buildFriction sums the window's tool-call outcomes across the sources that count a tool
+// call at all -- a source that counts none contributes nothing, not even to Calls, since a
+// call it never recorded cannot be one whose failure went unrecorded. A row joins Observed
+// -- and contributes its errors -- only when its tool records the outcome of every call it
+// makes and the row was actually parsed by a build that captured it. Anything else stays in
+// Calls alone: counting a call that cannot report a failure would dilute the rate toward
+// zero and let the caveat claim coverage the window does not have.
 func buildFriction(rows []store.UsageRow) friction {
 	var f friction
 	for i := range rows {
+		if !parser.Answers(rows[i].Tool, parser.SignalToolCallsCount) {
+			continue
+		}
 		f.Calls += rows[i].ToolCalls
 		if refusalCapableTool(rows[i].Tool) {
 			f.Refusable += rows[i].ToolCalls
@@ -136,7 +143,7 @@ func frictionPurity(f friction, sufficient bool) float64 {
 func frictionRateFigure(label string, n int64, f friction) Figure {
 	value := "—"
 	if f.Coherent() {
-		value = shareOrDash(n, f.Observed, 1)
+		value = humanize.PercentOrDash(n, f.Observed, 1)
 	}
 	return Figure{Label: label, Value: value, Note: strconv.FormatInt(n, 10) + " failed"}
 }
@@ -144,7 +151,7 @@ func frictionRateFigure(label string, n int64, f friction) Figure {
 // frictionCoverageCaveat states how much of the window could report a failure at all, so a
 // zero error count is never mistaken for "nothing failed" when it means "nothing recorded".
 func frictionCoverageCaveat(f friction) string {
-	return "Prov.: " + honestPercent(f.Coverage()) + " of tool calls record whether they failed, and only for sessions ingested by a build that captures it -- run `backfill` after upgrading. A source that marks only some outcomes is excluded from these rates rather than counted as successes; `assaio-agent signals coverage` says which does what."
+	return "Prov.: " + humanize.Percent(f.Coverage()) + " of tool calls record whether they failed, and only for sessions ingested by a build that captures it -- run `backfill` after upgrading. A source that marks only some outcomes is excluded from these rates rather than counted as successes; `assaio-agent signals coverage` says which does what."
 }
 
 func frictionTakeaway(sufficient, smooth bool, f friction) string {

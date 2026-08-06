@@ -2,10 +2,11 @@ package cli
 
 import (
 	"fmt"
-	"slices"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/assaio/assaio/internal/humanize"
 
 	"github.com/spf13/cobra"
 
@@ -134,16 +135,10 @@ func renderSignalSupport(cmd *cobra.Command, support []signal.Support, since str
 // sourcesFor names the in-tree parsers that produce a signal, which is what makes the
 // catalog readable without a store: "no source records this" is an answer too.
 func sourcesFor(id string) string {
-	var out []string
-	for _, d := range parser.Depths() {
-		if slices.Contains(d.Answers, id) {
-			out = append(out, d.Tool)
-		}
-	}
+	out := parser.SourcesAnswering(id)
 	if len(out) == 0 {
 		return "no in-tree source"
 	}
-	sort.Strings(out)
 	return strings.Join(out, ", ")
 }
 
@@ -153,5 +148,5 @@ func supportDetail(s *signal.Support) string {
 	}
 	sources := s.Sources
 	sort.Strings(sources)
-	return fmt.Sprintf("%s of tokens · %s", analyze.HonestPercent(s.Share), strings.Join(sources, ", "))
+	return fmt.Sprintf("%s of tokens · %s", humanize.Percent(s.Share), strings.Join(sources, ", "))
 }

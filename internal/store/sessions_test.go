@@ -20,22 +20,22 @@ func TestSessionsAggregatesPerSession(t *testing.T) {
 		{
 			Tool: "claude-code", SessionID: "s1", Timestamp: base, Model: "claude-opus-4-5",
 			Project: "web", InputTokens: 100, OutputTokens: 50, CacheReadTokens: 1000,
-			DedupeKey: "s1-a", Edits: 1, Compactions: 0,
+			DedupeKey: "s1-a", Granularity: "turn", Edits: 1, Compactions: 0,
 		},
 		{
 			Tool: "claude-code", SessionID: "s1", Timestamp: base.Add(10 * time.Minute), Model: "claude-opus-4-5",
 			Project: "web", InputTokens: 200, OutputTokens: 80, CacheReadTokens: 5000,
-			DedupeKey: "s1-b", Edits: 0, Compactions: 1,
+			DedupeKey: "s1-b", Granularity: "turn", Edits: 0, Compactions: 1,
 		},
 		{
 			Tool: "claude-code", SessionID: "s1", Timestamp: base.Add(50 * time.Minute), Model: "claude-opus-4-5",
 			Project: "web", InputTokens: 50, OutputTokens: 30, CacheReadTokens: 8000,
-			DedupeKey: "s1-c", Edits: 1, Compactions: 0,
+			DedupeKey: "s1-c", Granularity: "turn", Edits: 1, Compactions: 0,
 		},
 		{
 			Tool: "claude-code", SessionID: "s2", Timestamp: base.Add(2 * time.Hour), Model: "claude-haiku-4-5",
 			Project: "api", InputTokens: 30, OutputTokens: 10, CacheReadTokens: 0,
-			DedupeKey: "s2-a", Edits: 0, Compactions: 0,
+			DedupeKey: "s2-a", Granularity: "turn", Edits: 0, Compactions: 0,
 		},
 	})
 	if err != nil {
@@ -119,7 +119,7 @@ func TestSessionsIncludesMember(t *testing.T) {
 	ctx := context.Background()
 	ts := time.Date(2026, 7, 1, 10, 0, 0, 0, time.UTC)
 	_, err := s.Insert(ctx, []usage.Record{
-		{Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", InputTokens: 1, DedupeKey: "1", Member: "alice"},
+		{Tool: "claude-code", SessionID: "s1", Timestamp: ts, Model: "m", InputTokens: 1, DedupeKey: "1", Granularity: "turn", Member: "alice"},
 		{Tool: "claude-code", SessionID: "s2", Timestamp: ts, Model: "m", InputTokens: 1, DedupeKey: "2"},
 	})
 	if err != nil {
@@ -153,9 +153,9 @@ func TestSessionsSameSessionIDDifferentMembersStaySeparate(t *testing.T) {
 	ctx := context.Background()
 	ts := time.Date(2026, 7, 1, 10, 0, 0, 0, time.UTC)
 	_, err := s.Insert(ctx, []usage.Record{
-		{Tool: "claude-code", SessionID: "shared", Timestamp: ts, Model: "m", InputTokens: 1, DedupeKey: "alice:1", Member: "alice"},
-		{Tool: "claude-code", SessionID: "shared", Timestamp: ts.Add(time.Minute), Model: "m", InputTokens: 1, DedupeKey: "alice:2", Member: "alice"},
-		{Tool: "claude-code", SessionID: "shared", Timestamp: ts, Model: "m", InputTokens: 1, DedupeKey: "bob:1", Member: "bob"},
+		{Tool: "claude-code", SessionID: "shared", Timestamp: ts, Model: "m", InputTokens: 1, DedupeKey: "alice:1", Granularity: "turn", Member: "alice"},
+		{Tool: "claude-code", SessionID: "shared", Timestamp: ts.Add(time.Minute), Model: "m", InputTokens: 1, DedupeKey: "alice:2", Granularity: "turn", Member: "alice"},
+		{Tool: "claude-code", SessionID: "shared", Timestamp: ts, Model: "m", InputTokens: 1, DedupeKey: "bob:1", Granularity: "turn", Member: "bob"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -187,5 +187,56 @@ func TestSessionsEmptyStore(t *testing.T) {
 	}
 	if len(rows) != 0 {
 		t.Fatalf("Sessions on empty store = %+v, want empty", rows)
+	}
+}
+
+// A completed Claude sub-agent is stored under its parent's session_id as one record
+// totalling a whole run (migration 0006). Counting it as a turn is the exact misread the
+// granularity rule exists to prevent, and it would also let a whole run's context total
+// stand in for a single turn's peak.
+func TestSessionsExcludeSessionGrainRowsFromPerTurnFigures(t *testing.T) {
+	ctx := context.Background()
+	s := openTempStore(t)
+	base := time.Date(2026, 7, 1, 10, 0, 0, 0, time.UTC)
+	if _, err := s.Insert(ctx, []usage.Record{
+		{
+			Tool: "claude-code", SessionID: "s1", Timestamp: base, Model: "m", Project: "web",
+			InputTokens: 100, OutputTokens: 10, CacheReadTokens: 1000,
+			DedupeKey: "turn-a", Granularity: "turn",
+		},
+		{
+			Tool: "claude-code", SessionID: "s1", Timestamp: base.Add(10 * time.Minute), Model: "m", Project: "web",
+			InputTokens: 200, OutputTokens: 20, CacheReadTokens: 2000,
+			DedupeKey: "turn-b", Granularity: "turn",
+		},
+		{
+			Tool: "claude-code", SessionID: "s1", Timestamp: base.Add(20 * time.Minute), Model: "m", Project: "web",
+			InputTokens: 5000, OutputTokens: 900, CacheReadTokens: 90000,
+			DedupeKey: "agent:x", Granularity: "session",
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := s.Sessions(ctx, base.Add(-time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("Sessions = %+v, want one row", rows)
+	}
+	got := rows[0]
+	if got.Turns != 2 {
+		t.Errorf("Turns = %d, want 2: the sub-agent aggregate summarizes a run, it is not a turn", got.Turns)
+	}
+	if got.PeakContextTokens != 2200 {
+		t.Errorf("PeakContextTokens = %d, want 2200 (the largest real turn), not a whole run's total", got.PeakContextTokens)
+	}
+	// Whole-session figures keep every row: output tokens and edits are honest at either grain.
+	if got.OutputTokens != 930 {
+		t.Errorf("OutputTokens = %d, want 930: work produced is real at either grain", got.OutputTokens)
+	}
+	if diff := got.ActiveMinutes - 10; diff < -1e-3 || diff > 1e-3 {
+		t.Errorf("ActiveMinutes = %v, want ~10: only the gap between the two real turns", got.ActiveMinutes)
 	}
 }

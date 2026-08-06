@@ -2,6 +2,7 @@ package parser
 
 import (
 	"slices"
+	"sort"
 	"strings"
 )
 
@@ -23,13 +24,6 @@ var pluginDepth = Depth{
 		"the exec parser protocol carries no line, edit or tool-call fields",
 		"grain is declared per record, so per-turn signals cannot be assumed",
 	},
-}
-
-// Depths returns the matrix, deepest first.
-func Depths() []Depth {
-	out := make([]Depth, len(depths))
-	copy(out, depths)
-	return out
 }
 
 // Tools names every in-tree source, deepest first. Every surface that has to know which
@@ -57,6 +51,50 @@ func Answers(tool, id string) bool {
 		return false
 	}
 	return slices.Contains(d.Answers, id)
+}
+
+// SourcesAnswering names every in-tree source answering at least one of ids, alphabetically.
+// It is what a coverage caveat and the signal catalog both print, read from the matrix here
+// rather than by each surface walking the matrix and testing membership for itself -- a
+// second walk is a second opinion about what a source can do. An out-of-tree plugin is absent for
+// the same reason DepthOf omits it: its capability is whatever its author implemented.
+func SourcesAnswering(ids ...string) []string {
+	var out []string
+	for i := range depths {
+		if answersAny(depths[i].Tool, ids) {
+			out = append(out, depths[i].Tool)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func answersAny(tool string, ids []string) bool {
+	for _, id := range ids {
+		if Answers(tool, id) {
+			return true
+		}
+	}
+	return false
+}
+
+// SignalsAnsweredBy lists the signal ids tool produces, sorted. It is Answers asked the
+// other way round, for a consumer that has to be told a source's capability rather than
+// query it -- an out-of-tree metric plugin reads JSON and cannot call Answers at all, so
+// without this every plugin is exposed to the silence-as-zero bug ADR 0011 fixed in-tree.
+func SignalsAnsweredBy(tool string) []string {
+	d, ok := DepthOf(tool)
+	switch {
+	case ok:
+	case strings.HasPrefix(tool, PluginPrefix):
+		d = pluginDepth
+	default:
+		return nil
+	}
+	out := make([]string, len(d.Answers))
+	copy(out, d.Answers)
+	sort.Strings(out)
+	return out
 }
 
 // DepthOf returns tool's declared depth. An out-of-tree exec plugin is absent by design:

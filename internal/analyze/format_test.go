@@ -136,21 +136,6 @@ func TestRenderResultTextCaveatsAndTakeawayOrder(t *testing.T) {
 	}
 }
 
-func TestFormatPercentDecimals(t *testing.T) {
-	if got := formatPercent(0.999, 0); got != "100%" {
-		t.Fatalf("formatPercent(0.999, 0) = %q, want 100%%", got)
-	}
-	if got := formatPercent(0.999, 1); got != "99.9%" {
-		t.Fatalf("formatPercent(0.999, 1) = %q, want 99.9%%", got)
-	}
-}
-
-func TestShareOrDashZeroDenominator(t *testing.T) {
-	if got := shareOrDash(5, 0, 1); got != "—" {
-		t.Fatalf("shareOrDash(5, 0, 1) = %q, want —", got)
-	}
-}
-
 func TestClamp01Bounds(t *testing.T) {
 	cases := map[float64]float64{-1: 0, 0: 0, 0.5: 0.5, 1: 1, 2: 1}
 	for in, want := range cases {

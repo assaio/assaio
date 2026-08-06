@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+
+	"github.com/assaio/assaio/internal/humanize"
 )
 
 // statusCaveat states that the dashboard's efficiency signal is directional and scoped
@@ -43,10 +45,15 @@ func RenderStatusSummary(w io.Writer, in *Insights) error {
 
 // RenderChurnLine writes the one-line rework/thrash figure: how much AI-added code was
 // itself removed again later in the same transcript -- a within-session proxy for "AI
-// wrote code that didn't stick," never a per-person metric.
+// wrote code that didn't stick," never a per-person metric. A window whose sources never
+// record an undone line says so, rather than printing the 0% an empty denominator yields.
 func RenderChurnLine(w io.Writer, c ChurnStat) error {
+	if c.Rows == 0 {
+		_, err := fmt.Fprint(w, "rework: not recorded by any source in this window — absent, not churn-free\n\n")
+		return err
+	}
 	_, err := fmt.Fprintf(w, "rework: %d lines reworked (%s of AI-added) — thrash proxy, within-session\n\n",
-		c.ReworkLines, formatPercent(c.ReworkRate))
+		c.ReworkLines, humanize.PercentOrDash(c.ReworkLines, c.LinesAdded, 0))
 	return err
 }
 

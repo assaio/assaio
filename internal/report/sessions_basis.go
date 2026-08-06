@@ -3,23 +3,8 @@ package report
 import (
 	"sort"
 
-	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 )
-
-// SessionsAnswering keeps the sessions whose source can answer signal id. A figure averaged
-// over a source that never records the thing reads that silence as a zero, which is the one
-// mistake a session summary can make that nobody can see afterwards. Exported because the
-// validators ask the same question and two copies of this loop would be two answers to it.
-func SessionsAnswering(rows []store.SessionRow, id string) []store.SessionRow {
-	out := make([]store.SessionRow, 0, len(rows))
-	for i := range rows {
-		if parser.Answers(rows[i].Tool, id) {
-			out = append(out, rows[i])
-		}
-	}
-	return out
-}
 
 func fieldInt64(rows []store.SessionRow, pick func(*store.SessionRow) int64) []int64 {
 	out := make([]int64, len(rows))
@@ -42,7 +27,7 @@ func medianFloat(vals []float64) float64 {
 	sorted := make([]float64, len(vals))
 	copy(sorted, vals)
 	sort.Float64s(sorted)
-	return percentile(sorted, 50)
+	return Percentile(sorted, 50)
 }
 
 // shareWhere is the share of rows satisfying want, 0 when there are none to ask.

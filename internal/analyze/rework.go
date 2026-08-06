@@ -2,6 +2,10 @@ package analyze
 
 import (
 	"strconv"
+	"strings"
+
+	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/parser"
 
 	"github.com/assaio/assaio/internal/report"
 )
@@ -35,40 +39,52 @@ func (reworkValidator) Analyze(in Input) Result {
 		return r
 	}
 	r.restsOn(activeDays(&in), "active days")
+	// BuildChurn keeps only the sources that record an undone line: one recording changed
+	// lines but never a rework line would put its whole output in the denominator against a
+	// structural zero, lowering the rate with code nobody watched being undone.
 	churn := report.BuildChurn(in.Usage)
-	// Only calls from a source that records a refusal can be divided by: elsewhere the zero
-	// is the tool's silence, and folding it in would report a low rejection rate for work
-	// nobody was ever asked about.
-	var rejected, toolCalls int64
-	for i := range in.Usage {
-		if !refusalCapableTool(in.Usage[i].Tool) {
-			continue
-		}
-		rejected += in.Usage[i].Rejected
-		toolCalls += in.Usage[i].ToolCalls
-	}
-	rejectionKnown := toolCalls > 0
-	var rejectionRate float64
-	if rejectionKnown {
-		rejectionRate = float64(rejected) / float64(toolCalls)
-	}
+	capable := churn.Rows > 0
+	r.covering(shareOf(churn.Tokens, in.Totals.Tokens))
+	// Refusals have their own capable subset, counted once in buildFriction so this figure
+	// and friction's cannot disagree about the same rate.
+	f := buildFriction(in.Usage)
+	rejectionKnown := f.Refusable > 0
+	rejectionRate := shareOf(f.Rejected, f.Refusable)
 	low := churn.ReworkRate <= reworkWatchCeiling && rejectionLow(rejectionRate, rejectionKnown)
 
-	r.Read = readFor(low, "Low")
+	r.Read = reworkRead(low, capable)
 	r.Purity = reworkPurity(churn.ReworkRate, rejectionRate, rejectionKnown)
 	r.Figures = []Figure{
+		reworkFigure(&churn),
 		{
-			Label: "rework", Value: shareOrDash(churn.ReworkLines, churn.LinesAdded, 0),
-			Note: strconv.FormatInt(churn.ReworkLines, 10) + " lines, within-session thrash proxy",
-		},
-		{
-			Label: "rejection rate", Value: shareOrDash(rejected, toolCalls, 0),
-			Note: strconv.FormatInt(rejected, 10) + " of " + strconv.FormatInt(toolCalls, 10) + " calls that record a refusal",
+			Label: "rejection rate", Value: humanize.PercentOrDash(f.Rejected, f.Refusable, 1),
+			Note: strconv.FormatInt(f.Rejected, 10) + " of " + strconv.FormatInt(f.Refusable, 10) + " calls that record a refusal",
 		},
 	}
-	r.Caveats = reworkCaveats(rejectionKnown)
-	r.Takeaway = reworkTakeaway(low)
+	r.Caveats = reworkCaveats(rejectionKnown, churn.Rows < len(in.Usage))
+	r.Takeaway = reworkTakeaway(low, capable)
 	return r
+}
+
+// reworkFigure withholds the rate when no source in the window records an undone line: the
+// churn proxy would otherwise print the 0% its own empty denominator produces.
+func reworkFigure(churn *report.ChurnStat) Figure {
+	if churn.Rows == 0 {
+		return Figure{Label: "rework", Value: "—", Note: "no source here records an undone line"}
+	}
+	return Figure{
+		Label: "rework", Value: humanize.PercentOrDash(churn.ReworkLines, churn.LinesAdded, 0),
+		Note: strconv.FormatInt(churn.ReworkLines, 10) + " lines, within-session thrash proxy",
+	}
+}
+
+// reworkRead withholds the verdict when neither half could be measured, rather than
+// certifying a window as low-friction from two silences.
+func reworkRead(low, capable bool) Read {
+	if !capable {
+		return noDataRead
+	}
+	return readFor(low, "Low")
 }
 
 // rejectionLow reports whether the rejection rate is confirmed within the watch ceiling.
@@ -88,17 +104,26 @@ func reworkPurity(reworkRate, rejectionRate float64, rejectionKnown bool) float6
 	return clamp01(1 - (reworkRate+rejectionRate)/2)
 }
 
-func reworkCaveats(rejectionKnown bool) []string {
+func reworkCaveats(rejectionKnown, partialChurn bool) []string {
 	caveats := []string{"Evidence on AI churn's real-world impact is contested; bug/survival impact needs the server stage."}
 	if !rejectionKnown {
 		caveats = append(caveats, "No source in this window records a declined tool call -- the rejection rate is unconfirmed, not zero.")
 	}
+	if partialChurn {
+		caveats = append(caveats, "Prov.: rework reads the sources that record an undone line ("+
+			strings.Join(sourcesAnswering(parser.SignalReworkLines), ", ")+
+			"); lines from other sources are absent from the rate, not churn-free.")
+	}
 	return caveats
 }
 
-func reworkTakeaway(low bool) string {
-	if low {
+func reworkTakeaway(low, capable bool) string {
+	switch {
+	case !capable:
+		return "No source in this window records a line undone later in the same session, so churn cannot be read from it."
+	case low:
 		return "Rework and rejection are both low."
+	default:
+		return "Rework or rejection is elevated or unconfirmed -- worth a closer look."
 	}
-	return "Rework or rejection is elevated or unconfirmed -- worth a closer look."
 }

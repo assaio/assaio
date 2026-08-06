@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/assaio/assaio/internal/humanize"
+
 	"github.com/assaio/assaio/internal/label"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -68,7 +70,7 @@ func (intentValidator) Analyze(in Input) Result {
 	r.Figures = []Figure{
 		{
 			Label: "labeled sessions", Value: fmt.Sprintf("%d of %d", tally.labeled, len(in.Sessions)),
-			Note: honestPercent(r.Purity),
+			Note: humanize.Percent(r.Purity),
 		},
 		{Label: "task classes used", Value: strconv.Itoa(len(tally.byTask))},
 		{

@@ -21,7 +21,7 @@ func TestRenderSessionsBlockWithData(t *testing.T) {
 	out := buf.String()
 	for _, want := range []string{
 		"Sessions", "770 sessions", "median 13 turns (p90 47)", "12min active work",
-		"peak context ~85k tokens", "3,120 output tokens/session",
+		"peak context ~85.0K tokens", "3,120 output tokens/session",
 		"18% produced code, 82% conversational", "1% hit context compaction", "20.8/active day",
 	} {
 		if !strings.Contains(out, want) {

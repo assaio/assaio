@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/assaio/assaio/internal/humanize"
+
 	"github.com/assaio/assaio/internal/parser"
 )
 
@@ -159,7 +161,7 @@ func ConfidenceSummary(c *Confidence) string {
 	}
 	line := fmt.Sprintf("%s · %d %s", c.Label, c.Samples, c.Unit)
 	if axis, share, weak := weakestAxis(c); weak {
-		line += fmt.Sprintf(" · %s coverage %s", axis, honestPercent(share))
+		line += fmt.Sprintf(" · %s coverage %s", axis, humanize.Percent(share))
 	}
 	return line
 }

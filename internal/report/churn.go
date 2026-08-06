@@ -1,6 +1,9 @@
 package report
 
-import "github.com/assaio/assaio/internal/store"
+import (
+	"github.com/assaio/assaio/internal/parser"
+	"github.com/assaio/assaio/internal/store"
+)
 
 // ChurnStat is the aggregate rework/thrash signal across a set of usage rows: how much
 // AI-added code got removed again within the same transcript it was added in -- the
@@ -12,19 +15,27 @@ type ChurnStat struct {
 	ReworkLines int64
 	// ReworkRate is ReworkLines / LinesAdded; 0 when LinesAdded is zero, never a
 	// divide-by-zero panic. That 0 is a placeholder for an undefined ratio, not a
-	// measured rate -- a renderer must check LinesAdded itself (e.g. via shareOrDash on
-	// the raw counts) before formatting this as a confident percentage; see
-	// internal/analyze/rework.go's "rework" Figure.
+	// measured rate -- a renderer must check LinesAdded itself (e.g. via
+	// humanize.PercentOrDash on the raw counts) before formatting this as a confident
+	// percentage; see internal/analyze/rework.go's "rework" Figure.
 	ReworkRate float64
+	// Rows and Tokens are what the rate rests on: how many usage rows came from a source
+	// that records an undone line at all, and their tokens. Zero rows means the window
+	// could not answer the question, which is a different fact from a window with no churn.
+	Rows   int
+	Tokens int64
 }
 
-// BuildChurn aggregates rework signals across rows. Pure and empty-safe: no rows yields
-// a zero-value ChurnStat.
+// BuildChurn aggregates rework signals across the rows whose source records one. The gate
+// is inside rather than at each call site, because `status` and the `rework` validator both
+// print this number and a filter applied in one of them would be two answers to the same
+// question (ADR 0011). Pure and empty-safe: no capable rows yields a zero-value ChurnStat.
 func BuildChurn(rows []store.UsageRow) ChurnStat {
-	var s ChurnStat
-	for i := range rows {
-		s.LinesAdded += rows[i].LinesAdded
-		s.ReworkLines += rows[i].ReworkLines
+	capable := UsageAnswering(rows, parser.SignalReworkLines)
+	s := ChurnStat{Rows: len(capable), Tokens: TokensIn(capable)}
+	for i := range capable {
+		s.LinesAdded += capable[i].LinesAdded
+		s.ReworkLines += capable[i].ReworkLines
 	}
 	s.ReworkRate = reworkRate(s.ReworkLines, s.LinesAdded)
 	return s

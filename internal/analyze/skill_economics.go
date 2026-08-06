@@ -85,7 +85,7 @@ func skillShareFigure(topShare float64, comparable bool) Figure {
 	if !comparable {
 		return Figure{Label: "largest single share", Value: "—", Note: "needs two labels to compare"}
 	}
-	return Figure{Label: "largest single share", Value: formatPercent(topShare, 0), Note: "of that dimension"}
+	return Figure{Label: "largest single share", Value: humanize.PercentAt(topShare, 0), Note: "of that dimension"}
 }
 
 // skillCoverageCaveat names the sources that label a turn at all, read from the depth matrix

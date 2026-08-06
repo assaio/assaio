@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/assaio/assaio/internal/humanize"
+
 	"github.com/assaio/assaio/internal/parser"
 )
 
@@ -54,7 +56,13 @@ func (rhythmValidator) Analyze(in Input) Result {
 	// measure and its structural zero would read as a session that finished in an instant.
 	paced, pacedShare := sessionsAnswering(timed, parser.SignalActiveMinutes)
 	r.restsOn(len(timed), "sessions")
-	r.covering(pacedShare)
+	// The reach declared is the length half's, but only while there is a length half to
+	// narrow: with none, the figures that survive describe the whole window, and declaring
+	// zero would print "nothing in this window can answer it" above a complete off-hours
+	// share. The withheld Read and the takeaway carry that half's absence instead.
+	if len(paced) > 0 {
+		r.covering(pacedShare)
+	}
 	p := buildRhythm(timed, paced)
 	// Both halves need the floor, not just the window: a marathon share read off two timed
 	// sessions is the same coin flip as an off-hours share read off two.
@@ -66,9 +74,9 @@ func (rhythmValidator) Analyze(in Input) Result {
 	r.Purity = rhythmPurity(p, sufficient)
 	r.Figures = []Figure{
 		{Label: "sessions timed", Value: strconv.Itoa(len(timed))},
-		{Label: "off-hours", Value: formatPercent(p.OffHoursShare, 0), Note: formatPercent(p.WeekendShare, 0) + " on weekends"},
+		{Label: "off-hours", Value: humanize.PercentAt(p.OffHoursShare, 0), Note: humanize.PercentAt(p.WeekendShare, 0) + " on weekends"},
 		basisFigure("longest sessions", minutesLabel(p.P95ActiveMinutes)+" p95", "focused work", len(paced)),
-		basisFigure("marathons", formatPercent(p.MarathonShare, 0), "over "+strconv.Itoa(rhythmMarathonMinutes)+" min focused", len(paced)),
+		basisFigure("marathons", humanize.PercentAt(p.MarathonShare, 0), "over "+strconv.Itoa(rhythmMarathonMinutes)+" min focused", len(paced)),
 	}
 	r.Bars = rhythmBands(p.Bands)
 	r.Takeaway = rhythmTakeaway(steady, sufficient, len(paced))
@@ -77,7 +85,7 @@ func (rhythmValidator) Analyze(in Input) Result {
 		"Prov.: hours are read in this machine's local timezone; sessions recorded in another zone land in the wrong band.",
 		"Aggregate workload signal -- not an input to evaluating an individual.",
 	)
-	if pacedShare < 1 {
+	if len(paced) < len(timed) {
 		r.Caveats = append(r.Caveats, rhythmCoverageCaveat(len(paced), len(timed)))
 	}
 	return r

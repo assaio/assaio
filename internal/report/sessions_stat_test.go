@@ -20,9 +20,9 @@ func TestPercentile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := percentile(tt.sorted, tt.p)
+			got := Percentile(tt.sorted, tt.p)
 			if diff := got - tt.want; diff > 1e-9 || diff < -1e-9 {
-				t.Fatalf("percentile(%v, %v) = %v, want %v", tt.sorted, tt.p, got, tt.want)
+				t.Fatalf("Percentile(%v, %v) = %v, want %v", tt.sorted, tt.p, got, tt.want)
 			}
 		})
 	}

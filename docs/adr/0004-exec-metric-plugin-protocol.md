@@ -16,7 +16,7 @@ Out-of-tree metrics are subprocesses speaking a stdio protocol, mirroring ADR 00
 metric plugin is any executable that, invoked as `<command> analyze` with
 `ASSAIO_METRIC_PROTOCOL=1`, reads one JSON envelope on stdin — the same prepared
 `Input` bundle every built-in validator reads (usage, sessions, delegation, byModel,
-byProject, totals, prices), versioned as `assaio_metric_input: 1` — and writes to
+byProject, totals, prices, answers), versioned as `assaio_metric_input: 1` — and writes to
 stdout a one-line handshake (`{"assaio_metric":1,"name":"<name>"}`) followed by exactly
 one JSON `Result` document, in the same shape `analyze --format json` emits.
 
@@ -27,6 +27,14 @@ one JSON `Result` document, in the same shape `analyze --format json` emits.
 - **Declared under `metrics:` in config**, same `{name, command, timeout}` entry shape
   as `plugins:`, same opt-in-only rules (no PATH scanning, no downloading). One binary
   may appear in both lists and serve both protocols.
+- **The envelope carries capability, not only counts** (`answers`, added in v0.11). Every
+  activity column on a row is zero for a source that does not record it, so a plugin without
+  the depth matrix cannot tell a measurement from a silence — which made every out-of-tree
+  metric structurally exposed to the failure [ADR 0011](0011-capability-gated-metrics.md)
+  fixed in-tree, with no way to ask. Only the tools present in the window are sent: a plugin
+  needs the capability of the data it was handed, and shipping the whole matrix would make
+  the envelope a second publication of `internal/parser`. Removing this field is removing a
+  plugin author's only way to be honest, not trimming a redundant one.
 - **Reject, never fabricate.** The boundary whitelists `read.key`, requires the prose
   fields, caps counts and lengths, refuses control characters, and clamps
   `purity`/`frac`. A violating result is dropped whole with a warning — assaio never

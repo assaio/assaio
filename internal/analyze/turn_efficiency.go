@@ -34,10 +34,12 @@ func (turnEffValidator) Describe() string { return turnEffDescribe }
 //nolint:gocritic // Input is required by the Validator interface; analyzed once per run, not a hot path.
 func (turnEffValidator) Analyze(in Input) Result {
 	r := Result{Name: turnEffName, Title: turnEffTitle, Describe: turnEffDescribe, HowToRead: turnEffHowToRead}
-	// A session only counts here if its source records edits at all: elsewhere a zero edit
-	// count is the tool's silence, and skipping those sessions as "not code-producing" would
-	// judge prompting from a field the tool never kept.
-	edited, coverage := sessionsAnswering(in.Sessions, parser.SignalEditsCount)
+	// A session counts here only if its source records both halves of the question: edits,
+	// or a zero edit count is the tool's silence and skipping the session as "not
+	// code-producing" judges prompting from a field the tool never kept; and turns, since
+	// every figure below divides by them and a source that totals a session would make each
+	// one read as landing in no turns at all.
+	edited, coverage := sessionsAnswering(in.Sessions, parser.SignalEditsCount, parser.SignalTurnsCount)
 	r.covering(coverage)
 	var codeSessions, oneShot int64
 	var codeTurns, outPerTurn []float64
@@ -71,7 +73,7 @@ func (turnEffValidator) Analyze(in Input) Result {
 	}
 	r.Purity = clamp01(oneShotRate)
 	r.Figures = []Figure{
-		{Label: "one-shot rate", Value: honestPercent(oneShotRate), Note: "code sessions in <=" + strconv.Itoa(turnEffOneShotMax) + " turns"},
+		{Label: "one-shot rate", Value: humanize.Percent(oneShotRate), Note: "code sessions in <=" + strconv.Itoa(turnEffOneShotMax) + " turns"},
 		{Label: "median turns", Value: strconv.FormatFloat(medianAt50(codeTurns), 'f', 0, 64), Note: "per code session"},
 		{Label: "output/turn", Value: medianOutputPerTurn(outPerTurn), Note: "median tokens"},
 	}

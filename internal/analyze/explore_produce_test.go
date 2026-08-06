@@ -108,9 +108,30 @@ func TestExploreProduceUnclassifiedUsageIsNotZero(t *testing.T) {
 	}
 }
 
-// TestExploreProduceCoverageCaveatWhenMixed asserts a window mixing a naming tool with a
-// non-naming one discloses that the split covers only part of the calls.
+// TestExploreProduceCoverageCaveatWhenMixed asserts the split discloses that it covers only
+// part of the calls. What narrows it is history: usage from a naming source, ingested before
+// the purpose split was captured, carries calls with no purpose on them.
 func TestExploreProduceCoverageCaveatWhenMixed(t *testing.T) {
+	rows := []store.UsageRow{
+		{
+			Day: "2026-07-10", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web",
+			ToolReads: 40, ToolWrites: 20, ToolCalls: 60,
+		},
+		{Day: "2026-07-09", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web", ToolCalls: 40},
+	}
+	in := BuildInput(rows, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
+	got := mustGet(t, exploreName).Analyze(in)
+
+	joined := strings.Join(got.Caveats, " ")
+	if !strings.Contains(joined, "60%") {
+		t.Fatalf("Caveats = %q, want the 60%% coverage disclosure", got.Caveats)
+	}
+}
+
+// A source that names no tool call cannot lower the coverage figure: it records no call at
+// all, so counting its work as "unclassified" would report a gap in a capture that was never
+// attempted. The caveat's own wording already said this; the arithmetic did not.
+func TestExploreProduceIgnoresSourcesThatNameNoToolCalls(t *testing.T) {
 	rows := []store.UsageRow{
 		{
 			Day: "2026-07-10", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web",
@@ -119,11 +140,14 @@ func TestExploreProduceCoverageCaveatWhenMixed(t *testing.T) {
 		{Day: "2026-07-10", Tool: "cline", Model: "claude-sonnet-4-5", Project: "web", ToolCalls: 40},
 	}
 	in := BuildInput(rows, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
-	got := mustGet(t, exploreName).Analyze(in)
+	got := Evaluate(mustGet(t, exploreName), &in)
 
-	joined := strings.Join(got.Caveats, " ")
-	if !strings.Contains(joined, "60%") {
-		t.Fatalf("Caveats = %q, want the 60%% coverage disclosure", got.Caveats)
+	if got.Confidence.Signal == nil || *got.Confidence.Signal != 1 {
+		t.Fatalf("signal coverage = %v, want the full reach: every call that could be named was",
+			got.Confidence.Signal)
+	}
+	if len(got.Caveats) != 0 {
+		t.Fatalf("Caveats = %q, want no coverage gap disclosed for a source that records no calls", got.Caveats)
 	}
 }
 

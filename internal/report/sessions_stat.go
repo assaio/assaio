@@ -5,10 +5,12 @@ import (
 	"sort"
 )
 
-// percentile returns the p-th percentile (0-100) of sorted, an ascending-sorted slice,
+// Percentile returns the p-th percentile (0-100) of sorted, an ascending-sorted slice,
 // via linear interpolation between the two closest ranks (the common "linear" method).
-// Returns 0 for an empty slice; never indexes out of range.
-func percentile(sorted []float64, p float64) float64 {
+// Returns 0 for an empty slice; never indexes out of range. Exported because the validators
+// compute percentiles over the same data: a second implementation is a second method, and
+// two figures on one page would then no longer be comparable.
+func Percentile(sorted []float64, p float64) float64 {
 	n := len(sorted)
 	switch n {
 	case 0:
@@ -36,5 +38,5 @@ func percentileInt64(vals []int64, p float64) int64 {
 		floats[i] = float64(v)
 	}
 	sort.Float64s(floats)
-	return int64(math.Round(percentile(floats, p)))
+	return int64(math.Round(Percentile(floats, p)))
 }

@@ -30,7 +30,7 @@ func TestDepthTiersMatchWhatEachParserExtracts(t *testing.T) {
 // TestAnythingLessThanDeepDocumentsItsGaps is the honesty rule the tiers rest on: calling a
 // source "standard" is only fair if a reader can see exactly what it does not carry.
 func TestAnythingLessThanDeepDocumentsItsGaps(t *testing.T) {
-	for _, d := range Depths() {
+	for _, d := range depths {
 		if d.Tier != Deep && len(d.Gaps) == 0 {
 			t.Errorf("%s is %q but documents no gaps", d.Tool, d.Tier)
 		}
@@ -38,7 +38,7 @@ func TestAnythingLessThanDeepDocumentsItsGaps(t *testing.T) {
 }
 
 func TestDepthTiersComeFromTheFixedVocabulary(t *testing.T) {
-	for _, d := range Depths() {
+	for _, d := range depths {
 		switch d.Tier {
 		case Deep, Standard, ImportOnly:
 		default:
@@ -51,10 +51,10 @@ func TestDepthTiersComeFromTheFixedVocabulary(t *testing.T) {
 // here would be silently un-syncable and un-clearable -- which is how copilot-cli shipped.
 func TestToolsNamesEveryInTreeSource(t *testing.T) {
 	got := Tools()
-	if len(got) != len(Depths()) {
+	if len(got) != len(depths) {
 		t.Fatalf("Tools() = %v, want one name per depth row", got)
 	}
-	for i, d := range Depths() {
+	for i, d := range depths {
 		if got[i] != d.Tool {
 			t.Errorf("Tools()[%d] = %q, want %q", i, got[i], d.Tool)
 		}
@@ -101,7 +101,7 @@ func TestAPluginAnswersNoPerTurnSignal(t *testing.T) {
 }
 
 func TestDepthsAreOrderedDeepestFirst(t *testing.T) {
-	got := Depths()
+	got := depths
 	if len(got) == 0 {
 		t.Fatal("no depths")
 	}

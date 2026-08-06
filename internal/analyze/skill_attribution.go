@@ -76,7 +76,7 @@ func dimensionBars(rows []store.AttributionRow, kind string, topN int) []Bar {
 	for i := range kept {
 		out = append(out, Bar{
 			Label: kept[i].Name,
-			Value: kind + " · " + humanize.Count(kept[i].Tokens) + " tokens · " + formatPercent(shareOf(kept[i].Tokens, total), 0) + " · " + strconv.FormatInt(kept[i].Lines, 10) + " lines",
+			Value: kind + " · " + humanize.Count(kept[i].Tokens) + " tokens · " + humanize.PercentAt(shareOf(kept[i].Tokens, total), 0) + " · " + strconv.FormatInt(kept[i].Lines, 10) + " lines",
 			Frac:  fracOf(kept[i].Tokens, maxTokens),
 		})
 	}

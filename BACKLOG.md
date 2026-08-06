@@ -494,20 +494,58 @@ they wait behind features but keep the growing metric surface maintainable.
   per-member maps (`lines`/`cost`/`hasCost`/`unpriced`) into one `map[string]memberAgg`, so a
   member's totals travel as a unit.
 - [ ] **B75 · humanize helpers** — S · both — `internal/humanize` landed in v0.4 with
-  `analyze`'s two formatters (`compactCount`, `money`) moved onto it byte-identically. Still
-  to fold in: `report.formatCompactTokens` and `dashboard.formatCompactUSD`, which round and
-  case differently ("1.0K" vs "1k"), so unifying them *changes rendered output* and needs a
-  deliberate decision plus golden updates -- which is why v0.4 left them alone.
+  `analyze`'s two formatters (`compactCount`, `money`) moved onto it byte-identically. v0.11
+  folded in `report.formatCompactTokens` (the `status` peak-context figure now reads `85.0K`
+  rather than `85k`) and moved every percentage onto `humanize.Percent`. Still out:
+  `dashboard.formatCompactUSD`, which rounds and cases differently again, so unifying it
+  *changes rendered output* and needs its own golden update.
 - [ ] **B77 · readWhenEnough** — S · both — factor the "gate the favorable read behind a
   minimum-sample floor, else neutral" block shared verbatim by session-taxonomy,
   turn-efficiency, and model-right-sizing into one helper beside `readFor`.
-- [ ] **B106 · three files past the size budget outside the analysis packages** — S · both —
-  `internal/plugin/metric_input.go` (217), `internal/i18n/en_explain_work.go` (221) and
-  `internal/cli/analyze.go` (208) each carry more than one responsibility at more than the
-  ~200-line budget. The i18n one is the interesting case rather than the largest: it is a
-  block of prose per metric, so splitting it by metric group is a different judgement from
-  splitting code, and doing it badly makes the catalog harder to translate (`B08`), not
-  easier.
+- [ ] **B106 · two files past the size budget outside the analysis packages** — S · both —
+  `internal/i18n/en_explain_work.go` (221) and `internal/cli/analyze.go` (208) each carry more
+  than one responsibility at more than the ~200-line budget. (`internal/plugin/metric_input.go`
+  came off this list in v0.11, split into the envelope and its wire mapping when the capability
+  field landed.) The i18n one is the interesting case rather than the largest: it is a block of
+  prose per metric, so splitting it by metric group is a different judgement from splitting
+  code, and doing it badly makes the catalog harder to translate (`B08`), not easier.
+- [ ] **B115 · `insufficient` blames the source where the cause is a stale parse** — S · solo —
+  a verdict whose signal coverage is zero prints "nothing in this window can answer it". On the
+  maintainer's own store `explore-produce` and `friction` print exactly that directly above
+  their own caveat saying the real cause is history parsed by a build that did not capture the
+  field yet — two sentences, one contradiction. The fix is a fourth reason, not a reworded
+  third: "no source records it" and "your stored rows predate the capture" are different facts
+  and only the second has an action (`backfill`). Needs a way to tell them apart, which today
+  means asking the depth matrix whether *any* source in the window could have answered.
+- [ ] **B118 · does a cross-source line rate get to keep its denominator?** — M · both — a
+  source recording no changed line contributes a true zero to a line *total*, so `AI lines
+  total` is honest. A **rate** is the open question: `throughput`'s lines/active-day counts
+  days on which only a cost-only source ran, `model-fit`'s lines/1M tok counts its tokens,
+  `concentration` divides by the window's whole `Totals.Lines`, and `$`/100 lines — the
+  `status` headline and all of `effectiveness` — divides a cost from every source by lines
+  from only some. Each denominator is then larger than the population that could have fed the
+  numerator, which understates the rate. **Measured:** zero effect on the audited store, whose
+  two sources both record lines; it bites the moment a Gemini or Cline window exists. This is
+  a decision before it is a patch — gating the denominator makes `$`/100 lines answer "per
+  line-visible spend" rather than "per dollar", which is a different and arguably less useful
+  question — so it wants a paragraph in [ADR 0011](docs/adr/0011-capability-gated-metrics.md)
+  and its own real-data proof, not a quiet change to a figure people quote. The generic
+  invariant test deliberately leaves `LinesAdded` out until this is settled.
+- [ ] **B117 · `metrics verify` prints a blank confidence label** — S · both — the verify path
+  renders a plugin's `Result` without `analyze.Stamp`, so the label the summary leads with is
+  empty (`Confidence:  · 3 usage rows · activity coverage 0%`) while the coverage axes beside
+  it read as a real zero. Confirmed against v0.10 as well, so it is not new. Either stamp the
+  window like `analyze` does, or render the unstamped case as what it is — a conformance
+  check on the document, not a verdict about anyone's data.
+- [ ] **B116 · a parser fix reaches only the columns the restate covers** — S/M · solo —
+  `InsertLocal` restates activity and granularity on a re-read; `ts`, `model`, `project`,
+  `entrypoint` and `git_branch` are stamped once and never corrected, so a parser fix to any of
+  them cannot reach history and no canary looks at them. **No live case found:** the one
+  candidate on the audited store (a Codex session whose 198 records all carry the session's
+  start timestamp) has two-part dedupe keys and therefore predates v0.1 — it is a prototype
+  artifact, not a shipped build's output. This is a hole to close before a fix needs it, and
+  the question it turns on is which of those columns a re-read of the same file is the
+  authority on (granularity already is, and for the documented reason).
 
 ## Refusals (will not build, regardless of demand)
 
