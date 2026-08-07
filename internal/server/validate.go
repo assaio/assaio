@@ -50,6 +50,13 @@ func toolSet(tools []string) map[string]bool {
 // well-formed name, never an arbitrary string dressed up to look like one.
 var pluginToolPattern = regexp.MustCompile(`^plugin:[a-z0-9-]+$`)
 
+// cacheMissReasonPattern is the shape of a vendor's cache-miss vocabulary token, matched
+// rather than enumerated: the vocabulary is the vendor's to grow, so pinning today's six
+// values here would reject a record a future parser reads correctly. What it does block is
+// the reason being free text -- the value is rendered as the "top miss cause" on the shared
+// unauthenticated dashboard, and it keys a GROUP BY. Empty is allowed: most turns state none.
+var cacheMissReasonPattern = regexp.MustCompile(`^[a-z0-9_]{0,64}$`)
+
 // knownGranularities is the exact set of Granularity values usage.Record documents.
 var knownGranularities = map[string]bool{"turn": true, "session": true}
 
@@ -76,6 +83,9 @@ func validateRecordAt(r *usage.Record, now time.Time) error {
 			return fmt.Errorf("string field exceeds %d bytes", maxStringField)
 		}
 	}
+	if !cacheMissReasonPattern.MatchString(r.CacheMissReason) {
+		return fmt.Errorf("cache_miss_reason %q is not a vocabulary token", r.CacheMissReason)
+	}
 	if !knownTools[r.Tool] && !pluginToolPattern.MatchString(r.Tool) {
 		return fmt.Errorf("unknown tool %q", r.Tool)
 	}
@@ -90,6 +100,7 @@ func validateRecordAt(r *usage.Record, now time.Time) error {
 	// an overflow-magnitude one makes SUM() fail for the whole team.
 	fields := [...]int64{
 		r.InputTokens, r.OutputTokens, r.CacheReadTokens, r.CacheWriteTokens, r.ReasoningTokens,
+		r.CacheWrite1hTokens,
 		r.LinesAdded, r.LinesRemoved, r.Edits, r.ToolCalls, r.Rejected, r.Compactions, r.ReworkLines,
 		r.ToolReads, r.ToolSearches, r.ToolCommands, r.ToolWrites, r.ToolOther, r.ToolErrors,
 		r.Sidechain,
@@ -104,6 +115,12 @@ func validateRecordAt(r *usage.Record, now time.Time) error {
 	}
 	if r.Sidechain != 0 && r.Sidechain != 1 {
 		return fmt.Errorf("sidechain %d is not 0 or 1", r.Sidechain)
+	}
+	// The 1-hour portion is part of the cache write, and the two tiers are billed at
+	// different rates: a portion larger than its whole prices a negative 5-minute remainder
+	// into a total the whole team reads.
+	if r.CacheWrite1hTokens > r.CacheWriteTokens {
+		return fmt.Errorf("cache_write_1h %d exceeds cache_write %d", r.CacheWrite1hTokens, r.CacheWriteTokens)
 	}
 	return validateToolPurposeSplit(r)
 }

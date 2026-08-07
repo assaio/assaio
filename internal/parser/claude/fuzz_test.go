@@ -28,6 +28,7 @@ func FuzzParse(f *testing.F) {
 	f.Add([]byte(`{"type":"assistant","uuid":"a4","isSidechain":true,"attributionSkill":"code-review","attributionAgent":"general-purpose","message":{"model":"claude-opus-4-5","content":[{"type":"tool_use","name":"Read"},{"type":"tool_use","name":"mcp__srv__tool"},{"type":"tool_use","name":9},{"type":"text"}],"usage":{"input_tokens":1,"output_tokens":1}}}`))
 	f.Add([]byte(`{"type":"user","uuid":"tr5","message":{"content":[{"type":"tool_result","is_error":true},{"type":"tool_result","is_error":false}]}}`))
 	f.Add([]byte(`{"type":"user","uuid":"u1","cwd":"/x","message":{"role":"user","content":"plain text"}}`))
+	f.Add([]byte(`{"type":"assistant","uuid":"a5","timestamp":"2026-07-01T10:00:05Z","sessionId":"s1","message":{"model":"claude-opus-4-5","usage":{"cache_creation_input_tokens":10,"cache_creation":{"ephemeral_5m_input_tokens":-9223372036854775808,"ephemeral_1h_input_tokens":9223372036854775807}},"diagnostics":{"cache_miss_reason":{"type":"�"}}}}`))
 	f.Add([]byte(`{"type":"system","uuid":"cb1","subtype":"compact_boundary"}`))
 	f.Add([]byte(`{"type":"user","uuid":"cs1","isCompactSummary":true}`))
 
@@ -42,8 +43,15 @@ func FuzzParse(f *testing.F) {
 		for i := range recs {
 			r := &recs[i]
 			if r.InputTokens < 0 || r.OutputTokens < 0 || r.CacheReadTokens < 0 ||
-				r.CacheWriteTokens < 0 || r.ReasoningTokens < 0 {
+				r.CacheWriteTokens < 0 || r.ReasoningTokens < 0 || r.CacheWrite1hTokens < 0 {
 				t.Fatalf("negative token field: %+v", r)
+			}
+			if r.CacheWrite1hTokens > r.CacheWriteTokens {
+				t.Fatalf("1h portion %d exceeds the cache write %d it is part of: %+v",
+					r.CacheWrite1hTokens, r.CacheWriteTokens, r)
+			}
+			if !utf8.ValidString(r.CacheMissReason) {
+				t.Fatalf("CacheMissReason not valid UTF-8: %+v", r)
 			}
 			if r.LinesAdded < 0 || r.LinesRemoved < 0 || r.Edits < 0 || r.ToolCalls < 0 || r.Rejected < 0 || r.Compactions < 0 {
 				t.Fatalf("negative activity field: %+v", r)

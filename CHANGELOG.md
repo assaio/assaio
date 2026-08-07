@@ -21,6 +21,66 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-07
+
+### Fixed
+- **One Claude Code response was counted once per content block, and every token figure for
+  the flagship source was roughly double.** Claude writes an API response as *one JSONL line
+  per content block*, and each of those lines repeats that response's `usage` verbatim — the
+  same `input_tokens`, the same `cache_creation_input_tokens`, the same
+  `cache_read_input_tokens` — while `output_tokens` stays partial until the last line. The
+  parser keyed a record on the line's `uuid`, so a three-block answer billed one request three
+  times. **Measured on 5,724 real transcripts, not inferred:** 354,904 assistant lines are
+  159,175 actual responses, and a full re-ingest moves the totals
+  input **64.7M → 22.3M**, output **282.7M → 143.4M**, cache-read **94.6B → 46.5B**,
+  cache-write **2.83B → 1.01B**, and the estimated cost **$53,208 → $24,339**. Records fall
+  353,847 → 158,776. A record is now keyed on the response id and carries that response's
+  tokens once, while the activity of each block — tool calls, edits, the purpose split — is
+  summed across the group, because that half was never duplicated. Sub-agent aggregates are
+  keyed by `agentId` and were never affected. A transcript predating the `message.id` field
+  still parses, one record per line, exactly as before.
+  **Your stored history is rebuilt for you, and nothing is destroyed to do it:** migration
+  `0008` moves the `claude-code` rows the old grain inflated into a
+  `usage_record_pre_response_grain` archive that no report reads, clears their `ingest_file`
+  watermarks, and lets the next `backfill` re-read every transcript unconditionally — no flag
+  needed. Two details are deliberate. Clearing the watermarks is what makes that promise true
+  rather than likely: `buildIdentity()` returns a constant `dev` for any source build, so a
+  version bump alone would have left a `go install`ed binary skipping every transcript as
+  unchanged and the history empty. And the rows are archived rather than deleted because
+  **the rebuild only reaches as far back as the transcripts you still have** — Claude Code
+  rotates its own logs (30 days by default) while the store is the durable record, and this
+  migration runs from `store.Open`, which the statusline calls, so a delete would have fired
+  on the first prompt after the binary was replaced. `assaio-agent doctor` reports the
+  archive's size and the statement that drops it; `assaio-agent compact` returns the pages
+  afterwards. A member's synced rows are archived too, for the same reason the local ones are:
+  nothing will ever collide with their old keys, so leaving them in place would have a team
+  server reporting the inflated total *plus* the rebuilt one. Members restore their share by
+  syncing again; widen `sync --since` if the window you care about is older than 30 days.
+
+### Added
+- **A cache write is now priced by the lifetime it actually bought.** Claude splits every
+  cache write into `cache_creation.ephemeral_5m_input_tokens` and `ephemeral_1h_input_tokens`,
+  and the vendor bills the 1-hour tier at 1.6× the 5-minute rate — a distinction assaio read
+  past, pricing every write at the cheap rate. It is not a rounding error: **59.7%** of the
+  audited corpus's cache-write tokens are 1-hour writes (84% on `claude-opus-5`, 68% on
+  `claude-opus-4-8`, 0% on `claude-sonnet-5`), and pricing them correctly raises the
+  cache-write component by **35.8%** (**+$1,765** on that corpus). The rate was already in the
+  vendored price table as `cache_creation_input_token_cost_above_1hr`; nothing read it. A
+  model publishing a single cache-write rate bills both tiers at it, never zero, and a source
+  that reports no tier is priced exactly as before. New signal `ai.tokens.cache_write_1h`.
+- **`cache-hygiene` says *why* a prompt missed the cache.** Claude states its own reason on
+  every miss — `previous_message_not_found`, `tools_changed`, `unavailable`,
+  `messages_changed`, `system_changed`, `model_changed` — so a low cache-read share stops
+  being a number to stare at. The validator now reports the 1-hour write share and the top
+  stated cause, and the caveat claiming "vendor cache TTLs are invisible" is gone, because it
+  was false. New signal `ai.cache.miss_reason`; both are declared on the `claude-code` depth
+  row, and a window whose sources state neither says so rather than reading zero.
+
+### Changed
+- `reconcileColumns` now runs before the migration files rather than after, so a migration can
+  rely on every column `0001` declares being present. A database with no `usage_record` yet —
+  every fresh one — has nothing to heal and returns early.
+
 ## [0.11.0] - 2026-08-06
 
 ### Fixed
@@ -981,7 +1041,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/assaio/assaio/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/assaio/assaio/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/assaio/assaio/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/assaio/assaio/compare/v0.8.0...v0.9.0

@@ -250,14 +250,6 @@ on, since a link to a merged pull request is only as good as the session it link
   which the parser subtracts), and how history gets the value, since the local restate covers
   activity and granularity but deliberately not tokens. A `backfill --full` alone will not do
   it.
-- [ ] **B108 · Claude's cache is explainable, not opaque** — M · solo — two fields the audit
-  found on every assistant turn: `message.usage.cache_creation.ephemeral_5m_input_tokens` /
-  `ephemeral_1h_input_tokens` (the TTL tier a write bought) and
-  `message.diagnostics.cache_miss_reason.type` (a six-value vocabulary: `messages_changed`,
-  `model_changed`, `previous_message_not_found`, `system_changed`, `tools_changed`,
-  `unavailable`). `cache-hygiene` currently ships the caveat "vendor cache TTLs are invisible"
-  (`B02`); they are not. Turns a cache-read share into a cause a person can act on, and the
-  1-hour tier is priced differently from the 5-minute one, so it also sharpens cost.
 - [ ] **B109 · Copilot CLI is deeper than its matrix row** — M · both — the audit found named
   tool calls (`data.toolRequests[].name`), per-call line counts
   (`data.toolTelemetry.metrics.linesAdded`/`linesRemoved`), per-model request counts
@@ -330,10 +322,8 @@ on, since a link to a merged pull request is only as good as the session it link
   branches; a process signal (direct-to-main AI work), local only.
 - [ ] **B02 · cache-hygiene trend** — S · both — add the day-over-day cache-read-share
   trend to the shipped `cache-hygiene` validator, which already reports the current-window
-  share and the cache-write-waste flag. The caveat this item used to carry — "vendor cache TTLs
-  are invisible" — turned out to be false: Claude splits a cache write by TTL tier and Copilot
-  publishes the TTL in seconds (`B105` audit, now `B108` and `B109`). Day-grain approximation
-  stands.
+  share, the cache-write-waste flag, the 1-hour write share and the top stated miss cause
+  (`B108`, v0.12). Day-grain approximation stands.
 
 ## Pool — needs a schema or parser extension
 
@@ -546,6 +536,91 @@ they wait behind features but keep the growing metric surface maintainable.
   artifact, not a shipped build's output. This is a hole to close before a fix needs it, and
   the question it turns on is which of those columns a re-read of the same file is the
   authority on (granularity already is, and for the documented reason).
+
+## Pool — from the v0.12 whole-codebase review
+
+Findings from a max-effort review of `internal/` and `cmd/`, each reproduced against the
+maintainer's own store or a live `git` before being written down. The two severest — Claude
+Code's ~2× token inflation and cache writes priced at one flat rate — shipped in v0.12 and
+are not repeated here.
+
+- [ ] **B119 · Codex drops the lines of a created file** — S · solo — `patchFileChange`
+  declares only `unified_diff`, but a file *creation* is `{"type":"add","content":"…"}`: it
+  unmarshals cleanly, leaves `UnifiedDiff` empty and returns `(0,0)`. Measured across 21 real
+  rollouts: 192 `update` changes counted 2,358 lines while **50 `add` changes dropped 2,428** —
+  roughly half of Codex's added lines are missing, and rework is seeded with `added=0` for
+  those files on top.
+- [ ] **B120 · `store.Open` can silently use the wrong database** — S · both — the DSN is
+  `"file:" + path + "?_pragma=…"` with `path` unescaped, so a `#` in it truncates the path and
+  `Open` still returns success against a database somewhere else, while a `?` truncates *and*
+  drops all three pragmas (WAL, busy_timeout, foreign_keys). Reachable from `XDG_DATA_HOME` or
+  any home directory containing `#`, `?` or `%`.
+- [ ] **B121 · `clear` then `backfill` restores nothing** — S · both — `Clear` empties
+  `usage_record` but never `ingest_file`, so every input still matches on size/mtime/version
+  and the next `backfill` reports `unchanged` and imports zero. Only `--full` recovers, and
+  nothing says so — while `clear`'s own help implies usage records can be rebuilt by
+  re-import. Either clear the watermarks with the rows, or say `--full` in the output.
+- [ ] **B122 · `clear --labels` ignores every scope flag** — S · both — `clearLabels` reads
+  only the labels flag and `DeleteLabels` is an unscoped `DELETE FROM session_label`, so
+  `clear --tool codex --labels` destroys claude-code's labels too. The one thing in the store
+  that no re-import can rebuild, since a person typed it.
+- [ ] **B123 · `doctor --strict` exits 0 on a broken store** — S · both — both store-failure
+  paths print `ERROR` and return nil, short-circuiting before the strict-failure check, so a
+  cron job with a corrupt store *and* a mistyped `sources:` path reports green and the drift
+  canaries never run at all. Directly undercuts the `B59` promise.
+- [ ] **B124 · non-ASCII filenames break survival, silently** — S/M · solo — `core.quotePath`
+  defaults on, so git returns `"caf\303\251.go"`; `numstatPath` un-quotes a rename but never a
+  plain path, so `git blame` fails on it and `path.Ext` yields `.go"`, classifying the file as
+  `other` rather than `source`. Compounded by the next item.
+- [ ] **B125 · a failed blame is read as "did not survive"** — S · solo — every non-context
+  error in the survival walk hits `continue` with no counter, so the rate is printed as a
+  confident percentage over an unknown fraction of files. Contradicts the skip-and-count
+  policy every other collector in this repo follows.
+- [ ] **B126 · relative-path worktrees collapse into one bogus project** — S · solo —
+  `worktreeMainRoot` returns the gitdir prefix verbatim, but git ≥2.48 writes a *relative*
+  gitdir, so `filepath.Rel` fails, the subpath is dropped and an in-repo worktree resolves to
+  `Project = ".."` for every worktree session across every repository.
+- [ ] **B127 · humanize picks its unit before rounding** — S · both — `Count(999999999)`
+  renders `1000.0M` rather than `1.0B`, `Count(999950)` renders `1000.0K`, and
+  `Bytes(1048575)` renders `1024.0 KB`. Cache-read totals sit exactly in that band. A sibling
+  of the same class: an exact 0.5% prints `0%`, because the small-share guard uses `<` where
+  the upper edge uses `>=` — the precise rounding `humanize.Percent` says it refuses.
+- [ ] **B128 · the recent window covers eight day-buckets, not seven** — S · both —
+  `splitRecent` subtracts the whole window then truncates to a date, making that date recent
+  too; `cli/compare.go` already subtracts `days-1` and its comment warns against this exact
+  bias. Feeds Hot/GoingStale/DormantTools and `adoption`.
+- [ ] **B129 · unattributed usage is counted as a project** — S · both — `insights` groups on
+  `r.Project` including `""`, while `concentration` and the dashboard drill both exclude it
+  deliberately. It inflates the "N projects" header and flips `adoption`'s breadth signal to
+  "usage is broad across projects" for a single-repo user who also runs Gemini CLI, whose
+  parser never sets a project at all.
+- [ ] **B130 · `report --by task|outcome|difficulty --format csv` emits anonymous rows** — S ·
+  both — `RenderCSV`'s fixed columns omit the three annotation fields, and label-dimension
+  aggregation stamps the key *only* into those fields, so every identity column is empty and
+  the rows are indistinguishable from one another. Table and JSON are correct.
+- [ ] **B131 · the dashboard renders a real cost as `$0`** — S · both —
+  `dashboard.formatCompactUSD` drops to zero decimals below $1,000, so $12 across 30 active
+  days prints "**$0** per active day". `humanize.USD` keeps cents below $100 for exactly this
+  reason, and `costDisplay`'s own doc forbids a fabricated zero. Folds into `B75`.
+- [ ] **B132 · the rework cap is a budget that is never consumed** — S · solo — each edit
+  clamps its removals to the file's total added lines rather than to what is left unaccounted,
+  so two edits can each claim the same added lines and the rate can exceed 100% (3 added, two
+  10-line deletions → 6 rework on 3 added). Nothing clamps `ChurnStat.ReworkRate` afterwards,
+  and the existing test pins the non-decrement, so the doc comment's invariant is the part
+  that is wrong.
+- [ ] **B133 · a metric plugin can inject a record with no timestamp bound** — S · both —
+  `plugin/record.go` validates a plugin's records without the timestamp range
+  `server/validate.go` applies to the same shape over HTTP, so a year-9999 record sits in
+  every `--since` window forever. The two validators should be one.
+- [ ] **B134 · `init --db` imports to one store and reports from another** — S · both — the
+  import path writes to the default local store while the report reads `--db`, so the command
+  prints an empty first run against the database it just told the user about.
+- [ ] **B135 · `skill-economics` can total one dimension and rank another** — S · solo — the
+  printed "attributed tokens" figure and the "largest share" line can be drawn from different
+  dimensions, which is the exact confusion the comment three lines above it exists to prevent.
+- [ ] **B136 · `rework` shows a full gauge beside a withheld verdict** — S · both — `Purity`
+  renders 1.00 when both of its inputs are structural silences, so the dashboard draws a
+  perfect bar next to a `—`.
 
 ## Refusals (will not build, regardless of demand)
 

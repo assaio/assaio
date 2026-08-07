@@ -23,6 +23,15 @@ func BuildInput(usage []store.UsageRow, sessions []store.SessionRow, prices pric
 	}
 }
 
+// usageTokens is one row's billable counts in the shape pricing takes, so the three build
+// passes cannot drift apart on which of them a cost is computed from.
+func usageTokens(r *store.UsageRow) pricing.Tokens {
+	return pricing.Tokens{
+		In: r.In, Out: r.Out, CacheWrite: r.CacheWrite, CacheRead: r.CacheRead,
+		CacheWrite1h: r.CacheWrite1h,
+	}
+}
+
 // buildTotals sums rows into Totals in one pass, folding priced cost only from usage
 // whose model resolves in prices and flagging Priced false the moment one does not.
 // Priced starts false on zero rows (an honest "nothing to price" rather than a vacuous
@@ -38,7 +47,7 @@ func buildTotals(rows []store.UsageRow, prices pricing.Table) Totals {
 		t.CacheRead += r.CacheRead
 		t.CacheWrite += r.CacheWrite
 		t.Lines += r.LinesAdded
-		if cost, ok := prices.CostTokens(r.Model, r.In, r.Out, r.CacheWrite, r.CacheRead); ok {
+		if cost, ok := prices.CostTokens(r.Model, usageTokens(r)); ok {
 			if t.Cost == nil {
 				zero := 0.0
 				t.Cost = &zero
@@ -74,6 +83,7 @@ func buildModelStats(rows []store.UsageRow, prices pricing.Table, totalTokens in
 		m.Output += r.Out
 		m.CacheRead += r.CacheRead
 		m.CacheWrite += r.CacheWrite
+		m.CacheWrite1h += r.CacheWrite1h
 		m.Lines += r.LinesAdded
 		m.Tokens += r.In + r.Out + r.CacheRead + r.CacheWrite
 	}
@@ -83,7 +93,7 @@ func buildModelStats(rows []store.UsageRow, prices pricing.Table, totalTokens in
 	for i, name := range order {
 		m := byModel[name]
 		m.Tier = modelTier(name, prices)
-		cost, ok := prices.CostTokens(name, m.Input, m.Output, m.CacheWrite, m.CacheRead)
+		cost, ok := prices.CostTokens(name, pricing.Tokens{In: m.Input, Out: m.Output, CacheWrite: m.CacheWrite, CacheRead: m.CacheRead, CacheWrite1h: m.CacheWrite1h})
 		m.Priced = ok
 		if ok {
 			m.Cost = &cost
@@ -119,7 +129,7 @@ func buildProjectStats(rows []store.UsageRow, prices pricing.Table, totalTokens 
 		}
 		a.stat.Lines += r.LinesAdded
 		a.tokens += r.In + r.Out + r.CacheRead + r.CacheWrite
-		if cost, ok := prices.CostTokens(r.Model, r.In, r.Out, r.CacheWrite, r.CacheRead); ok {
+		if cost, ok := prices.CostTokens(r.Model, usageTokens(r)); ok {
 			if a.stat.Cost == nil {
 				zero := 0.0
 				a.stat.Cost = &zero

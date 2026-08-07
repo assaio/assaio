@@ -8,6 +8,10 @@ import (
 	"io"
 )
 
+// MaxVocabularyToken caps a vendor category label. Real ones are a couple of words; the cap
+// exists because the line carrying one may be up to MaxLineBytes.
+const MaxVocabularyToken = 64
+
 // MaxLineBytes caps a single log line; a longer line aborts the file scan.
 const MaxLineBytes = 16 * 1024 * 1024
 
@@ -24,6 +28,32 @@ func NonNeg(n int64) int64 {
 		return 0
 	}
 	return n
+}
+
+// VocabularyToken keeps a vendor's category label only when it has the shape of one --
+// lowercase, digits and underscores, bounded. A label is rendered verbatim and grouped on, so
+// a log carrying free text (or a crafted line) in a field documented as a closed vocabulary
+// must not reach the store; the honest reading of an unrecognisable shape is that this turn
+// stated no label, which every figure over it already renders as an absence.
+func VocabularyToken(s string) string {
+	if len(s) > MaxVocabularyToken {
+		return ""
+	}
+	for _, r := range s {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '_' {
+			return ""
+		}
+	}
+	return s
+}
+
+// Subset clamps a count the log reports as a portion of total to that total: whatever is
+// left is read as the remainder, and a portion larger than its whole makes that negative.
+func Subset(n, total int64) int64 {
+	if n > total {
+		return NonNeg(total)
+	}
+	return NonNeg(n)
 }
 
 // FileFingerprint returns a short deterministic digest of b. Parsers that build a

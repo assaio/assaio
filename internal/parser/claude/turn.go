@@ -5,48 +5,105 @@ import (
 	"github.com/assaio/assaio/internal/usage"
 )
 
-// appendAssistant appends a new record for an assistant turn, deduping by uuid.
-func appendAssistant(l *line, cf *carryForward, seen map[string]struct{}, out []usage.Record, lastAssistant int, act *blockActivity) ([]usage.Record, int, int) {
+// appendAssistant folds an assistant line into the records. Lines sharing a message.id are
+// the content blocks of one API response, so the first one appends a record and the rest
+// merge into it. st.last then points at the response *this line belonged to*, which is what a
+// following tool result, denial or error is attributed to -- correct, since the result answers
+// the tool_use block that just arrived. For the 8-in-48,440 response whose blocks are not
+// adjacent that rewinds the cursor to the earlier record, which is the same rule rather than
+// an exception to it.
+func (st *parseState) appendAssistant(l *line, cf *carryForward, act *blockActivity) {
 	if l.Type != "assistant" || l.Message.Model == "" {
-		return out, lastAssistant, 0
+		return
 	}
-	if l.UUID == "" {
-		return out, lastAssistant, 1
+	key := l.Message.ID
+	if key == "" {
+		key = l.UUID
 	}
-	if _, dup := seen[l.UUID]; dup {
-		return out, lastAssistant, 0
+	if key == "" {
+		st.skipped++
+		return
 	}
-	seen[l.UUID] = struct{}{}
-	out = append(out, recordFromLine(l, cf, act))
-	return out, len(out) - 1, 0
+	// A line repeated verbatim is a streamed retry, not a second content block.
+	if l.UUID != "" {
+		if _, dup := st.seenLine[l.UUID]; dup {
+			return
+		}
+		st.seenLine[l.UUID] = struct{}{}
+	}
+	if at, ok := st.byMessage[key]; ok {
+		mergeResponse(&st.out[at], l, act)
+		st.last = at
+		return
+	}
+	st.out = append(st.out, recordFromLine(l, cf, act, key))
+	st.last = len(st.out) - 1
+	st.byMessage[key] = st.last
 }
 
-func recordFromLine(l *line, cf *carryForward, act *blockActivity) usage.Record {
+// mergeResponse folds another content block of an already-recorded API response into it.
+// The two halves are counted differently on purpose: the response's token usage is repeated
+// verbatim on every one of its lines, so summing it counted one request several times --
+// the whole of what this fixes -- while the activity on each line is that block's own and
+// has to be added. Output tokens are the exception among the token fields: the earlier lines
+// of a response carry a partial count that grows to the true total on the last one, so the
+// largest is the answer rather than the first.
+func mergeResponse(r *usage.Record, l *line, act *blockActivity) {
+	u := &l.Message.Usage
+	r.InputTokens = max(r.InputTokens, parser.NonNeg(u.Input))
+	r.OutputTokens = max(r.OutputTokens, parser.NonNeg(u.Output))
+	r.CacheReadTokens = max(r.CacheReadTokens, parser.NonNeg(u.CacheRead))
+	r.CacheWriteTokens = max(r.CacheWriteTokens, parser.NonNeg(u.CacheWrite))
+	r.CacheWrite1hTokens = max(r.CacheWrite1hTokens, u.cacheWrite1h())
+
+	r.ToolCalls += act.byPurpose.Total()
+	r.Edits += act.edits
+	r.ToolReads += act.byPurpose.Reads
+	r.ToolSearches += act.byPurpose.Searches
+	r.ToolCommands += act.byPurpose.Commands
+	r.ToolWrites += act.byPurpose.Writes
+	r.ToolOther += act.byPurpose.Other
+
+	// A label the first block did not carry is still this response's label.
+	if r.Skill == "" {
+		r.Skill = l.AttributionSkill
+	}
+	if r.Agent == "" {
+		r.Agent = l.AttributionAgent
+	}
+	if r.CacheMissReason == "" {
+		r.CacheMissReason = parser.VocabularyToken(l.Message.Diagnostics.CacheMissReason.Type)
+	}
+}
+
+func recordFromLine(l *line, cf *carryForward, act *blockActivity, dedupeKey string) usage.Record {
 	return usage.Record{
-		Tool:             tool,
-		SessionID:        l.SessionID,
-		Timestamp:        l.Timestamp,
-		Model:            l.Message.Model,
-		InputTokens:      parser.NonNeg(l.Message.Usage.Input),
-		OutputTokens:     parser.NonNeg(l.Message.Usage.Output),
-		CacheReadTokens:  parser.NonNeg(l.Message.Usage.CacheRead),
-		CacheWriteTokens: parser.NonNeg(l.Message.Usage.CacheWrite),
-		DedupeKey:        l.UUID,
-		Cwd:              cf.cwd,
-		Project:          cf.project(),
-		GitBranch:        cf.gitBranch,
-		Entrypoint:       cf.entrypoint,
-		Granularity:      "turn",
-		ToolCalls:        act.byPurpose.Total(),
-		Edits:            act.edits,
-		ToolReads:        act.byPurpose.Reads,
-		ToolSearches:     act.byPurpose.Searches,
-		ToolCommands:     act.byPurpose.Commands,
-		ToolWrites:       act.byPurpose.Writes,
-		ToolOther:        act.byPurpose.Other,
-		Sidechain:        boolFlag(l.IsSidechain),
-		Skill:            l.AttributionSkill,
-		Agent:            l.AttributionAgent,
+		Tool:               tool,
+		SessionID:          l.SessionID,
+		Timestamp:          l.Timestamp,
+		Model:              l.Message.Model,
+		InputTokens:        parser.NonNeg(l.Message.Usage.Input),
+		OutputTokens:       parser.NonNeg(l.Message.Usage.Output),
+		CacheReadTokens:    parser.NonNeg(l.Message.Usage.CacheRead),
+		CacheWriteTokens:   parser.NonNeg(l.Message.Usage.CacheWrite),
+		CacheWrite1hTokens: l.Message.Usage.cacheWrite1h(),
+		CacheMissReason:    parser.VocabularyToken(l.Message.Diagnostics.CacheMissReason.Type),
+		DedupeKey:          dedupeKey,
+		Cwd:                cf.cwd,
+		Project:            cf.project(),
+		GitBranch:          cf.gitBranch,
+		Entrypoint:         cf.entrypoint,
+		Granularity:        "turn",
+		ToolCalls:          act.byPurpose.Total(),
+		Edits:              act.edits,
+		ToolReads:          act.byPurpose.Reads,
+		ToolSearches:       act.byPurpose.Searches,
+		ToolCommands:       act.byPurpose.Commands,
+		ToolWrites:         act.byPurpose.Writes,
+		ToolOther:          act.byPurpose.Other,
+		Sidechain:          boolFlag(l.IsSidechain),
+		Skill:              l.AttributionSkill,
+		Agent:              l.AttributionAgent,
 	}
 }
 

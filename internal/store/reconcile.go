@@ -17,6 +17,10 @@ import (
 // runner skips a filename it has already recorded, so the edited CREATE TABLE never ran
 // there. It is not a licence to edit a shipped migration: doing so still leaves every other
 // object (a new table, an index, a backfilled value) missing on an upgraded database.
+//
+// It runs before the migration files, not after: a later migration that touches a column
+// 0001 defines has to find it there. A database that has no usage_record yet -- every fresh
+// one, since 0001 is what creates it -- has nothing to heal and returns early.
 func reconcileColumns(ctx context.Context, db *sql.DB) error {
 	want, err := schemaColumns()
 	if err != nil {
@@ -25,6 +29,9 @@ func reconcileColumns(ctx context.Context, db *sql.DB) error {
 	have, err := existingColumns(ctx, db)
 	if err != nil {
 		return err
+	}
+	if len(have) == 0 {
+		return nil
 	}
 	for _, col := range want {
 		if have[col.name] {

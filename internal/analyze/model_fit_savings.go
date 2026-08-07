@@ -21,7 +21,7 @@ type modelSavings struct {
 // requires priced premium usage, at least one cheaper-tier model in use to reprice onto, a
 // positive difference, and at least one active day to project a monthly figure.
 func computeModelSavings(models []ModelStat, prices pricing.Table, activeDays int) (modelSavings, bool) {
-	var pIn, pOut, pCacheRead, pCacheWrite int64
+	var premium pricing.Tokens
 	var premiumCost float64
 	var premiumPriced bool
 	for i := range models {
@@ -29,10 +29,11 @@ func computeModelSavings(models []ModelStat, prices pricing.Table, activeDays in
 		if m.Tier != tierPremium {
 			continue
 		}
-		pIn += m.Input
-		pOut += m.Output
-		pCacheRead += m.CacheRead
-		pCacheWrite += m.CacheWrite
+		premium.In += m.Input
+		premium.Out += m.Output
+		premium.CacheRead += m.CacheRead
+		premium.CacheWrite += m.CacheWrite
+		premium.CacheWrite1h += m.CacheWrite1h
 		if m.Priced && m.Cost != nil {
 			premiumCost += *m.Cost
 			premiumPriced = true
@@ -41,7 +42,7 @@ func computeModelSavings(models []ModelStat, prices pricing.Table, activeDays in
 	if !premiumPriced || activeDays <= 0 {
 		return modelSavings{}, false
 	}
-	target, counterfactual, ok := cheapestCheaperCost(models, prices, pIn, pOut, pCacheWrite, pCacheRead)
+	target, counterfactual, ok := cheapestCheaperCost(models, prices, premium)
 	if !ok {
 		return modelSavings{}, false
 	}
@@ -54,13 +55,13 @@ func computeModelSavings(models []ModelStat, prices pricing.Table, activeDays in
 
 // cheapestCheaperCost reprices the premium token bundle onto every cheaper-tier model in use
 // and returns the cheapest option's model and cost.
-func cheapestCheaperCost(models []ModelStat, prices pricing.Table, in, out, cacheWrite, cacheRead int64) (model string, cost float64, ok bool) {
+func cheapestCheaperCost(models []ModelStat, prices pricing.Table, tk pricing.Tokens) (model string, cost float64, ok bool) {
 	for i := range models {
 		m := &models[i]
 		if m.Tier != tierCheaper {
 			continue
 		}
-		c, priced := prices.CostTokens(m.Model, in, out, cacheWrite, cacheRead)
+		c, priced := prices.CostTokens(m.Model, tk)
 		if !priced {
 			continue
 		}

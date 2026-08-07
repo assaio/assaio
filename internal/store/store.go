@@ -18,8 +18,13 @@ type Store struct{ db *sql.DB }
 // the group rather than a summary of it: a per-turn record and a session aggregate are
 // different units, so summing them into one row would state a total nobody can interpret.
 type UsageRow struct {
-	Day, Tool, Model, Project, Entrypoint, Member, Granularity        string
-	In, Out, CacheRead, CacheWrite, Reasoning                         int64
+	Day, Tool, Model, Project, Entrypoint, Member, Granularity string
+	In, Out, CacheRead, CacheWrite, Reasoning                  int64
+	// CacheWrite1h is the portion of CacheWrite that bought a 1-hour cache lifetime, billed
+	// at its own higher rate. A subset of CacheWrite, never added to it; 0 for sources that
+	// do not report the tier, which reads the same as "every write was 5-minute" -- so a
+	// figure over it declares its own coverage.
+	CacheWrite1h                                                      int64
 	LinesAdded, LinesRemoved, Edits, ToolCalls, Rejected, Compactions int64
 	ReworkLines                                                       int64
 	// ToolReads..ToolOther split ToolCalls by purpose; ToolErrors counts failed calls. All
@@ -41,13 +46,14 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
-	// Migrations are local and fast; no caller cancellation semantics at open.
-	if err := migrate(context.Background(), db); err != nil {
+	// Every usage_record column needs a constant DEFAULT: reconcileColumns installs a missing one with ADD COLUMN, which SQLite rejects without one.
+	// It runs first so a migration below can rely on every column 0001 declares existing.
+	if err := reconcileColumns(context.Background(), db); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
-	// Every usage_record column needs a constant DEFAULT: reconcileColumns installs a missing one with ADD COLUMN, which SQLite rejects without one.
-	if err := reconcileColumns(context.Background(), db); err != nil {
+	// Migrations are local and fast; no caller cancellation semantics at open.
+	if err := migrate(context.Background(), db); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -84,7 +90,8 @@ func (s *Store) UsageByLabel(ctx context.Context, since time.Time) ([]UsageRow, 
 // annotation-grouped queries cannot drift apart on what a total contains.
 const usageAggregates = `
                SUM(input_tokens), SUM(output_tokens),
-               SUM(cache_read_tokens), SUM(cache_write_tokens), SUM(reasoning_tokens),
+               SUM(cache_read_tokens), SUM(cache_write_tokens), SUM(cache_write_1h),
+               SUM(reasoning_tokens),
                SUM(lines_added), SUM(lines_removed), SUM(edits), SUM(tool_calls), SUM(rejected), SUM(compactions),
                SUM(rework_lines),
                SUM(tool_reads), SUM(tool_searches), SUM(tool_commands), SUM(tool_writes), SUM(tool_other),
@@ -141,7 +148,7 @@ func (s *Store) usage(ctx context.Context, since time.Time, filter LabelFilter, 
 		var u UsageRow
 		dest := []any{
 			&u.Day, &u.Tool, &u.Model, &u.Project, &u.Entrypoint, &u.Member, &u.Granularity,
-			&u.In, &u.Out, &u.CacheRead, &u.CacheWrite, &u.Reasoning,
+			&u.In, &u.Out, &u.CacheRead, &u.CacheWrite, &u.CacheWrite1h, &u.Reasoning,
 			&u.LinesAdded, &u.LinesRemoved, &u.Edits, &u.ToolCalls, &u.Rejected, &u.Compactions,
 			&u.ReworkLines,
 			&u.ToolReads, &u.ToolSearches, &u.ToolCommands, &u.ToolWrites, &u.ToolOther,

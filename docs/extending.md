@@ -1724,14 +1724,15 @@ field is skipped for that reason.
 |---|---|---|
 | `uuid`, `sessionId`, `timestamp`, `cwd`, `gitBranch`, `entrypoint` | extracted | Record identity, dedupe key and dimensions. |
 | `message.model`, `message.usage.{input_tokens,output_tokens,cache_read_input_tokens,cache_creation_input_tokens}` | extracted | Every token signal and the cost estimate. |
+| `message.id` | extracted (v0.12) | The API response a line belongs to. Claude writes one line per content block and repeats that response's usage on each, so keying a record on the line `uuid` counted one request once per block — 354,904 lines were 159,175 responses on the audited corpus, inflating output tokens 1.97x and cache-write 2.81x. A record is now keyed on this. |
 | `message.content[].type` = `tool_use` / `tool_result` + `.name` / `.is_error` | extracted | Tool-call count, the purpose split, and `ai.tool_errors.count`. |
 | `toolUseResult.structuredPatch[].lines` | extracted | `ai.lines.added` / `.removed` and, via the shared helper, `ai.rework.lines`. |
 | `toolUseResult.{agentId,agentType,resolvedModel,usage,toolStats.linesAdded,toolStats.linesRemoved}` | extracted | The completed sub-agent's own record. |
 | `toolDenialKind` | extracted | `ai.rejected.count`. |
 | `isCompactSummary`, `subtype` = `compact_boundary` | extracted | `ai.compactions.count`. |
 | `isSidechain`, `attributionSkill`, `attributionAgent` | extracted | Delegation share and the skill / sub-agent split. |
-| `message.usage.cache_creation.ephemeral_5m_input_tokens` / `ephemeral_1h_input_tokens` | **skipped — worth extracting** | The cache TTL tier, on every assistant turn. `cache-hygiene` currently caveats that "vendor cache TTLs are invisible"; they are not (`B108`). |
-| `message.diagnostics.cache_miss_reason.type` | **skipped — worth extracting** | Six documented-by-vocabulary reasons a prompt cache missed (`messages_changed`, `model_changed`, `previous_message_not_found`, `system_changed`, `tools_changed`, `unavailable`). Turns a cache rate into a cause (`B108`). |
+| `message.usage.cache_creation.ephemeral_5m_input_tokens` / `ephemeral_1h_input_tokens` | extracted (v0.12) | The cache TTL tier, on every assistant turn. 59.7% of the audited corpus's cache-write tokens bought the 1-hour lifetime, which bills at 1.6x the 5-minute rate, so reading it raised the cache-write cost component by 35.8%. Signal `ai.tokens.cache_write_1h`. |
+| `message.diagnostics.cache_miss_reason.type` | extracted (v0.12) | Six documented-by-vocabulary reasons a prompt cache missed (`messages_changed`, `model_changed`, `previous_message_not_found`, `system_changed`, `tools_changed`, `unavailable`). `cache-hygiene` names the top one, turning a cache rate into a cause. Signal `ai.cache.miss_reason`. |
 | `toolUseResult.userModified` | **skipped — worth extracting** | The human edited what the AI wrote. A direct correction signal where `rework` has only a proxy (`B111`). |
 | `toolUseResult.toolStats.{readCount,searchCount,bashCount,editFileCount,otherToolCount}` | **skipped — accounting undecided** | The sub-agent's own purpose split, already in the log. Populating it means also setting `ToolCalls`, which would double-count against the parent turn — the open half of `B78`. |
 | `attributionPlugin`, `attributionMcpServer`, `attributionMcpTool` | **skipped — worth extracting** | Two more attribution dimensions beside skill and sub-agent, on a third of all turns (`B112`). |

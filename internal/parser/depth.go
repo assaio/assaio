@@ -50,6 +50,11 @@ var (
 	// and Cline never surface a thinking count, so claiming it for them would report support
 	// for a figure their records can only ever leave at zero.
 	reasoningSignals = []string{SignalTokensReasoning}
+	// cacheDetailSignals say what a cache write bought and why one could not be read back.
+	// Claude Code is the only source publishing either today, which is why they are declared
+	// per source rather than folded into costSignals: a source that reports a cache write
+	// and no tier would otherwise claim every write was the cheap one.
+	cacheDetailSignals = []string{SignalTokensCacheWrite1h, SignalCacheMissReason}
 	// perTurnSignals need records at turn grain: a source that totals a whole session has
 	// no second timestamp to measure a gap or a turn against.
 	perTurnSignals = []string{SignalTurnsCount, SignalActiveMinutes}
@@ -74,6 +79,7 @@ var depths = []Depth{
 		Tool: "claude-code", Tier: Deep,
 		Tokens: true, Activity: true, Attribution: true,
 		Answers: answers(costSignals, perTurnSignals, lineSignals, editSignals, compactionSignals,
+			cacheDetailSignals,
 			[]string{SignalToolErrorsCount, SignalRejectedCount, SignalSkillTokens, SignalAgentTokens}),
 	},
 	{

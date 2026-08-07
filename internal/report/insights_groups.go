@@ -65,7 +65,7 @@ func accumulateGroupStat(g *GroupStat, u *store.UsageRow, t pricing.Table) {
 	if u.Day > g.LastActive {
 		g.LastActive = u.Day
 	}
-	cost, ok := t.CostTokens(u.Model, u.In, u.Out, u.CacheWrite, u.CacheRead)
+	cost, ok := t.CostTokens(u.Model, pricing.Tokens{In: u.In, Out: u.Out, CacheWrite: u.CacheWrite, CacheRead: u.CacheRead, CacheWrite1h: u.CacheWrite1h})
 	if !ok {
 		g.HasUnpriced = true
 		return
