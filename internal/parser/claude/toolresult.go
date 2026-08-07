@@ -47,21 +47,22 @@ const (
 
 // applyToolResult interprets l's toolUseResult: a completed sub-agent call appends its
 // own additional usage record (deduped by agentId, since sub-agent usage never overlaps
-// its parent turn); an edit result attributes its added/removed/rework line counts to
-// out[lastAssistant] via rt. It reports whether the line matched either shape.
-func applyToolResult(l *line, cf *carryForward, out []usage.Record, lastAssistant int, rt reworkTracker) ([]usage.Record, bool) {
+// its parent turn); an edit result attributes its added/removed/rework line counts to the
+// last assistant record. It reports whether the line matched either shape.
+func (st *parseState) applyToolResult(l *line, cf *carryForward) bool {
 	t, action := classifyToolResult(l.ToolUseResult)
 	switch action {
 	case actionSubAgent:
-		return append(out, subAgentRecord(l, &t, cf)), true
+		st.out = append(st.out, subAgentRecord(l, &t, cf))
+		return true
 	case actionStub:
-		return out, true
+		return true
 	case actionEdit:
 		added, removed := countPatchLines(t.StructuredPatch)
-		rt.attribute(out, lastAssistant, t.FilePath, added, removed)
-		return out, true
+		st.rework.attribute(st.out, st.last, t.FilePath, added, removed)
+		return true
 	default:
-		return out, false
+		return false
 	}
 }
 
@@ -101,22 +102,23 @@ func parseToolResult(raw json.RawMessage) (toolResult, bool) {
 // summary of many requests is never labelled as one of them (docs/extending.md).
 func subAgentRecord(l *line, t *toolResult, cf *carryForward) usage.Record {
 	r := usage.Record{
-		Tool:             tool,
-		SessionID:        l.SessionID,
-		Timestamp:        l.Timestamp,
-		Model:            t.ResolvedModel,
-		InputTokens:      parser.NonNeg(t.Usage.Input),
-		OutputTokens:     parser.NonNeg(t.Usage.Output),
-		CacheReadTokens:  parser.NonNeg(t.Usage.CacheRead),
-		CacheWriteTokens: parser.NonNeg(t.Usage.CacheWrite),
-		DedupeKey:        agentDedupePrefix + t.AgentID,
-		Cwd:              cf.cwd,
-		Project:          cf.project(),
-		GitBranch:        cf.gitBranch,
-		Entrypoint:       cf.entrypoint,
-		Granularity:      "session",
-		Sidechain:        1,
-		Agent:            t.AgentType,
+		Tool:               tool,
+		SessionID:          l.SessionID,
+		Timestamp:          l.Timestamp,
+		Model:              t.ResolvedModel,
+		InputTokens:        parser.NonNeg(t.Usage.Input),
+		OutputTokens:       parser.NonNeg(t.Usage.Output),
+		CacheReadTokens:    parser.NonNeg(t.Usage.CacheRead),
+		CacheWriteTokens:   parser.NonNeg(t.Usage.CacheWrite),
+		CacheWrite1hTokens: t.Usage.cacheWrite1h(),
+		DedupeKey:          agentDedupePrefix + t.AgentID,
+		Cwd:                cf.cwd,
+		Project:            cf.project(),
+		GitBranch:          cf.gitBranch,
+		Entrypoint:         cf.entrypoint,
+		Granularity:        "session",
+		Sidechain:          1,
+		Agent:              t.AgentType,
 	}
 	if t.ToolStats != nil {
 		r.LinesAdded = parser.NonNeg(t.ToolStats.LinesAdded)

@@ -69,7 +69,7 @@ func Build(rows []store.UsageRow, t pricing.Table) []Row {
 			In:          u.In, Out: u.Out, CacheRead: u.CacheRead, CacheWrite: u.CacheWrite, Reasoning: u.Reasoning,
 			Task: u.Task, Outcome: u.Outcome, Difficulty: u.Difficulty,
 		}
-		if cost, ok := t.CostTokens(u.Model, u.In, u.Out, u.CacheWrite, u.CacheRead); ok {
+		if cost, ok := t.CostTokens(u.Model, pricing.Tokens{In: u.In, Out: u.Out, CacheWrite: u.CacheWrite, CacheRead: u.CacheRead, CacheWrite1h: u.CacheWrite1h}); ok {
 			r.Cost = &cost
 			r.Priced = true
 		} else {

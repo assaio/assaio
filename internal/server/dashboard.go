@@ -55,9 +55,14 @@ func BuildDashboard(ctx context.Context, st *store.Store) (dashboard.Data, error
 	if err != nil {
 		return dashboard.Data{}, err
 	}
+	misses, err := st.CacheMisses(ctx, since)
+	if err != nil {
+		return dashboard.Data{}, err
+	}
 	in := analyze.BuildInput(usageRows, sessionRows, table, time.Now(), dashboardRecentWindow, analyze.Delegation{Sub: sub, Total: total})
 	in.TurnSizing = turns
 	in.Skills, in.Agents = skills, agents
+	in.CacheMisses = misses
 	in.Ingested, in.ParsedBy, _ = st.Provenance(ctx)
 	const anonymize = true
 	// Exec metric plugins are deliberately nil here: GET / is unauthenticated and

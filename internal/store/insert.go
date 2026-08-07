@@ -67,8 +67,9 @@ func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL 
            lines_added, lines_removed, edits, tool_calls, rejected, compactions, rework_lines,
            member,
            tool_reads, tool_searches, tool_commands, tool_writes, tool_other,
-           tool_errors, sidechain, skill, agent)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           tool_errors, sidechain, skill, agent,
+           cache_write_1h, cache_miss_reason)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(tool, dedupe_key) DO NOTHING`)
 	if err != nil {
 		return 0, err
@@ -83,7 +84,8 @@ func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL 
 			r.LinesAdded, r.LinesRemoved, r.Edits, r.ToolCalls, r.Rejected, r.Compactions, r.ReworkLines,
 			r.Member,
 			r.ToolReads, r.ToolSearches, r.ToolCommands, r.ToolWrites, r.ToolOther,
-			r.ToolErrors, r.Sidechain, r.Skill, r.Agent)
+			r.ToolErrors, r.Sidechain, r.Skill, r.Agent,
+			r.CacheWrite1hTokens, r.CacheMissReason)
 		if err != nil {
 			return inserted, err
 		}

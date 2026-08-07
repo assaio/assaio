@@ -92,7 +92,7 @@ func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table) {
 	g.Rejected += u.Rejected
 	g.TokensTotal += RowTokens(u)
 
-	cost, ok := t.CostTokens(u.Model, u.In, u.Out, u.CacheWrite, u.CacheRead)
+	cost, ok := t.CostTokens(u.Model, pricing.Tokens{In: u.In, Out: u.Out, CacheWrite: u.CacheWrite, CacheRead: u.CacheRead, CacheWrite1h: u.CacheWrite1h})
 	if !ok {
 		g.HasUnpriced = true
 		return

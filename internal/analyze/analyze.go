@@ -60,6 +60,11 @@ type Input struct {
 	// aggregate hides. Populated by the CLI from store.TurnSizing; empty in the drill and
 	// in tests that don't set it, where model-right-sizing reads "no premium turns".
 	TurnSizing []store.ModelTurns
+	// CacheMisses is the window's stated cache-miss reasons per tool, from
+	// store.CacheMisses, ordered by turns descending. Populated by the CLI; empty in the
+	// drill and in tests that don't set it, where cache-hygiene reports no stated cause
+	// rather than inventing one.
+	CacheMisses []store.CacheMissRow
 	// Ingested is when the newest data in the store was read and ParsedBy is the build that
 	// read it; both travel onto every Result's Confidence. Zero and "" mean unknown, which
 	// is what a caller that cannot answer should leave them as rather than guessing.

@@ -236,7 +236,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- HERO ────────────────────────────────────────────────────────────── -->
   <section class="wrap hero">
     <div>
-      <p class="eyebrow">Assay report · v0.11.0</p>
+      <p class="eyebrow">Assay report · v0.12.0</p>
       <h1>Is it <em>delivering?</em></h1>
       <p class="lede">
         Teams pour real money into AI coding tools and can't answer the one question that
@@ -317,6 +317,18 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         open — a churn rate that divided by a source's lines while it recorded no undone one,
         and two denominators counting tool calls a source never names — and a test now holds
         the rule for every future metric rather than a review catching it.
+      </p>
+      <p class="intro">
+        The hardest way is a number that looks right. Claude Code writes one API response as
+        several log lines — one per content block — and repeats that response's token usage on
+        every one of them. assaio counted each line, so a three-part answer billed one request
+        three times, and the flagship source's every token figure ran roughly double: measured
+        across 5,724 real transcripts, 354,904 lines are 159,175 responses, and the estimated
+        cost fell from <strong>$53,208 to $24,339</strong> once they were counted as what they
+        are. Nothing looked broken — that is the point. v0.12 fixes it and rebuilds your stored
+        history on the next run, and in the same release a cache write is finally priced by the
+        lifetime it bought, since 59.7% of those tokens bought the hour-long tier that bills at
+        1.6× the rate assaio had been charging them at.
       </p>
       <div class="split">
         <div class="panel">

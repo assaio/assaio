@@ -39,6 +39,18 @@ var catalog = []Signal{
 		Describe:  "Prompt tokens billed at the cache-write rate; wasted when never read back.",
 	},
 	{
+		ID: "ai.tokens.cache_write_1h", Title: "1-hour cache-write tokens", Unit: "tokens",
+		Status: Observed, Grains: perTurn,
+		ZeroMeans: "this source does not report the cache lifetime a write bought, or every write was the 5-minute tier -- the two are indistinguishable here",
+		Describe:  "The portion of cache-write tokens that bought a 1-hour cache lifetime, billed at its own higher rate. A subset of cache-write, never added to a total.",
+	},
+	{
+		ID: "ai.cache.miss_reason", Title: "Cache-miss reason", Unit: "count",
+		Status: Observed, Grains: perTurn,
+		ZeroMeans: "no turn in the window stated a reason -- either the cache was hit or this source does not report one",
+		Describe:  "The vendor's own reason a prompt could not be served from cache, from its closed vocabulary. A category label, never content.",
+	},
+	{
 		ID: "ai.tokens.reasoning", Title: "Reasoning tokens", Unit: "tokens",
 		Status: Observed, Grains: perTurn,
 		ZeroMeans: "this source does not report reasoning separately -- not that none was spent",

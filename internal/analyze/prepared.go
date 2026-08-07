@@ -15,6 +15,9 @@ type ModelStat struct {
 	Tokens int64
 	// Input, Output, CacheRead, CacheWrite are the same usage summed per token type.
 	Input, Output, CacheRead, CacheWrite int64
+	// CacheWrite1h is the portion of CacheWrite that bought a 1-hour cache lifetime and is
+	// billed at its own higher rate -- a subset, never added to a total.
+	CacheWrite1h int64
 	// Lines is AI-added code lines summed across this model's usage.
 	Lines int64
 	// Cost is USD cost priced from Prices; nil when Priced is false.
@@ -49,7 +52,10 @@ type ProjectStat struct {
 type Totals struct {
 	// Tokens is In+Output+CacheRead+CacheWrite summed (reasoning is a subset of output, not re-added) across all Usage.
 	Tokens int64
-	// Input, Output, CacheRead, CacheWrite are the same usage summed per token type.
+	// Input, Output, CacheRead, CacheWrite are the same usage summed per token type. The
+	// 1-hour cache-write portion is deliberately not summed here: the only figure over it
+	// needs the per-source capability gate a window total cannot express, so it reads
+	// Usage directly (see cache.go).
 	Input, Output, CacheRead, CacheWrite int64
 	// Lines is AI-added code lines summed across all Usage.
 	Lines int64

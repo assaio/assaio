@@ -67,6 +67,12 @@ drift instead of a human eventually noticing the numbers shrank.`,
 			if size, sizeErr := st.Size(cmd.Context()); sizeErr == nil {
 				cmd.Printf("size:         %s\n", storeSizeLine(size))
 			}
+			// The 0.12 upgrade moves the pre-response-grain Claude rows aside rather than
+			// deleting them, so the space they hold has to be visible and droppable.
+			if rows, archErr := st.LegacyArchiveRows(cmd.Context()); archErr == nil && rows > 0 {
+				cmd.Printf("archived:     %d pre-0.12 Claude Code row(s) kept aside by migration 0008; no report reads them.\n", rows)
+				cmd.Println("              Drop with: sqlite3 <db> 'DROP TABLE usage_record_pre_response_grain', then `assaio-agent compact`.")
+			}
 			cmd.Printf("inventory:    %s\n", doctorInventoryLabel(cmd, st, n))
 			cmd.Printf("freshness:    %s\n", doctorFreshnessLabel(cmd, st))
 			warnings, err := driftWarnings(cmd.Context(), st)

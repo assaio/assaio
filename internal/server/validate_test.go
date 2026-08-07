@@ -161,3 +161,32 @@ func TestValidateRecordRejectsOversizedStringField(t *testing.T) {
 		t.Fatal("want error for an oversized Tool field, got nil")
 	}
 }
+
+// The miss reason is rendered as a value on the shared unauthenticated dashboard and keys a
+// GROUP BY, so a push may not put free text in it. The shape is matched rather than the
+// vocabulary enumerated: the vendor may add a token, and rejecting a record a future parser
+// reads correctly would be the worse failure.
+func TestValidateRejectsAFreeTextCacheMissReason(t *testing.T) {
+	tests := []struct {
+		name, reason string
+		ok           bool
+	}{
+		{"vendor token", "previous_message_not_found", true},
+		{"empty is the common case", "", true},
+		{"an unseen vendor token still passes", "some_future_reason9", true},
+		{"prose", "the cache missed because of reasons", false},
+		{"markup", "<script>alert(1)</script>", false},
+		{"uppercase", "Tools_Changed", false},
+		{"overlong", strings.Repeat("a", 65), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := newValidRecord()
+			r.CacheMissReason = tt.reason
+			err := validateRecord(&r)
+			if (err == nil) != tt.ok {
+				t.Errorf("validateRecord(%q) err = %v, want ok=%v", tt.reason, err, tt.ok)
+			}
+		})
+	}
+}

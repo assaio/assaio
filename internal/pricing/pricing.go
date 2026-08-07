@@ -15,19 +15,31 @@ import (
 //go:embed litellm.json
 var vendored embed.FS
 
-// Price holds per-token costs in USD for one model.
-type Price struct{ Input, Output, CacheWrite, CacheRead float64 }
+// Price holds per-token costs in USD for one model. CacheWrite1h is the rate for a write
+// that bought a 1-hour cache lifetime; it falls back to CacheWrite for a model whose table
+// entry publishes only one cache-write rate, which is the vendor charging one rate rather
+// than a tier being free.
+type Price struct{ Input, Output, CacheWrite, CacheRead, CacheWrite1h float64 }
 
 // Table maps a model name to its Price.
 type Table map[string]Price
 
+// Tokens is the billable token counts of one model's usage. CacheWrite1h is the portion of
+// CacheWrite that bought a 1-hour cache lifetime: a subset priced at its own rate, never
+// added to a total. Passing the counts as a value keeps a new billing tier from growing
+// every call site's argument list.
+type Tokens struct {
+	In, Out, CacheWrite, CacheRead, CacheWrite1h int64
+}
+
 // litellmEntry mirrors the fields we use from LiteLLM's price file. Cache-write is a
 // pointer because OpenAI entries set it to null.
 type litellmEntry struct {
-	Input      float64  `json:"input_cost_per_token"`
-	Output     float64  `json:"output_cost_per_token"`
-	CacheWrite *float64 `json:"cache_creation_input_token_cost"`
-	CacheRead  *float64 `json:"cache_read_input_token_cost"`
+	Input        float64  `json:"input_cost_per_token"`
+	Output       float64  `json:"output_cost_per_token"`
+	CacheWrite   *float64 `json:"cache_creation_input_token_cost"`
+	CacheWrite1h *float64 `json:"cache_creation_input_token_cost_above_1hr"`
+	CacheRead    *float64 `json:"cache_read_input_token_cost"`
 }
 
 // loadOnce guards cachedTable/cachedErr: Load parses the embedded price table at most
@@ -66,6 +78,10 @@ func LoadReader(r io.Reader) (Table, error) {
 		if e.CacheWrite != nil {
 			p.CacheWrite = *e.CacheWrite
 		}
+		p.CacheWrite1h = p.CacheWrite
+		if e.CacheWrite1h != nil {
+			p.CacheWrite1h = *e.CacheWrite1h
+		}
 		if e.CacheRead != nil {
 			p.CacheRead = *e.CacheRead
 		}
@@ -77,12 +93,18 @@ func LoadReader(r io.Reader) (Table, error) {
 // Cost computes the USD cost of r using t, trying the exact model name then its
 // normalized form. ok is false when the model is not priced.
 func (t Table) Cost(r *usage.Record) (float64, bool) {
-	return t.CostTokens(r.Model, r.InputTokens, r.OutputTokens, r.CacheWriteTokens, r.CacheReadTokens)
+	return t.CostTokens(r.Model, Tokens{
+		In: r.InputTokens, Out: r.OutputTokens,
+		CacheWrite: r.CacheWriteTokens, CacheRead: r.CacheReadTokens,
+		CacheWrite1h: r.CacheWrite1hTokens,
+	})
 }
 
-// CostTokens computes the USD cost of the given token counts for model using t, trying
-// the exact model name then its normalized form. ok is false when the model is not priced.
-func (t Table) CostTokens(model string, in, out, cacheWrite, cacheRead int64) (float64, bool) {
+// CostTokens computes the USD cost of tk for model using t, trying the exact model name
+// then its normalized form. ok is false when the model is not priced. A cache write is
+// split at its 1-hour portion and each part billed at its own rate; a source that does not
+// report the tier leaves that portion zero and is priced exactly as before.
+func (t Table) CostTokens(model string, tk Tokens) (float64, bool) {
 	p, ok := t[model]
 	if !ok {
 		p, ok = t[NormalizeModel(model)]
@@ -90,9 +112,13 @@ func (t Table) CostTokens(model string, in, out, cacheWrite, cacheRead int64) (f
 	if !ok {
 		return 0, false
 	}
-	cost := float64(in)*p.Input +
-		float64(out)*p.Output +
-		float64(cacheWrite)*p.CacheWrite +
-		float64(cacheRead)*p.CacheRead
+	// The 1-hour portion is clamped to the write it is part of: a stored subset larger than
+	// its whole would otherwise bill a negative 5-minute remainder.
+	long := min(max(tk.CacheWrite1h, 0), max(tk.CacheWrite, 0))
+	cost := float64(tk.In)*p.Input +
+		float64(tk.Out)*p.Output +
+		float64(tk.CacheWrite-long)*p.CacheWrite +
+		float64(long)*p.CacheWrite1h +
+		float64(tk.CacheRead)*p.CacheRead
 	return cost, true
 }

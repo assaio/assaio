@@ -88,7 +88,7 @@ func memberTotals(rows []store.UsageRow, prices pricing.Table) (lines map[string
 	for i := range rows {
 		m := rows[i].Member
 		lines[m] += rows[i].LinesAdded
-		if c, ok := prices.CostTokens(rows[i].Model, rows[i].In, rows[i].Out, rows[i].CacheWrite, rows[i].CacheRead); ok {
+		if c, ok := prices.CostTokens(rows[i].Model, pricing.Tokens{In: rows[i].In, Out: rows[i].Out, CacheWrite: rows[i].CacheWrite, CacheRead: rows[i].CacheRead, CacheWrite1h: rows[i].CacheWrite1h}); ok {
 			cost[m] += c
 			hasCost[m] = true
 		} else {

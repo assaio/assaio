@@ -101,7 +101,7 @@ func BuildInventory(rows []store.UsageRow, t pricing.Table) Inventory {
 		days[r.Day] = struct{}{}
 		inv.TotalLinesAdded += r.LinesAdded
 
-		if c, ok := t.CostTokens(r.Model, r.In, r.Out, r.CacheWrite, r.CacheRead); ok {
+		if c, ok := t.CostTokens(r.Model, pricing.Tokens{In: r.In, Out: r.Out, CacheWrite: r.CacheWrite, CacheRead: r.CacheRead, CacheWrite1h: r.CacheWrite1h}); ok {
 			cost += c
 			hasCost = true
 		} else {

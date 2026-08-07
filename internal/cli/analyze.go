@@ -169,9 +169,14 @@ func buildAnalyzeInputFiltered(cmd *cobra.Command, st *store.Store, start time.T
 	if err != nil {
 		return analyze.Input{}, err
 	}
+	misses, err := st.CacheMissesFiltered(cmd.Context(), start, filter)
+	if err != nil {
+		return analyze.Input{}, err
+	}
 	in := analyze.BuildInput(usageRows, sessionRows, table, time.Now(), analyzeRecentWindow, analyze.Delegation{Sub: sub, Total: total})
 	in.TurnSizing = turns
 	in.Skills, in.Agents = skills, agents
+	in.CacheMisses = misses
 	// Provenance is diagnostic, not a figure: a store that cannot answer leaves it unknown
 	// rather than failing an analysis that is otherwise complete.
 	in.Ingested, in.ParsedBy, _ = st.Provenance(cmd.Context())

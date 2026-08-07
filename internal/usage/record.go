@@ -14,6 +14,17 @@ type Record struct {
 	OutputTokens     int64
 	CacheReadTokens  int64
 	CacheWriteTokens int64
+	// CacheWrite1hTokens is the portion of CacheWriteTokens that bought a 1-hour cache
+	// lifetime rather than the default 5-minute one; a subset, never added to a total, and
+	// priced at its own higher rate. 0 for sources that do not report the tier -- which is
+	// indistinguishable from "all writes were 5-minute", so any figure over it declares its
+	// own coverage.
+	CacheWrite1hTokens int64
+	// CacheMissReason is why the vendor could not serve this turn's prompt from cache, from
+	// the tool's own closed vocabulary (Claude Code: messages_changed, model_changed,
+	// previous_message_not_found, system_changed, tools_changed, unavailable); "" when the
+	// turn hit cache or the source reports no reason. A category label, never content.
+	CacheMissReason string
 	// ReasoningTokens is the thinking/reasoning portion that is already included in
 	// OutputTokens (an informational subset, billed at the output rate). It is never
 	// added to a token total and never priced on its own -- doing either double-counts.
