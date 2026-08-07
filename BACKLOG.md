@@ -33,7 +33,103 @@ the source-depth matrix (`B58`, `B59`, `B69`, `B81`, `B82`, `B83`, all v0.5), an
 annotations with per-kind-of-work stratification (`B80`, v0.6) alongside the GitHub Copilot
 CLI parser (`B53`, v0.6). See [CHANGELOG.md](CHANGELOG.md) and [FEATURES.md](FEATURES.md).
 
-## Next — "Evidence Graph: from session to shipped change"
+## Now — "Correctness lockdown"
+
+Nothing new is built on top of a surface that is known to be wrong. Every item here is a
+defect in something already shipped, each with the reproduction that found it, and they are
+listed in the pool below as `B119`–`B136`. They close first. The reason is v0.12: the flagship
+parser was 2x wrong for eleven releases and every honesty guard this project owns said it was
+fine.
+
+## Next — "Calibrated measurement"
+
+The guard the v0.12 class of bug needs, which provenance and coverage cannot provide.
+
+- [ ] **B137 · conservation + metamorphic suite** — L · both — the check whose expected answer
+  does **not** come from the parser that produces it, because a golden written from a mistaken
+  reading preserves the mistake — which is exactly what happened for eleven releases. Four
+  parts. (1) *Independently adjudicated traces*: a redacted real sample per claimed capability
+  whose totals — logical responses, requests, tokens by class, tool calls, created and updated
+  files, changed lines — were counted by hand or by a second implementation, never by
+  `internal/parser`. (2) *Accounting invariants*, asserted for every source: one logical
+  response is billed once; the cache classes sum to the input they are part of; a created file
+  contributes its lines; rework never exceeds the additions it is undoing (`B132`); skipped
+  evidence is counted and withholds a verdict rather than lowering it. (3) *Metamorphic
+  properties*: splitting one response across N blocks that repeat its usage must not change a
+  token total, and writing the same file creation as a unified diff or as `content` must not
+  change a line count — those two alone would have caught both of v0.12's defects. (4)
+  *Cross-surface assertions*: `report`, `status`, the dashboard, `sync` and a metric plugin
+  cannot render different totals for the same window, which the roadmap already promises and
+  nothing currently enforces. Supersedes the "captured real-world samples" half of `B20`.
+- [ ] **B19 · offline billing reconciliation** — M · both — import a vendor's own billing or
+  usage export (a CSV or JSON download, no credential, no network) and report the
+  estimate-vs-actual delta with its confidence band, the scope mismatch behind it, and an
+  unexplained-delta figure. This is the only external oracle for aggregate tokens and money the
+  project can have, and it would have surfaced v0.12's 2x on the first run. It never edits a
+  figure to make it agree; a delta it cannot explain is the output, not an error. Cannot check
+  a line count, an edit attribution, a per-session split, or anything on a flat-rate plan —
+  those need `B137`'s invariants and git, and the report says so.
+
+## Then — "Everything the logs already say"
+
+Depth before breadth, and before correlation. This milestone is the half of the product that
+needs no server, no credential and no repository — and the half every other conclusion rests
+on, since a link to a merged pull request is only as good as the session it links.
+
+- [ ] **B107 · Codex cache-write tokens are never read** — S · solo —
+  `payload.info.total_token_usage.cache_write_input_tokens` is reported on every Codex
+  `token_count` and `usage.Record` gets no value for it. **Measure before claiming a
+  correction**: on the audited corpus the field carried a value on 238 events and was zero on
+  every one, so this fixes no number here — the reason to read it is that a zero nobody looked
+  at and a zero the vendor reported are different facts, and a different plan or model may not
+  share it. Two things have to be settled first, and neither is guessable from that corpus:
+  whether `input_tokens` already contains the write (it does contain `cached_input_tokens`,
+  which the parser subtracts), and how history gets the value, since the local restate covers
+  activity and granularity but deliberately not tokens. A `backfill --full` alone will not do
+  it.
+- [ ] **B109 · Copilot CLI is deeper than its matrix row** — M · both — the audit found named
+  tool calls (`data.toolRequests[].name`), per-call line counts
+  (`data.toolTelemetry.metrics.linesAdded`/`linesRemoved`), per-model request counts
+  (`data.modelMetrics.<model>.requests.count`), a published cache TTL
+  (`data.modelCacheState[].cacheTtlSeconds`) and sub-agent parentage
+  (`data.parentAgentTaskId`) — every one of them a signal its depth row currently declares it
+  cannot answer. Per-call lines are the interesting half: they would end the "credited whole to
+  the model with the most requests" compromise. The corpus behind this is three sessions, so
+  verify against a real one before writing the row.
+- [ ] **B110 · Gemini CLI: the parsed shape is missing from a current install** — S/M · solo —
+  the two files matching the discovery glob on the audited machine contain no token field at
+  all (`files=2 records=0`), and the wider `~/.gemini` tree carries a different vocabulary
+  (`CHECKPOINT`, `PLANNER_RESPONSE`, `CONVERSATION_HISTORY`) with no `tokens` object anywhere.
+  Either the recording moved or these files were never the token source; settle which against a
+  fresh session before touching the parser. **The second half is ours, not Gemini's**: a source
+  this small is invisible to every drift canary, since each needs a 20-file sample floor. A
+  source that has always had a handful of files needs a canary that can fire on "discovered
+  files, parsed zero records", which none of the four does.
+- [ ] **B111 · the human correction, recorded rather than proxied** — S · solo —
+  `toolUseResult.userModified` marks an edit the person changed after the AI wrote it, on a
+  meaningful share of Claude edit results. `rework` today infers correction from add-then-remove
+  churn within a transcript and says it is a proxy; this is the thing itself. Ships as its own
+  signal beside `ai.rework.lines`, never folded into it — they mean different things.
+- [ ] **B112 · attribution beyond skill and sub-agent, and the build that wrote the line** — M ·
+  solo — Claude stamps `attributionPlugin` and `attributionMcpServer`/`attributionMcpTool` on a
+  large share of turns, which would widen `skill-economics` from two dimensions to four and give
+  MCP servers a cost of their own. Alongside it, `version` on every line is the harness-version
+  cohort input `B96` assumes needs a server — it is already on disk, offline, per turn.
+- [ ] **B113 · how a turn ended** — S/M · both — three fields for one signal: Claude's
+  `message.stop_reason` (`max_tokens` marks a truncated answer), `toolUseResult.interrupted` (a
+  command the human cut short), and Codex's `turn_aborted` with `reason: interrupted`. Together
+  they distinguish a turn that finished from one that was stopped, which every efficiency figure
+  currently averages together. Codex's `changes.<path>.{type,move_path}` belongs here too: an
+  add, an update and a rename are one undifferentiated edit today.
+- [ ] **B114 · Codex states its own limits** — M · both — `payload.info.model_context_window` is
+  the model's context limit on every `token_count`, which is what `B16` proposes to vendor a
+  table for; and `payload.rate_limits.{plan_type,primary.used_percent,primary.resets_at,credits}`
+  is the only place any source says how close a session ran to a plan's ceiling. That is the
+  subscription question `subscription-fit` answers from a configured number today, answered
+  from the vendor's own accounting instead. Both are per-session state rather than usage, so the
+  storage shape needs deciding first.
+
+## After that — "Evidence Graph: from session to shipped change"
 
 The outcome layer, pulled ahead of recommendations: a suggestion built on activity and
 output proxies alone is a guess with a confident voice. First connect a session to the
@@ -131,7 +227,7 @@ does not ship.
   connector, not after it: local-only defaults, field-level sync policy, retention, minimum
   cohort for any server view, and a test asserting no ranking surface exists.
 
-## After that — "Harness intelligence & verified improvement"
+## Then — "Harness intelligence & verified improvement"
 
 Agent configuration — `AGENTS.md`, rules, skills, sub-agents, hooks, MCP servers — is a
 versioned engineering input, not magic that is assumed to help. Once outcomes are linkable,
@@ -170,7 +266,7 @@ recommendation can rest on outcome rather than on activity.
   evidence behind a finding. Never exposes prompts, code, secrets, or — in anonymized mode —
   project names.
 
-## Then — "Team adoption, without surveillance"
+## After that — "Team adoption, without surveillance"
 
 A team self-hosts it, sees cross-tool adoption and delivery outcomes, and cannot build a
 leaderboard from it.
@@ -196,9 +292,11 @@ Every `$` today is an estimate at public pay-as-you-go prices, which a flat-rate
 subscription makes structurally different from real spend — and assaio's own model should
 speak a standard rather than only its own dialect.
 
-- [ ] **B19 · vendor billing reconciliation** — M/L · both — opt-in pull of Anthropic/OpenAI
-  usage/cost APIs; estimate-vs-actual delta with a confidence band and an unexplained-delta
-  report. Network- and credential-gated; pulls vendor aggregates only, never uploads logs.
+- [ ] **B138 · credentialed billing pull** — M/L · both — the network half of the
+  reconciliation `B19` moved up to "Calibrated measurement": an opt-in pull of the Anthropic/OpenAI usage and cost
+  APIs so the reconciliation runs unattended instead of from a downloaded export. Network- and
+  credential-gated; pulls vendor aggregates only, never uploads logs. Deliberately second: the
+  offline import carries most of the value and needs nobody's key.
 - [ ] **B16 · context-utilization** — M · both — vendored model context-window table (like
   the price table) → peak context vs model limit, near-limit share, and honest right-sizing
   hints. Prerequisite for pricing long-context and cache tiers instead of one flat rate. For
@@ -215,82 +313,30 @@ speak a standard rather than only its own dialect.
   validator, parser-drift tests and a privacy manifest. What makes a community connector
   possible without touching core packages. Supersedes the "more parsers in core" reflex.
 
-## v1.0 — "Stable open evidence platform"
+## v1.0 — "Measurements worth depending on"
 
-The one milestone that keeps a version number, because there the number *is* the promise:
-`v1.0` is the semver stability guarantee.
+The one milestone that keeps a version number, because there the number *is* the promise. It is
+**not** only the semver guarantee any more: after v0.12 the bar leads with calibration, because
+a frozen contract over an uncalibrated measurement is a stable wrong answer, which is worse than
+a breaking correct one. The six conditions are spelled out in
+[ROADMAP.md](ROADMAP.md#what-v10-has-to-mean); the contract freeze is the last of them, not the
+first.
 
-Plugin authors and any future managed cloud can build on it without breakage.
-
-- [ ] **B23 · protocol & schema freeze** — M · both — declare the exec plugin protocols
-  (parser, metric, rule), the canonical event and signal contracts, the sync API and the
-  SQLite schema stable under semver, with conformance fixtures and deprecation windows.
-- [ ] **B24 · in-process plugin API (research first)** — L · both — the mechanism is **not**
+- [ ] **B23 · protocol freeze** — M · both — declare the exec plugin protocols (parser,
+  metric, rule), the canonical event and signal contracts and the sync API stable under semver,
+  with conformance fixtures and deprecation windows. **The SQLite schema is deliberately
+  excluded**: v0.12 needed a migration that rewrote stored rows to correct a semantic error and
+  it will not be the last, so freezing the store would make every future correction a breaking
+  change and create pressure to leave a wrong number in place. It stays internally versioned
+  and migratable — a promise about correctability, not the absence of one.
+- [ ] **B24 · in-process plugin API (research first)** — L · both — **no longer a v1.0
+  condition**: it is a research question, not a readiness bar. The mechanism is **not**
   decided, and native Go plugins are explicitly not a v1 requirement: they need cgo, do not
   work on Windows, and require host and plugin built with identical toolchain and dependency
   versions, which contradicts shipping one static binary per platform. Evaluate a sandboxed
   WebAssembly/WASI component instead — it brings capability limits and resource budgets — and
   keep exec plugins as the universal baseline either way. Deliverable is a decision record,
   not code.
-
-## Next — "Everything the logs already say"
-
-Depth before breadth, and before correlation. This milestone is the half of the product that
-needs no server, no credential and no repository — and the half every other conclusion rests
-on, since a link to a merged pull request is only as good as the session it links.
-
-- [ ] **B107 · Codex cache-write tokens are never read** — S · solo —
-  `payload.info.total_token_usage.cache_write_input_tokens` is reported on every Codex
-  `token_count` and `usage.Record` gets no value for it. **Measure before claiming a
-  correction**: on the audited corpus the field carried a value on 238 events and was zero on
-  every one, so this fixes no number here — the reason to read it is that a zero nobody looked
-  at and a zero the vendor reported are different facts, and a different plan or model may not
-  share it. Two things have to be settled first, and neither is guessable from that corpus:
-  whether `input_tokens` already contains the write (it does contain `cached_input_tokens`,
-  which the parser subtracts), and how history gets the value, since the local restate covers
-  activity and granularity but deliberately not tokens. A `backfill --full` alone will not do
-  it.
-- [ ] **B109 · Copilot CLI is deeper than its matrix row** — M · both — the audit found named
-  tool calls (`data.toolRequests[].name`), per-call line counts
-  (`data.toolTelemetry.metrics.linesAdded`/`linesRemoved`), per-model request counts
-  (`data.modelMetrics.<model>.requests.count`), a published cache TTL
-  (`data.modelCacheState[].cacheTtlSeconds`) and sub-agent parentage
-  (`data.parentAgentTaskId`) — every one of them a signal its depth row currently declares it
-  cannot answer. Per-call lines are the interesting half: they would end the "credited whole to
-  the model with the most requests" compromise. The corpus behind this is three sessions, so
-  verify against a real one before writing the row.
-- [ ] **B110 · Gemini CLI: the parsed shape is missing from a current install** — S/M · solo —
-  the two files matching the discovery glob on the audited machine contain no token field at
-  all (`files=2 records=0`), and the wider `~/.gemini` tree carries a different vocabulary
-  (`CHECKPOINT`, `PLANNER_RESPONSE`, `CONVERSATION_HISTORY`) with no `tokens` object anywhere.
-  Either the recording moved or these files were never the token source; settle which against a
-  fresh session before touching the parser. **The second half is ours, not Gemini's**: a source
-  this small is invisible to every drift canary, since each needs a 20-file sample floor. A
-  source that has always had a handful of files needs a canary that can fire on "discovered
-  files, parsed zero records", which none of the four does.
-- [ ] **B111 · the human correction, recorded rather than proxied** — S · solo —
-  `toolUseResult.userModified` marks an edit the person changed after the AI wrote it, on a
-  meaningful share of Claude edit results. `rework` today infers correction from add-then-remove
-  churn within a transcript and says it is a proxy; this is the thing itself. Ships as its own
-  signal beside `ai.rework.lines`, never folded into it — they mean different things.
-- [ ] **B112 · attribution beyond skill and sub-agent, and the build that wrote the line** — M ·
-  solo — Claude stamps `attributionPlugin` and `attributionMcpServer`/`attributionMcpTool` on a
-  large share of turns, which would widen `skill-economics` from two dimensions to four and give
-  MCP servers a cost of their own. Alongside it, `version` on every line is the harness-version
-  cohort input `B96` assumes needs a server — it is already on disk, offline, per turn.
-- [ ] **B113 · how a turn ended** — S/M · both — three fields for one signal: Claude's
-  `message.stop_reason` (`max_tokens` marks a truncated answer), `toolUseResult.interrupted` (a
-  command the human cut short), and Codex's `turn_aborted` with `reason: interrupted`. Together
-  they distinguish a turn that finished from one that was stopped, which every efficiency figure
-  currently averages together. Codex's `changes.<path>.{type,move_path}` belongs here too: an
-  add, an update and a rename are one undifferentiated edit today.
-- [ ] **B114 · Codex states its own limits** — M · both — `payload.info.model_context_window` is
-  the model's context limit on every `token_count`, which is what `B16` proposes to vendor a
-  table for; and `payload.rate_limits.{plan_type,primary.used_percent,primary.resets_at,credits}`
-  is the only place any source says how close a session ran to a plan's ceiling. That is the
-  subscription question `subscription-fit` answers from a configured number today, answered
-  from the vendor's own accounting instead. Both are per-session state rather than usage, so the
-  storage shape needs deciding first.
 
 ## Pool — validators from data already stored (unscheduled)
 
