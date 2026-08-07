@@ -78,22 +78,96 @@ two of them, and pre-assigning `v0.7` to a promise would make this document sche
 explicitly says it does not schedule. `v1.0` is the exception, because there it is the
 promise: the semver stability guarantee itself.
 
-The first two unshipped rows are the exception to "one at a time": **evidence graph** and
-**everything the logs already say** run in parallel, because they improve different things
-and one of them is the floor under the other. When the two compete for a release's attention,
-depth of analysis wins — see [why](#why-local-analysis-is-the-stronger-half-not-the-smaller-one)
-below.
+The order changed after v0.12, and the reason is worth stating before the table rather than
+after it. For eleven releases the Claude Code parser counted one API response once per content
+block, because Claude writes one line per block and repeats that response's token usage on
+each. Every token and cost figure for the flagship source was roughly **2× too high**. Nothing
+looked broken: the numbers were plausible, internally consistent, and passed every test, fuzz
+target, golden file, drift canary and capability gate this project had built. It was found by
+a person reading the code, and the same read found that the Codex parser silently drops about
+half of its added lines (`B119`). See [why calibration now leads](#why-calibration-comes-before-correlation).
+
+So **correctness lockdown** and **calibrated measurement** come first, then the remaining depth
+in the logs, and the evidence graph waits behind all three. Correlation on top of an uncalibrated measurement does not produce a wrong
+number — it produces a *more persuasive* wrong number, which is the one failure this project
+cannot absorb.
 
 | Milestone | Promise | Done when |
 |---|---|---|
 | **Trust the dataset** ✓ | Before `assaio` advises anything, it shows what it read, what it missed, and how sure it is | shipped in v0.5: every validator carries coverage + confidence as data, format drift is detected instead of silently under-reporting, `doctor --strict` fails a cron job, every source publishes its real depth, and a first run needs no config (`B58`, `B59`, `B69`, `B81`, `B82`, `B83`) |
 | **Intent** ✓ | Metrics can be read per kind of work | shipped in v0.6: a session can be labeled task class / outcome / difficulty, any metric stratified by it, and unlabeled data stays fully counted (`B80`) |
+| **Correctness lockdown** | Every known wrong number, false green and silent data loss in a shipped surface is closed before anything new is built on top | the whole-codebase review's defects are fixed, each with the reproduction that found it: Codex's dropped file creations (`B119`), the DSN that can open the wrong database (`B120`), `clear` leaving a store that no `backfill` refills (`B121`), `--labels` ignoring every scope flag (`B122`), `doctor --strict` exiting 0 on a broken store (`B123`), survival reading a failed blame as "did not survive" (`B124`, `B125`), worktrees collapsing into one project (`B126`), units chosen before rounding (`B127`), an eight-day "seven-day" window (`B128`), unattributed usage counted as a project (`B129`), anonymous CSV rows (`B130`), a real cost rendered `$0` (`B131`), a rework rate that can exceed 100% (`B132`), and the unbounded plugin timestamp (`B133`)–(`B136`) |
+| **Calibrated measurement** | Every figure assaio publishes has been checked against something that is not assaio, and a semantic mis-read fails a test instead of shipping | a conservation and metamorphic suite whose expected totals are adjudicated independently of the parser that produces them, so splitting one response across blocks, or writing one file creation two ways, cannot change a total (`B137`); an offline reconciliation against a vendor's own billing or usage export, reporting scope mismatch and unexplained delta rather than forcing agreement (`B19`); and a parser fix that can find and rebuild every stored row it invalidates (`B116`, `B118`) |
+| **Everything the logs already say** | Without a server, a repository or a credential, `assaio` reads every signal the local logs carry, proves the reading is right, and turns it into more conclusions than any vendor dashboard draws from the same file | every source's unread fields are inventoried and either extracted or documented as deliberately skipped, done in v0.10 ([the audit](docs/extending.md#what-each-sources-log-carries-and-what-assaio-reads)); what it found is extracted (`B107`–`B114`, of which the cache tier and miss cause shipped in v0.12 as `B108`); the activity gap closes where a log carries the data (`B39`, `B72`); the local-view metrics land as one file each with their caveats (`B28`–`B37`, `B02`, `B78`, `B79`); and a parser proves itself against evidence it did not generate, so a mis-read fails a test instead of shipping (`B137`) |
 | **Evidence graph** | You can see which AI sessions produced commits and pull requests, what happened in review and CI, and how sure `assaio` is about every link | the canonical event contract ([ADR 0007](docs/adr/0007-canonical-event-contract.md)) and the signal catalog ([ADR 0008](docs/adr/0008-signal-catalog.md)) exist, both shipped; local git commit metadata is a content-free observation, shipped, and GitHub PR/review/check metadata is not yet; the conformance corpus that defines what an honest link is, shipped ahead of the engine ([ADR 0010](docs/adr/0010-attribution-conformance-corpus.md)); attribution edges carry method, confidence, alternatives and ambiguity; ambiguous stays ambiguous; `outcomes` shows the funnel with its unattributed share and `evidence explain` says why a link was or was not made (`B92`, `B94`, `B85`, `B18`, `B21`, `B100`–`B104`) |
-| **Everything the logs already say** | Without a server, a repository or a credential, `assaio` reads every signal the local logs carry, proves the reading is right, and turns it into more conclusions than any vendor dashboard draws from the same file | every source's unread fields are inventoried and either extracted or documented as deliberately skipped, done in v0.10 ([the audit](docs/extending.md#what-each-sources-log-carries-and-what-assaio-reads)); what it found is extracted (`B107`–`B114`, of which the cache tier and miss cause shipped in v0.12 as `B108`); the activity gap closes where a log carries the data (`B39`, `B72`); the local-view metrics land as one file each with their caveats (`B28`–`B37`, `B02`, `B78`, `B79`); and a parser proves itself against captured real-world samples rather than only against fixtures, so a format change fails a test before it reaches a report (`B20`) |
 | **Harness intelligence** | You learn which agent configuration and workflow changes actually helped, and each finding comes with one reversible experiment | agent config artifacts are inventoried without storing their content; cohorts can be compared before and after a harness version changed; recommendations are deterministic rules carrying evidence, one action, a follow-up metric and a review window, and abstain when outcome coverage is thin — never an LLM narrating a dashboard (`B95`, `B96`, `B84`, `B97`, `B87`, `B17`, `B44`) |
 | **Team, without surveillance** | A team self-hosts it, sees adoption and delivery outcomes, and cannot build a leaderboard from it | authenticated, resumable sync with retention and roles; adoption read as activation → retention → breadth, in bands with a cohort floor (`B22`, `B09`, `B40`, `B41`) |
-| **Cost truth & interoperability** | The `$` figure can be reconciled against what was actually billed, and the data speaks a standard | opt-in vendor billing reconciliation shows the estimate-vs-actual delta with a confidence band; pricing models long-context and cache tiers; canonical fields map to OpenTelemetry GenAI conventions with content dropped by default; a connector SDK makes a community source possible without touching core (`B19`, `B16`, `B98`, `B99`) |
-| **v1.0 · Stable platform** | Plugin authors and a managed cloud can build on it without breakage | plugin protocols, the event and signal contracts, the sync API and the schema frozen under semver, with conformance fixtures (`B23`) |
+| **Cost truth & interoperability** | The `$` figure can be reconciled against what was actually billed, and the data speaks a standard | the credentialed billing pull runs the reconciliation unattended once the offline import proves it (`B138`); pricing models long-context as it now models cache tiers (`B16`); canonical fields map to OpenTelemetry GenAI conventions with content dropped by default (`B98`); a connector SDK makes a community source possible without touching core (`B99`) |
+| **v1.0 · Measurements worth depending on** | The numbers have been checked against something outside assaio, a wrong one fails visibly rather than quietly, and the contracts a third party builds on are frozen | see [What v1.0 has to mean](#what-v10-has-to-mean) — calibration first, contract freeze second (`B23`, `B99`) |
+
+### Why calibration comes before correlation
+
+The honesty machinery this project already has is real, and it was not enough. ADR 0011 stopped
+absence being read as zero; the confidence envelope stops a thin verdict being quoted as a solid
+one; the drift canaries watch for a format that moved. Every one of those answers the question
+*"is this field present and how much does it cover?"* — and v0.12's bug answered yes to all of
+them while being twice wrong, because the field was present, complete, and **counted at the
+wrong semantic grain**. Provenance cannot rescue a systematic parser bias. A metric computed
+over a field that turned out to mean something else looks exactly like a metric that works.
+
+That is a different class of failure and it needs a different guard, so the roadmap now names
+one. The guard is not "more golden files": a golden produced from the same mistaken reading
+preserves the mistake, which is precisely what happened here for eleven releases. What catches
+it is a check whose expected answer does not come from the parser — an independently adjudicated
+total, an accounting invariant (*one logical response is billed once*; *the cache classes sum to
+the input*), a metamorphic property (*writing the same file creation as a diff or as `content`
+must not change the line count*), and a cross-surface assertion that `report`, `status`, the
+dashboard and `sync` cannot disagree. That is `B137`.
+
+The second guard is external, and there is only one true source of it: **what the vendor
+actually billed**. `B19` sat under "Later" as a cost-truth nicety; it is really the only oracle
+that can tell assaio its aggregate token counts are wrong, and it would have caught the 2×
+immediately. It moves forward and splits — `B19`, an offline import of a billing or usage
+export, needs no credential and no network and is most of the value; `B138`, the credentialed
+API pull, can follow. Reconciliation reports the delta and its scope mismatch; it never edits a
+figure to agree.
+
+Billing is not a universal oracle and the roadmap should not pretend otherwise: it cannot check
+a line count, an edit attribution, a per-session allocation, or anything on a flat-rate plan.
+Those need their own external checks — git is the ground truth for changed lines, and a
+controlled session with a known shape is the ground truth for event grain.
+
+### What v1.0 has to mean
+
+The old bar was "the plugin protocols, the event and signal contracts, the sync API and the
+SQLite schema are frozen under semver". That is a platform-maintainer's definition, and after
+v0.12 it is the wrong one to lead with: a frozen contract over an uncalibrated measurement is a
+stable wrong answer, which is worse than a breaking correct one.
+
+`v1.0` is declared when all of the following are true, and not before:
+
+1. **Every claimed capability is calibrated.** Each in-tree source either passes the `B137`
+   conservation and metamorphic suite for every signal its depth row claims, or its row is
+   downgraded to experimental/import-only until it does.
+2. **The two deep sources have been reconciled against outside evidence.** Claude Code and
+   Codex totals check out against a real billing or usage export across more than one install
+   and more than one window, with no unexplained multiplicative gap.
+3. **No known wrong number, false green, or silent data loss is open.** The correctness-lockdown
+   milestone is closed, not deferred.
+4. **A correction can reach history.** A parser fix identifies and rebuilds every stored field
+   it invalidates, or says plainly which rows it cannot (`B116`); nothing repeats the v0.12
+   situation where the store held a figure no re-read could correct.
+5. **Failure is visible.** Unsupported or failed evidence renders `—`, an error, or an
+   unexplained-delta warning — never a zero and never a confident percentage.
+6. **Then the contracts freeze.** The exec plugin protocols, the event and signal contracts and
+   the sync API get conformance fixtures and semver guarantees (`B23`, `B99`).
+
+Deliberately **not** in that list: freezing the SQLite schema. v0.12 needed a migration that
+rewrote stored rows to correct a semantic error, and it will not be the last; a frozen store
+schema would make every future correction a breaking change and create pressure to leave a wrong
+number in place. The store stays internally versioned and migratable, and that is a promise
+about *correctability*, not an absence of one. The in-process plugin API (`B24`) also leaves the
+v1.0 path entirely — it is a research question, not a readiness condition.
 
 ### Why local analysis is the stronger half, not the smaller one
 
@@ -191,10 +265,11 @@ the real depth of each source it read.
   deep parser.
 - **Cost truthfulness.** Every `$` is an estimate at public pay-as-you-go API prices, which
   a flat-rate subscription makes structurally different from real spend. Two candidates
-  close the gap: opt-in **vendor billing reconciliation** (pull Anthropic/OpenAI usage
-  APIs, show the estimate-vs-actual delta with a confidence band — `B19`), and **tiered /
-  context-length pricing** (long-context and distinct cache read/write rates a single
-  per-model number can't capture — `B16`).
+  close the gap: **vendor billing reconciliation**, which v0.12 promoted out of this theme into
+  [calibration](#why-calibration-comes-before-correlation) because it is the only external
+  oracle assaio has for its own token counts — offline import first (`B19`), the credentialed
+  pull second (`B138`) — and **long-context pricing** (`B16`; the cache-tier half shipped in
+  v0.12, so one per-model number no longer hides a 1.6x write rate).
 
 ### 3. Deeper local analysis — the half that has to be strongest
 
