@@ -46,3 +46,15 @@ func TestPercentOrDash(t *testing.T) {
 		}
 	}
 }
+
+// TestPercentEdgesAreSymmetric is B127's sibling: an exact 0.5% fell through to the
+// default and printed "0%" -- the precise rounding this function exists to refuse -- while
+// an exact 99.5% was already caught by the upper guard's >=.
+func TestPercentEdgesAreSymmetric(t *testing.T) {
+	if got := Percent(0.005); got != "<1%" {
+		t.Errorf("Percent(0.005) = %q, want %q", got, "<1%")
+	}
+	if got := Percent(0.995); got != ">99%" {
+		t.Errorf("Percent(0.995) = %q, want %q", got, ">99%")
+	}
+}

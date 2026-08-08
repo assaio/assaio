@@ -104,3 +104,47 @@ func TestInsertSteadyStateRerunWritesNothing(t *testing.T) {
 		t.Fatalf("inserted on an unchanged re-run = %d, want 0", n)
 	}
 }
+
+// TestRestateLowersReworkFromACorrectedRule is B132's other half: rework_lines is derived
+// by a rule rather than read from the log, so a build that corrects the rule downward has
+// to be able to say so. MAX would have pinned every stored row at the inflated figure.
+func TestRestateLowersReworkFromACorrectedRule(t *testing.T) {
+	st, ctx := newStore(t), context.Background()
+	inflated := restateRecord(1, 1, "")
+	inflated.ReworkLines = 40
+	if _, err := st.InsertLocal(ctx, []usage.Record{inflated}); err != nil {
+		t.Fatal(err)
+	}
+	corrected := restateRecord(1, 1, "")
+	corrected.ReworkLines = 12
+	if _, err := st.InsertLocal(ctx, []usage.Record{corrected}); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := st.Usage(ctx, time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].ReworkLines != 12 {
+		t.Fatalf("rows = %+v, want one row with ReworkLines=12", rows)
+	}
+}
+
+// TestRestateStillRaisesActivityFromALaterRead keeps the append-only repair the MAX columns
+// exist for: a session read while it was still being written must not pin its own undercount.
+func TestRestateStillRaisesActivityFromALaterRead(t *testing.T) {
+	st, ctx := newStore(t), context.Background()
+	partial := restateRecord(1, 0, "")
+	partial.LinesAdded = 5
+	if _, err := st.InsertLocal(ctx, []usage.Record{partial}); err != nil {
+		t.Fatal(err)
+	}
+	complete := restateRecord(3, 2, "")
+	complete.LinesAdded = 21
+	if _, err := st.InsertLocal(ctx, []usage.Record{complete}); err != nil {
+		t.Fatal(err)
+	}
+	rows, _ := st.Usage(ctx, time.Time{})
+	if len(rows) != 1 || rows[0].LinesAdded != 21 {
+		t.Fatalf("rows = %+v, want one row with LinesAdded=21", rows)
+	}
+}

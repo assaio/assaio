@@ -19,7 +19,9 @@ func PercentAt(share float64, decimals int) string {
 	step := math.Pow10(-decimals)
 	pct := share * 100
 	switch {
-	case pct > 0 && pct < step/2:
+	// Both edges compare inclusively, so an exact half-step -- 0.5% at whole precision --
+	// takes the "<1%" branch instead of falling through to a rounded "0%".
+	case pct > 0 && pct <= step/2:
 		return "<" + strconv.FormatFloat(step, 'f', decimals, 64) + "%"
 	case pct < 100 && pct >= 100-step/2:
 		return ">" + strconv.FormatFloat(100-step, 'f', decimals, 64) + "%"

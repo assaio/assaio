@@ -1,8 +1,7 @@
 package dashboard
 
 import (
-	"strconv"
-
+	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/report"
 )
 
@@ -12,27 +11,14 @@ import (
 func costBasis(inv report.Inventory, window string) string {
 	total := "—"
 	if inv.TotalCost != nil {
-		total = formatCompactUSD(*inv.TotalCost)
+		total = humanize.USDCompact(*inv.TotalCost)
 		if inv.HasUnpriced {
 			total += "*"
 		}
 	}
 	perDay := "—"
 	if inv.TotalCost != nil && inv.Days > 0 {
-		perDay = formatCompactUSD(*inv.TotalCost / float64(inv.Days))
+		perDay = humanize.USDCompact(*inv.TotalCost / float64(inv.Days))
 	}
 	return total + " / " + window + " · " + perDay + " per active day"
-}
-
-// formatCompactUSD renders a USD amount compactly for the assay footnote, e.g.
-// 31500 -> "$31.5K", 750 -> "$750".
-func formatCompactUSD(v float64) string {
-	switch {
-	case v >= 1_000_000:
-		return "$" + strconv.FormatFloat(v/1_000_000, 'f', 1, 64) + "M"
-	case v >= 1_000:
-		return "$" + strconv.FormatFloat(v/1_000, 'f', 1, 64) + "K"
-	default:
-		return "$" + strconv.FormatFloat(v, 'f', 0, 64)
-	}
 }

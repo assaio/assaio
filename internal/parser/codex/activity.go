@@ -2,7 +2,6 @@ package codex
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/usage"
@@ -60,13 +59,6 @@ type patchApplyEnd struct {
 	Changes map[string]json.RawMessage `json:"changes"`
 }
 
-// patchFileChange is one file's entry in a patch_apply_end's changes map. The map key
-// (an absolute file path) is used only to scope rework tracking in memory and is never
-// copied onto a usage.Record (PRIVACY.md).
-type patchFileChange struct {
-	UnifiedDiff string `json:"unified_diff"`
-}
-
 // applyEventMsg routes an event_msg payload by its own type: token_count carries usage
 // deltas (existing behavior), patch_apply_end carries edit activity. Other event_msg
 // kinds (agent_message, task_started, ...) are filtered, not skipped.
@@ -102,30 +94,9 @@ func (st *parseState) applyPatchApplyEnd(payload json.RawMessage) {
 	}
 	st.pending.edits++
 	for file, raw := range p.Changes {
-		added, removed := diffLineCounts(raw)
+		added, removed := changeLineCounts(raw)
 		st.pending.linesAdded += added
 		st.pending.linesRemoved += removed
 		st.pending.reworkLines += parser.Rework(st.addedSoFar, file, added, removed)
 	}
-}
-
-// diffLineCounts counts a unified_diff's "+"/"-" prefixed body lines; a malformed entry
-// (not even a valid patchFileChange) contributes 0 rather than aborting the whole event.
-// File headers ("--- a/x", "+++ b/x") and the hunk header ("@@ ... @@") share the "+"/"-"
-// markers but are not body lines, so they must not count as added/removed lines.
-func diffLineCounts(raw json.RawMessage) (added, removed int64) {
-	var c patchFileChange
-	if err := json.Unmarshal(raw, &c); err != nil {
-		return 0, 0
-	}
-	for _, ln := range strings.Split(c.UnifiedDiff, "\n") {
-		switch {
-		case strings.HasPrefix(ln, "+++ "), strings.HasPrefix(ln, "--- "), strings.HasPrefix(ln, "@@"):
-		case strings.HasPrefix(ln, "+"):
-			added++
-		case strings.HasPrefix(ln, "-"):
-			removed++
-		}
-	}
-	return added, removed
 }

@@ -37,9 +37,11 @@ CLI parser (`B53`, v0.6). See [CHANGELOG.md](CHANGELOG.md) and [FEATURES.md](FEA
 
 Nothing new is built on top of a surface that is known to be wrong. Every item here is a
 defect in something already shipped, each with the reproduction that found it, and they are
-listed in the pool below as `B119`–`B136`. They close first. The reason is v0.12: the flagship
-parser was 2x wrong for eleven releases and every honesty guard this project owns said it was
-fine.
+listed in the pool below. They close first. The reason is v0.12: the flagship parser was 2x
+wrong for eleven releases and every honesty guard this project owns said it was fine.
+
+The eight that carried a wrong number or destroyed data closed in v0.13 (`B119`–`B123`,
+`B127`, `B131`, `B132`); `B124`–`B126` and `B128`–`B130`, `B133`–`B136` remain below.
 
 ## Next — "Calibrated measurement"
 
@@ -532,9 +534,12 @@ they wait behind features but keep the growing metric surface maintainable.
 - [ ] **B75 · humanize helpers** — S · both — `internal/humanize` landed in v0.4 with
   `analyze`'s two formatters (`compactCount`, `money`) moved onto it byte-identically. v0.11
   folded in `report.formatCompactTokens` (the `status` peak-context figure now reads `85.0K`
-  rather than `85k`) and moved every percentage onto `humanize.Percent`. Still out:
-  `dashboard.formatCompactUSD`, which rounds and cases differently again, so unifying it
-  *changes rendered output* and needs its own golden update.
+  rather than `85k`) and moved every percentage onto `humanize.Percent`. v0.13 took
+  `dashboard.formatCompactUSD` with `B131`, since the rounding that made it a duplicate was
+  also what printed a real cost as `$0`; the survivor is `humanize.USDCompact`. Still out:
+  `humanize.USD` and `USDCompact` disagree about the same amount — `USD` keeps cents below
+  $100 and has no M tier, `USDCompact` keeps them below $1 and has one — so `status` and the
+  dashboard still render one figure two ways, and reconciling them changes shipped output.
 - [ ] **B77 · readWhenEnough** — S · both — factor the "gate the favorable read behind a
   minimum-sample floor, else neutral" block shared verbatim by session-taxonomy,
   turn-efficiency, and model-right-sizing into one helper beside `readFor`.
@@ -581,7 +586,51 @@ they wait behind features but keep the growing metric surface maintainable.
   start timestamp) has two-part dedupe keys and therefore predates v0.1 — it is a prototype
   artifact, not a shipped build's output. This is a hole to close before a fix needs it, and
   the question it turns on is which of those columns a re-read of the same file is the
-  authority on (granularity already is, and for the documented reason).
+  authority on. **v0.13 answered it for one more column and found the second half of the
+  hole**: every activity column takes `MAX(stored, offered)`, so a correction that lowers a
+  figure cannot reach history at all — `B132`'s did not, until `rework_lines` joined
+  `granularity` as an assigned column. The rule that made that safe is stated and narrow (the
+  value is derived from the whole file by a rule that is monotone in the prefix read), and it
+  does not obviously extend to `lines_added` or the token counts, where MAX is repairing a
+  genuinely partial read. Deciding that per column is the remaining work, and a canary that
+  notices a re-read wanting to lower a figure is what would make it visible.
+
+## Pool — from the v0.13 whole-codebase review
+
+Same rule as the pool below: reproduced against the maintainer's own store before being
+written down. What v0.13 fixed is in [CHANGELOG.md](CHANGELOG.md) and not repeated here.
+
+- [ ] **B139 · nothing notices when the price table falls behind the models in use** — M ·
+  both — v0.13 refreshed the vendored LiteLLM snapshot and the acute case is gone: on the
+  maintainer's store 45.5% of tokens (22.7B of 49.8B) had no price because `claude-opus-5` was
+  absent, and the window's estimate rose $23,750.98 → $39,203.40 once it had one. **The
+  mechanism that let it happen is untouched.** Three parts, none of them a bigger asterisk.
+  (1) A refresh is a release chore with no owner and no test that fails when the table lags the
+  models in a real store — a stale table is indistinguishable from a complete one from inside,
+  which is why five weeks of drift produced no signal at all. (2) The `*` marker discloses the
+  condition wherever cost renders but **never quantifies it**: "includes unpriced usage" reads
+  the same at 0.1% and at 45%, and the reader cannot tell which they are looking at. (3)
+  `doctor` prints `pricing: N models, snapshot <date>` — a fact about the table, not about
+  *your* window — and `--strict` does not fire on it, so the largest single source of error in
+  the headline number stayed invisible to the gate that exists to catch exactly that. `B34`
+  proposes the validator; this is the diagnostic, the disclosure and the release gate, and it
+  wants a decision on what unpriced share is worth failing on.
+- [ ] **B140 · a Claude `<synthetic>` message is counted as a turn** — S · solo — Claude Code
+  writes locally-generated assistant messages (API errors, refusals to continue) with
+  `"model": "<synthetic>"` and an all-zero usage block. **Measured:** 551 of 163,976 records
+  (0.34%) on the audited store carry zero tokens, zero tool calls and zero lines — 565 counting
+  the other zero-token Claude rows. **One live consequence already found**: `<synthetic>` has no
+  price, so it sets `Row.HasUnpriced` while carrying no spend, and the first cut of v0.13's cost
+  gate keyed on that flag and failed every run on a fully priced store. The gate now keys on
+  unpriced tokens; every *other* reader of `HasUnpriced` — `report`, `status`, the dashboard —
+  still prints the "includes unpriced usage" asterisk on a window where nothing is missing.
+  Beyond that they are real events but not API requests, so
+  every per-record denominator (tokens per turn, the confidence envelope's "N usage rows",
+  the coverage weighting) is 0.34% larger than the population that could feed its numerator.
+  **Below the threshold of a wrong number here and recorded so it is not rediscovered as one**;
+  it matters if the share ever grows, which a rate-limited or erroring session would do. The
+  decision is whether a synthetic turn is a turn — `B113`'s "how a turn ended" is the same
+  question from the other side, so they probably answer together.
 
 ## Pool — from the v0.12 whole-codebase review
 
@@ -590,30 +639,6 @@ maintainer's own store or a live `git` before being written down. The two severe
 Code's ~2× token inflation and cache writes priced at one flat rate — shipped in v0.12 and
 are not repeated here.
 
-- [ ] **B119 · Codex drops the lines of a created file** — S · solo — `patchFileChange`
-  declares only `unified_diff`, but a file *creation* is `{"type":"add","content":"…"}`: it
-  unmarshals cleanly, leaves `UnifiedDiff` empty and returns `(0,0)`. Measured across 21 real
-  rollouts: 192 `update` changes counted 2,358 lines while **50 `add` changes dropped 2,428** —
-  roughly half of Codex's added lines are missing, and rework is seeded with `added=0` for
-  those files on top.
-- [ ] **B120 · `store.Open` can silently use the wrong database** — S · both — the DSN is
-  `"file:" + path + "?_pragma=…"` with `path` unescaped, so a `#` in it truncates the path and
-  `Open` still returns success against a database somewhere else, while a `?` truncates *and*
-  drops all three pragmas (WAL, busy_timeout, foreign_keys). Reachable from `XDG_DATA_HOME` or
-  any home directory containing `#`, `?` or `%`.
-- [ ] **B121 · `clear` then `backfill` restores nothing** — S · both — `Clear` empties
-  `usage_record` but never `ingest_file`, so every input still matches on size/mtime/version
-  and the next `backfill` reports `unchanged` and imports zero. Only `--full` recovers, and
-  nothing says so — while `clear`'s own help implies usage records can be rebuilt by
-  re-import. Either clear the watermarks with the rows, or say `--full` in the output.
-- [ ] **B122 · `clear --labels` ignores every scope flag** — S · both — `clearLabels` reads
-  only the labels flag and `DeleteLabels` is an unscoped `DELETE FROM session_label`, so
-  `clear --tool codex --labels` destroys claude-code's labels too. The one thing in the store
-  that no re-import can rebuild, since a person typed it.
-- [ ] **B123 · `doctor --strict` exits 0 on a broken store** — S · both — both store-failure
-  paths print `ERROR` and return nil, short-circuiting before the strict-failure check, so a
-  cron job with a corrupt store *and* a mistyped `sources:` path reports green and the drift
-  canaries never run at all. Directly undercuts the `B59` promise.
 - [ ] **B124 · non-ASCII filenames break survival, silently** — S/M · solo — `core.quotePath`
   defaults on, so git returns `"caf\303\251.go"`; `numstatPath` un-quotes a rename but never a
   plain path, so `git blame` fails on it and `path.Ext` yields `.go"`, classifying the file as
@@ -626,11 +651,6 @@ are not repeated here.
   `worktreeMainRoot` returns the gitdir prefix verbatim, but git ≥2.48 writes a *relative*
   gitdir, so `filepath.Rel` fails, the subpath is dropped and an in-repo worktree resolves to
   `Project = ".."` for every worktree session across every repository.
-- [ ] **B127 · humanize picks its unit before rounding** — S · both — `Count(999999999)`
-  renders `1000.0M` rather than `1.0B`, `Count(999950)` renders `1000.0K`, and
-  `Bytes(1048575)` renders `1024.0 KB`. Cache-read totals sit exactly in that band. A sibling
-  of the same class: an exact 0.5% prints `0%`, because the small-share guard uses `<` where
-  the upper edge uses `>=` — the precise rounding `humanize.Percent` says it refuses.
 - [ ] **B128 · the recent window covers eight day-buckets, not seven** — S · both —
   `splitRecent` subtracts the whole window then truncates to a date, making that date recent
   too; `cli/compare.go` already subtracts `days-1` and its comment warns against this exact
@@ -644,16 +664,6 @@ are not repeated here.
   both — `RenderCSV`'s fixed columns omit the three annotation fields, and label-dimension
   aggregation stamps the key *only* into those fields, so every identity column is empty and
   the rows are indistinguishable from one another. Table and JSON are correct.
-- [ ] **B131 · the dashboard renders a real cost as `$0`** — S · both —
-  `dashboard.formatCompactUSD` drops to zero decimals below $1,000, so $12 across 30 active
-  days prints "**$0** per active day". `humanize.USD` keeps cents below $100 for exactly this
-  reason, and `costDisplay`'s own doc forbids a fabricated zero. Folds into `B75`.
-- [ ] **B132 · the rework cap is a budget that is never consumed** — S · solo — each edit
-  clamps its removals to the file's total added lines rather than to what is left unaccounted,
-  so two edits can each claim the same added lines and the rate can exceed 100% (3 added, two
-  10-line deletions → 6 rework on 3 added). Nothing clamps `ChurnStat.ReworkRate` afterwards,
-  and the existing test pins the non-decrement, so the doc comment's invariant is the part
-  that is wrong.
 - [ ] **B133 · a metric plugin can inject a record with no timestamp bound** — S · both —
   `plugin/record.go` validates a plugin's records without the timestamp range
   `server/validate.go` applies to the same shape over HTTP, so a year-9999 record sits in

@@ -32,10 +32,11 @@ func TestParseActivityFieldsPerTurn(t *testing.T) {
 	if turn1.LinesAdded != 5 || turn1.LinesRemoved != 0 || turn1.Edits != 1 || turn1.ToolCalls != 6 || turn1.Compactions != 0 || turn1.ReworkLines != 0 {
 		t.Fatalf("turn1 = %+v, want LinesAdded=5 LinesRemoved=0 Edits=1 ToolCalls=6 Compactions=0 ReworkLines=0", turn1)
 	}
-	// turn2's patch_apply_end re-edits a.ts (5 added in turn1): +3/-2 there plus +5/-1 on
-	// the new b.ts = +8/-3 total; 2 of a.ts's 2 removed lines undo turn1's own additions.
-	if turn2.LinesAdded != 8 || turn2.LinesRemoved != 3 || turn2.Edits != 1 || turn2.ToolCalls != 4 || turn2.Compactions != 1 || turn2.ReworkLines != 2 {
-		t.Fatalf("turn2 = %+v, want LinesAdded=8 LinesRemoved=3 Edits=1 ToolCalls=4 Compactions=1 ReworkLines=2", turn2)
+	// turn2's patch_apply_end re-edits a.ts (5 added in turn1): +3/-2 there, plus b.ts
+	// created with a 5-line body = +8/-2 total; both of a.ts's removed lines undo turn1's
+	// own additions.
+	if turn2.LinesAdded != 8 || turn2.LinesRemoved != 2 || turn2.Edits != 1 || turn2.ToolCalls != 4 || turn2.Compactions != 1 || turn2.ReworkLines != 2 {
+		t.Fatalf("turn2 = %+v, want LinesAdded=8 LinesRemoved=2 Edits=1 ToolCalls=4 Compactions=1 ReworkLines=2", turn2)
 	}
 }
 
@@ -144,6 +145,80 @@ func TestParseDiffLineCountsSkipsUnifiedDiffHeaders(t *testing.T) {
 	}
 	if r := recs[0]; r.LinesAdded != 2 || r.LinesRemoved != 1 {
 		t.Fatalf("recs[0] = %+v, want LinesAdded=2 LinesRemoved=1 (the --- /+++ file headers must not count as body lines)", r)
+	}
+}
+
+// TestParseCreatedFileContributesItsLines covers the shape a file *creation* takes in a
+// patch_apply_end: `{"type":"add","content":"…"}` carries no unified_diff at all, so a
+// counter that reads only the diff drops every line of every new file.
+func TestParseCreatedFileContributesItsLines(t *testing.T) {
+	const rollout = `{"type":"session_meta","payload":{"id":"c13","cwd":"/home/dev/app13","timestamp":"2026-07-01T09:00:00Z"}}
+{"type":"turn_context","payload":{"model":"gpt-5.1"}}
+{"type":"event_msg","payload":{"type":"patch_apply_end","success":true,"changes":{"/repo/new.ts":{"type":"add","content":"one\ntwo\nthree\n"}}}}
+{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":0,"output_tokens":50,"reasoning_output_tokens":0,"total_tokens":150}}}}
+`
+	recs, _, err := Parse(strings.NewReader(rollout))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recs) != 1 {
+		t.Fatalf("got %d records, want 1: %+v", len(recs), recs)
+	}
+	if r := recs[0]; r.LinesAdded != 3 || r.LinesRemoved != 0 || r.Edits != 1 {
+		t.Fatalf("recs[0] = %+v, want LinesAdded=3 LinesRemoved=0 Edits=1 (a created file's content is its added lines)", r)
+	}
+}
+
+// TestParseCreatedFileWithoutTrailingNewlineCountsItsLastLine pins that the count is the
+// file's lines, not its newlines: a body with no final newline still ends in a real line.
+func TestParseCreatedFileWithoutTrailingNewlineCountsItsLastLine(t *testing.T) {
+	const rollout = `{"type":"session_meta","payload":{"id":"c14","cwd":"/home/dev/app14","timestamp":"2026-07-01T09:00:00Z"}}
+{"type":"turn_context","payload":{"model":"gpt-5.1"}}
+{"type":"event_msg","payload":{"type":"patch_apply_end","success":true,"changes":{"/repo/a.txt":{"type":"add","content":"only"},"/repo/b.txt":{"type":"add","content":""}}}}
+{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":0,"output_tokens":50,"reasoning_output_tokens":0,"total_tokens":150}}}}
+`
+	recs, _, err := Parse(strings.NewReader(rollout))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := recs[0]; r.LinesAdded != 1 {
+		t.Fatalf("recs[0] = %+v, want LinesAdded=1 (one unterminated line, plus an empty file's zero)", r)
+	}
+}
+
+// TestParseCreatedFileSeedsRework covers the second half of the dropped creation: a file
+// born with 0 recorded added lines gives a later removal nothing to be rework against.
+func TestParseCreatedFileSeedsRework(t *testing.T) {
+	const rollout = `{"type":"session_meta","payload":{"id":"c15","cwd":"/home/dev/app15","timestamp":"2026-07-01T09:00:00Z"}}
+{"type":"turn_context","payload":{"model":"gpt-5.1"}}
+{"type":"event_msg","payload":{"type":"patch_apply_end","success":true,"changes":{"/repo/new.ts":{"type":"add","content":"one\ntwo\nthree\n"}}}}
+{"type":"event_msg","payload":{"type":"patch_apply_end","success":true,"changes":{"/repo/new.ts":{"type":"update","unified_diff":"@@ -1,3 +1,1 @@\n one\n-two\n-three"}}}}
+{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":0,"output_tokens":50,"reasoning_output_tokens":0,"total_tokens":150}}}}
+`
+	recs, _, err := Parse(strings.NewReader(rollout))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := recs[0]; r.ReworkLines != 2 {
+		t.Fatalf("recs[0] = %+v, want ReworkLines=2 (both removals undo lines this session created)", r)
+	}
+}
+
+// TestParseDeletedFileContributesRemovedLines is the mirror of a creation. Unobserved on
+// the audited corpus (only add and update appear there), but the discriminator has the
+// arm, and a change type nobody counts is exactly what B119 was.
+func TestParseDeletedFileContributesRemovedLines(t *testing.T) {
+	const rollout = `{"type":"session_meta","payload":{"id":"c16","cwd":"/home/dev/app16","timestamp":"2026-07-01T09:00:00Z"}}
+{"type":"turn_context","payload":{"model":"gpt-5.1"}}
+{"type":"event_msg","payload":{"type":"patch_apply_end","success":true,"changes":{"/repo/gone.ts":{"type":"delete","content":"a\nb\n"}}}}
+{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":0,"output_tokens":50,"reasoning_output_tokens":0,"total_tokens":150}}}}
+`
+	recs, _, err := Parse(strings.NewReader(rollout))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := recs[0]; r.LinesAdded != 0 || r.LinesRemoved != 2 {
+		t.Fatalf("recs[0] = %+v, want LinesAdded=0 LinesRemoved=2", r)
 	}
 }
 

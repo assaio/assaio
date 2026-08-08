@@ -55,7 +55,7 @@
     "Entrypoint": "",
     "Granularity": "turn",
     "LinesAdded": 8,
-    "LinesRemoved": 3,
+    "LinesRemoved": 2,
     "Edits": 1,
     "ToolCalls": 4,
     "Rejected": 0,

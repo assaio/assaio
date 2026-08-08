@@ -12,6 +12,8 @@ type ChurnStat struct {
 	// LinesAdded is total AI-added code lines.
 	LinesAdded int64
 	// ReworkLines is the subset of LinesAdded later removed within the same transcript+file.
+	// Per transcript it can never exceed that file's additions (internal/parser.Rework spends
+	// a budget); across a window whose start cuts between an addition and its removal it can.
 	ReworkLines int64
 	// ReworkRate is ReworkLines / LinesAdded; 0 when LinesAdded is zero, never a
 	// divide-by-zero panic. That 0 is a placeholder for an undefined ratio, not a

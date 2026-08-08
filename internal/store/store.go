@@ -40,8 +40,7 @@ type UsageRow struct {
 // Open opens (creating if needed) a WAL-mode SQLite database at path and applies any
 // pending migrations.
 func Open(path string) (*Store, error) {
-	dsn := "file:" + path + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(on)"
-	db, err := sql.Open("sqlite", dsn)
+	db, err := sql.Open("sqlite", storeDSN(path))
 	if err != nil {
 		return nil, err
 	}
@@ -170,30 +169,4 @@ func (s *Store) Count(ctx context.Context) (int64, error) {
 	var n int64
 	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM usage_record`).Scan(&n)
 	return n, err
-}
-
-// Clear deletes usage records older than before (if non-zero) and/or matching tool (if
-// non-empty), returning the number of rows removed.
-func (s *Store) Clear(ctx context.Context, before time.Time, tool string) (int64, error) {
-	hasBefore := !before.IsZero()
-	hasTool := tool != ""
-
-	var res sql.Result
-	var err error
-	switch {
-	case hasBefore && hasTool:
-		res, err = s.db.ExecContext(ctx, `DELETE FROM usage_record WHERE ts < ? AND tool = ?`,
-			before.UTC().Format(time.RFC3339), tool)
-	case hasBefore:
-		res, err = s.db.ExecContext(ctx, `DELETE FROM usage_record WHERE ts < ?`,
-			before.UTC().Format(time.RFC3339))
-	case hasTool:
-		res, err = s.db.ExecContext(ctx, `DELETE FROM usage_record WHERE tool = ?`, tool)
-	default:
-		res, err = s.db.ExecContext(ctx, `DELETE FROM usage_record`)
-	}
-	if err != nil {
-		return 0, err
-	}
-	return res.RowsAffected()
 }

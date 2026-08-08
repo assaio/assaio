@@ -25,15 +25,23 @@ import (
 // divides by; restating one without the other could put the portion above its whole, and
 // reasoning_tokens is here for the same reason against output_tokens.
 //
-// granularity is the one column assigned rather than maximised. It is a claim about what a
-// record *is*, and the current parse is the authority on that: a build that learns a record
-// summarizes a whole run rather than one turn has to be able to say so, and MAX would keep
-// 'turn' forever because it sorts above 'session'. Re-labelling coarser is the documented
-// direction (docs/format-resilience.md); it is never a way to claim finer detail, because
-// only a re-read of the same file can set it.
+// granularity and rework_lines are assigned rather than maximised, for the same reason from
+// two directions. granularity is a claim about what a record *is*, and the current parse is
+// the authority on that: a build that learns a record summarizes a whole run rather than one
+// turn has to be able to say so, and MAX would keep 'turn' forever because it sorts above
+// 'session'. Re-labelling coarser is the documented direction (docs/format-resilience.md);
+// it is never a way to claim finer detail, because only a re-read of the same file can set it.
+//
+// rework_lines is not a count of anything in the log -- it is derived from the whole
+// transcript by a rule (internal/parser.Rework) that a later build can correct downward, and
+// v0.13 did: MAX would have pinned every stored row at the inflated figure forever. The
+// append-only argument that justifies MAX elsewhere still holds under assignment, because the
+// rule is monotone in the prefix read -- a longer transcript never yields less rework -- so a
+// re-read of a session that was still being written restates it upward exactly as before.
 const restateActivitySQL = `
         UPDATE usage_record SET
             granularity = ?,
+            rework_lines = ?,
             input_tokens = MAX(input_tokens, ?), output_tokens = MAX(output_tokens, ?),
             cache_read_tokens = MAX(cache_read_tokens, ?),
             cache_write_tokens = MAX(cache_write_tokens, ?),
@@ -41,7 +49,6 @@ const restateActivitySQL = `
             lines_added = MAX(lines_added, ?), lines_removed = MAX(lines_removed, ?),
             edits = MAX(edits, ?), tool_calls = MAX(tool_calls, ?),
             rejected = MAX(rejected, ?), compactions = MAX(compactions, ?),
-            rework_lines = MAX(rework_lines, ?),
             tool_reads = MAX(tool_reads, ?), tool_searches = MAX(tool_searches, ?),
             tool_commands = MAX(tool_commands, ?), tool_writes = MAX(tool_writes, ?),
             tool_other = MAX(tool_other, ?), tool_errors = MAX(tool_errors, ?),
@@ -61,10 +68,9 @@ func (s *Store) InsertLocal(ctx context.Context, recs []usage.Record) (int, erro
 // activityRestateArgs binds r to restateActivitySQL's placeholders.
 func activityRestateArgs(r *usage.Record) []any {
 	return []any{
-		r.Granularity,
+		r.Granularity, r.ReworkLines,
 		r.InputTokens, r.OutputTokens, r.CacheReadTokens, r.CacheWriteTokens, r.ReasoningTokens,
 		r.LinesAdded, r.LinesRemoved, r.Edits, r.ToolCalls, r.Rejected, r.Compactions,
-		r.ReworkLines,
 		r.ToolReads, r.ToolSearches, r.ToolCommands, r.ToolWrites, r.ToolOther, r.ToolErrors,
 		r.Sidechain, r.Skill, r.Agent,
 		r.CacheWrite1hTokens, r.CacheMissReason,

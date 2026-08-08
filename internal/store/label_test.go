@@ -85,7 +85,7 @@ func TestLabelAbsentAndUnmark(t *testing.T) {
 func TestDeleteLabels(t *testing.T) {
 	s, ctx, since := labeledStore(t)
 
-	n, err := s.DeleteLabels(ctx)
+	n, err := s.DeleteLabels(ctx, time.Time{}, "")
 	if err != nil || n != 1 {
 		t.Fatalf("DeleteLabels n=%d err=%v", n, err)
 	}

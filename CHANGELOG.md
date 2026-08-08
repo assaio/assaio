@@ -21,6 +21,113 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-08
+
+### Compatibility
+- **Your stored numbers change, and the upgrade rebuilds them for you.** Migration `0009`
+  clears the `claude-code` and `codex` ingest watermarks, so the next `backfill` re-reads every
+  transcript once — no flag, and nothing is deleted. Codex's added lines go up (a created file
+  finally counts), and rework goes down for both sources (a removal can no longer claim the
+  same added line twice). On the maintainer's corpus that is Codex 6,632 → 10,604 added lines
+  and Claude Code 37,885 → 33,752 rework lines. The first import after upgrading is therefore a
+  slow one.
+- **`check --max-cost` can now fail where it used to pass**, on a window carrying tokens the
+  price table has no row for. If that is you, refresh to this release's price table first — the
+  gate exists because the old behaviour compared your budget against a figure missing that
+  model's whole spend.
+
+### Fixed
+- **Codex dropped every line of every file it created, and about a third of its added lines
+  with them.** A Codex `patch_apply_end` describes each changed file as a type-discriminated
+  union: an `update` carries a `unified_diff`, but a *creation* carries the file's whole body
+  as `{"type":"add","content":"…"}`. The counter read only the diff, so a created file
+  unmarshaled cleanly and contributed `(0, 0)`. **Measured on 61 real rollouts, not inferred:**
+  54 created files carried **3,972** added lines that were never counted, so the corpus
+  reported **6,632** added lines where the true figure is **10,604** — a 37% undercount, and
+  every file born that way also entered rework tracking with zero additions to be undone. The
+  parser now reads the discriminator: an `add` contributes its body's lines as added, a
+  `delete` its own as removed (unobserved on the audited corpus, but a union arm nobody counts
+  is exactly what this defect was). The `add` entry in the golden fixture was a hand-written
+  shape Codex does not emit — a diff on a creation — and has been replaced with a captured
+  one. (`B119`)
+- **The rework cap was a budget nobody spent, so churn could exceed the additions it undoes.**
+  `parser.Rework` clamped each removal at a file's *total* recorded additions rather than at
+  the additions not yet undone, so two removals could both claim the same lines: 3 added
+  followed by two 10-line deletions produced 6 rework lines on 3 added — a rate above 100%,
+  which the function's own doc comment said was impossible. The budget is now consumed as it
+  is claimed and refilled by later additions. **On the maintainer's corpus:** Claude Code
+  rework **37,885 → 33,752** lines (a 13.3% rate becomes 11.9%), Codex **961 → 913**. (`B132`)
+- **A corrected rework rule could not reach a single stored row.** `restateActivitySQL` takes
+  `MAX(stored, offered)` on every activity column, which repairs a session ingested while it
+  was still being written — and pins any figure a later build corrects *downward*, forever.
+  `rework_lines` is now assigned rather than maximised, joining `granularity` as a value the
+  current parse is the authority on: it is derived from the whole transcript by a rule, not
+  read from the log, and the rule is monotone in the prefix read, so a half-written session
+  still restates upward exactly as before. Migration `0009` clears the `claude-code` and
+  `codex` ingest watermarks so a plain `backfill` re-reads and rebuilds — no flag, nothing
+  deleted, one slower import. **Verified end to end:** a store carrying the old figures was
+  rebuilt by one `backfill` to exactly the totals a fresh store produces from the same logs.
+- **`clear` left a store that no `backfill` could refill.** `Clear` emptied `usage_record` but
+  never `ingest_file`, so every input still matched on size/mtime/version and the next import
+  reported `unchanged` and inserted nothing — while `clear`'s own help implied usage records
+  are re-importable. A clear that is not time-scoped now drops the watermarks of the inputs it
+  unread, so `backfill` rebuilds; `--older-than` deliberately keeps them, because pruning
+  history is a request to forget records rather than re-read them, and the command now says
+  which of the two just happened. (`B121`)
+- **`clear --tool codex --labels` deleted every other tool's session labels.** `DeleteLabels`
+  was an unscoped `DELETE FROM session_label` that read none of the scope flags — destroying
+  the one thing in the store no re-import can rebuild, because a person typed it. It now
+  follows the same scope as the deletion beside it, and only ever takes the label of a session
+  the clear removes *entirely*: a session with records on both sides of a time cutoff survives,
+  so its annotation does too, and a label that cannot be tied to the scope at all is never
+  guessed at. Unscoped `--all --labels` still deletes everything. (`B122`)
+- **`doctor --strict` exited 0 on a store it could not open.** Both store-failure paths printed
+  `ERROR` and returned nil, short-circuiting before the strict check — so a cron job with a
+  corrupt database *and* a mistyped `sources:` path reported green, and the drift canaries the
+  whole `--strict` promise rests on never ran at all. A store failure is now a strict failure
+  like any other, the report continues to its caveats, and the drift line says the canaries
+  were not evaluated instead of "no canary fired". (`B123`)
+- **Nearly half the flagship setup's tokens had no price, so every `$` figure was a little
+  over half the truth.** The vendored LiteLLM snapshot dated 2026-07-11 and its newest Opus was
+  `claude-opus-4-8`; the model in heaviest real use, `claude-opus-5`, had no row, and usage on
+  an unpriced model is excluded from cost rather than estimated. **Measured on the maintainer's
+  store: 22.7B of 49.8B tokens — 45.5% — resolved to no price**, and the window's estimate rose
+  from `$23,750.98` to `$39,203.40` (+65%) once it did. The snapshot is refreshed to 2026-08-08
+  (2,949 → 2,988 models); four existing entries changed price and one was removed, none of them
+  a model this corpus uses. Not a matching bug — `NormalizeModel` resolved `claude-sonnet-5` and
+  `claude-fable-5` correctly all along — which is exactly why nothing caught it: a stale table
+  looks identical to a complete one from inside. Refreshing it is still a release chore with no
+  test behind it (`B139`).
+- **`check --max-cost` reported OK on a window it could not price.** Cost excludes usage on a
+  model the price table has no row for — the `*` in the output says so — but the gate compared
+  the budget against that partial figure anyway, so on the store above `--max-cost 100000`
+  passed against a figure covering a little over half the window. A cost budget over unpriced
+  *tokens* now fails, for the reason `check`'s own help already gives about rules — a gate that
+  could not be evaluated is not a gate that passed — and the cost line reads `UNPRICED` rather
+  than `OK`, so the printed verdict and the exit code cannot disagree. The token axis is
+  untouched: tokens are physical, and a missing price says nothing about them.
+- **A `#` in the store's path opened a different database, and a `?` silently dropped the
+  pragmas.** The DSN was `"file:" + path` with nothing escaped, and everything after `file:` is
+  parsed as a URI: `#` starts a fragment and `?` starts the query, so either truncated the
+  filename while `Open` still returned success — the second taking WAL, `busy_timeout` and
+  `foreign_keys` with it. Reachable from any `XDG_DATA_HOME` or home directory containing one.
+  The three characters that change a URI's meaning (`%`, `?`, `#`) are now escaped; nothing
+  else is touched, so a Windows path or one containing spaces resolves exactly as before.
+  (`B120`)
+- **Compact units were chosen before rounding, so a value printed its own ceiling.**
+  `humanize.Count(999,999,999)` rendered `1000.0M` instead of `1.0B`, `Count(999,950)` rendered
+  `1000.0K`, and `Bytes(1,048,575)` rendered `1024.0 KB`. Real cache-read totals sit in exactly
+  that band. The unit is now picked from the value that will actually be printed. A sibling of
+  the same class: an exact 0.5% printed `0%` — the precise rounding `humanize.Percent` exists to
+  refuse — because the small-share guard compared with `<` where the upper edge uses `>=`.
+  (`B127`)
+- **The dashboard rendered a real cost as `$0`.** The footnote's per-active-day figure dropped
+  to whole dollars below $1,000, so $12 across 30 active days printed "**$0** per active day" —
+  the fabricated zero `costDisplay`'s own doc forbids. Cost rendering moved onto a single
+  `humanize.USDCompact`, which keeps cents below a dollar and says `<$0.01` rather than round a
+  real amount to nothing; the dashboard's own copy of the formatter is gone. (`B131`, part of
+  `B75`)
+
 ## [0.12.0] - 2026-08-07
 
 ### Fixed
@@ -1041,7 +1148,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/assaio/assaio/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/assaio/assaio/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/assaio/assaio/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/assaio/assaio/compare/v0.9.0...v0.10.0

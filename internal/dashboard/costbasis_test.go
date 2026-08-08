@@ -6,22 +6,15 @@ import (
 	"github.com/assaio/assaio/internal/report"
 )
 
-func TestFormatCompactUSD(t *testing.T) {
-	tests := []struct {
-		v    float64
-		want string
-	}{
-		{0, "$0"},
-		{17, "$17"},
-		{999, "$999"},
-		{1000, "$1.0K"},
-		{31500, "$31.5K"},
-		{1_500_000, "$1.5M"},
-	}
-	for _, tt := range tests {
-		if got := formatCompactUSD(tt.v); got != tt.want {
-			t.Fatalf("formatCompactUSD(%v) = %q, want %q", tt.v, got, tt.want)
-		}
+// TestCostBasisNeverRendersARealCostAsZero is B131: the per-active-day figure rounded to
+// whole dollars, so $12 across 30 days printed "$0 per active day" -- exactly the
+// fabricated zero costDisplay's own doc forbids.
+func TestCostBasisNeverRendersARealCostAsZero(t *testing.T) {
+	cost := 12.0
+	got := costBasis(report.Inventory{TotalCost: &cost, Days: 30}, "last 30 days")
+	want := "$12 / last 30 days · $0.40 per active day"
+	if got != want {
+		t.Fatalf("costBasis = %q, want %q", got, want)
 	}
 }
 

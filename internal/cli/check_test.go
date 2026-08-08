@@ -138,3 +138,48 @@ func TestCheckExitsZeroWithinBudget(t *testing.T) {
 		t.Fatalf("check output must mark the axis OK: %q", out.String())
 	}
 }
+
+// TestCheckCostGateFailsOnUnpricedUsage: a --max-cost gate that compares a budget against a
+// cost missing the window's unpriced models reports OK on a window it cannot price. On the
+// maintainer's own store that is 45% of the tokens, because the newest model in use has no
+// row in the vendored price table -- so the gate would pass a budget exceeded ~2x.
+func TestCheckCostGateFailsOnUnpricedUsage(t *testing.T) {
+	totals := checkTotals{Tokens: 1000, Cost: 10, HasUnpriced: true, UnpricedTokens: 450}
+	breaches := evaluateBudget(totals, budget{MaxCost: 100})
+	if len(breaches) != 1 {
+		t.Fatalf("breaches = %v, want one: a cost budget cannot be evaluated over unpriced usage", breaches)
+	}
+	if !strings.Contains(breaches[0], "450") {
+		t.Fatalf("breach %q must say how much of the window is unpriced", breaches[0])
+	}
+}
+
+// TestCheckCostGateStillPassesWhenEverythingIsPriced keeps the gate usable: a fully priced
+// window under budget is not a failure.
+func TestCheckCostGateStillPassesWhenEverythingIsPriced(t *testing.T) {
+	if b := evaluateBudget(checkTotals{Tokens: 1000, Cost: 10}, budget{MaxCost: 100}); len(b) != 0 {
+		t.Fatalf("breaches = %v, want none", b)
+	}
+}
+
+// TestCheckTokenGateIgnoresPricing: tokens are physical, so an unpriced model says nothing
+// about a token budget.
+func TestCheckTokenGateIgnoresPricing(t *testing.T) {
+	totals := checkTotals{Tokens: 10, HasUnpriced: true, UnpricedTokens: 10}
+	if b := evaluateBudget(totals, budget{MaxTokens: 100}); len(b) != 0 {
+		t.Fatalf("breaches = %v, want none: a token budget does not depend on a price", b)
+	}
+}
+
+// TestCheckCostGateIgnoresAZeroTokenUnpricedModel is what a real store caught: Claude's
+// locally-generated "<synthetic>" turns are an unpriced row with no tokens, so gating on the
+// HasUnpriced flag failed every run on a window that was in fact fully priced.
+func TestCheckCostGateIgnoresAZeroTokenUnpricedModel(t *testing.T) {
+	totals := checkTotals{Tokens: 1000, Cost: 10, HasUnpriced: true, UnpricedTokens: 0}
+	if b := evaluateBudget(totals, budget{MaxCost: 100}); len(b) != 0 {
+		t.Fatalf("breaches = %v, want none: an unpriced model with no tokens hides no spend", b)
+	}
+	if v := costVerdict(totals, budget{MaxCost: 100}); v != "OK" {
+		t.Fatalf("costVerdict = %q, want OK", v)
+	}
+}

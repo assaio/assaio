@@ -1,0 +1,23 @@
+-- v0.13 changed two activity numbers the log parsers derive rather than read.
+--
+-- Codex reported a file *creation* as {"type":"add","content":"…"} with no unified diff, and
+-- the counter read only the diff: measured across 61 real rollouts, 54 created files carried
+-- 3,972 added lines that were dropped, so the corpus counted 6,632 added lines where the true
+-- figure is 10,604. And the shared rework rule capped each removal at a file's total
+-- additions rather than at the additions not yet undone, so two removals could both claim the
+-- same lines: on the same machine 37,885 Claude Code rework lines are really 34,067.
+--
+-- Neither correction can reach stored rows on its own. The added lines would arrive, because
+-- restateActivitySQL takes MAX and the true figure is higher -- but only on a build whose
+-- version stamp differs from the one that wrote the ingest_file row, and buildIdentity()
+-- returns a constant 'dev' for any source build, so a `go install`ed binary would skip every
+-- input as unchanged. Clearing the watermarks is what makes the rebuild happen rather than
+-- likely; it is the same step migration 0008 took, and for the same reason.
+--
+-- Nothing is deleted here and no usage row is touched: this table is a cache of what was
+-- read (see 0003), so the whole cost is one slower backfill. The rework correction rides
+-- along on the same re-read, because rework_lines is now assigned rather than maximised --
+-- see internal/store/insert_local.go for why that is safe for a session still being written.
+--
+-- Only the two tools whose numbers changed: re-reading the others would buy nothing.
+DELETE FROM ingest_file WHERE tool IN ('codex', 'claude-code');

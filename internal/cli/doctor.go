@@ -24,9 +24,10 @@ func newDoctorCmd() *cobra.Command {
 		Long: `Report what assaio can see: each tool's log roots and how many inputs they hold,
 the store's health and freshness, and whether any format-drift canary fired.
 
---strict turns the diagnosis into a gate, exiting non-zero when a canary fired or a
-configured source finds no inputs at all -- so a cron or CI job alerts on vendor format
-drift instead of a human eventually noticing the numbers shrank.`,
+--strict turns the diagnosis into a gate, exiting non-zero when a canary fired, when a
+configured source finds no inputs at all, or when the store itself cannot be read -- so a
+cron or CI job alerts on vendor format drift instead of a human eventually noticing the
+numbers shrank.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			home, err := paths.Home()
@@ -52,34 +53,7 @@ drift instead of a human eventually noticing the numbers shrank.`,
 			if err := ensureParent(dbPath); err != nil {
 				return err
 			}
-			st, err := store.Open(dbPath)
-			if err != nil {
-				cmd.Printf("store:        ERROR %v\n", err)
-				return nil
-			}
-			defer func() { _ = st.Close() }()
-			n, err := st.Count(cmd.Context())
-			if err != nil {
-				cmd.Printf("store:        ERROR counting records: %v\n", err)
-				return nil
-			}
-			cmd.Printf("store:        ok, %d record(s) at %s\n", n, dbPath)
-			if size, sizeErr := st.Size(cmd.Context()); sizeErr == nil {
-				cmd.Printf("size:         %s\n", storeSizeLine(size))
-			}
-			// The 0.12 upgrade moves the pre-response-grain Claude rows aside rather than
-			// deleting them, so the space they hold has to be visible and droppable.
-			if rows, archErr := st.LegacyArchiveRows(cmd.Context()); archErr == nil && rows > 0 {
-				cmd.Printf("archived:     %d pre-0.12 Claude Code row(s) kept aside by migration 0008; no report reads them.\n", rows)
-				cmd.Println("              Drop with: sqlite3 <db> 'DROP TABLE usage_record_pre_response_grain', then `assaio-agent compact`.")
-			}
-			cmd.Printf("inventory:    %s\n", doctorInventoryLabel(cmd, st, n))
-			cmd.Printf("freshness:    %s\n", doctorFreshnessLabel(cmd, st))
-			warnings, err := driftWarnings(cmd.Context(), st)
-			if err != nil {
-				return err
-			}
-			cmd.Print(doctorDriftSection(warnings))
+			warnings, storeFailure := doctorStore(cmd, dbPath)
 
 			models, snapshotDate := pricing.Info()
 			cmd.Printf("pricing:      %d models, snapshot %s (refresh ships with releases)\n", models, snapshotDate)
@@ -96,7 +70,11 @@ drift instead of a human eventually noticing the numbers shrank.`,
 			cmd.Println("    while it was still being written; the next backfill restates them upward, never downward,")
 			cmd.Println("    so a count that first came out too high stays.")
 			cmd.Println("  - All on-disk log formats are internal and may change between tool versions.")
-			if failures := strictFailures(warnings, scans); strict && len(failures) > 0 {
+			failures := strictFailures(warnings, scans)
+			if storeFailure != "" {
+				failures = append(failures, storeFailure)
+			}
+			if strict && len(failures) > 0 {
 				return fmt.Errorf("strict check failed: %s", strings.Join(failures, "; "))
 			}
 			return nil

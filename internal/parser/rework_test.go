@@ -10,8 +10,35 @@ func TestReworkCountsRemovalOfOwnAddition(t *testing.T) {
 	if r := Rework(m, "a.go", 0, 4); r != 4 {
 		t.Fatalf("Rework(remove 4 of 10 added) = %d, want 4", r)
 	}
-	if m["a.go"] != 10 {
-		t.Fatalf("addedSoFar[a.go] = %d, want 10 (a removal never decrements it)", m["a.go"])
+	if m["a.go"] != 6 {
+		t.Fatalf("unreworked[a.go] = %d, want 6 (the 4 lines already counted as rework are spent)", m["a.go"])
+	}
+}
+
+// TestReworkNeverExceedsTheAdditionsItUndoes is the invariant the cap exists for: two
+// removals cannot each claim the same added lines, so rework can never exceed the file's
+// additions and the rate can never exceed 100%.
+func TestReworkNeverExceedsTheAdditionsItUndoes(t *testing.T) {
+	m := map[string]int64{}
+	Rework(m, "d.go", 3, 0)
+	first := Rework(m, "d.go", 0, 10)
+	second := Rework(m, "d.go", 0, 10)
+	if first+second != 3 {
+		t.Fatalf("rework total = %d+%d, want 3 in total (only 3 lines were ever added to undo)", first, second)
+	}
+}
+
+// TestReworkBudgetIsRefilledByLaterAdditions covers the other half: consuming the budget
+// must not make a file permanently immune to rework once it is written to again.
+func TestReworkBudgetIsRefilledByLaterAdditions(t *testing.T) {
+	m := map[string]int64{}
+	Rework(m, "e.go", 5, 0)
+	if r := Rework(m, "e.go", 0, 5); r != 5 {
+		t.Fatalf("first removal = %d, want 5", r)
+	}
+	Rework(m, "e.go", 7, 0)
+	if r := Rework(m, "e.go", 0, 7); r != 7 {
+		t.Fatalf("removal after a fresh 7-line addition = %d, want 7", r)
 	}
 }
 

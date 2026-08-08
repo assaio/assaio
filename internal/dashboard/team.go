@@ -3,6 +3,7 @@ package dashboard
 import (
 	"sort"
 
+	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/report"
 	"github.com/assaio/assaio/internal/store"
@@ -145,7 +146,7 @@ func costDisplay(cost float64, hasCost, unpriced bool) string {
 	if !hasCost {
 		return "—"
 	}
-	s := formatCompactUSD(cost)
+	s := humanize.USDCompact(cost)
 	if unpriced {
 		s += "*"
 	}

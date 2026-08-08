@@ -119,12 +119,38 @@ func (s *Store) LabelCount(ctx context.Context) (int64, error) {
 	return n, err
 }
 
-// DeleteLabels removes every annotation, returning how many were deleted. Only ever called
-// behind an explicit flag: nothing else in assaio deletes data a person typed.
-func (s *Store) DeleteLabels(ctx context.Context) (int64, error) {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM session_label`)
-	if err != nil {
-		return 0, err
+// DeleteLabels removes annotations within the same scope Clear applies to usage records,
+// returning how many were deleted. Only ever called behind an explicit flag: nothing else
+// in assaio deletes data a person typed.
+//
+// Unscoped (zero before, empty tool) it deletes every annotation, including one whose
+// session has no usage rows left to identify it by. A scope narrows it to the sessions the
+// matching Clear removes *entirely*: a session with records on both sides of a time cutoff
+// still exists afterwards, so its annotation is not that clear's to take, and one that
+// cannot be tied to the scope at all is never guessed at.
+func (s *Store) DeleteLabels(ctx context.Context, before time.Time, tool string) (int64, error) {
+	if before.IsZero() && tool == "" {
+		return rowsAffected(s.db.ExecContext(ctx, `DELETE FROM session_label`))
 	}
-	return res.RowsAffected()
+	cutoff := ""
+	if !before.IsZero() {
+		cutoff = before.UTC().Format(time.RFC3339)
+	}
+	// Bound twice per axis: once to ask whether it constrains anything, once to compare --
+	// the same shape labelSubquery uses, and for the same reason.
+	args := []any{cutoff, cutoff, tool, tool}
+	return rowsAffected(s.db.ExecContext(ctx, `
+        DELETE FROM session_label
+        WHERE EXISTS (`+clearedRecords+`)
+          AND NOT EXISTS (`+survivingRecords+`)`, append(args, args...)...))
 }
+
+// clearedRecords selects the session's usage rows a Clear with this scope removes;
+// survivingRecords selects the ones it leaves behind. Spelled as two fragments over the
+// same bound scope so the two can never describe different windows.
+const (
+	scopedRecord = `SELECT 1 FROM usage_record u
+              WHERE u.session_id = session_label.session_id AND u.member = session_label.member`
+	clearedRecords   = scopedRecord + ` AND (? = '' OR u.ts < ?) AND (? = '' OR u.tool = ?)`
+	survivingRecords = scopedRecord + ` AND NOT ((? = '' OR u.ts < ?) AND (? = '' OR u.tool = ?))`
+)

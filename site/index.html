@@ -236,7 +236,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- HERO ────────────────────────────────────────────────────────────── -->
   <section class="wrap hero">
     <div>
-      <p class="eyebrow">Assay report · v0.12.0</p>
+      <p class="eyebrow">Assay report · v0.13.0</p>
       <h1>Is it <em>delivering?</em></h1>
       <p class="lede">
         Teams pour real money into AI coding tools and can't answer the one question that
@@ -329,6 +329,19 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         history on the next run, and in the same release a cache write is finally priced by the
         lifetime it bought, since 59.7% of those tokens bought the hour-long tier that bills at
         1.6× the rate assaio had been charging them at.
+      </p>
+      <p class="intro">
+        The last way is a number that is simply not there. Codex describes a file it
+        <em>changed</em> as a diff and a file it <em>created</em> as the whole file — and assaio
+        read only the diff, so every new file counted zero. Across 61 real rollouts that dropped
+        <strong>3,972 of 10,604 added lines</strong>: not a wrong figure, an absent one, sitting
+        inside a right-looking total. The same release found 45% of a real machine's tokens
+        carrying no price at all, because the model in heaviest use was newer than the vendored
+        price table — a $23,750 estimate that was really $39,203. v0.13 fixes both and rebuilds
+        your stored history on the next run. Neither was caught by a test, a golden file or a
+        drift canary; both were caught by reading the code against the logs, which is why the
+        next release builds the check whose expected answer does not come from the parser that
+        produced it.
       </p>
       <div class="split">
         <div class="panel">
