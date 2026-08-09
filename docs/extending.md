@@ -780,7 +780,11 @@ The plugin writes to stdout:
 Required: `session_id`, `timestamp` (RFC3339), `model`, `dedupe_key`, and `granularity`
 (`turn` or `session` — the [granularity honesty rule](#granularity-honesty-hard-rule)
 applies to plugins exactly as it does to in-tree parsers). Token fields default to 0;
-`project`, `git_branch`, and `entrypoint` are optional. The same
+`project`, `git_branch`, and `entrypoint` are optional. **A field the protocol does not
+define is rejected**, as it already was for the metric and rule protocols: a plugin writing
+`outputTokens` where the protocol says `output_tokens` would otherwise store a zero and be
+counted as a valid record, which is a wrong number arriving quietly instead of a protocol
+error arriving loudly. Emit exactly the fields above. The same
 [`usage.Record` contract](#the-usagerecord-contract) rules apply: `project` is a
 directory **basename**, never a full path, and `dedupe_key` must be
 [deterministic](#dedupekey-determinism-hard-rule) so re-runs never double-count.
@@ -798,6 +802,7 @@ log lines:
 |---|---|
 | empty `session_id` or `dedupe_key` | `dedupe_key` is half the store's uniqueness constraint; a blank one collapses rows onto each other. |
 | unparseable `timestamp` | a record that cannot be placed in time can appear in no window. |
+| a field the protocol does not define | a misspelled field is a silent zero; naming it is the only way the plugin author finds out. |
 | `timestamp` before 2020-01-01 or more than 48h in the future | since v0.14. Every query is `ts >= ?` with no ceiling, so a year-9999 record sits inside every `--since` window forever. Identical to what the sync endpoint enforces on the same shape — the two are one shared check (`internal/usage`). |
 | invalid `granularity` | see the [granularity honesty rule](#granularity-honesty-hard-rule). |
 | a negative count, or one above 1,000,000,000 | a negative renders impossible percentages; an overflow-magnitude one distorts every `SUM()` it lands in. |

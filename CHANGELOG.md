@@ -37,6 +37,11 @@ Discussion.
   header name is unaffected.
 - **`assaio-agent init` no longer accepts `--db`.** It never honoured it (see below), so the
   flag only ever produced a wrong answer.
+- **A parser plugin's record line is now rejected for a field the protocol does not define**
+  (`B143`), which the metric and rule protocols already did. A plugin writing `outputTokens`
+  where the protocol says `output_tokens` stored a zero and was counted as a valid record — a
+  wrong number arriving quietly rather than a protocol error arriving loudly. Emit exactly the
+  documented fields; a rejected line is skipped and counted like any other boundary failure.
 - **A parser plugin's records are now rejected for an out-of-range timestamp**, matching what
   the sync endpoint already enforced on the same shape, and for `reasoning_tokens` above
   `output_tokens`. A conforming plugin is unaffected; a rejected line is skipped and counted

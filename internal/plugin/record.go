@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -93,9 +94,16 @@ func (w *wireRecord) toRecordAt(pluginName string, now time.Time) (usage.Record,
 
 // parseRecordLine unmarshals one JSONL line and validates it against the protocol's
 // boundary invariants. The returned error, when non-nil, is the skip reason.
+//
+// Decoding is strict, as the metric and rule protocols already were: a plugin writing
+// `outputTokens` where the protocol says `output_tokens` used to store a zero and be counted
+// as a valid record, which is a silent wrong number rather than a loud protocol error. An
+// unknown field is now a named violation, which is the posture ADR 0003 argues for.
 func parseRecordLine(line []byte, pluginName string) (usage.Record, error) {
 	var w wireRecord
-	if err := json.Unmarshal(line, &w); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(line))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&w); err != nil {
 		return usage.Record{}, fmt.Errorf("invalid JSON: %w", err)
 	}
 	return w.toRecord(pluginName)

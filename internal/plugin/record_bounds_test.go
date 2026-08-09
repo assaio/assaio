@@ -77,3 +77,21 @@ func wireField(t *testing.T, v any, field string) any {
 	}
 	return decoded[field]
 }
+
+// TestUnknownFieldIsAProtocolError: a plugin misspelling a protocol field used to store a
+// zero and be counted as a valid record -- a silent wrong number where the metric and rule
+// protocols would have named the violation. B143.
+func TestUnknownFieldIsAProtocolError(t *testing.T) {
+	const line = `{"session_id":"s1","timestamp":"2026-03-02T09:00:00Z","model":"m","granularity":"turn","dedupe_key":"d1","outputTokens":500}`
+	if _, err := parseRecordLine([]byte(line), "demo"); err == nil {
+		t.Error("a misspelled field must be a named protocol error, not a stored zero")
+	}
+	const ok = `{"session_id":"s1","timestamp":"2026-03-02T09:00:00Z","model":"m","granularity":"turn","dedupe_key":"d1","output_tokens":500}`
+	rec, err := parseRecordLine([]byte(ok), "demo")
+	if err != nil {
+		t.Fatalf("a conforming record must still parse: %v", err)
+	}
+	if rec.OutputTokens != 500 {
+		t.Errorf("OutputTokens = %d, want 500", rec.OutputTokens)
+	}
+}
