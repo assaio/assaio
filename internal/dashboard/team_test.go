@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"bytes"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -85,8 +86,26 @@ func TestBuildTeamRankedBySessionsNotCostOrLines(t *testing.T) {
 	if d.Team.Stats[0].Frac != 1 {
 		t.Fatalf("top-ranked member's Frac = %v, want 1 (scaled against the list's own max)", d.Team.Stats[0].Frac)
 	}
-	if d.Team.Stats[0].LinesAdded != 40 || d.Team.Stats[1].LinesAdded != 5000 {
-		t.Fatalf("Stats = %+v, want alice=40 lines and bob=5000 lines preserved as data, just not the rank key", d.Team.Stats)
+	if d.Team.LinesAdded != 5040 {
+		t.Fatalf("Team.LinesAdded = %d, want 5040 -- the team's total, not any member's", d.Team.LinesAdded)
+	}
+}
+
+// TestTeamRowCarriesNoOutputFigure: a member's row shows how often they engaged and nothing
+// else. Pseudonymous is not anonymous to a colleague who knows the roster, so lines and
+// spend on a per-member row are a productivity comparison however the list is sorted (B141).
+func TestTeamRowCarriesNoOutputFigure(t *testing.T) {
+	d := Build(fixtureInputWithMembers(), "last 30 days", false, nil, nil)
+	if d.Team == nil {
+		t.Fatal("Team = nil, want a breakdown when usage carries member data")
+	}
+	fields := reflect.TypeOf(TeamStat{})
+	for i := range fields.NumField() {
+		switch name := fields.Field(i).Name; name {
+		case "Member", "Sessions", "Frac":
+		default:
+			t.Errorf("TeamStat carries %q: a per-member row may show engagement only", name)
+		}
 	}
 }
 
@@ -147,7 +166,7 @@ func TestRenderHTMLTeamSectionPresentWithMemberData(t *testing.T) {
 	if !strings.Contains(html, `class="team"`) {
 		t.Fatalf("dashboard HTML must include the Team section when usage carries member data: %s", html)
 	}
-	if !strings.Contains(html, "aggregated, pseudonymized by default") {
+	if !strings.Contains(html, "this panel is not a scoreboard") {
 		t.Fatalf("Team section must carry its honesty caption: %s", html)
 	}
 	if !strings.Contains(html, "member-") {

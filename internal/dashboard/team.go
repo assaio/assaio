@@ -9,22 +9,32 @@ import (
 	"github.com/assaio/assaio/internal/store"
 )
 
-// TeamStat is one member's adoption signal for the dashboard's ranked bar list: how much
-// they engaged, never how "good" their output was. Frac is Sessions scaled against the
-// list's own maximum, for the bar width.
+// TeamStat is one member's adoption signal: how often they engaged, and nothing else.
+// Frac is Sessions scaled against the list's own maximum, for the bar width.
+//
+// It deliberately carries no lines and no cost. Ranking by sessions rather than by output
+// was always the rule, but printing each pseudonymous member's AI lines and spend on their
+// own row hands anyone who knows the roster a productivity comparison anyway, week over
+// week -- pseudonymous is not anonymous to a colleague. The Refusals in BACKLOG.md forbid
+// ranking per named individual; this is the spirit of that line rather than its letter, and
+// it is far harder to take a number away once a team has been reading it (B141).
 type TeamStat struct {
-	Member      string
-	Sessions    int
-	LinesAdded  int64
-	CostDisplay string
-	Frac        float64
+	Member   string
+	Sessions int
+	Frac     float64
 }
 
 // Team is the dashboard's per-member adoption breakdown: present only when the queried
 // usage carries a non-empty Member, i.e. it was aggregated by a team server from synced
 // agents -- never for a purely local store (see buildTeam).
+//
+// LinesAdded and CostDisplay are the whole team's, not any member's. What a team needs from
+// this panel is whether AI use has spread and what it costs together; neither question
+// requires knowing which member wrote what.
 type Team struct {
-	Stats []TeamStat
+	Stats       []TeamStat
+	LinesAdded  int64
+	CostDisplay string
 }
 
 // buildTeam returns nil when usage carries no member data at all, so a purely local
@@ -54,16 +64,24 @@ func buildTeam(usageRows []store.UsageRow, sessionRows []store.SessionRow, price
 	}
 
 	stats := make([]TeamStat, 0, len(names))
+	var teamLines, teamCost float64
+	teamPriced, teamUnpriced := false, false
 	for _, m := range names {
 		stats = append(stats, TeamStat{
-			Member:      memberLabel(m, anonymize),
-			Sessions:    sessions[m],
-			LinesAdded:  lines[m],
-			CostDisplay: costDisplay(cost[m], hasCost[m], unpriced[m]),
-			Frac:        fraction(sessions[m], maxSessions),
+			Member:   memberLabel(m, anonymize),
+			Sessions: sessions[m],
+			Frac:     fraction(sessions[m], maxSessions),
 		})
+		teamLines += float64(lines[m])
+		teamCost += cost[m]
+		teamPriced = teamPriced || hasCost[m]
+		teamUnpriced = teamUnpriced || unpriced[m]
 	}
-	return &Team{Stats: stats}
+	return &Team{
+		Stats:       stats,
+		LinesAdded:  int64(teamLines),
+		CostDisplay: costDisplay(teamCost, teamPriced, teamUnpriced),
+	}
 }
 
 // hasMemberData reports whether any row carries a non-empty Member -- the signal that

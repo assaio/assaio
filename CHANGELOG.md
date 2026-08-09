@@ -32,6 +32,12 @@ Discussion.
   `claude-code` ingest watermark so the next `backfill` re-reads every transcript once. On
   the maintainer's store that moves added lines 280,500 → 280,170 and removed lines
   111,920 → 111,296. Nothing is deleted; the first import after upgrading is a slow one.
+- **The team dashboard's per-member row now shows sessions only** (`B141`). It also printed
+  each pseudonymous member's AI lines and spend, and pseudonymous is not anonymous to a
+  colleague who knows the roster — that is a productivity comparison however the list is
+  sorted. Lines and cost are now the team's total, shown once above the list. A self-hosted
+  team server that has been reading the old rows will see them disappear on upgrade; the
+  figures were never removable later without an argument, which is why it is done now.
 - **A projected "per month" figure is now a calendar month, not thirty *active* days**
   (`B142`). `subscription-fit` and `model-fit`'s savings estimate both divided the window's
   cost by the days that carried usage and multiplied by 30, so somebody who codes five days a

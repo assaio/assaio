@@ -542,6 +542,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span>{{len .Stats}} {{(locale).MembersSuffix}}</span>
     </div>
     <p class="section-sub">{{(locale).TeamCaption}}</p>
+    <p class="section-sub tnum">{{(locale).TeamTotalPrefix}} <strong>{{.LinesAdded}} {{(locale).AILinesLabel}}</strong> · <strong>{{.CostDisplay}}</strong></p>
     <ul class="teamlist">
       {{range .Stats}}
       <li>
@@ -549,8 +550,6 @@ table.subpath tbody tr:hover td{background:var(--bg);}
         <span class="teamlist__bar"><span style="width:{{pct .Frac}}%"></span></span>
         <span class="teamlist__stats tnum">
           <span>{{.Sessions}} {{(locale).SessionsLabel}}</span>
-          <span>{{.LinesAdded}} {{(locale).AILinesLabel}}</span>
-          <span>{{.CostDisplay}}</span>
         </span>
       </li>
       {{end}}

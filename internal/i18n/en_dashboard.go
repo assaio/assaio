@@ -41,6 +41,7 @@ type Dashboard struct {
 	TeamPanelLabel     string // Team section's panel-label title, present only on a central store
 	MembersSuffix      string // panel label: "<n> <MembersSuffix>"
 	TeamCaption        string // Team section's one-line honesty caption
+	TeamTotalPrefix    string // Team section: prefix for the whole-team lines and cost
 }
 
 var enDashboard = Dashboard{
@@ -74,5 +75,6 @@ var enDashboard = Dashboard{
 	AnonymizedCaveat:   "Project names pseudonymized for sharing -- run with --no-anonymize for real names.",
 	TeamPanelLabel:     "Team",
 	MembersSuffix:      "members",
-	TeamCaption:        "Team adoption -- aggregated, pseudonymized by default; per-person requires an explicit opt-in.",
+	TeamCaption:        "Team adoption -- how widely AI use has spread, by sessions. Lines and cost are the team's, never a member's: this panel is not a scoreboard.",
+	TeamTotalPrefix:    "Together:",
 }
