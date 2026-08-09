@@ -152,6 +152,11 @@ func percentileAt(sorted []float64, p float64) float64 {
 // medianAt50 returns the median of sorted (ascending).
 func medianAt50(sorted []float64) float64 { return percentileAt(sorted, 0.5) }
 
+// neutralPurity is the gauge a validator draws when it has no verdict to draw one from. Half
+// is the only honest position: an empty bar reads as a bad result and a full one as a good
+// one, and a withheld verdict is neither.
+const neutralPurity = 0.5
+
 // clamp01 constrains x to [0,1], the valid range for Result.Purity.
 func clamp01(x float64) float64 {
 	switch {

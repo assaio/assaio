@@ -21,7 +21,8 @@ func usageWire(rows []store.UsageRow) []metricUsageRow {
 			Day: r.Day, Tool: r.Tool, Model: r.Model, Project: r.Project,
 			Entrypoint: r.Entrypoint, Member: r.Member, Granularity: r.Granularity,
 			In: r.In, Out: r.Out, CacheRead: r.CacheRead, CacheWrite: r.CacheWrite,
-			Reasoning: r.Reasoning, LinesAdded: r.LinesAdded, LinesRemoved: r.LinesRemoved,
+			CacheWrite1h: r.CacheWrite1h,
+			Reasoning:    r.Reasoning, LinesAdded: r.LinesAdded, LinesRemoved: r.LinesRemoved,
 			Edits: r.Edits, ToolCalls: r.ToolCalls, Rejected: r.Rejected,
 			Compactions: r.Compactions, ReworkLines: r.ReworkLines,
 		})
@@ -84,7 +85,10 @@ func pricesWire(rows []store.UsageRow, prices pricing.Table) map[string]metricPr
 		if !ok {
 			continue
 		}
-		out[model] = metricPrice{Input: p.Input, Output: p.Output, CacheRead: p.CacheRead, CacheWrite: p.CacheWrite}
+		out[model] = metricPrice{
+			Input: p.Input, Output: p.Output, CacheRead: p.CacheRead,
+			CacheWrite: p.CacheWrite, CacheWrite1h: p.CacheWrite1h,
+		}
 	}
 	return out
 }

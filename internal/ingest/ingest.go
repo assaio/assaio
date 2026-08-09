@@ -137,7 +137,10 @@ func ingestInput(ctx context.Context, st *store.Store, sk *skipper, cache projec
 // is suppressed to avoid double-counting. cache memoizes project resolution across files.
 func ingestClaude(ctx context.Context, st *store.Store, sk *skipper, mainFiles, subFiles []string, cache projectCache) (Result, error) {
 	covered := claude.CoveredAgents(subFiles)
-	res := Result{Tool: "claude-code", Files: len(mainFiles) + len(subFiles)}
+	if err := dropSupersededAggregates(ctx, st, covered); err != nil {
+		return Result{Tool: claudeTool}, err
+	}
+	res := Result{Tool: claudeTool, Files: len(mainFiles) + len(subFiles)}
 	files := make([]string, 0, len(mainFiles)+len(subFiles))
 	files = append(files, subFiles...)
 	files = append(files, mainFiles...)

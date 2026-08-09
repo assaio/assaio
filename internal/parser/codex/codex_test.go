@@ -98,11 +98,12 @@ func TestNegativeDeltaFieldsAreDroppedNotPropagated(t *testing.T) {
 	}
 }
 
-// TestCacheDominantTurnUnderCountsInputByDesign documents the honest-clamp tradeoff: when
-// a turn's cached delta exceeds its input delta (true input is nonzero but the model's
-// cumulative accounting makes the cached share look larger), InputTokens clamps to 0
-// rather than going negative, undercounting non-cached input on that turn.
-func TestCacheDominantTurnUnderCountsInputByDesign(t *testing.T) {
+// TestCacheDominantTurnConservesTheInputDelta holds the accounting invariant: cached input
+// is a part of the prompt, so the two stored classes must add back up to the input delta
+// whatever the two cumulative counters do. Before this, a turn whose cached counter advanced
+// further than its input counter (here 80 against 50) stored the whole cached delta beside a
+// clamped zero, publishing 80 prompt tokens from a vendor total that gained 50.
+func TestCacheDominantTurnConservesTheInputDelta(t *testing.T) {
 	const rollout = `{"type":"session_meta","payload":{"id":"c1","cwd":"/home/dev/app","timestamp":"2026-07-01T09:00:00Z"}}
 {"type":"turn_context","payload":{"model":"gpt-5.1"}}
 {"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000,"cached_input_tokens":100,"output_tokens":300,"reasoning_output_tokens":50,"total_tokens":1600}}}}
@@ -117,10 +118,13 @@ func TestCacheDominantTurnUnderCountsInputByDesign(t *testing.T) {
 	}
 	rec := recs[1]
 	if rec.InputTokens != 0 {
-		t.Fatalf("InputTokens = %d, want 0 (documented under-count: delta.input=50 < delta.cached=80, clamped)", rec.InputTokens)
+		t.Fatalf("InputTokens = %d, want 0 (the whole 50-token delta was served from cache)", rec.InputTokens)
 	}
-	if rec.CacheReadTokens != 80 {
-		t.Fatalf("CacheReadTokens = %d, want 80 (cache delta preserved)", rec.CacheReadTokens)
+	if rec.CacheReadTokens != 50 {
+		t.Fatalf("CacheReadTokens = %d, want 50 (clamped to the input delta it is part of)", rec.CacheReadTokens)
+	}
+	if got := rec.InputTokens + rec.CacheReadTokens; got != 50 {
+		t.Fatalf("input + cache_read = %d, want the input delta 50", got)
 	}
 }
 

@@ -21,6 +21,124 @@ Discussion.
 
 ## [Unreleased]
 
+### Compatibility
+- **A correction can now lower a stored activity count, and the upgrade applies one.** The
+  restate path took `MAX(stored, offered)` on every column, so a parser fix that *reduces* a
+  figure could not reach a single existing row — the record already exists, nothing new is
+  inserted, and a maximum never accepts a smaller number. The activity counts (lines,
+  rework, edits, tool calls, the purpose split, rejections, errors, compactions) are now
+  assigned from the current parse; the token counts stay on `MAX`, because those are the
+  vendor's own figures rather than a rule assaio wrote. Migration `0010` clears the
+  `claude-code` ingest watermark so the next `backfill` re-reads every transcript once. On
+  the maintainer's store that moves added lines 280,500 → 280,170 and removed lines
+  111,920 → 111,296. Nothing is deleted; the first import after upgrading is a slow one.
+- **`report --format csv` gained three columns** — `task`, `outcome`, `difficulty`, after
+  `granularity`. A consumer reading columns by position must be updated; one reading them by
+  header name is unaffected.
+- **`assaio-agent init` no longer accepts `--db`.** It never honoured it (see below), so the
+  flag only ever produced a wrong answer.
+- **A parser plugin's records are now rejected for an out-of-range timestamp**, matching what
+  the sync endpoint already enforced on the same shape, and for `reasoning_tokens` above
+  `output_tokens`. A conforming plugin is unaffected; a rejected line is skipped and counted
+  as a violation, exactly as any other boundary failure.
+- **A `backfill` may now delete stored rows** — only Claude Code sub-agent aggregates
+  (`agent:<id>`) whose own transcript is on disk, which were counting the same work twice
+  beside the detailed turns. Zero such rows on the maintainer's store; a store upgraded from
+  v0.1.0 may hold some.
+
+### Fixed
+- **A repeated transcript line was counted twice, and every count that mattered lives on the
+  repeated kind.** Claude Code writes a streamed retry as the same line again, and the guard
+  against that sat inside the assistant branch of the parser — so assistant lines were
+  protected and user lines were not. An edit result's added, removed and rework lines, a tool
+  denial, a failed tool result and a compaction boundary all went in twice. **Measured on
+  5,597 real transcripts, not inferred:** 329 repeated edit results carrying **460** added and
+  **656** removed lines, plus 5 repeated denials — so the corpus reported 382,738 added lines
+  where the true figure is 382,278, and 32,767 rework lines against a true 32,387. The guard
+  now runs ahead of every line kind. A line carrying no uuid is still folded in, because there
+  is nothing to recognise it by.
+- **A stored sub-agent aggregate outlived the transcript that superseded it.** The parent
+  transcript summarizes a completed sub-agent as one row; the sub-agent's own file holds the
+  same work per turn. Suppression at parse time only keeps a *new* aggregate out — a row
+  written before that file existed, or by a build that could not discover it, stayed beside
+  the detailed turns and double-counted its tokens and cost. `backfill` now drops the
+  superseded ones. This also removes the reason `Delegation` had to pick one definition of
+  sub-agent work over the other on a mixed store.
+- **The team server could never correct a partial figure.** A sync that runs mid-response
+  pushes an output count that has not reached its true total yet, and pushes went through
+  first-write-wins `Insert`, whose repair never touches a token count — so the undercount was
+  permanent on the one surface a whole team reads. The endpoint prefixes every dedupe key with
+  its member and the member charset excludes the colon, so each row has exactly one possible
+  writer: restating one is that member correcting their own number, never overwriting
+  somebody else's.
+- **Non-ASCII filenames left the survival rate silently.** git's `core.quotePath` is on by
+  default, so `café.go` arrives as `"caf\303\251.go"`; that string names no file, so
+  `git blame` rejected it and its lines simply vanished from the rate, while `path.Ext` read
+  `.go"` and filed it under "other" instead of source. (`B124`)
+- **A failed blame was reported as code that did not survive.** Every non-context error in the
+  survival walk hit a bare `continue` with no counter, so the rate was printed as a confident
+  percentage over an unknown fraction of the window's files. `survival` now names how many
+  files it could not read and keeps them outside the rate. (`B125`)
+- **Every worktree session in every repository resolved to a project named `..`** on git 2.48
+  and later, which writes the worktree pointer *relative* to the worktree. Read verbatim it
+  matched no `/.git/worktrees/` segment. Alongside it, a worktree checked out beside its main
+  repository produced `Subpath = "../tmp/feature"` — not a repository subpath, and host
+  directory names in a field PRIVACY.md promises holds none. A path that climbs out of the
+  root is now no subpath at all. (`B126`)
+- **The "seven-day" recent window covered eight day-buckets.** Subtracting the whole duration
+  and then truncating to a date made the boundary date recent too, so Hot / GoingStale /
+  DormantTools and `adoption` compared eight days against six and read the difference as a
+  trend. (`B128`)
+- **Usage that names no project was counted as a project.** A source that logs no working
+  directory (Gemini CLI, Cline) leaves it empty on every row, and pooling those under one
+  nameless key made a single-repo user who also runs Gemini CLI read as working across two —
+  which is exactly what `adoption`'s breadth signal is computed from. The spend still counts;
+  only the project name is unknown. (`B129`)
+- **`report --by task|outcome|difficulty --format csv` emitted rows nothing could tell
+  apart.** Aggregating on a label dimension stamps the key into `Task`/`Outcome`/`Difficulty`
+  and leaves every other identity column empty, and the CSV header had none of the three. The
+  table and JSON forms were always correct. (`B130`)
+- **A metric plugin could inject a record with no timestamp bound**, so a year-9999 row sat
+  inside every `--since` window forever. The range and magnitude rules the sync endpoint
+  applies are now one shared check both boundaries use, and it also holds
+  `reasoning_tokens <= output_tokens` — without which a record renders a reasoning share above
+  100%. (`B133`)
+- **`init --db` imported to one store and reported from another**, so the command printed an
+  empty first run against the database it had just told the user about. `init` imports through
+  `backfill`, which only ever writes this machine's own store, so the flag is gone rather than
+  threaded through. (`B134`)
+- **`skill-economics` totalled one dimension and ranked another.** The "largest single share"
+  is taken within whichever of skills / sub-agents has two entries to compare, while the
+  "attributed tokens" figure above it — labelled "in the dimension below" — was read off the
+  *larger* one. An 80% share sat beside a total 80% was never taken from. (`B135`)
+- **`rework` drew a full gauge beside a withheld verdict.** With neither churn nor rejection
+  measurable, both structural silences entered the purity average as zeros and the faceplate
+  rendered 1.00 — the strongest possible "all clear" — next to a `—`. A gauge with nothing
+  behind it now sits at neutral. (`B136`)
+- **A Codex diff could lose a removed line to a comment marker.** The unified-diff file headers
+  were matched anywhere in the diff rather than at the position the grammar puts them, so a
+  removed line of SQL, Lua, Haskell or Ada — whose comments begin `-- ` — was read as a file
+  header and not counted. Unobserved on the audited corpus (0 of 349 real diffs): this is the
+  rule, not a correction to a figure.
+- **Codex could store more prompt tokens than its own total gained.** `input_tokens` is the
+  whole prompt and `cached_input_tokens` the part of it served from cache, but the two deltas
+  were taken independently, so a turn whose cached counter advanced further than its input
+  counter stored the entire cached delta beside a clamped zero. The two classes now add back
+  up to the input delta. Unobserved on the audited corpus (0 of 1,686 events).
+- **A record with no timestamp was stored and then invisible.** Every report, validator and
+  dashboard window is bounded by `ts >= ?`, so such a row counted toward the store's totals
+  and appeared in no window. It is now counted as skipped — the honest word for evidence that
+  could not be read, and the number the drift canaries already watch.
+- **A model name that arrived late could never be applied.** Cline reads the model from a
+  sidecar that may not exist when a task is first parsed, and the restate path deliberately
+  never touched an identity column — so those tokens stayed unpriceable forever. A blank model
+  is now filled by a later read; a stored name is still never overwritten.
+
+### Changed
+- A metric plugin's wire input carries `cacheWrite1h` on every usage row and on every price,
+  so a plugin re-pricing what it is handed no longer has to bill every cache write at the
+  cheaper 5-minute rate and report a cost the core disagrees with.
+
 ## [0.13.0] - 2026-08-08
 
 ### Compatibility

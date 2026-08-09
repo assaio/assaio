@@ -25,7 +25,7 @@ func TestValidateRecordBoundsEveryNumericField(t *testing.T) {
 			value int64
 		}{
 			{"negative", -1},
-			{"overflow magnitude", maxFieldValue + 1},
+			{"overflow magnitude", usage.MaxCount + 1},
 		} {
 			t.Run(field.Name+"/"+tc.name, func(t *testing.T) {
 				r := newValidRecord()

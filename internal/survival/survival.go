@@ -26,6 +26,11 @@ type Result struct {
 	SurvivalRate float64
 	Commits      int // commits in the window
 	Files        int // window-touched files successfully blamed
+	// Unreadable is window-touched files git could not blame. A deleted or renamed-away path
+	// legitimately did not survive, but so does a path this build failed to name, and the two
+	// are indistinguishable from here -- so the count is reported beside the rate rather than
+	// folded into it, the same skip-and-count policy every parser in this repo follows.
+	Unreadable int
 	// Changed is what those commits touched, by category rather than by path: a window that
 	// only moved documentation is a different fact from one that rewrote source, and the
 	// rate alone cannot tell them apart.
@@ -53,6 +58,7 @@ func Analyze(ctx context.Context, root string, commits []event.Event, files []st
 		return Result{}, err
 	}
 	res.Surviving, res.MergeLines, res.Files = blame.surviving, blame.merged, blame.files
+	res.Unreadable = blame.unreadable
 	res.SurvivalRate = rate(res.Surviving, res.GitAdded)
 	return res, nil
 }
@@ -85,17 +91,20 @@ func (r *Result) tally(commits []event.Event) map[string]bool {
 }
 
 // blameTally is what one pass over the touched files found: lines still in HEAD from the
-// window's ordinary commits, lines from its merges, and how many files could be blamed.
+// window's ordinary commits, lines from its merges, how many files could be blamed, and how
+// many could not.
 type blameTally struct {
 	surviving, merged int64
-	files             int
+	files, unreadable int
 }
 
 // survivingLines blames each still-present touched file at HEAD and counts the lines whose
 // commit is in the window -- window-authored lines still in the tree. A merge's lines are
 // counted apart from the rest: numstat never reported them as added, so counting them as
-// survivors would divide by a total they were never in. A file git cannot blame (deleted or
-// renamed away) is skipped; its lines legitimately did not survive.
+// survivors would divide by a total they were never in. A file git cannot blame is skipped
+// and counted: a deleted or renamed-away path legitimately did not survive, but a path this
+// build failed to read did not fail to survive, and the rate must not present the second as
+// the first without saying how many there were.
 func survivingLines(ctx context.Context, root string, files []string, inWindow map[string]bool) (blameTally, error) {
 	var t blameTally
 	for _, f := range files {
@@ -104,7 +113,8 @@ func survivingLines(ctx context.Context, root string, files []string, inWindow m
 			if ctx.Err() != nil {
 				return t, ctx.Err()
 			}
-			continue // a deleted, renamed-away or binary path cannot be blamed: it did not survive
+			t.unreadable++
+			continue
 		}
 		t.files++
 		for _, h := range hashes {

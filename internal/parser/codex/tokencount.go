@@ -54,14 +54,20 @@ func (st *parseState) tokenCountRecord(payload json.RawMessage) (usage.Record, b
 	if d.input <= 0 && d.output <= 0 && d.cached <= 0 {
 		return usage.Record{}, false, nil
 	}
-	// Clamping can under-report non-cached input on cache-dominant turns (delta.cached > delta.input).
+	// input_tokens is the whole prompt and cached_input_tokens the part of it served from
+	// cache, so the two stored classes have to add back up to the input delta. Clamping the
+	// cached part to it is what holds that: the counters are two independent cumulative
+	// numbers, and a turn where cached advanced further than input would otherwise store more
+	// prompt tokens than the vendor's own total gained. Unobserved on the audited corpus (0 of
+	// 1,686 events) -- this is the invariant, not a correction to a figure.
+	cacheRead := parser.Subset(d.cached, parser.NonNeg(d.input))
 	return usage.Record{
 		Tool:            tool,
 		SessionID:       st.session,
 		Timestamp:       st.ts,
 		Model:           st.model,
-		InputTokens:     parser.NonNeg(d.input - d.cached),
-		CacheReadTokens: parser.NonNeg(d.cached),
+		InputTokens:     parser.NonNeg(d.input) - cacheRead,
+		CacheReadTokens: cacheRead,
 		OutputTokens:    parser.NonNeg(d.output),
 		ReasoningTokens: parser.NonNeg(d.reasoning),
 		DedupeKey:       fmt.Sprintf("%s:%s:%d", st.fileFP, st.session, st.turn),

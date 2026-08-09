@@ -27,7 +27,16 @@ type GroupStat struct {
 
 // Inventory summarizes distinct counts and cost/line totals across all queried usage.
 type Inventory struct {
-	Projects, Models, Tools, Entrypoints, Days int
+	// Projects counts the distinct *named* projects only. Usage from a source that logs no
+	// working directory carries no project name, and counting that one nameless bucket as a
+	// project made a single-repo user who also runs Gemini CLI read as working across two --
+	// which is what adoption's breadth signal is computed from. Its cost and lines stay in
+	// TotalCost and TotalLinesAdded: the spend is real, only the project name is unknown.
+	Projects int
+	// Unattributed is how many rows named no project, so a surface can say the count above is
+	// not the whole window rather than implying it is.
+	Unattributed                     int
+	Models, Tools, Entrypoints, Days int
 	// TotalCost is USD cost summed from priced usage only; nil when nothing priced.
 	TotalCost *float64
 	// HasUnpriced reports whether some usage was excluded from TotalCost because its
@@ -64,10 +73,10 @@ func BuildInsights(rows []store.UsageRow, t pricing.Table, now time.Time, recent
 	}
 }
 
-// splitRecent partitions rows into those on or after now-recent (recent) and the rest
-// (prior), comparing Day as a "YYYY-MM-DD" string so no per-row time parsing is needed.
+// splitRecent partitions rows into the recent sub-window and the rest (prior), comparing Day
+// as a "YYYY-MM-DD" string so no per-row time parsing is needed.
 func splitRecent(rows []store.UsageRow, now time.Time, recent time.Duration) (recentRows, priorRows []store.UsageRow) {
-	cutoff := now.UTC().Add(-recent).Format("2006-01-02")
+	cutoff := recentCutoff(now, recent)
 	for i := range rows {
 		if rows[i].Day >= cutoff {
 			recentRows = append(recentRows, rows[i])
@@ -76,6 +85,21 @@ func splitRecent(rows []store.UsageRow, now time.Time, recent time.Duration) (re
 		}
 	}
 	return recentRows, priorRows
+}
+
+// recentCutoff is the first day bucket a window of `recent` covers, counting today as one of
+// them. Subtracting the whole duration and then truncating to a date made that date recent
+// too, so a "7 days" window spanned eight buckets and every Hot/GoingStale/DormantTools
+// verdict compared eight days against six -- the same off-by-one cli/compare.go's own comment
+// warns against. A window shorter than a day still covers today.
+func recentCutoff(now time.Time, recent time.Duration) string {
+	days := int(recent / (24 * time.Hour))
+	if days < 1 {
+		days = 1
+	}
+	u := now.UTC()
+	midnight := time.Date(u.Year(), u.Month(), u.Day(), 0, 0, 0, 0, time.UTC)
+	return midnight.AddDate(0, 0, -(days - 1)).Format("2006-01-02")
 }
 
 // BuildInventory counts distinct projects/models/tools/entrypoints/days and totals cost
@@ -94,7 +118,11 @@ func BuildInventory(rows []store.UsageRow, t pricing.Table) Inventory {
 	var hasCost bool
 	for i := range rows {
 		r := &rows[i]
-		projects[r.Project] = struct{}{}
+		if attributed(r) {
+			projects[r.Project] = struct{}{}
+		} else {
+			inv.Unattributed++
+		}
 		models[r.Model] = struct{}{}
 		tools[r.Tool] = struct{}{}
 		entrypoints[r.Entrypoint] = struct{}{}

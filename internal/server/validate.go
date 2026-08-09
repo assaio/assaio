@@ -10,26 +10,10 @@ import (
 	"github.com/assaio/assaio/internal/usage"
 )
 
-// maxFieldValue bounds any single numeric field on a pushed record. Real usage, even
-// session-aggregate granularity over a long session, tops out in the low millions; this
-// cap is generous headroom while still rejecting overflow-magnitude garbage that would
-// distort the shared dashboard's SUM() aggregates.
-const maxFieldValue = 1_000_000_000
-
 // maxStringField bounds any single string field on a pushed record: these are identities
 // and labels, not free text. It blocks a client from smuggling a multi-megabyte model or
 // dedupe_key into the shared store and the unauthenticated dashboard it feeds.
 const maxStringField = 512
-
-// tsFloor is the earliest plausible record timestamp; anything before it (including the
-// zero value, year 1) is garbage. No AI-coding tool predates it.
-var tsFloor = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
-
-// tsFutureSkew is how far past "now" a record may be timestamped before it is rejected --
-// generous headroom for clock skew across a team, while still blocking a far-future
-// timestamp that would sit permanently in every recent window and never age out of the
-// shared dashboard.
-const tsFutureSkew = 48 * time.Hour
 
 // knownTools is the exact set of Tool values assaio's built-in parsers emit, read from the
 // depth matrix so a source becomes syncable the moment it declares its depth -- a list kept
@@ -92,35 +76,16 @@ func validateRecordAt(r *usage.Record, now time.Time) error {
 	if !knownGranularities[r.Granularity] {
 		return fmt.Errorf("unknown granularity %q", r.Granularity)
 	}
-	if r.Timestamp.Before(tsFloor) || r.Timestamp.After(now.Add(tsFutureSkew)) {
-		return fmt.Errorf("timestamp %s out of range", r.Timestamp.UTC().Format(time.RFC3339))
+	// The range and magnitude rules are usage.Check*: an exec plugin's records cross the same
+	// boundary from a different direction and must not be allowed a value this rejects.
+	if err := usage.CheckTimestamp(r.Timestamp, now); err != nil {
+		return err
 	}
-	// Every numeric field a record carries must appear here: an unbounded one is summed
-	// into the shared aggregates, where a negative value renders impossible percentages and
-	// an overflow-magnitude one makes SUM() fail for the whole team.
-	fields := [...]int64{
-		r.InputTokens, r.OutputTokens, r.CacheReadTokens, r.CacheWriteTokens, r.ReasoningTokens,
-		r.CacheWrite1hTokens,
-		r.LinesAdded, r.LinesRemoved, r.Edits, r.ToolCalls, r.Rejected, r.Compactions, r.ReworkLines,
-		r.ToolReads, r.ToolSearches, r.ToolCommands, r.ToolWrites, r.ToolOther, r.ToolErrors,
-		r.Sidechain,
-	}
-	for _, v := range fields {
-		if v < 0 {
-			return errors.New("negative count field")
-		}
-		if v > maxFieldValue {
-			return fmt.Errorf("count field exceeds %d", maxFieldValue)
-		}
+	if err := usage.CheckCounts(r); err != nil {
+		return err
 	}
 	if r.Sidechain != 0 && r.Sidechain != 1 {
 		return fmt.Errorf("sidechain %d is not 0 or 1", r.Sidechain)
-	}
-	// The 1-hour portion is part of the cache write, and the two tiers are billed at
-	// different rates: a portion larger than its whole prices a negative 5-minute remainder
-	// into a total the whole team reads.
-	if r.CacheWrite1hTokens > r.CacheWriteTokens {
-		return fmt.Errorf("cache_write_1h %d exceeds cache_write %d", r.CacheWrite1hTokens, r.CacheWriteTokens)
 	}
 	return validateToolPurposeSplit(r)
 }

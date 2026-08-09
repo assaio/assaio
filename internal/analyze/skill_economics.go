@@ -55,9 +55,16 @@ func (skillValidator) Analyze(in Input) Result {
 	// side that cannot both be true, and points the reader at a skill worth 1% of the window.
 	r.restsOn(len(in.Skills)+len(in.Agents), "labeled skills and sub-agents")
 	topShareOf, attributed, comparable := topAttributionShare(in.Skills, in.Agents)
+	// The tokens the share is a share *of*, which is the dimension topAttributionShare picked
+	// and not necessarily the larger one. With no comparable dimension there is no share to
+	// stand beside, so the figure falls back to every labeled token seen.
+	basis := attributedTokens(in.Skills, in.Agents)
+	if comparable {
+		basis = attributed
+	}
 	// The share is of attributed tokens, which are a slice of the window: an 80% share of 3%
 	// of the tokens is a real figure about almost nothing, and only this metric can say so.
-	r.covering(fracOf(attributedTokens(in.Skills, in.Agents), in.Totals.Tokens))
+	r.covering(fracOf(basis, in.Totals.Tokens))
 	// Concentration needs something to concentrate against: with one label its share is
 	// 100% by construction, which is arithmetic, not a finding.
 	measurable := attributed >= skillMinTokens && comparable
@@ -68,7 +75,7 @@ func (skillValidator) Analyze(in Input) Result {
 	r.Figures = []Figure{
 		{Label: "skills seen", Value: strconv.Itoa(len(in.Skills))},
 		{Label: "sub-agent types", Value: strconv.Itoa(len(in.Agents))},
-		{Label: "attributed tokens", Value: humanize.Count(attributedTokens(in.Skills, in.Agents)), Note: "in the dimension below"},
+		attributedFigure(basis, comparable),
 		skillShareFigure(topShareOf, comparable),
 	}
 	r.Bars = attributionBars(in.Skills, in.Agents, skillTopN)
@@ -76,6 +83,17 @@ func (skillValidator) Analyze(in Input) Result {
 	r.Takeaway = skillTakeaway(measurable, spread)
 	r.Caveats = append(r.Caveats, skillCoverageCaveat())
 	return r
+}
+
+// attributedFigure renders the token total the share below it is a share of. Its Note only
+// claims to be that dimension's total when there *is* a share -- otherwise the number is
+// every labeled token seen, and saying "in the dimension below" would point at a "—".
+func attributedFigure(basis int64, comparable bool) Figure {
+	note := "all labeled turns"
+	if comparable {
+		note = "in the dimension below"
+	}
+	return Figure{Label: "attributed tokens", Value: humanize.Count(basis), Note: note}
 }
 
 // skillShareFigure renders the largest single share, "—" when no dimension holds two entries

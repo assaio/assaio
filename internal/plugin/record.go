@@ -39,6 +39,12 @@ type wireRecord struct {
 // config name; the stored Tool is always "plugin:<name>" so a plugin can never
 // impersonate a built-in source.
 func (w *wireRecord) toRecord(pluginName string) (usage.Record, error) {
+	return w.toRecordAt(pluginName, time.Now())
+}
+
+// toRecordAt is toRecord with the clock injected, so the range a timestamp is judged
+// against is a test's to choose.
+func (w *wireRecord) toRecordAt(pluginName string, now time.Time) (usage.Record, error) {
 	if w.SessionID == "" {
 		return usage.Record{}, errors.New("empty session_id")
 	}
@@ -53,15 +59,17 @@ func (w *wireRecord) toRecord(pluginName string) (usage.Record, error) {
 	if w.Granularity != "turn" && w.Granularity != "session" {
 		return usage.Record{}, fmt.Errorf("invalid granularity %q (want turn|session)", w.Granularity)
 	}
-	if w.InputTokens < 0 || w.OutputTokens < 0 || w.CacheReadTokens < 0 ||
-		w.CacheWriteTokens < 0 || w.ReasoningTokens < 0 {
-		return usage.Record{}, errors.New("negative token field")
-	}
 	ts, err := time.Parse(time.RFC3339, w.Timestamp)
 	if err != nil {
 		return usage.Record{}, fmt.Errorf("bad timestamp %q: %w", w.Timestamp, err)
 	}
-	return usage.Record{
+	// The same range and magnitude rules the sync endpoint applies to the same shape. A
+	// plugin is opt-in config, not a stranger -- but an unbounded timestamp from one sits in
+	// every --since window forever, which is the store's problem rather than the plugin's.
+	if err := usage.CheckTimestamp(ts, now); err != nil {
+		return usage.Record{}, err
+	}
+	rec := usage.Record{
 		Tool:             parser.PluginPrefix + pluginName,
 		SessionID:        w.SessionID,
 		Timestamp:        ts,
@@ -76,7 +84,11 @@ func (w *wireRecord) toRecord(pluginName string) (usage.Record, error) {
 		GitBranch:        w.GitBranch,
 		Entrypoint:       w.Entrypoint,
 		Granularity:      w.Granularity,
-	}, nil
+	}
+	if err := usage.CheckCounts(&rec); err != nil {
+		return usage.Record{}, err
+	}
+	return rec, nil
 }
 
 // parseRecordLine unmarshals one JSONL line and validates it against the protocol's

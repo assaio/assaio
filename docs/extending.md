@@ -790,14 +790,29 @@ Anything the plugin writes to stderr passes through to `assaio`'s stderr prefixe
 
 ### What the boundary enforces
 
-`assaio` validates every record line and **skips** (and counts) any line with a negative
-token field, an empty `dedupe_key`, an unparseable timestamp, or an invalid
-`granularity` — the same skip-and-count policy in-tree parsers apply to corrupt log
-lines. Stored records get the tool label `plugin:<name>`, so a plugin can never
-impersonate a built-in source and its dedupe keyspace `(tool, dedupe_key)` never
-collides with anyone else's. A plugin that exits non-zero, times out, or fails the
-handshake is reported as failed for that run; the rest of the backfill continues.
-Stdout is capped at 64 MiB per run.
+`assaio` validates every record line and **skips** (and counts) any line that breaks one of
+the boundary invariants — the same skip-and-count policy in-tree parsers apply to corrupt
+log lines:
+
+| Rejected | Why |
+|---|---|
+| empty `session_id` or `dedupe_key` | `dedupe_key` is half the store's uniqueness constraint; a blank one collapses rows onto each other. |
+| unparseable `timestamp` | a record that cannot be placed in time can appear in no window. |
+| `timestamp` before 2020-01-01 or more than 48h in the future | since v0.14. Every query is `ts >= ?` with no ceiling, so a year-9999 record sits inside every `--since` window forever. Identical to what the sync endpoint enforces on the same shape — the two are one shared check (`internal/usage`). |
+| invalid `granularity` | see the [granularity honesty rule](#granularity-honesty-hard-rule). |
+| a negative count, or one above 1,000,000,000 | a negative renders impossible percentages; an overflow-magnitude one distorts every `SUM()` it lands in. |
+| `reasoning_tokens` above `output_tokens` | since v0.14. Reasoning is a *subset* of output, and a record claiming more renders a reasoning share above 100%. |
+| a string field over 512 bytes | these are identities and labels, not free text. |
+
+Stored records get the tool label `plugin:<name>`, so a plugin can never impersonate a
+built-in source and its dedupe keyspace `(tool, dedupe_key)` never collides with anyone
+else's. A plugin that exits non-zero, times out, or fails the handshake is reported as
+failed for that run; the rest of the backfill continues. Stdout is capped at 64 MiB per run.
+
+Unknown fields are currently ignored rather than rejected, unlike the metric and rule
+protocols — so a misspelled key stores a zero instead of raising a violation. That
+inconsistency is tracked as `B143` and will change behind a handshake version bump, not
+silently.
 
 ### A complete example (Python)
 
@@ -890,7 +905,8 @@ parser protocol's `assaio_plugin`):
   "recentDays": 7,
   "usage":    [{"day":"2026-07-16","tool":"claude-code","model":"...","project":"...",
                 "entrypoint":"","member":"","granularity":"turn","in":100,"out":200,
-                "cacheRead":0,"cacheWrite":0,"reasoning":0,"linesAdded":40,"linesRemoved":5,
+                "cacheRead":0,"cacheWrite":0,"cacheWrite1h":0,"reasoning":0,
+                "linesAdded":40,"linesRemoved":5,
                 "edits":3,"toolCalls":7,"rejected":1,"compactions":1,"reworkLines":2}],
   "sessions": [{"sessionId":"...","project":"...","tool":"...","model":"...",
                 "member":"","firstTs":"...","lastTs":"...","turns":4,
@@ -904,11 +920,24 @@ parser protocol's `assaio_plugin`):
   "totals":    {"tokens":0,"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"lines":0,
                 "cost":null,"priced":false,"cacheEfficiency":0.9},
   "prices":    {"claude-opus-4-8":{"input":0.000015,"output":0.000075,
-                "cacheRead":0.0000015,"cacheWrite":0.00001875}},
+                "cacheRead":0.0000015,"cacheWrite":0.00001875,
+                "cacheWrite1h":0.00003}},
   "answers":   {"claude-code":["ai.compactions.count","ai.edits.count","..."],
                 "copilot-cli":["ai.cost.estimated","ai.lines.added","..."]}
 }
 ```
+
+#### `cacheWrite1h` — a subset, never a total (since v0.14)
+
+`cacheWrite1h` on a usage row is the portion of `cacheWrite` that bought a 1-hour cache
+lifetime, and `prices[model].cacheWrite1h` is that portion's own higher rate. It is a
+**subset**: adding it to `cacheWrite` double-counts those tokens. Price a row the way the
+core does — `min(cacheWrite1h, cacheWrite)` at the 1-hour rate, the remainder at
+`cacheWrite`. Both fields are `0` for a source that does not report the tier, which reads the
+same as "every write was 5-minute", so a plugin publishing a figure over them should declare
+its own coverage. Before v0.14 neither field was on the wire, so a plugin re-pricing what it
+was handed necessarily billed every write at the cheaper rate and reported a cost the core
+disagreed with.
 
 #### `answers` — which zeros are measurements and which are silence
 

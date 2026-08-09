@@ -39,9 +39,29 @@ func projectKey(u *store.UsageRow) string { return u.Project }
 
 func toolKey(u *store.UsageRow) string { return u.Tool }
 
-// projectStats groups rows by project into GroupStat.
+// attributed reports whether a row names the project it belongs to. A source that logs no
+// working directory (Gemini CLI, Cline) leaves it empty for every row it emits, and pooling
+// those under one nameless key makes a project out of "we do not know which project" --
+// which then ranks beside real ones and counts toward breadth. internal/analyze's
+// concentration and the dashboard's drill already exclude it; this is the same rule, spelled
+// once for the surfaces that did not.
+func attributed(u *store.UsageRow) bool { return u.Project != "" }
+
+// attributedRows keeps only the rows that name a project, so a project ranking never has a
+// nameless entry in it.
+func attributedRows(rows []store.UsageRow) []store.UsageRow {
+	out := make([]store.UsageRow, 0, len(rows))
+	for i := range rows {
+		if attributed(&rows[i]) {
+			out = append(out, rows[i])
+		}
+	}
+	return out
+}
+
+// projectStats groups the rows that name a project into GroupStat.
 func projectStats(rows []store.UsageRow, t pricing.Table) []GroupStat {
-	return groupStats(rows, projectKey, t)
+	return groupStats(attributedRows(rows), projectKey, t)
 }
 
 // groupStats groups rows by keyAt into GroupStat, in groupBy's key-sorted order, with

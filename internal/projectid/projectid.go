@@ -29,10 +29,19 @@ func Resolve(cwd string) (repoRoot, subpath string) {
 	if repoRoot == "" {
 		return cwd, ""
 	}
-	if rel, err := filepath.Rel(repoRoot, cwd); err == nil && rel != "." {
+	if rel, err := filepath.Rel(repoRoot, cwd); err == nil && rel != "." && !escapes(rel) {
 		subpath = rel
 	}
 	return repoRoot, subpath
+}
+
+// escapes reports whether rel climbs out of the root it was computed against. A worktree
+// checked out beside its main repository does exactly that, and the resulting "../tmp/feature"
+// is neither a repository subpath nor something PRIVACY.md allows the store to hold -- it
+// names directories on the host. The honest answer for a working directory outside the root
+// is that it has no subpath within it.
+func escapes(rel string) bool {
+	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // findRepoRoot walks dir and its ancestors looking for a .git entry, stopping at the
@@ -61,7 +70,7 @@ func repoRootAt(dir string) (root string, ok bool) {
 	if info.IsDir() {
 		return dir, true
 	}
-	if main, ok := worktreeMainRoot(gitPath); ok {
+	if main, ok := worktreeMainRoot(gitPath, dir); ok {
 		return main, true
 	}
 	return dir, true
@@ -69,10 +78,12 @@ func repoRootAt(dir string) (root string, ok bool) {
 
 // worktreeMainRoot reads a ".git" file shaped as a git-worktree pointer
 // ("gitdir: <root>/.git/worktrees/<name>") and returns the main repository root, the
-// text before "/.git/". ok is false for a submodule's ".git" file or anything else
-// that does not match the worktree shape, so the caller falls back to treating the
-// pointer file's own directory as the root.
-func worktreeMainRoot(gitFile string) (root string, ok bool) {
+// text before "/.git/". git 2.48 and later writes that pointer *relative* to the worktree,
+// so it is resolved against dir -- the directory holding the pointer file -- before the
+// segment is looked for; an absolute pointer is unaffected. ok is false for a submodule's
+// ".git" file or anything else that does not match the worktree shape, so the caller falls
+// back to treating the pointer file's own directory as the root.
+func worktreeMainRoot(gitFile, dir string) (root string, ok bool) {
 	data, err := os.ReadFile(gitFile) //nolint:gosec // gitFile is built from the directory being walked, not external input
 	if err != nil {
 		return "", false
@@ -81,7 +92,10 @@ func worktreeMainRoot(gitFile string) (root string, ok bool) {
 	if !ok {
 		return "", false
 	}
-	gitdir = filepath.ToSlash(gitdir)
+	if !filepath.IsAbs(gitdir) {
+		gitdir = filepath.Join(dir, gitdir)
+	}
+	gitdir = filepath.ToSlash(filepath.Clean(gitdir))
 	idx := strings.Index(gitdir, worktreeSegment)
 	if idx < 0 {
 		return "", false

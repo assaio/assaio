@@ -100,6 +100,14 @@ a turn wrote a row before that line existed, with zero errors recorded — and n
 corrected it, so `friction` under-reported from then on. v0.4 made a re-read restate those
 columns upward (`B68`), which removed the objection.
 
+Since v0.14 a re-read restates an activity column to whatever the current parse says, rather
+than to the larger of the two. That is still safe for a session read mid-write, because each
+attribution rule is monotone in the prefix it read — a longer transcript never yields fewer
+edits or less rework for a turn already emitted, since later lines attach to later turns. What
+it adds is the other direction: when a *build* corrects a rule, the correction reaches rows
+already stored instead of being pinned at the old, higher figure forever. Token counts still
+take the maximum: those are the vendor's own numbers, not a rule assaio wrote.
+
 ```json
 "Stop": [{ "hooks": [{ "type": "command", "command": "assaio-agent backfill" }] }]
 ```

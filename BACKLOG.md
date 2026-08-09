@@ -41,7 +41,12 @@ listed in the pool below. They close first. The reason is v0.12: the flagship pa
 wrong for eleven releases and every honesty guard this project owns said it was fine.
 
 The eight that carried a wrong number or destroyed data closed in v0.13 (`B119`–`B123`,
-`B127`, `B131`, `B132`); `B124`–`B126` and `B128`–`B130`, `B133`–`B136` remain below.
+`B127`, `B131`, `B132`). The remaining ten closed in v0.14 (`B124`–`B126`, `B128`–`B130`,
+`B133`–`B136`), together with four defects the same review found that had no id yet: a
+repeated Claude transcript line counted twice, a superseded sub-agent aggregate left in the
+store, a team-server push that could never correct a partial figure, and an activity
+correction that could not reach a stored row at all. **The milestone is closed** — what a
+later review finds opens a new pool below rather than reopening this one.
 
 ## Next — "Calibrated measurement"
 
@@ -632,51 +637,39 @@ written down. What v0.13 fixed is in [CHANGELOG.md](CHANGELOG.md) and not repeat
   decision is whether a synthetic turn is a turn — `B113`'s "how a turn ended" is the same
   question from the other side, so they probably answer together.
 
-## Pool — from the v0.12 whole-codebase review
+## Pool — from the v0.14 whole-codebase review
 
-Findings from a max-effort review of `internal/` and `cmd/`, each reproduced against the
-maintainer's own store or a live `git` before being written down. The two severest — Claude
-Code's ~2× token inflation and cache writes priced at one flat rate — shipped in v0.12 and
-are not repeated here.
+The defects this review found are fixed and listed in [CHANGELOG.md](CHANGELOG.md). What
+remains here is what it found that is **not** a defect: three places where the code does
+exactly what it says and the question is whether what it says is still the right call. Each
+needs a decision before an edit, which is why none of them was quietly changed.
 
-- [ ] **B124 · non-ASCII filenames break survival, silently** — S/M · solo — `core.quotePath`
-  defaults on, so git returns `"caf\303\251.go"`; `numstatPath` un-quotes a rename but never a
-  plain path, so `git blame` fails on it and `path.Ext` yields `.go"`, classifying the file as
-  `other` rather than `source`. Compounded by the next item.
-- [ ] **B125 · a failed blame is read as "did not survive"** — S · solo — every non-context
-  error in the survival walk hits `continue` with no counter, so the rate is printed as a
-  confident percentage over an unknown fraction of files. Contradicts the skip-and-count
-  policy every other collector in this repo follows.
-- [ ] **B126 · relative-path worktrees collapse into one bogus project** — S · solo —
-  `worktreeMainRoot` returns the gitdir prefix verbatim, but git ≥2.48 writes a *relative*
-  gitdir, so `filepath.Rel` fails, the subpath is dropped and an in-repo worktree resolves to
-  `Project = ".."` for every worktree session across every repository.
-- [ ] **B128 · the recent window covers eight day-buckets, not seven** — S · both —
-  `splitRecent` subtracts the whole window then truncates to a date, making that date recent
-  too; `cli/compare.go` already subtracts `days-1` and its comment warns against this exact
-  bias. Feeds Hot/GoingStale/DormantTools and `adoption`.
-- [ ] **B129 · unattributed usage is counted as a project** — S · both — `insights` groups on
-  `r.Project` including `""`, while `concentration` and the dashboard drill both exclude it
-  deliberately. It inflates the "N projects" header and flips `adoption`'s breadth signal to
-  "usage is broad across projects" for a single-repo user who also runs Gemini CLI, whose
-  parser never sets a project at all.
-- [ ] **B130 · `report --by task|outcome|difficulty --format csv` emits anonymous rows** — S ·
-  both — `RenderCSV`'s fixed columns omit the three annotation fields, and label-dimension
-  aggregation stamps the key *only* into those fields, so every identity column is empty and
-  the rows are indistinguishable from one another. Table and JSON are correct.
-- [ ] **B133 · a metric plugin can inject a record with no timestamp bound** — S · both —
-  `plugin/record.go` validates a plugin's records without the timestamp range
-  `server/validate.go` applies to the same shape over HTTP, so a year-9999 record sits in
-  every `--since` window forever. The two validators should be one.
-- [ ] **B134 · `init --db` imports to one store and reports from another** — S · both — the
-  import path writes to the default local store while the report reads `--db`, so the command
-  prints an empty first run against the database it just told the user about.
-- [ ] **B135 · `skill-economics` can total one dimension and rank another** — S · solo — the
-  printed "attributed tokens" figure and the "largest share" line can be drawn from different
-  dimensions, which is the exact confusion the comment three lines above it exists to prevent.
-- [ ] **B136 · `rework` shows a full gauge beside a withheld verdict** — S · both — `Purity`
-  renders 1.00 when both of its inputs are structural silences, so the dashboard draws a
-  perfect bar next to a `—`.
+- [ ] **B141 · what the team panel is allowed to show per member** — S · both — `buildTeam`
+  already refuses the obvious mistake: it ranks by session count, never by cost or lines,
+  precisely so the panel cannot read as a productivity board. It still prints each
+  pseudonymous member's AI lines and spend on their own row, and a reader who knows the roster
+  can compare them week over week. The Refusals below forbid ranking "per named individual",
+  which pseudonymized output technically is not — so this is a question about the spirit of
+  that line, not a violation of its letter. Options, cheapest first: drop lines and cost from
+  the row and keep sessions; keep them but band them; or state a cohort floor below which the
+  panel does not render at all. Decide before the team server has real users, because the
+  answer is much harder to take away later.
+- [ ] **B142 · "per month" is thirty *active* days** — S · both — `subscription-fit` and
+  model-fit savings both divide the window's cost by its active days and multiply by 30. For
+  somebody who codes five days a week that projects a working week onto a calendar month:
+  five active days at $50 become $300/mo where repeating that weekly is about $217, and a $250
+  plan flips from "not paying off" to "paying off". The caveat says "projected to a month from
+  this window's usage", which is true and does not say *which* month. Either the rate is
+  calendar-anchored (span the window in real days) or the figure is renamed to what it is
+  (`per 30 active days`); do not silently change the formula, because it moves every existing
+  user's headline.
+- [ ] **B143 · the parser plugin protocol decodes leniently where the others are strict** —
+  S · both — `parseRecordLine` uses a plain `json.Unmarshal`, so a plugin emitting
+  `outputTokens` instead of `output_tokens` stores a zero and is counted as a valid record;
+  the metric and rule protocols reject an unknown field and count the line as a violation.
+  Making the three consistent turns a silent zero into a named protocol error, which is the
+  posture ADR 0003 argues for — but it is a breaking change for any plugin carrying its own
+  extra fields, so it needs a version bump on the handshake or a documented grace period.
 
 ## Refusals (will not build, regardless of demand)
 

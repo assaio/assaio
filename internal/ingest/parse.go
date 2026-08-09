@@ -29,7 +29,8 @@ func ingestParsed(ctx context.Context, st *store.Store, cache projectCache, res 
 	if parseErr != nil {
 		res.Failed++
 	}
-	res.Skipped += skipped
+	recs, undated := dated(recs)
+	res.Skipped += skipped + undated
 	if len(recs) == 0 {
 		return nil
 	}
@@ -42,4 +43,22 @@ func ingestParsed(ctx context.Context, st *store.Store, cache projectCache, res 
 	}
 	res.Inserted += n
 	return nil
+}
+
+// dated drops records a log gave no timestamp and reports how many went. Every report,
+// every validator and every dashboard window is bounded by `ts >= ?`, so a record stamped
+// with the zero time is stored and then invisible to all of them while still counting toward
+// the store's size and its row totals -- present in one place, absent in every other. Counted
+// as skipped, which is the honest word for evidence that could not be read and the number the
+// drift canaries already watch.
+func dated(recs []usage.Record) (kept []usage.Record, dropped int) {
+	kept = recs[:0]
+	for i := range recs {
+		if recs[i].Timestamp.IsZero() {
+			dropped++
+			continue
+		}
+		kept = append(kept, recs[i])
+	}
+	return kept, dropped
 }

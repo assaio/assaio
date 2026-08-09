@@ -24,13 +24,6 @@ func (st *parseState) appendAssistant(l *line, cf *carryForward, act *blockActiv
 		st.skipped++
 		return
 	}
-	// A line repeated verbatim is a streamed retry, not a second content block.
-	if l.UUID != "" {
-		if _, dup := st.seenLine[l.UUID]; dup {
-			return
-		}
-		st.seenLine[l.UUID] = struct{}{}
-	}
 	if at, ok := st.byMessage[key]; ok {
 		mergeResponse(&st.out[at], l, act)
 		st.last = at

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -78,9 +79,15 @@ func newScanner(out []byte) *bufio.Scanner {
 func sinceArg(since time.Time) string { return since.UTC().Format(time.RFC3339) }
 
 // numstatPath resolves a git numstat path field to the file's current path, unwrapping the
-// two rename forms git prints ("old => new" and "pre/{old => new}/post") so a caller targets
-// the present name, not the arrow-mangled string.
+// two rename forms git prints ("old => new" and "pre/{old => new}/post") and then git's own
+// quoting, so a caller targets the present name on disk rather than the arrow-mangled or
+// escaped string. The order matters: git quotes each side of the arrow separately, so the
+// arrow has to be resolved before the surviving side is decoded.
 func numstatPath(field string) string {
+	return unquotePath(renamedTo(field))
+}
+
+func renamedTo(field string) string {
 	i := strings.Index(field, " => ")
 	if i < 0 {
 		return field
@@ -91,4 +98,21 @@ func numstatPath(field string) string {
 		}
 	}
 	return field[i+len(" => "):]
+}
+
+// unquotePath decodes the C-style form git wraps a path in whenever core.quotePath is on --
+// its default -- so a byte outside ASCII arrives as `"caf\303\251.go"`. Left as-is, that
+// string names no file: `git blame` rejects it and path.Ext reads `.go"`, so every non-ASCII
+// path silently left the survival rate and landed in the "other" category. The escape
+// vocabulary git writes (\\, \", the control letters, and three-digit octal) is a subset of
+// Go's, so strconv decodes it; anything it cannot read is returned untouched rather than
+// mangled further.
+func unquotePath(s string) string {
+	if len(s) < 2 || s[0] != '"' || s[len(s)-1] != '"' {
+		return s
+	}
+	if unquoted, err := strconv.Unquote(s); err == nil {
+		return unquoted
+	}
+	return s
 }

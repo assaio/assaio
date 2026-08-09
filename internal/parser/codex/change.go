@@ -47,12 +47,18 @@ func contentLines(s string) int64 {
 }
 
 // diffLineCounts counts a unified diff's "+"/"-" prefixed body lines. File headers
-// ("--- a/x", "+++ b/x") and the hunk header ("@@ ... @@") share the "+"/"-" markers but
-// are not body lines, so they must not count as added/removed lines.
+// ("--- a/x", "+++ b/x") and the hunk header ("@@ ... @@") share the "+"/"-" markers but are
+// not body lines, so they must not count as added/removed lines. The grammar places the file
+// headers before the first hunk header and every line after it in a hunk body, and that
+// position is what separates them -- matching "--- " anywhere swallowed a real removed line
+// of SQL, Lua, Haskell or Ada, whose comments begin exactly that way.
 func diffLineCounts(diff string) (added, removed int64) {
+	inHunk := false
 	for _, ln := range strings.Split(diff, "\n") {
 		switch {
-		case strings.HasPrefix(ln, "+++ "), strings.HasPrefix(ln, "--- "), strings.HasPrefix(ln, "@@"):
+		case strings.HasPrefix(ln, "@@"):
+			inHunk = true
+		case !inHunk && (strings.HasPrefix(ln, "+++ ") || strings.HasPrefix(ln, "--- ")):
 		case strings.HasPrefix(ln, "+"):
 			added++
 		case strings.HasPrefix(ln, "-"):

@@ -51,22 +51,56 @@ func TestInsertLocalRestatesAHalfAttributedTurn(t *testing.T) {
 	}
 }
 
-// TestInsertLocalNeverDegradesAStoredRow keeps the honesty guarantee Insert already makes:
-// a re-parse that extracts less than what is stored must not lower it.
-func TestInsertLocalNeverDegradesAStoredRow(t *testing.T) {
+// TestInsertLocalNeverDegradesAStoredTokenCount keeps MAX where the number is the vendor's
+// own: a token count is read off the log, so a re-read that somehow sees less (a truncated or
+// rotated file) must not lower a figure the vendor already stated.
+func TestInsertLocalNeverDegradesAStoredTokenCount(t *testing.T) {
+	ctx := context.Background()
+	st := openTempStore(t)
+
+	rich := liveTurn(3, 2, 40)
+	rich.InputTokens, rich.OutputTokens = 500, 900
+	thin := liveTurn(1, 0, 0)
+	thin.InputTokens, thin.OutputTokens = 10, 20
+
+	if _, err := st.InsertLocal(ctx, []usage.Record{rich}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.InsertLocal(ctx, []usage.Record{thin}); err != nil {
+		t.Fatal(err)
+	}
+
+	var in, out int64
+	row := st.db.QueryRowContext(ctx, `SELECT input_tokens, output_tokens FROM usage_record WHERE dedupe_key = 'k1'`)
+	if err := row.Scan(&in, &out); err != nil {
+		t.Fatal(err)
+	}
+	if in != 500 || out != 900 {
+		t.Fatalf("stored tokens = (%d, %d), want the vendor's stated (500, 900) intact", in, out)
+	}
+}
+
+// TestInsertLocalLetsACorrectedRuleLowerActivity is the other half of that line, and the one
+// v0.14 needed. An activity count is assaio's own reading -- which lines are edits, which turn
+// a result belongs to -- so when a build corrects that rule downward the correction has to be
+// able to reach a stored row. Under MAX it could not: the row already exists, so nothing new
+// is inserted, and a maximum never accepts a smaller number. Every figure the duplicate-line
+// fix lowers would have been pinned at its inflated value forever.
+func TestInsertLocalLetsACorrectedRuleLowerActivity(t *testing.T) {
 	ctx := context.Background()
 	st := openTempStore(t)
 
 	if _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 2, 40)}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(1, 0, 0)}); err != nil {
+	// The same file re-read by a build that no longer counts a repeated line twice.
+	if _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 1, 20)}); err != nil {
 		t.Fatal(err)
 	}
 
 	reads, errors, lines := storedTurn(t, st)
-	if reads != 3 || errors != 2 || lines != 40 {
-		t.Fatalf("stored = (reads %d, errors %d, lines %d), want the richer (3, 2, 40) intact", reads, errors, lines)
+	if reads != 3 || errors != 1 || lines != 20 {
+		t.Fatalf("stored = (reads %d, errors %d, lines %d), want the corrected (3, 1, 20)", reads, errors, lines)
 	}
 }
 

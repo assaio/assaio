@@ -37,14 +37,17 @@ the report file. A config file is written only if one is actually needed -- with
 default log locations there is nothing to configure, and a file that restates the defaults
 is one more thing to maintain.
 
---non-interactive skips the confirmation, for packaging smoke tests and scripted setup.`,
+--non-interactive skips the confirmation, for packaging smoke tests and scripted setup.
+
+There is deliberately no --db: init imports through backfill, which only ever writes this
+machine's own store, so pointing the report half elsewhere would have shown an empty first
+run against a database init never filled.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runInit(cmd, nonInteractive)
 		},
 	}
 	c.Flags().BoolVar(&nonInteractive, "non-interactive", false, "skip the confirmation prompt")
-	addDBFlag(c)
 	return c
 }
 

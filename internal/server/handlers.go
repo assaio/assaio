@@ -66,6 +66,10 @@ type usagePushResult struct {
 // rows, so a buggy or malicious client can never partially poison the shared dashboard.
 // Error responses describe the violated rule in the client's own submitted data, never
 // an internal (DB/schema) detail -- see logging below for that.
+//
+// The member prefix is also what makes InsertSynced safe: it gives every row exactly one
+// possible writer, so restating one on a re-push is that member correcting their own figure
+// and can never overwrite somebody else's.
 func (s *Server) handleUsage(w http.ResponseWriter, r *http.Request) {
 	if !authorized(r, s.token) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -95,7 +99,7 @@ func (s *Server) handleUsage(w http.ResponseWriter, r *http.Request) {
 		push.Records[i].Member = push.Member
 		push.Records[i].DedupeKey = push.Member + ":" + push.Records[i].DedupeKey
 	}
-	inserted, err := s.store.Insert(r.Context(), push.Records)
+	inserted, err := s.store.InsertSynced(r.Context(), push.Records)
 	if err != nil {
 		log.Printf("insert usage: %v", err)
 		http.Error(w, "failed to store usage", http.StatusInternalServerError)

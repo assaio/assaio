@@ -112,7 +112,7 @@ func TestValidateRecordRejectsNegativeFields(t *testing.T) {
 
 func TestValidateRecordRejectsOverflowMagnitude(t *testing.T) {
 	r := newValidRecord()
-	r.InputTokens = maxFieldValue + 1
+	r.InputTokens = usage.MaxCount + 1
 	if err := validateRecord(&r); err == nil {
 		t.Fatal("want error for overflow-magnitude token count, got nil")
 	}
@@ -120,9 +120,9 @@ func TestValidateRecordRejectsOverflowMagnitude(t *testing.T) {
 
 func TestValidateRecordAcceptsBoundaryMagnitude(t *testing.T) {
 	r := newValidRecord()
-	r.InputTokens = maxFieldValue
+	r.InputTokens = usage.MaxCount
 	if err := validateRecord(&r); err != nil {
-		t.Fatalf("boundary value maxFieldValue should be accepted: %v", err)
+		t.Fatalf("boundary value usage.MaxCount should be accepted: %v", err)
 	}
 }
 

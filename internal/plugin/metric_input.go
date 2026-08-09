@@ -48,19 +48,24 @@ type metricUsageRow struct {
 	// Granularity is "turn" or "session". A plugin that sums these rows without reading it
 	// would fold whole-session aggregates into a per-turn figure, which is the same misread
 	// the core reports now disclose.
-	Granularity  string `json:"granularity"`
-	In           int64  `json:"in"`
-	Out          int64  `json:"out"`
-	CacheRead    int64  `json:"cacheRead"`
-	CacheWrite   int64  `json:"cacheWrite"`
-	Reasoning    int64  `json:"reasoning"`
-	LinesAdded   int64  `json:"linesAdded"`
-	LinesRemoved int64  `json:"linesRemoved"`
-	Edits        int64  `json:"edits"`
-	ToolCalls    int64  `json:"toolCalls"`
-	Rejected     int64  `json:"rejected"`
-	Compactions  int64  `json:"compactions"`
-	ReworkLines  int64  `json:"reworkLines"`
+	Granularity string `json:"granularity"`
+	In          int64  `json:"in"`
+	Out         int64  `json:"out"`
+	CacheRead   int64  `json:"cacheRead"`
+	CacheWrite  int64  `json:"cacheWrite"`
+	// CacheWrite1h is the portion of CacheWrite that bought a 1-hour cache lifetime, billed
+	// at its own higher rate (metricPrice.CacheWrite1h). A subset, never added to the total.
+	// Without it a plugin re-pricing these rows necessarily bills every write at the cheaper
+	// 5-minute rate and reports a cost the core does not agree with.
+	CacheWrite1h int64 `json:"cacheWrite1h"`
+	Reasoning    int64 `json:"reasoning"`
+	LinesAdded   int64 `json:"linesAdded"`
+	LinesRemoved int64 `json:"linesRemoved"`
+	Edits        int64 `json:"edits"`
+	ToolCalls    int64 `json:"toolCalls"`
+	Rejected     int64 `json:"rejected"`
+	Compactions  int64 `json:"compactions"`
+	ReworkLines  int64 `json:"reworkLines"`
 }
 
 type metricSessionRow struct {
@@ -123,6 +128,10 @@ type metricPrice struct {
 	Output     float64 `json:"output"`
 	CacheRead  float64 `json:"cacheRead"`
 	CacheWrite float64 `json:"cacheWrite"`
+	// CacheWrite1h prices the 1-hour portion of a cache write; it equals CacheWrite for a
+	// model the table gives only one write rate, which is the vendor charging one rate rather
+	// than the tier being free.
+	CacheWrite1h float64 `json:"cacheWrite1h"`
 }
 
 func buildMetricInput(in *analyze.Input) metricInput {

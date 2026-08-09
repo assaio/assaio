@@ -53,7 +53,7 @@ func (reworkValidator) Analyze(in Input) Result {
 	low := churn.ReworkRate <= reworkWatchCeiling && rejectionLow(rejectionRate, rejectionKnown)
 
 	r.Read = reworkRead(low, capable)
-	r.Purity = reworkPurity(churn.ReworkRate, rejectionRate, rejectionKnown)
+	r.Purity = reworkPurity(churn.ReworkRate, capable, rejectionRate, rejectionKnown)
 	r.Figures = []Figure{
 		reworkFigure(&churn),
 		{
@@ -94,14 +94,24 @@ func rejectionLow(rejectionRate float64, known bool) bool {
 	return known && rejectionRate <= reworkWatchCeiling
 }
 
-// reworkPurity averages known rates only: an unknown rejection rate (no tool calls) is
-// excluded rather than folded in as a fabricated zero, which would inflate purity above
-// what the actually-observed rework signal supports.
-func reworkPurity(reworkRate, rejectionRate float64, rejectionKnown bool) float64 {
-	if !rejectionKnown {
-		return clamp01(1 - reworkRate)
+// reworkPurity averages the known rates only: an unmeasured rate is a structural silence,
+// and folding one in as a zero credits the window for friction nobody could observe. The
+// rework half needed the same treatment the rejection half already had -- with neither
+// measurable the gauge read a perfect 1.00 beside a withheld "—", which is the one thing a
+// faceplate must never draw.
+func reworkPurity(reworkRate float64, reworkKnown bool, rejectionRate float64, rejectionKnown bool) float64 {
+	var sum float64
+	known := 0
+	if reworkKnown {
+		sum, known = sum+reworkRate, known+1
 	}
-	return clamp01(1 - (reworkRate+rejectionRate)/2)
+	if rejectionKnown {
+		sum, known = sum+rejectionRate, known+1
+	}
+	if known == 0 {
+		return neutralPurity
+	}
+	return clamp01(1 - sum/float64(known))
 }
 
 func reworkCaveats(rejectionKnown, partialChurn bool) []string {

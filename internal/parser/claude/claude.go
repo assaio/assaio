@@ -168,8 +168,12 @@ func Parse(r io.Reader) ([]usage.Record, int, error) {
 	return st.out, st.skipped, nil
 }
 
-// applyLine folds one already-unmarshaled line into the state.
+// applyLine folds one already-unmarshaled line into the state, unless the transcript has
+// already shown this uuid.
 func (st *parseState) applyLine(l *line, cf *carryForward) {
+	if st.seen(l.UUID) {
+		return
+	}
 	if st.markDenial(l.ToolDenialKind) {
 		return
 	}

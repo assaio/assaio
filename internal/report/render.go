@@ -140,11 +140,15 @@ func RenderJSON(w io.Writer, rows []Row) error {
 	return enc.Encode(rows)
 }
 
-// RenderCSV writes rows to w as CSV with a header row.
+// RenderCSV writes rows to w as CSV with a header row. The three annotation columns are
+// part of the fixed shape rather than added per dimension: `--by task|outcome|difficulty`
+// stamps the group key into one of them and leaves every other identity column empty, so a
+// header without them emitted rows nothing could tell apart.
 func RenderCSV(w io.Writer, rows []Row) error {
 	cw := csv.NewWriter(w)
 	_ = cw.Write([]string{
-		"day", "tool", "model", "project", "entrypoint", "member", "granularity", "in", "out",
+		"day", "tool", "model", "project", "entrypoint", "member", "granularity",
+		"task", "outcome", "difficulty", "in", "out",
 		"cache_read", "cache_write", "reasoning", "cache_eff", "cost", "priced", "has_unpriced",
 	})
 	for i := range rows {
@@ -159,6 +163,7 @@ func RenderCSV(w io.Writer, rows []Row) error {
 		}
 		_ = cw.Write([]string{
 			r.Day, r.Tool, r.Model, r.Project, r.Entrypoint, r.Member, r.Granularity,
+			r.Task, r.Outcome, r.Difficulty,
 			strconv.FormatInt(r.In, 10), strconv.FormatInt(r.Out, 10),
 			strconv.FormatInt(r.CacheRead, 10), strconv.FormatInt(r.CacheWrite, 10),
 			strconv.FormatInt(r.Reasoning, 10), cacheEffStr,

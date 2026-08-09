@@ -1,0 +1,24 @@
+-- v0.14 corrected which *lines* of a Claude Code transcript are counted at all.
+--
+-- A transcript that repeats a line verbatim is a streamed retry, and the guard against that
+-- sat inside the assistant branch of the parser. Every count that actually lives on a user
+-- line therefore went in twice: an edit result's added, removed and rework lines, a tool
+-- denial, a failed tool result, a compaction boundary. Measured across 5,597 real transcripts,
+-- 329 repeated edit results carried 460 added and 656 removed lines, and there were 5 repeated
+-- denials -- so the corpus reported 382,738 added lines where the true figure is 382,278, and
+-- 32,767 rework lines against a true 32,387.
+--
+-- Every one of those corrections is downward, and restateActivitySQL took MAX on all of them,
+-- so not one could have reached a stored row: the record already exists, so nothing new is
+-- inserted, and a maximum never accepts a smaller number. The activity columns are now
+-- assigned rather than maximised -- see internal/store/insert_local.go for the line between
+-- what the vendor reports and what assaio derives, and why assignment stays safe for a session
+-- still being written.
+--
+-- Clearing the watermark is what makes the rebuild happen rather than likely: buildIdentity()
+-- returns a constant 'dev' for any source build, so a `go install`ed binary would otherwise
+-- skip every input as unchanged. Same step as 0008 and 0009, same reason.
+--
+-- Nothing is deleted here and no usage row is touched: this table is a cache of what was read
+-- (see 0003), so the whole cost is one slower backfill. Only claude-code, whose parser changed.
+DELETE FROM ingest_file WHERE tool = 'claude-code';

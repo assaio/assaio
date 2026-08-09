@@ -83,7 +83,8 @@ func renderSurvival(cmd *cobra.Command, res *survival.Result, since string, skip
 		rate = fmt.Sprintf("%.0f%%", res.SurvivalRate*100)
 	}
 	cmd.Printf("Survival · %s   window: %s\n", res.Project, windowLabel(since))
-	cmd.Printf("  %d commits in window · %d files blamed%s\n", res.Commits, res.Files, skippedNote(skipped))
+	cmd.Printf("  %d commits in window · %d files blamed%s%s\n",
+		res.Commits, res.Files, unreadableNote(res.Unreadable), skippedNote(skipped))
 	cmd.Printf("  changed files:       %s\n", categoryLine(&res.Changed))
 	if res.Reverts > 0 {
 		cmd.Printf("  reverts:             %d commit(s) git itself labelled a revert\n", res.Reverts)
@@ -130,6 +131,15 @@ func categoryLine(c *event.FileCategories) string {
 		return "none"
 	}
 	return strings.Join(parts, " · ")
+}
+
+// unreadableNote names touched files git could not blame, so a rate computed over part of
+// the window's files never reads as one computed over all of them.
+func unreadableNote(unreadable int) string {
+	if unreadable == 0 {
+		return ""
+	}
+	return fmt.Sprintf(" · %d file(s) unreadable, outside the rate", unreadable)
 }
 
 // skippedNote names commits git printed in a shape this build could not read, so a short
