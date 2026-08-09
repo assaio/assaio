@@ -55,6 +55,15 @@ Discussion.
   so a reviewer can check a number without running anything — and a test asserting that every
   signal a source's depth row claims is pinned by one of them. On its first run it found two
   defects in the flagship parser and one over-claim in the capability matrix, all listed below.
+  Three more kinds of check sit beside the traces, none of which needs an expected value:
+  **accounting invariants** (one logical response billed once, a subset never above its whole,
+  rework never above the additions it undoes, every record addressable and dated) that run
+  over a whole real corpus — 5,586 Claude Code sessions and 66 Codex rollouts on the
+  maintainer's machine, zero violations; **metamorphic properties**, where the same fact
+  written two ways must produce the same total, which is what both of v0.12's defects and
+  v0.14's created-file defect all failed; and **cross-surface assertions** holding `report`,
+  `effectiveness`, `analyze`, the dashboard, `sync` and the metric-plugin wire to one window,
+  which `ROADMAP.md` has promised since v0.5 with nothing enforcing it.
 
 ### Fixed
 - **Every context compaction was counted twice.** Claude Code writes one overflow as two
