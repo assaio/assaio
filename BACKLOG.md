@@ -52,22 +52,17 @@ later review finds opens a new pool below rather than reopening this one.
 
 The guard the v0.12 class of bug needs, which provenance and coverage cannot provide.
 
-- [ ] **B137 · conservation + metamorphic suite** — L · both — the check whose expected answer
-  does **not** come from the parser that produces it, because a golden written from a mistaken
-  reading preserves the mistake — which is exactly what happened for eleven releases. Four
-  parts. (1) *Independently adjudicated traces*: a redacted real sample per claimed capability
-  whose totals — logical responses, requests, tokens by class, tool calls, created and updated
-  files, changed lines — were counted by hand or by a second implementation, never by
-  `internal/parser`. (2) *Accounting invariants*, asserted for every source: one logical
-  response is billed once; the cache classes sum to the input they are part of; a created file
-  contributes its lines; rework never exceeds the additions it is undoing (`B132`); skipped
-  evidence is counted and withholds a verdict rather than lowering it. (3) *Metamorphic
-  properties*: splitting one response across N blocks that repeat its usage must not change a
-  token total, and writing the same file creation as a unified diff or as `content` must not
-  change a line count — those two alone would have caught both of v0.12's defects. (4)
-  *Cross-surface assertions*: `report`, `status`, the dashboard, `sync` and a metric plugin
-  cannot render different totals for the same window, which the roadmap already promises and
-  nothing currently enforces. Supersedes the "captured real-world samples" half of `B20`.
+- [x] **B137 · conservation + metamorphic suite** — shipped in v0.14 as `internal/calibration`.
+  Eight adjudicated traces across all five sources, accounting invariants that run over a whole
+  real corpus, two metamorphic properties, and a cross-surface rule. It found two defects in the
+  Claude Code parser and one over-claim in the depth matrix on its first run — see
+  [CHANGELOG.md](CHANGELOG.md). What it left open is `B144` below.
+- [ ] **B144 · calibrate Gemini CLI and Cline against a real capture** — S · both — both are
+  calibrated today against a *constructed* sample in the source's shape, because the maintainer's
+  machine holds neither a Gemini chat log carrying token counts nor a Cline install. A
+  constructed trace proves the reading; only a real one also proves the shape is still what the
+  vendor writes, and each trace already declares which it is (`capture: real|constructed`). Needs
+  one redacted capture per source from anybody who runs them.
 - [ ] **B19 · offline billing reconciliation** — M · both — import a vendor's own billing or
   usage export (a CSV or JSON download, no credential, no network) and report the
   estimate-vs-actual delta with its confidence band, the scope mismatch behind it, and an
@@ -639,37 +634,17 @@ written down. What v0.13 fixed is in [CHANGELOG.md](CHANGELOG.md) and not repeat
 
 ## Pool — from the v0.14 whole-codebase review
 
-The defects this review found are fixed and listed in [CHANGELOG.md](CHANGELOG.md). What
-remains here is what it found that is **not** a defect: three places where the code does
-exactly what it says and the question is whether what it says is still the right call. Each
-needs a decision before an edit, which is why none of them was quietly changed.
+The defects this review found are fixed and listed in [CHANGELOG.md](CHANGELOG.md). What it
+found that was **not** a defect — three places where the code did exactly what it said, and the
+question was whether what it said was still the right call — was decided rather than deferred,
+and all three shipped in v0.14:
 
-- [ ] **B141 · what the team panel is allowed to show per member** — S · both — `buildTeam`
-  already refuses the obvious mistake: it ranks by session count, never by cost or lines,
-  precisely so the panel cannot read as a productivity board. It still prints each
-  pseudonymous member's AI lines and spend on their own row, and a reader who knows the roster
-  can compare them week over week. The Refusals below forbid ranking "per named individual",
-  which pseudonymized output technically is not — so this is a question about the spirit of
-  that line, not a violation of its letter. Options, cheapest first: drop lines and cost from
-  the row and keep sessions; keep them but band them; or state a cohort floor below which the
-  panel does not render at all. Decide before the team server has real users, because the
-  answer is much harder to take away later.
-- [ ] **B142 · "per month" is thirty *active* days** — S · both — `subscription-fit` and
-  model-fit savings both divide the window's cost by its active days and multiply by 30. For
-  somebody who codes five days a week that projects a working week onto a calendar month:
-  five active days at $50 become $300/mo where repeating that weekly is about $217, and a $250
-  plan flips from "not paying off" to "paying off". The caveat says "projected to a month from
-  this window's usage", which is true and does not say *which* month. Either the rate is
-  calendar-anchored (span the window in real days) or the figure is renamed to what it is
-  (`per 30 active days`); do not silently change the formula, because it moves every existing
-  user's headline.
-- [ ] **B143 · the parser plugin protocol decodes leniently where the others are strict** —
-  S · both — `parseRecordLine` uses a plain `json.Unmarshal`, so a plugin emitting
-  `outputTokens` instead of `output_tokens` stores a zero and is counted as a valid record;
-  the metric and rule protocols reject an unknown field and count the line as a violation.
-  Making the three consistent turns a silent zero into a named protocol error, which is the
-  posture ADR 0003 argues for — but it is a breaking change for any plugin carrying its own
-  extra fields, so it needs a version bump on the handshake or a documented grace period.
+- `B141` — the team panel's per-member row now shows engagement only; output and spend are the
+  team's total. A pseudonym is not anonymous to a colleague who knows the roster.
+- `B142` — a projected "per month" is a calendar month, not thirty *active* days, which had been
+  inflating the figure a flat plan is compared against.
+- `B143` — the parser plugin protocol rejects a field it does not define, as the metric and rule
+  protocols already did.
 
 ## Refusals (will not build, regardless of demand)
 

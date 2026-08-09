@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>assaio — is your AI coding spend delivering?</title>
-<meta name="description" content="assaio reads the AI coding session logs already on your machine and weighs output against the tokens it burns: effectiveness, model fit, context health, adoption. Per project, offline, no upload. Claude Code, Codex, Gemini CLI, Copilot CLI, Cline.">
+<meta name="description" content="assaio reads the AI coding session logs already on your machine and weighs what AI produced against the tokens it burns: effectiveness, model fit, context health, adoption. Per project, offline, no upload. Claude Code, Codex, Gemini CLI, Copilot CLI, Cline.">
 <meta name="color-scheme" content="light dark">
 <meta property="og:title" content="assaio — is your AI coding spend delivering?">
 <meta property="og:description" content="Weighs AI output against the tokens it burns, per project: effectiveness, model fit, context health, adoption. Fully offline, no upload. The first piece of a self-hosted AI-engineering analytics platform.">
@@ -68,13 +68,17 @@ code{font:400 .9em/1 var(--mono)}
 .hero h1 em{font-style:normal; color:var(--signal)}
 .lede{max-width:34rem; margin:1.5rem 0 0; color:var(--dim); font-size:1.125rem}
 .lede strong{color:var(--fg); font-weight:600}
-.term{margin-top:2rem; border:1px solid var(--rule); border-radius:3px; background:var(--cell); font:400 .875rem/1.9 var(--mono); overflow:hidden}
-.term-bar{display:flex; gap:.5rem; align-items:center; padding:.55rem .85rem; border-bottom:1px solid var(--rule-soft); color:var(--faint); font-size:.625rem; letter-spacing:.14em; text-transform:uppercase}
-.term-body{padding:.9rem 1rem; overflow-x:auto}
-.term-body div{white-space:pre}
-.term .p{color:var(--faint); user-select:none}
-.term .o{color:var(--dim)}
-.note{margin:.85rem 0 0; font-size:.8125rem; color:var(--faint)}
+
+/* install command, with copy */
+.getin{margin-top:2rem; display:grid; gap:.6rem; max-width:36rem}
+.getin .il{font:500 .625rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
+.copyrow{display:flex; align-items:stretch; border:1px solid var(--rule); border-radius:3px; background:var(--cell); overflow:hidden}
+.copyrow pre{margin:0; padding:.8rem .95rem; overflow-x:auto; flex:1; font:400 .875rem/1.5 var(--mono); color:var(--fg)}
+.copyrow pre span{color:var(--faint); user-select:none}
+.copybtn{appearance:none; flex:none; border:0; border-left:1px solid var(--rule); background:transparent; color:var(--dim); font:500 .625rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; padding-inline:.9rem; cursor:pointer}
+.copybtn:hover{color:var(--fg); background:var(--rule-soft)}
+.note{margin:.85rem 0 0; font-size:.8125rem; color:var(--faint); max-width:36rem}
+
 .gauge{border:1px dashed var(--rule); border-radius:3px; background:var(--cell); padding:1.35rem 1.4rem 1.5rem}
 .gauge .g-sub{margin:.15rem 0 0; font:500 .6875rem/1.4 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
 .g-read{font:600 clamp(1.5rem,3.4vw,2rem)/1 var(--mono); letter-spacing:-.02em; margin:1.5rem 0 0; color:var(--faint)}
@@ -90,13 +94,15 @@ code{font:400 .9em/1 var(--mono)}
 .sec-head .eyebrow{margin-left:auto}
 .sec>.wrap>.intro{max-width:46rem; margin:-.75rem 0 2rem; color:var(--dim)}
 .sec>.wrap>.intro strong{color:var(--fg); font-weight:600}
+.more{margin:1.5rem 0 0; max-width:52rem; font-size:.9375rem; color:var(--faint)}
+.more b{color:var(--dim); font-weight:600}
 
-/* headline figures */
-.figs{display:grid; grid-template-columns:repeat(auto-fit,minmax(11rem,1fr)); gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:3px; overflow:hidden}
-.fig{background:var(--bg); padding:1.5rem 1.35rem}
-.fig b{display:block; font:600 clamp(1.6rem,4vw,2.4rem)/1 var(--mono); letter-spacing:-.03em; color:var(--fg)}
-.fig .fl{display:block; margin-top:.6rem; font:500 .625rem/1.4 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
-.fig.lead b{color:var(--signal)}
+/* questions grid */
+.qs{display:grid; grid-template-columns:repeat(auto-fit,minmax(17rem,1fr)); gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:3px; overflow:hidden}
+.q{background:var(--bg); padding:1.5rem 1.4rem}
+.q h3{margin:0; font:600 1.0625rem/1.35 var(--sans); letter-spacing:-.01em; color:var(--fg); text-wrap:balance}
+.q p{margin:.6rem 0 0; font-size:.9375rem; color:var(--dim)}
+.q .qt{display:block; margin-top:.9rem; font:500 .625rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--signal)}
 
 /* data table (echoes the tool's own output) */
 .tbl{overflow-x:auto; border:1px solid var(--rule); border-radius:3px; background:var(--cell)}
@@ -106,7 +112,7 @@ th:first-child,td:first-child{text-align:left}
 thead th{color:var(--faint); font-weight:500; letter-spacing:.05em; text-transform:uppercase; font-size:.6875rem; border-bottom-color:var(--rule)}
 tbody tr:last-child td{border-bottom:0}
 td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
-.reads{margin:1.5rem 0 0; display:grid; gap:.7rem; max-width:52rem}
+.reads{margin:1.5rem 0 0; padding:0; display:grid; gap:.7rem; max-width:52rem}
 .reads li{list-style:none; font-size:.9375rem; color:var(--dim)}
 .reads b{color:var(--fg); font-weight:600; font-family:var(--mono); font-size:.9em}
 
@@ -115,88 +121,75 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
 .panel{border:1px solid var(--rule); border-radius:3px; padding:1.35rem 1.4rem}
 .panel h3{margin:0 0 1.1rem; font:500 .6875rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
 .panel.not h3{color:var(--amber)}
-.deflist{display:grid; gap:1rem}
+.panel ul{margin:0; padding-left:1.1rem}
+.panel li{margin:0 0 .7rem; font-size:.9375rem; color:var(--dim)}
+.panel li b{color:var(--fg); font-weight:600}
+.deflist{display:grid; gap:1rem; margin:0}
 .deflist dt{font:600 .9375rem/1.3 var(--mono); letter-spacing:-.01em; color:var(--fg)}
 .deflist dd{margin:.25rem 0 0; font-size:.9375rem; color:var(--dim)}
-.panel.not ul{margin:0; padding:0; list-style:none; display:grid; gap:.85rem}
-.panel.not li{display:flex; gap:.7rem; align-items:baseline; font-size:.9375rem; color:var(--dim)}
-.panel.not li::before{content:"↻"; color:var(--amber); font:600 .85rem/1.5 var(--mono); flex:none}
-.panel.not li b{color:var(--fg); font-weight:600}
 
-/* faceplate grid */
-.plate{display:grid; grid-template-columns:repeat(auto-fit,minmax(13.5rem,1fr)); gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:3px; overflow:hidden}
-.cell{background:var(--bg); padding:1.25rem 1.25rem 1.4rem; position:relative}
-.cell .cn{font:500 .625rem/1.4 var(--mono); letter-spacing:.13em; text-transform:uppercase; color:var(--faint); display:block; padding-right:3rem}
-.cell .cv{display:block; margin-top:.7rem; font:600 1.0625rem/1 var(--mono); letter-spacing:-.01em; color:var(--signal)}
-.cell .cv.watch{color:var(--amber)}
-.cell .cd{margin:.8rem 0 0; font-size:.875rem; color:var(--dim); line-height:1.55}
-.tag{position:absolute; top:1.25rem; right:1.25rem; font:500 .5625rem/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--signal); border:1px solid currentColor; border-radius:2px; padding:.25rem .35rem}
-.more{margin:1.4rem 0 0; font-size:.9375rem; color:var(--faint)}
-.plate.mini{grid-template-columns:repeat(6,1fr)}
-.plate.mini .cell{padding:1.05rem 1.05rem 1.2rem}
-.plate.mini .cn{padding-right:0; min-height:2.4em; font-size:.6rem; letter-spacing:.11em}
-.plate.mini .cv{font-size:.9375rem; margin-top:.5rem}
-.plate.mini .cv.neutral{color:var(--faint)}
-.plate.mini .bar{margin-top:.85rem}
-@media(max-width:66rem){.plate.mini{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:30rem){.plate.mini{grid-template-columns:repeat(2,1fr)}}
+/* principles */
+.prin{display:grid; grid-template-columns:repeat(auto-fit,minmax(19rem,1fr)); gap:1.25rem; margin-top:.5rem}
+.pr{border:1px solid var(--rule); border-radius:3px; padding:1.35rem 1.4rem; background:var(--cell)}
+.pr h3{margin:0; font:600 1rem/1.35 var(--sans); letter-spacing:-.01em; color:var(--fg)}
+.pr .pn{display:block; margin-bottom:.75rem; font:500 .625rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--signal)}
+.pr p{margin:.7rem 0 0; font-size:.9375rem; color:var(--dim)}
+.pr p strong{color:var(--fg); font-weight:600}
 
-/* generic card grid */
-.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(17rem,1fr)); gap:1.25rem}
-.card{border:1px solid var(--rule); border-radius:3px; padding:1.35rem}
-.card h3{margin:0; font:500 .6875rem/1.3 var(--mono); letter-spacing:.13em; text-transform:uppercase; color:var(--faint)}
-.card h3.on{color:var(--signal)}
-.card pre{margin:.9rem 0 0; padding:.8rem .9rem; overflow-x:auto; background:var(--cell); border:1px solid var(--rule-soft); border-radius:2px; font:400 .8125rem/1.7 var(--mono); color:var(--fg)}
-.card p{margin:.85rem 0 0; font-size:.875rem; color:var(--dim)}
-.card p:first-of-type{margin-top:.9rem}
+/* faceplate */
+.plate{display:grid; grid-template-columns:repeat(auto-fill,minmax(13rem,1fr)); gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:3px; overflow:hidden}
+.cell{background:var(--bg); padding:1rem 1.05rem 1.15rem}
+.cn{display:block; font:500 .625rem/1.3 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
+.cv{display:block; margin-top:.5rem; font:600 1rem/1.2 var(--mono); letter-spacing:-.02em; color:var(--signal)}
+.cv.watch{color:var(--amber)} .cv.neutral{color:var(--dim)}
+.plate .bar{margin-top:.7rem}
 
-/* install — stacked, full-width commands (never clipped) */
-.installs{display:grid; gap:1rem}
-.inst{display:grid; grid-template-columns:15rem minmax(0,1fr); gap:.6rem 1.75rem; align-items:start; border:1px solid var(--rule); border-radius:3px; padding:1.1rem 1.35rem}
-.inst .il{font:500 .6875rem/1.6 var(--mono); letter-spacing:.13em; text-transform:uppercase; color:var(--faint); padding-top:.35rem}
-.inst pre{margin:0; padding:.75rem .9rem; background:var(--cell); border:1px solid var(--rule-soft); border-radius:2px; font:400 .8125rem/1.75 var(--mono); color:var(--fg); overflow-x:auto; white-space:pre}
-.inst .ip{grid-column:2; margin:.7rem 0 0; font-size:.875rem; color:var(--dim)}
-.inst .ip code{color:var(--fg)}
-@media(max-width:46rem){.inst{grid-template-columns:1fr; gap:.55rem} .inst .il{padding-top:0} .inst .ip{grid-column:1}}
+/* cards */
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(15.5rem,1fr)); gap:1.25rem}
+.card{border:1px solid var(--rule); border-radius:3px; padding:1.35rem 1.4rem}
+.card h3{margin:0 0 .6rem; font:600 .9375rem/1.3 var(--mono); letter-spacing:-.01em; color:var(--fg)}
+.card p{margin:0; font-size:.9375rem; color:var(--dim)}
 
-/* command list */
-.cmds{border:1px solid var(--rule); border-radius:3px; overflow:hidden}
-.cmd{display:grid; grid-template-columns:12rem 1fr; gap:1rem 1.5rem; padding:.85rem 1.2rem; border-bottom:1px solid var(--rule-soft); align-items:baseline}
-.cmd:last-child{border-bottom:0}
-.cmd b{font:600 .8125rem/1.4 var(--mono); color:var(--signal); letter-spacing:-.01em}
-.cmd span{font-size:.9375rem; color:var(--dim)}
-@media (max-width:34rem){.cmd{grid-template-columns:1fr; gap:.3rem}}
+/* commands */
+.cmds{display:grid; grid-template-columns:repeat(auto-fit,minmax(19rem,1fr)); gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:3px; overflow:hidden}
+.cmd{background:var(--bg); padding:1.15rem 1.25rem}
+.cmd b{display:block; font:600 .9375rem/1 var(--mono); letter-spacing:-.01em; color:var(--signal)}
+.cmd span{display:block; margin-top:.5rem; font-size:.875rem; color:var(--dim)}
 
-/* tools + accuracy */
-.tools{display:grid; gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:3px; overflow:hidden}
-.tool{background:var(--bg); display:grid; grid-template-columns:minmax(9rem,auto) 1fr auto; gap:.6rem 1.5rem; padding:1.05rem 1.3rem; align-items:baseline}
-.tool b{font:600 .9375rem/1.3 var(--mono); letter-spacing:-.01em}
-.tool code{color:var(--dim); font-size:.8125rem; word-break:break-all}
-.tool .cap{justify-self:end; font:500 .625rem/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; padding:.3rem .45rem; border-radius:2px; border:1px solid var(--rule); color:var(--faint); white-space:nowrap}
-.tool .cap.full{color:var(--signal); border-color:currentColor}
-@media (max-width:40rem){.tool{grid-template-columns:1fr; gap:.35rem} .tool .cap{justify-self:start}}
-.caveats{margin:1.4rem 0 0; padding:0; list-style:none; display:grid; gap:.6rem; max-width:54rem}
-.caveats li{font-size:.875rem; color:var(--faint); padding-left:1.1rem; position:relative}
-.caveats li::before{content:"·"; position:absolute; left:.2rem; color:var(--amber)}
+/* sources */
+.tools{display:grid; grid-template-columns:repeat(auto-fit,minmax(17rem,1fr)); gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:3px; overflow:hidden}
+.tool{background:var(--bg); padding:1.2rem 1.25rem}
+.tool b{display:block; font:600 .9375rem/1.2 var(--sans); color:var(--fg)}
+.tool code{display:block; margin-top:.45rem; font-size:.75rem; color:var(--faint); word-break:break-all}
+.cap{display:inline-block; margin-top:.75rem; font:500 .625rem/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--dim); border:1px solid var(--rule); border-radius:2px; padding:.35rem .5rem}
+.cap.full{color:var(--signal); border-color:var(--signal)}
+.caveats{margin:1.5rem 0 0; padding-left:1.1rem; max-width:52rem}
+.caveats li{margin:0 0 .65rem; font-size:.9375rem; color:var(--dim)}
 
-/* why / narrative */
-.why{max-width:46rem}
-.why p{font-size:1.1875rem; line-height:1.6; color:var(--dim); margin:0 0 1.15rem}
-.why p strong{color:var(--fg); font-weight:600}
-.why .kick{font:600 clamp(1.4rem,3vw,1.85rem)/1.3 var(--mono); letter-spacing:-.02em; color:var(--fg); margin-bottom:1.4rem}
+/* install */
+.installs{display:grid; grid-template-columns:repeat(auto-fit,minmax(19rem,1fr)); gap:1.25rem}
+.inst{border:1px solid var(--rule); border-radius:3px; padding:1.2rem 1.3rem}
+.il{display:block; font:500 .625rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin-bottom:.75rem}
+.inst pre{margin:0; padding:0; overflow-x:auto; font:400 .8125rem/1.7 var(--mono); color:var(--fg)}
+.ip{margin:.85rem 0 0; font-size:.8125rem; color:var(--faint)}
 
 /* refusals */
-.refuse{list-style:none; margin:0; padding:0; display:grid; gap:.85rem; max-width:54rem}
-.refuse li{display:flex; gap:.85rem; align-items:baseline; font-size:1rem; color:var(--dim)}
-.refuse li::before{content:"—"; color:var(--amber); font:600 .9rem/1.6 var(--mono); flex:none}
+.refuse{margin:0; padding:0; display:grid; gap:.85rem; max-width:52rem}
+.refuse li{list-style:none; font-size:.9375rem; color:var(--dim); border-left:2px solid var(--amber); padding-left:.9rem}
 .refuse b{color:var(--fg); font-weight:600}
 
+/* why */
+.why{max-width:46rem}
+.why .kick{font:600 clamp(1.1rem,2.4vw,1.35rem)/1.45 var(--sans); color:var(--fg); margin:0 0 1.1rem; text-wrap:balance}
+.why p{margin:0 0 1rem; color:var(--dim)}
+.why strong{color:var(--fg); font-weight:600}
+
 /* partner */
-.partner{display:grid; grid-template-columns:repeat(auto-fit,minmax(16rem,1fr)); gap:1.25rem; margin-bottom:2rem}
-.partner .p{border-top:2px solid var(--signal); padding-top:1rem}
-.partner h3{margin:0 0 .5rem; font:600 1rem/1.3 var(--mono); letter-spacing:-.01em}
-.partner p{margin:0; font-size:.9375rem; color:var(--dim)}
-.talk{display:flex; gap:1.25rem; flex-wrap:wrap; align-items:center; font:500 .8125rem/1 var(--mono)}
+.partner{display:grid; grid-template-columns:repeat(auto-fit,minmax(16rem,1fr)); gap:1.25rem}
+.partner .p{border:1px solid var(--rule); border-radius:3px; padding:1.35rem 1.4rem}
+.partner h3{margin:0 0 .6rem; font:600 .9375rem/1.3 var(--mono); color:var(--fg)}
+.partner .p p{margin:0; font-size:.9375rem; color:var(--dim)}
+.talk{margin-top:1.75rem; display:flex; gap:1.35rem; flex-wrap:wrap; align-items:center}
 .talk a{color:var(--signal); text-decoration:none; border-bottom:1px solid var(--rule); padding-bottom:.25rem}
 .talk a:hover{border-color:var(--signal)}
 
@@ -206,6 +199,8 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
 .colo nav a{font:500 .75rem/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--dim); text-decoration:none; border-bottom:1px solid var(--rule); padding-bottom:.25rem}
 .colo nav a:hover{color:var(--fg); border-color:var(--fg)}
 .colo p{margin:.5rem 0 0; max-width:54rem}
+.rel{display:inline-flex; align-items:center; gap:.5rem; font:500 .6875rem/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; border:1px solid var(--rule); border-radius:2px; padding:.45rem .65rem; color:var(--dim); text-decoration:none; margin-bottom:1.1rem}
+.rel:hover{color:var(--fg); border-color:var(--fg)}
 
 @media (max-width:56rem){
   .hero{grid-template-columns:1fr; gap:2.5rem}
@@ -222,10 +217,10 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
     assaio
   </span>
   <nav class="mnav">
-    <a href="#measures">Measures</a>
-    <a href="#analyze">Analyze</a>
-    <a href="#tools">Tools</a>
-    <a href="#adapt">Adapt</a>
+    <a href="#answers">Answers</a>
+    <a href="#honest">Honest scope</a>
+    <a href="#sources">Sources</a>
+    <a href="#adapt">Extend</a>
     <a href="#install">Install</a>
     <a href="https://github.com/assaio/assaio">GitHub</a>
   </nav>
@@ -236,27 +231,28 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- HERO ────────────────────────────────────────────────────────────── -->
   <section class="wrap hero">
     <div>
-      <p class="eyebrow">Assay report · v0.13.0</p>
+      <p class="eyebrow">Open source · Apache-2.0 · runs entirely offline</p>
       <h1>Is it <em>delivering?</em></h1>
       <p class="lede">
-        Teams pour real money into AI coding tools and can't answer the one question that
+        Teams pour real money into AI coding tools and cannot answer the one question that
         matters. Vendor dashboards count tokens and dollars — spend, never output — one silo
         per tool. <strong>assaio</strong> reads the session logs already on your machine and
-        weighs what AI produced against the tokens it burns — per project: effectiveness,
-        model fit, context health, adoption, and how efficiently tokens turn into shipped
-        code. Claude Code, Codex, Gemini CLI, Copilot CLI, Cline.
-        Offline, no account, no upload — the first piece of a self-hosted AI-engineering
-        analytics platform.
+        weighs what AI produced against the tokens it burned, per project: effectiveness,
+        model fit, context health, adoption. Claude Code, Codex, Gemini CLI, Copilot CLI and
+        Cline in one picture. No account, no upload, no network.
       </p>
-      <div class="term">
-        <div class="term-bar">local · offline</div>
-        <div class="term-body">
-<div><span class="p">$ </span>brew install assaio/tap/assaio-agent</div>
-<div><span class="p">$ </span>assaio-agent init</div>
-<div><span class="o">  detects your tools, discloses what it reads, imports, reports</span></div>
+      <div class="getin">
+        <span class="il">Install · macOS &amp; Linux</span>
+        <div class="copyrow">
+          <pre><span>$ </span>brew install assaio/tap/assaio-agent</pre>
+          <button class="copybtn" type="button" data-copy="brew install assaio/tap/assaio-agent">Copy</button>
+        </div>
+        <div class="copyrow">
+          <pre><span>$ </span>assaio-agent init</pre>
+          <button class="copybtn" type="button" data-copy="assaio-agent init">Copy</button>
         </div>
       </div>
-      <p class="note">About 60 seconds to your own numbers: <code>init</code> detects your tools, shows every directory it will read <em>before</em> reading it, imports, and prints the report.</p>
+      <p class="note">About sixty seconds to your own numbers: <code>init</code> detects your tools, shows every directory it will read <em>before</em> reading it, imports, and prints the report. Want to look before importing anything? <code>assaio-agent demo</code> runs the full reports on bundled sample data.</p>
     </div>
     <aside class="gauge">
       <p class="eyebrow">Assay verdict</p>
@@ -268,15 +264,60 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
     </aside>
   </section>
 
-  <!-- HEADLINE FIGURE + WORKFLOW ─────────────────────────────────────────── -->
+  <!-- WHAT IT ANSWERS ────────────────────────────────────────────────────── -->
+  <section class="sec" id="answers">
+    <div class="wrap">
+      <div class="sec-head"><h2>The questions it answers</h2><p class="eyebrow">what you actually want to know</p></div>
+      <p class="intro">
+        Not "how many tokens did we burn" — every vendor already tells you that. These are the
+        questions a spend decision turns on, and each one is answered from evidence already
+        sitting on your disk.
+      </p>
+      <div class="qs">
+        <div class="q">
+          <h3>Which projects turn tokens into code, and which mostly reason in circles?</h3>
+          <p>AI lines against tokens spent, grouped by repository. Greenfield and debugging look nothing alike, and the ratio says which is which.</p>
+          <span class="qt">effectiveness</span>
+        </div>
+        <div class="q">
+          <h3>Are we paying premium-model prices for work a cheaper model would do?</h3>
+          <p>Premium versus cheaper token share, the lines-per-token contrast between them, and premium turns that produced almost no output.</p>
+          <span class="qt">model-fit · model-right-sizing</span>
+        </div>
+        <div class="q">
+          <h3>Does the flat plan actually pay off at our volume?</h3>
+          <p>Your window's API-equivalent cost projected onto a calendar month against the plan price you configured — not onto a month of working days, which flatters the plan.</p>
+          <span class="qt">subscription-fit</span>
+        </div>
+        <div class="q">
+          <h3>How much of what AI writes gets thrown away again?</h3>
+          <p>Within-session churn — removals that undo lines the same session added — beside the tool calls a human declined.</p>
+          <span class="qt">rework · friction</span>
+        </div>
+        <div class="q">
+          <h3>Is the context window being spent on prompt, or on answers?</h3>
+          <p>Cache reuse and what each write bought, conversation depth, and how often a session ran out of context and had to be summarized.</p>
+          <span class="qt">cache-hygiene · context</span>
+        </div>
+        <div class="q">
+          <h3>Is adoption spreading, or is it three people and a habit?</h3>
+          <p>Sessions, active days, and breadth across projects and tools, read as activation → retention → breadth rather than as a headcount.</p>
+          <span class="qt">adoption</span>
+        </div>
+      </div>
+      <p class="more">Nineteen reads in all, each one file in the codebase, each printing a directional verdict with its caveat rather than a bare score — and each able to be recomputed over just the sessions you labelled a given kind of work, so <code>$</code>/100 lines on bugfixes stops being averaged in with greenfield features.</p>
+    </div>
+  </section>
+
+  <!-- EFFECTIVENESS ──────────────────────────────────────────────────────── -->
   <section class="sec" id="read">
     <div class="wrap">
       <div class="sec-head"><h2>Effectiveness — code out, tokens in</h2><p class="eyebrow">example report</p></div>
       <p class="intro">
         The question isn't dollars — it's whether the tokens you burn turn into code that
         ships. assaio reads <strong>output against tokens spent</strong>, per project, so you
-        see where AI earns its context window and where it mostly reasons in circles. Grouped
-        by project, never by author — task type drives the ratio far more than any person does.
+        see where AI earns its context window and where it does not. Grouped by project, never
+        by author: the kind of task drives this ratio far more than any person does.
       </p>
       <div class="tbl">
         <table>
@@ -293,87 +334,19 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <li><b>api</b> yields 13 lines per 1M — a fraction of webapp. Debugging-heavy: tokens go to reading and reasoning, not new lines.</li>
         <li><b>planning</b> shows <b>—</b>: real tokens, zero lines. An architecture session, not waste — an honest blank, never a fabricated ratio.</li>
       </ul>
-      <p class="more">Cost is the honest denominator, not the pitch — every <code>$</code> is an estimate at public pay-as-you-go prices, not your bill; on a flat plan, <code>subscription-fit</code> reads whether it pays off. Group by <code>day · project · tool · model</code>; pipe <code>--format json|csv</code>.</p>
+      <p class="more">Cost is the honest denominator, not the pitch — every <code>$</code> is an estimate at public pay-as-you-go prices, not your bill. Group by <code>day · project · tool · model · entrypoint · member</code>; pipe <code>--format json|csv</code> into whatever you already use.</p>
     </div>
   </section>
 
-  <!-- MEASURES / DOESN'T ─────────────────────────────────────────────────── -->
-  <section class="sec" id="measures">
-    <div class="wrap">
-      <div class="sec-head"><h2>What it measures — and what it doesn't yet</h2><p class="eyebrow">the honest scope</p></div>
-      <p class="intro">
-        assaio measures <strong>how much AI is producing, how efficiently, and with how much
-        friction</strong> — not <em>how good the result is</em>. That line is deliberate;
-        blurring it would be the easiest way to lie with this tool.
-      </p>
-      <p class="intro" style="margin-top:1.1rem">
-        The second easiest way is a zero. Your tools do not all record the same things, and a
-        field one of them never writes arrives here looking exactly like a measurement of nothing.
-        Read naively, a Cline or Copilot window said <em>100% of your sessions were conversational</em>
-        — a sentence about how someone worked, drawn from a column their tool does not keep.
-        Since v0.10 that cannot happen: every figure is computed only over the sources that
-        record its field, says how much of your window that reaches, and withholds the verdict
-        rather than certifying a silence. v0.11 finished the job on the half that was still
-        open — a churn rate that divided by a source's lines while it recorded no undone one,
-        and two denominators counting tool calls a source never names — and a test now holds
-        the rule for every future metric rather than a review catching it.
-      </p>
-      <p class="intro">
-        The hardest way is a number that looks right. Claude Code writes one API response as
-        several log lines — one per content block — and repeats that response's token usage on
-        every one of them. assaio counted each line, so a three-part answer billed one request
-        three times, and the flagship source's every token figure ran roughly double: measured
-        across 5,724 real transcripts, 354,904 lines are 159,175 responses, and the estimated
-        cost fell from <strong>$53,208 to $24,339</strong> once they were counted as what they
-        are. Nothing looked broken — that is the point. v0.12 fixes it and rebuilds your stored
-        history on the next run, and in the same release a cache write is finally priced by the
-        lifetime it bought, since 59.7% of those tokens bought the hour-long tier that bills at
-        1.6× the rate assaio had been charging them at.
-      </p>
-      <p class="intro">
-        The last way is a number that is simply not there. Codex describes a file it
-        <em>changed</em> as a diff and a file it <em>created</em> as the whole file — and assaio
-        read only the diff, so every new file counted zero. Across 61 real rollouts that dropped
-        <strong>3,972 of 10,604 added lines</strong>: not a wrong figure, an absent one, sitting
-        inside a right-looking total. The same release found 45% of a real machine's tokens
-        carrying no price at all, because the model in heaviest use was newer than the vendored
-        price table — a $23,750 estimate that was really $39,203. v0.13 fixes both and rebuilds
-        your stored history on the next run. Neither was caught by a test, a golden file or a
-        drift canary; both were caught by reading the code against the logs, which is why the
-        next release builds the check whose expected answer does not come from the parser that
-        produced it.
-      </p>
-      <div class="split">
-        <div class="panel">
-          <h3>Measured today · offline</h3>
-          <dl class="deflist">
-            <div><dt>Adoption</dt><dd>Tool mix, sessions, and sub-agent delegation — from the session logs.</dd></div>
-            <div><dt>Effect</dt><dd>AI lines added and removed, from diff <code>+</code>/<code>-</code> markers. The code text itself is never read or stored — only counts.</dd></div>
-            <div><dt>Efficiency</dt><dd>Lines of code per token spent — where the context window earns its keep. Cost per 100 lines too, as an honest estimate, never the headline.</dd></div>
-            <div><dt>Friction</dt><dd>Edit/write tool-calls, plus proposals the human declined.</dd></div>
-          </dl>
-        </div>
-        <div class="panel not">
-          <h3>Not measured yet · needs the server stage</h3>
-          <ul>
-            <li><b>Survival</b> — whether AI-written code lived on in <code>main</code> after review, rewrites, and reverts.</li>
-            <li><b>Bug impact</b> — whether it caused bugs, only ever against age-matched human code.</li>
-            <li><b>Quality</b> — maintainability, alongside DORA- and DX-style signals.</li>
-          </ul>
-          <p style="margin:1.15rem 0 0; color:var(--faint); font-size:.875rem; line-height:1.55">These need correlating usage with git and issue history — the deeper server work ahead. The local <code>survival</code> command (v0.2) is the first honest step, and v0.8 puts a git evidence collector under it: every commit in the window becomes a content-free observation — counts and a file-category split, never a path or a message — which is what an attribution edge will eventually point at. v0.9 adds the conformance corpus that defines what an honest link is <em>before</em> the engine exists: ten scenarios — including two where the evidence genuinely cannot decide — asserting that ambiguous stays ambiguous and that a human’s correction wins.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ANALYZE / VALIDATORS ───────────────────────────────────────────────── -->
+  <!-- FACEPLATE ──────────────────────────────────────────────────────────── -->
   <section class="sec" id="analyze">
     <div class="wrap">
-      <div class="sec-head"><h2>Nineteen reads, one faceplate</h2><p class="eyebrow">analyze · one file each</p></div>
+      <div class="sec-head"><h2>Nineteen reads, one faceplate</h2><p class="eyebrow">analyze</p></div>
       <p class="intro">
-        <code>analyze</code> reads what actually moves the needle — <strong>model fit, context
-        health, adoption, token efficiency</strong> — and prints a directional verdict for each,
-        always with its caveat, never a bare score. This is the surface, not the price tag.
+        <code>analyze</code> prints a directional verdict for each dimension, always with its
+        caveat and always with <strong>what it rests on</strong>: how much of your window the
+        figure actually reaches, how many observations are behind it, how fresh the data is,
+        and which build read it. A thin read cannot be quoted as a solid one.
       </p>
       <div class="plate mini" id="plate">
         <div class="cell"><span class="cn">Model fit</span><span class="cv watch">Watch</span><div class="bar"><i data-p=".2"></i></div></div>
@@ -396,11 +369,67 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="cell"><span class="cn">Skill economics</span><span class="cv">Proportionate</span><div class="bar"><i data-p=".8"></i></div></div>
         <div class="cell"><span class="cn">Task intent</span><span class="cv neutral">Building</span><div class="bar"><i data-p=".45"></i></div></div>
       </div>
-      <p class="more">Since v0.5 every verdict carries a <b>confidence envelope</b> — activity, pricing and turn-level coverage, the sample it rests on, how fresh the data is, and which build read it — so a thin read cannot be quoted as a solid one. Since v0.9 it carries a fourth axis, <b>signal coverage</b>: how much of your window that particular figure actually reaches. A reasoning share read off under 1% of your output now says so instead of reporting <code>high</code>, and a metric nothing in the window can answer reads <code>insufficient</code> rather than confident — and since v0.10 it says <em>which</em> nothing: a window that cannot answer, a count of zero, or a plugin that never said what it rests on. Since v0.6 every one of them can also be read <b>per kind of work</b>: label a session with <code>mark</code> and <code>$</code>/100 lines on bugfixes stops being averaged in with research and greenfield features. Write your own <b>metric plugin</b> in any language and it renders right beside the built-ins, carrying the same envelope.</p>
+      <p class="more">A reasoning share read off under 1% of your output says so instead of reporting <b>high</b>; a metric nothing in the window can answer reads <b>insufficient</b> rather than confident, and names <em>which</em> nothing it hit — a window that cannot answer, a genuine count of zero, or a plugin that never declared what it rests on. Write your own <b>metric plugin</b> in any language and it renders right beside the built-ins, carrying the same envelope.</p>
     </div>
   </section>
 
-  <!-- THE ASSAY DASHBOARD ────────────────────────────────────────────────── -->
+  <!-- HONEST SCOPE ───────────────────────────────────────────────────────── -->
+  <section class="sec" id="honest">
+    <div class="wrap">
+      <div class="sec-head"><h2>What it measures, and what it refuses to</h2><p class="eyebrow">the honest scope</p></div>
+      <p class="intro">
+        assaio measures <strong>how much AI is producing, how efficiently, and with how much
+        friction</strong> — not how good the result is. That line is deliberate: blurring it
+        would be the easiest way to lie with this tool. The harder problem is that a
+        measurement can be wrong while looking perfectly healthy, so the guards below are
+        part of the product rather than part of the process.
+      </p>
+      <div class="split">
+        <div class="panel">
+          <h3>Measured today · offline</h3>
+          <dl class="deflist">
+            <div><dt>Adoption</dt><dd>Tool mix, sessions, active days, breadth across projects, and how much work is delegated to sub-agents.</dd></div>
+            <div><dt>Effect</dt><dd>AI lines added and removed, read from diff <code>+</code>/<code>-</code> markers and from the body of a file the tool created. The code text itself is never read or stored — only counts.</dd></div>
+            <div><dt>Efficiency</dt><dd>Lines per token spent, cache reuse and what each write bought, premium-model fit, and cost per 100 lines as an estimate, never the headline.</dd></div>
+            <div><dt>Friction</dt><dd>Churn that undoes the session's own work, tool calls that failed, and proposals a human declined.</dd></div>
+          </dl>
+        </div>
+        <div class="panel not">
+          <h3>Not measured yet · needs the server stage</h3>
+          <ul>
+            <li><b>Survival</b> — whether AI-written code lived on in <code>main</code> after review, rewrites and reverts.</li>
+            <li><b>Bug impact</b> — whether it caused bugs, only ever against age-matched human code.</li>
+            <li><b>Quality</b> — maintainability, alongside DORA- and DX-style signals.</li>
+          </ul>
+          <p style="margin:1.15rem 0 0; color:var(--faint); font-size:.875rem; line-height:1.55">These need usage correlated with git and issue history. The local <code>survival</code> command is the first honest step, reading content-free commit observations — counts and a file-category split, never a path, a branch name or a message. Underneath it sits a conformance corpus that defines what an honest session→commit link <em>is</em> before the engine that draws one exists, including scenarios where the evidence genuinely cannot decide: ambiguous has to stay ambiguous, and a human's correction wins.</p>
+        </div>
+      </div>
+      <div class="prin">
+        <div class="pr">
+          <span class="pn">Principle 01</span>
+          <h3>A silence is never a zero</h3>
+          <p>Your tools do not all record the same things, and a field one of them never writes arrives looking exactly like a measurement of nothing. Read naively, that reports <em>100% of your sessions were conversational</em> — a sentence about how someone worked, drawn from a column their tool does not keep. Every figure is computed only over the sources that record its field, says how much of your window that reaches, and <strong>withholds the verdict rather than certifying a silence</strong>.</p>
+        </div>
+        <div class="pr">
+          <span class="pn">Principle 02</span>
+          <h3>Every fact carries its provenance</h3>
+          <p>Nothing here is a bare number. Each source publishes what it can actually answer, signal by signal, so <code>signals coverage</code> tells you which of the twenty-two figures <em>your</em> data can carry. Format drift is detected rather than absorbed: per-source canaries compare each import against a baseline of recent runs and warn when a vendor changes a log format under you.</p>
+        </div>
+        <div class="pr">
+          <span class="pn">Principle 03</span>
+          <h3>The check whose answer doesn't come from the parser</h3>
+          <p>A test written from a mistaken reading of a log preserves the mistake. So the parsers are held to evidence they did not produce: <strong>redacted real traces whose totals were counted by hand</strong>, accounting invariants that must hold whatever the numbers are, and metamorphic properties — the same fact written two ways has to produce the same total. That last one is what catches a reader that handles one encoding and silently drops the other, which is what every semantic bug in this project has turned out to be.</p>
+        </div>
+        <div class="pr">
+          <span class="pn">Principle 04</span>
+          <h3>One window, one number</h3>
+          <p>The report, the dashboard, a CI gate, a team server and a metric you wrote yourself all read the same window, and a test holds them to the same total. A figure that moved between two screens is a bug, not a rounding difference — and every correction can reach the history already in your store, so a fix repairs the past instead of only the future.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD ──────────────────────────────────────────────────────────── -->
   <section class="sec" id="dashboard">
     <div class="wrap">
       <div class="sec-head"><h2>The Assay — an offline dashboard</h2><p class="eyebrow">one self-contained file</p></div>
@@ -413,42 +442,16 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
       </p>
       <div class="cards">
         <div class="card"><h3>Self-contained</h3><p>No network, no CDN — one file you can open offline or attach to an email. The same posture as this page.</p></div>
-        <div class="card"><h3>Shareable by default</h3><p>Pseudonymized project and member names; a per-member team section appears only on a central store.</p></div>
+        <div class="card"><h3>Shareable by default</h3><p>Pseudonymized project and member names. A team panel appears only on a central store, and it shows engagement per member — output and spend only as a team total, never per person.</p></div>
         <div class="card"><h3>Honest on its face</h3><p>Every cost marked an estimate; unpriced usage flagged, never a fake $0; a "how to read" note per section.</p></div>
       </div>
     </div>
   </section>
 
-  <!-- COMMANDS ───────────────────────────────────────────────────────────── -->
-  <section class="sec" id="commands">
+  <!-- SOURCES ────────────────────────────────────────────────────────────── -->
+  <section class="sec" id="sources">
     <div class="wrap">
-      <div class="sec-head"><h2>Commands</h2><p class="eyebrow">one binary</p></div>
-      <div class="cmds">
-        <div class="cmd"><b>init</b><span>A first run end to end: detects your tools, prints every directory it will read <em>before</em> reading it, imports, reports, and names what to run next. No config needed.</span></div>
-        <div class="cmd"><b>demo</b><span>Full reports on bundled sample data — the 60-second first look, no logs needed.</span></div>
-        <div class="cmd"><b>backfill</b><span>Import local session logs. Incremental: an input already read unchanged is skipped; <code>--full</code> forces a re-parse.</span></div>
-        <div class="cmd"><b>report</b><span>Token/cost report. <code>--by day|project|tool|model|entrypoint|member</code>, <code>--format table|json|csv</code>, <code>--compare</code>.</span></div>
-        <div class="cmd"><b>effectiveness</b><span>AI output vs cost — AI lines, edits, rejections, $/100 lines — per project.</span></div>
-        <div class="cmd"><b>analyze</b><span>Run the metric validators (and any metric plugins); print each one's directional read. <code>--task|--outcome|--difficulty</code> recompute every one over just the sessions you labeled that way.</span></div>
-        <div class="cmd"><b>mark</b><span>Label a session with what the work actually was — task class, outcome, difficulty. Category values only, never free text, never synced; the one fact the logs cannot contain.</span></div>
-        <div class="cmd"><b>signals</b><span>What assaio can report, and what <em>your</em> data supports. <code>describe</code> says what one signal counts and what a zero means; <code>coverage</code> reads your store and reports each signal as fully, partly or not at all supported — because "no rework happened" and "this source never recorded rework" are different facts.</span></div>
-        <div class="cmd"><b>survival</b><span>Directional local outcome: how much of a repo's window still lives in <code>HEAD</code>, beside its AI lines — and, since v0.8, what those commits changed by <em>category</em> (test / source / docs / config / generated) plus how many were reverts. Read from content-free commit observations: no path, branch name, message or diff leaves the repository. Since v0.9 merge commits are reported apart from the rate — git publishes no line counts for a merge, so a hand-resolved conflict is counted in neither figure rather than inflating survival.</span></div>
-        <div class="cmd"><b>dashboard</b><span>Write the self-contained offline HTML Assay report; pseudonymized by default.</span></div>
-        <div class="cmd"><b>check</b><span>Exit non-zero over a token (or API-equivalent $) budget — a CI / pre-push gate. Also runs your <b>rule plugins</b>: an <code>error</code> alert, or a rule that could not be evaluated, fails the gate.</span></div>
-        <div class="cmd"><b>explain</b><span>The long-form page for a metric — what it measures, how to read it, what to do, and its limits. Needs no store.</span></div>
-        <div class="cmd"><b>statusline</b><span>One ambient line for your status bar: today's tokens, AI lines, cost basis and data age. Read-only, never fails loudly.</span></div>
-        <div class="cmd"><b>serve · sync</b><span>Self-hosted team server and the push to it — pseudonymous by default.</span></div>
-        <div class="cmd"><b>doctor · status</b><span>Detected tools, resolved log roots, store size, the per-source depth matrix, and format-drift canaries. <code>doctor --strict</code> exits non-zero on suspected drift — for cron.</span></div>
-        <div class="cmd"><b>plugins · metrics</b><span><code>list</code> / <code>verify</code> out-of-tree exec parser, metric and rule plugins — nothing stored.</span></div>
-        <div class="cmd"><b>config · clear · compact</b><span>Print the effective config; delete stored data with an explicit scope and <code>--yes</code>; return freed pages to the filesystem.</span></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- SUPPORTED TOOLS + ACCURACY ─────────────────────────────────────────── -->
-  <section class="sec" id="tools">
-    <div class="wrap">
-      <div class="sec-head"><h2>Supported tools &amp; accuracy</h2><p class="eyebrow">five sources · declared depth, not a checkmark</p></div>
+      <div class="sec-head"><h2>What it reads</h2><p class="eyebrow">five sources · declared depth, not a checkmark</p></div>
       <div class="tools">
         <div class="tool"><b>Claude Code</b><code>~/.claude/projects/**/*.jsonl</code><span class="cap full">tokens + activity</span></div>
         <div class="tool"><b>OpenAI Codex CLI</b><code>~/.codex/sessions/**</code><span class="cap full">tokens + activity</span></div>
@@ -456,33 +459,67 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="tool"><b>GitHub Copilot CLI</b><code>~/.copilot/session-state/&lt;id&gt;/events.jsonl</code><span class="cap full">tokens + lines · per session</span></div>
         <div class="tool"><b>Cline</b><code>globalStorage/saoudrizwan.claude-dev · ~/.cline</code><span class="cap">tokens · cost only</span></div>
       </div>
-      <p class="intro" style="margin-top:1.5rem">"Supports Gemini CLI" is misleading when it means tokens but no edits. Since v0.5 each source publishes its real <strong>depth</strong> — <em>deep</em> (tokens + activity), <em>standard</em> (reliable usage, documented activity gaps), <em>import-only</em> — and <code>doctor</code> prints the matrix for the tools found on your machine. Since v0.7 a source declares that <strong>per signal</strong> rather than per tier, because "has activity" is one bit over a tool that records changed lines and no edit count, no tool calls and no turns — so <code>signals coverage</code> tells you which of the twenty figures your own data can actually carry. The first thing that bought, in v0.8: the catalog had been claiming every source reports reasoning tokens, where only three of five do. In v0.10 it became a rule the metrics obey rather than a table they sit beside — a figure is computed only over the sources that record its field, so a tool that never writes an edit count is <em>absent</em> from the session mix instead of counted as a conversation. Since v0.11 an out-of-tree <b>metric plugin</b> is told the same thing on the wire, so a metric you write yourself can tell a measurement from a silence too.</p>
+      <p class="intro" style="margin-top:1.5rem">
+        "Supports Gemini CLI" is misleading when it means tokens but no edits. Each source
+        publishes its real <strong>depth</strong> — and it declares that per signal rather than
+        per tier, because "has activity" is one bit over a tool that records changed lines and
+        no edit count, no tool calls and no turns. <code>doctor</code> prints the matrix for the
+        tools found on your machine; <code>signals coverage</code> reads your store and reports
+        each figure as fully, partly or not at all supported. An out-of-tree metric plugin is
+        told the same thing on the wire, so a metric you write yourself can tell a measurement
+        from a silence too.
+      </p>
       <ul class="caveats">
-        <li>AI-line activity (lines, edits, rework) is captured in full for Claude Code and Codex; Copilot CLI carries changed lines only — its log names tool calls too, which v0.10&rsquo;s field audit found and assaio does not read yet — and Gemini CLI and Cline contribute cost but no line counts. <code>signals coverage</code> reports which of the twenty figures your own mix supports.</li>
-        <li>Copilot CLI totals a session only when it ends, so its records cover a whole session rather than a turn: they carry lines added and removed, are marked <code>‡</code> in reports, and lower the turn-level coverage every verdict declares.</li>
-        <li>Format drift is detected rather than silently absorbed: four per-source canaries compare each import against a baseline of recent runs and warn when a vendor changes a log format under you.</li>
-        <li>Cline is discovered across VS Code, Insiders, VSCodium, and Cursor. Costs come from a vendored snapshot of the LiteLLM price table.</li>
-        <li>The price table is flat per model — long-context (e.g. <code>[1m]</code>) and 1-hour cache premiums aren't modeled yet, so heavy-context sessions under-estimate.</li>
+        <li>Line activity — lines, edits, rework — is captured in full for Claude Code and Codex; Copilot CLI carries changed lines only; Gemini CLI and Cline contribute cost but no line counts.</li>
+        <li>Copilot CLI totals a session only when it ends, so its records cover a whole session rather than a turn: they are marked <code>‡</code> in reports and lower the turn-level coverage every verdict declares.</li>
+        <li>Cline is discovered across VS Code, Insiders, VSCodium and Cursor. Costs come from a vendored snapshot of the LiteLLM price table.</li>
+        <li>The price table is flat per model — long-context premiums aren't modeled yet, so heavy-context sessions under-estimate.</li>
         <li>A model missing from the table renders <code>—</code> (JSON <code>null</code>, CSV blank, excluded from totals) — never a faked <code>$0</code>. <code>doctor</code> prints every caveat on each run.</li>
       </ul>
       <p class="more">More sources — opencode, Aider, Qwen, Roo &amp; Kilo Code — are on the roadmap and buildable out-of-tree today.</p>
     </div>
   </section>
 
-  <!-- COST HONESTY + TEAM ────────────────────────────────────────────────── -->
-  <section class="sec" id="cost">
+  <!-- COMMANDS ───────────────────────────────────────────────────────────── -->
+  <section class="sec" id="commands">
     <div class="wrap">
-      <div class="sec-head"><h2>Cost honesty &amp; the team server</h2><p class="eyebrow">estimate, not invoice</p></div>
-      <div class="cards">
-        <div class="card"><h3 class="on">Every $ is an estimate</h3><p>Priced at public pay-as-you-go rates — not your bill. Token counts are computed server-side and unobservable to an offline client.</p></div>
-        <div class="card"><h3 class="on">Declare your real basis</h3><p>On a subscription or negotiated rate? Set <code>pricing</code> — an effective $/token or a monthly plan cost — and reports show a truer figure. <code>subscription-fit</code> then reads whether the plan pays off.</p></div>
-        <div class="card"><h3 class="on">Budget gate</h3><p><code>check --max-tokens N</code> exits non-zero over budget — plan-independent by default, for CI or a pre-push hook.</p></div>
-        <div class="card"><h3 class="on">Team server, self-hosted</h3><p><code>serve</code> pools usage that teammates <code>sync</code> to it and serves one aggregated, pseudonymized-by-default dashboard. You host it, on infrastructure you control.</p></div>
+      <div class="sec-head"><h2>Commands</h2><p class="eyebrow">one binary, no runtime deps</p></div>
+      <div class="cmds">
+        <div class="cmd"><b>init</b><span>A first run end to end: detects your tools, prints every directory it will read <em>before</em> reading it, imports, reports, and names what to run next. No config needed.</span></div>
+        <div class="cmd"><b>demo</b><span>Full reports on bundled sample data — the sixty-second first look, no logs needed.</span></div>
+        <div class="cmd"><b>backfill</b><span>Import local session logs. Incremental: an input already read unchanged is skipped; <code>--full</code> forces a re-parse.</span></div>
+        <div class="cmd"><b>report</b><span>Token/cost report. <code>--by day|project|tool|model|entrypoint|member</code>, <code>--format table|json|csv</code>, <code>--compare</code>.</span></div>
+        <div class="cmd"><b>effectiveness</b><span>AI output against cost — lines, edits, rejections, $/100 lines — per project.</span></div>
+        <div class="cmd"><b>analyze</b><span>Run the metric validators and any metric plugins; print each one's directional read. <code>--task|--outcome|--difficulty</code> recompute every one over just the sessions you labelled that way.</span></div>
+        <div class="cmd"><b>mark</b><span>Label a session with what the work actually was — task class, outcome, difficulty. Category values only, never free text, never synced; the one fact the logs cannot contain.</span></div>
+        <div class="cmd"><b>signals</b><span>What assaio can report, and what <em>your</em> data supports. <code>describe</code> says what one signal counts and what a zero means; <code>coverage</code> reports each as fully, partly or not at all supported — because "no rework happened" and "this source never recorded rework" are different facts.</span></div>
+        <div class="cmd"><b>survival</b><span>Directional local outcome: how much of a repo's window still lives in <code>HEAD</code>, beside its AI lines, plus what those commits changed by category and how many were reverts. Merge commits are reported apart from the rate, and a file git could not read is counted and named rather than passed over.</span></div>
+        <div class="cmd"><b>dashboard</b><span>Write the self-contained offline HTML Assay report; pseudonymized by default.</span></div>
+        <div class="cmd"><b>check</b><span>Exit non-zero over a token or API-equivalent $ budget — a CI or pre-push gate. Also runs your <b>rule plugins</b>: an <code>error</code> alert, or a rule that could not be evaluated, fails the gate.</span></div>
+        <div class="cmd"><b>explain</b><span>The long-form page for a metric — what it measures, how to read it, what to do, and its limits. Needs no store.</span></div>
+        <div class="cmd"><b>statusline</b><span>One ambient line for your status bar: today's tokens, AI lines, cost basis and data age. Read-only, never fails loudly.</span></div>
+        <div class="cmd"><b>serve · sync</b><span>Self-hosted team server and the push to it — pseudonymous by default, on infrastructure you control.</span></div>
+        <div class="cmd"><b>doctor · status</b><span>Detected tools, resolved log roots, store size, the per-source depth matrix, and format-drift canaries. <code>doctor --strict</code> exits non-zero on suspected drift — for cron.</span></div>
+        <div class="cmd"><b>plugins · metrics</b><span><code>list</code> / <code>verify</code> out-of-tree exec parser, metric and rule plugins — nothing stored.</span></div>
+        <div class="cmd"><b>config · clear · compact</b><span>Print the effective config; delete stored data with an explicit scope and <code>--yes</code>; return freed pages to the filesystem.</span></div>
       </div>
     </div>
   </section>
 
-  <!-- ADAPT / EXTENSIBILITY ──────────────────────────────────────────────── -->
+  <!-- COST + TEAM ────────────────────────────────────────────────────────── -->
+  <section class="sec" id="cost">
+    <div class="wrap">
+      <div class="sec-head"><h2>Cost honesty &amp; the team server</h2><p class="eyebrow">estimate, not invoice</p></div>
+      <div class="cards">
+        <div class="card"><h3>Every $ is an estimate</h3><p>Priced at public pay-as-you-go rates — not your bill. Token counts are computed server-side and unobservable to an offline client.</p></div>
+        <div class="card"><h3>Declare your real basis</h3><p>On a subscription or a negotiated rate? Set <code>pricing</code> — an effective $/token or a monthly plan cost — and reports show a truer figure. <code>subscription-fit</code> then reads whether the plan pays off.</p></div>
+        <div class="card"><h3>Budget gate</h3><p><code>check --max-tokens N</code> exits non-zero over budget — plan-independent by default, for CI or a pre-push hook.</p></div>
+        <div class="card"><h3>Team server, self-hosted</h3><p><code>serve</code> pools usage that teammates <code>sync</code> to it and serves one aggregated, pseudonymized dashboard. You host it, on infrastructure you control.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADAPT ──────────────────────────────────────────────────────────────── -->
   <section class="sec" id="adapt">
     <div class="wrap">
       <div class="sec-head"><h2>Adapt it to your organization</h2><p class="eyebrow">built to extend</p></div>
@@ -490,10 +527,10 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         One tool = one package; one metric = one file. Extend assaio without forking — exec
         plugins are standalone executables in <strong>any language</strong>, declared in your
         config and speaking a small stdout protocol, so they survive core refactors. Three
-        protocols today — data sources, metrics, and rules that gate CI.
+        protocols: data sources, metrics, and rules that gate CI.
       </p>
       <div class="cards">
-        <div class="card"><h3>Data source · any language</h3><p>An out-of-tree parser — Python, Rust, shell — for a tool assaio doesn't read yet. <code>plugins verify</code> checks conformance. Or add one in-tree via PR.</p></div>
+        <div class="card"><h3>Data source · any language</h3><p>An out-of-tree parser — Python, Rust, shell — for a tool assaio doesn't read yet. <code>plugins verify</code> checks conformance, and a field the protocol doesn't define is a named error rather than a silent zero. Or add one in-tree via PR.</p></div>
         <div class="card"><h3>Metric plugin · any language</h3><p>An analyzer that reads the same prepared data every built-in metric reads and returns one result — it renders in <code>analyze</code> and on the dashboard, no rebuild.</p></div>
         <div class="card"><h3>Rule plugin · any language</h3><p>A gate of your own: it reads this window's verdicts — never usage rows, never project names — and raises alerts that can fail <code>check</code> in CI.</p></div>
         <div class="card"><h3>Query the store</h3><p>The SQLite schema is documented — query it with <code>sqlite3</code> or any client, or pipe <code>report --format json|csv</code> into your own BI.</p></div>
@@ -504,7 +541,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- INSTALL ────────────────────────────────────────────────────────────── -->
   <section class="sec" id="install">
     <div class="wrap">
-      <div class="sec-head"><h2>Install</h2><p class="eyebrow">single static binary · no runtime deps</p></div>
+      <div class="sec-head"><h2>Install</h2><p class="eyebrow">single static binary</p></div>
       <div class="installs">
         <div class="inst"><span class="il">Homebrew · macOS &amp; Linux</span><pre>brew install assaio/tap/assaio-agent</pre></div>
         <div class="inst"><span class="il">Go 1.25+</span><pre>go install github.com/assaio/assaio/cmd/assaio-agent@latest</pre></div>
@@ -528,7 +565,7 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
       </p>
       <ul class="refuse">
         <li><b>No "estimated time saved."</b> The logs contain no counterfactual, so any such number is invented.</li>
-        <li><b>No leaderboards.</b> Nothing is ranked per named individual — aggregate and pseudonymized by default.</li>
+        <li><b>No leaderboards.</b> Nothing is ranked per named individual — aggregate and pseudonymized by default, and the team panel shows engagement rather than output per person.</li>
         <li><b>No silent precision.</b> Directional signals say so; an unpriced model renders a blank, never a fake $0.</li>
         <li><b>No per-person analytics</b> outside a deliberate, governed team-mode opt-in.</li>
       </ul>
@@ -563,7 +600,7 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
         <div class="p"><h3>Contributors</h3><p>One tool = one package; one metric = one file. A small, readable codebase — a good place to make a first open-source contribution count.</p></div>
       </div>
       <div class="talk">
-        <span class="eyebrow" style="text-transform:uppercase">Talk to us</span>
+        <span class="eyebrow">Talk to us</span>
         <a href="https://github.com/assaio/assaio/discussions">GitHub Discussions</a>
         <a href="https://karauda.com/contact">karauda.com/contact</a>
       </div>
@@ -572,11 +609,12 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
 </main>
 
 <footer class="wrap colo">
+  <a class="rel" href="https://github.com/assaio/assaio/blob/main/CHANGELOG.md">Assay report · v0.14.0 → changelog</a>
   <nav>
     <a href="https://github.com/assaio/assaio">GitHub</a>
     <a href="https://github.com/assaio/assaio/releases">Releases</a>
+    <a href="https://github.com/assaio/assaio/blob/main/CHANGELOG.md">Changelog</a>
     <a href="https://github.com/assaio/assaio/blob/main/ROADMAP.md">Roadmap</a>
-    <a href="https://github.com/assaio/assaio/blob/main/BACKLOG.md">Backlog</a>
     <a href="https://github.com/assaio/assaio/blob/main/FEATURES.md">Features</a>
     <a href="https://github.com/assaio/assaio/blob/main/PRIVACY.md">Privacy</a>
     <a href="https://github.com/assaio/assaio/blob/main/CONTRIBUTING.md">Contributing</a>
@@ -601,6 +639,17 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
     root.setAttribute('data-theme',next);
     try{ localStorage.setItem('assaio-theme',next); }catch(e){}
   });
+
+  [].forEach.call(document.querySelectorAll('.copybtn'),function(b){
+    b.addEventListener('click',function(){
+      var done=function(){ var was=b.textContent; b.textContent='Copied'; setTimeout(function(){ b.textContent=was; },1400); };
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(b.dataset.copy).then(done,function(){}); return; }
+      var ta=document.createElement('textarea'); ta.value=b.dataset.copy; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); done(); }catch(e){}
+      document.body.removeChild(ta);
+    });
+  });
+
   var bars=[].slice.call(document.querySelectorAll('#plate .bar i'));
   function settle(){ bars.forEach(function(b){ b.style.width=(parseFloat(b.dataset.p)*100)+'%'; }); }
   if(!('IntersectionObserver' in window)){ settle(); return; }

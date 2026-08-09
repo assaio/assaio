@@ -21,17 +21,32 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-08-09
+
 ### Compatibility
-- **A correction can now lower a stored activity count, and the upgrade applies one.** The
-  restate path took `MAX(stored, offered)` on every column, so a parser fix that *reduces* a
-  figure could not reach a single existing row — the record already exists, nothing new is
-  inserted, and a maximum never accepts a smaller number. The activity counts (lines,
-  rework, edits, tool calls, the purpose split, rejections, errors, compactions) are now
-  assigned from the current parse; the token counts stay on `MAX`, because those are the
-  vendor's own figures rather than a rule assaio wrote. Migration `0010` clears the
-  `claude-code` ingest watermark so the next `backfill` re-reads every transcript once. On
-  the maintainer's store that moves added lines 280,500 → 280,170 and removed lines
-  111,920 → 111,296. Nothing is deleted; the first import after upgrading is a slow one.
+- **Your stored activity counts change, in both directions, and the upgrade rebuilds them for
+  you.** This release corrects four things about *which* lines and events a Claude Code
+  transcript contributes at all, and the restate path could not have applied any of them: it
+  took `MAX(stored, offered)` on every column, so a fix that *reduces* a figure could never
+  reach an existing row — the record already exists, nothing new is inserted, and a maximum
+  never accepts a smaller number. The activity counts (lines, rework, edits, tool calls, the
+  purpose split, rejections, errors, compactions) are now assigned from the current parse; the
+  token counts stay on `MAX`, because those are the vendor's own figures rather than a rule
+  assaio wrote. Migration `0010` clears the `claude-code` ingest watermark so the next
+  `backfill` re-reads every transcript once — **the first import after upgrading is a slow
+  one**, and nothing is deleted by it.
+
+  On the maintainer's corpus of 5,586 real transcripts the net effect is:
+
+  | figure | before | after | why |
+  |---|---|---|---|
+  | lines added | 383,579 | **1,010,406** | a created file finally counts its body |
+  | rework lines | 32,550 | **46,948** | those lines are now a budget a removal can undo |
+  | compactions | 38 | **19** | one overflow was counted once per marker, and it writes two |
+  | added / removed | −460 / −656 | applied | a repeated transcript line went in twice |
+
+  Most stores will see AI lines rise sharply and compactions halve. Both are corrections, not
+  new activity.
 - **The team dashboard's per-member row now shows sessions only** (`B141`). It also printed
   each pseudonymous member's AI lines and spend, and pseudonymous is not anonymous to a
   colleague who knows the roster — that is a productivity comparison however the list is
@@ -1330,7 +1345,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/assaio/assaio/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/assaio/assaio/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/assaio/assaio/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/assaio/assaio/compare/v0.10.0...v0.11.0
