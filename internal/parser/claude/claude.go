@@ -110,6 +110,9 @@ type parseState struct {
 	out []usage.Record
 	// seenLine guards a transcript that repeats a line verbatim -- a streamed retry.
 	seenLine map[string]struct{}
+	// inCompaction marks that the previous line was a compaction marker, so the boundary and
+	// the summary Claude Code writes for one overflow count as one event.
+	inCompaction bool
 	// byMessage maps an API response id to the record carrying it. Claude writes one JSONL
 	// line per content block of a single response, each repeating that response's usage, so
 	// a record per line counted one request's tokens once per block.

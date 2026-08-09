@@ -216,9 +216,11 @@ func TestParseSkipsMalformedLineAndCountsIt(t *testing.T) {
 }
 
 func TestParseCompactionAttribution(t *testing.T) {
-	// Two compaction lines using each of the two ground-truth discriminators
-	// (isCompactSummary and subtype=="compact_boundary") both attribute to the same
-	// most-recently-emitted assistant record, incrementing rather than overwriting.
+	// The two ground-truth discriminators (isCompactSummary and subtype=="compact_boundary")
+	// are the two lines Claude Code writes for one overflow, so the pair attributes one
+	// compaction to the most-recently-emitted assistant record and emits no record of its
+	// own. This test asserted 2 until v0.14, which is what counting per marker produces --
+	// a golden written from the same misreading as the code it guards.
 	const log = `{"type":"assistant","uuid":"a1","timestamp":"2026-07-01T10:00:00Z","sessionId":"s1","message":{"model":"claude-opus-4-5","usage":{"input_tokens":1,"output_tokens":1}}}
 {"type":"user","uuid":"cs1","timestamp":"2026-07-01T10:00:01Z","sessionId":"s1","isCompactSummary":true}
 {"type":"system","uuid":"cb1","timestamp":"2026-07-01T10:00:02Z","sessionId":"s1","subtype":"compact_boundary"}
@@ -234,8 +236,8 @@ func TestParseCompactionAttribution(t *testing.T) {
 	if len(recs) != 2 {
 		t.Fatalf("got %d records, want 2 (compaction lines never emit their own record): %+v", len(recs), recs)
 	}
-	if recs[0].Compactions != 2 {
-		t.Fatalf("a1 Compactions = %d, want 2 (both compaction markers attributed to it)", recs[0].Compactions)
+	if recs[0].Compactions != 1 {
+		t.Fatalf("a1 Compactions = %d, want 1 (the boundary and its summary are one overflow)", recs[0].Compactions)
 	}
 	if recs[1].Compactions != 0 {
 		t.Fatalf("a2 Compactions = %d, want 0 (compactions occurred before it was emitted)", recs[1].Compactions)

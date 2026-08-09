@@ -69,3 +69,38 @@ func TestCreatedFileFeedsTheReworkBudget(t *testing.T) {
 		t.Errorf("ReworkLines = %d, want 2 -- the creation's lines are what the removal undoes", recs[0].ReworkLines)
 	}
 }
+
+// TestOneCompactionIsCountedOnce: Claude Code writes a single context overflow as two
+// adjacent lines -- a system boundary and the user-side summary -- so a counter that fires
+// per marker reports every compaction twice. Measured on the maintainer's corpus: 19 real
+// events, 38 counted.
+func TestOneCompactionIsCountedOnce(t *testing.T) {
+	const boundary = `{"type":"system","uuid":"c1","sessionId":"s1","timestamp":"2026-03-02T09:00:02Z","subtype":"compact_boundary"}`
+	const summary = `{"type":"user","uuid":"c2","sessionId":"s1","timestamp":"2026-03-02T09:00:03Z","isCompactSummary":true}`
+	const later = `{"type":"assistant","uuid":"a2","sessionId":"s1","timestamp":"2026-03-02T09:00:04Z","message":{"id":"m2","model":"claude-opus-5","usage":{"input_tokens":1,"output_tokens":1},"content":[]}}`
+
+	recs, _, err := Parse(strings.NewReader(strings.Join([]string{createAssistant, boundary, summary}, "\n") + "\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recs[0].Compactions != 1 {
+		t.Errorf("Compactions = %d, want 1 -- the boundary and its summary are one overflow", recs[0].Compactions)
+	}
+
+	second := strings.NewReplacer(`"c1"`, `"c3"`, `"c2"`, `"c4"`)
+	twice := strings.Join([]string{
+		createAssistant, boundary, summary, later,
+		second.Replace(boundary), second.Replace(summary),
+	}, "\n") + "\n"
+	recs, _, err = Parse(strings.NewReader(twice))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var total int64
+	for i := range recs {
+		total += recs[i].Compactions
+	}
+	if total != 2 {
+		t.Errorf("Compactions = %d, want 2 -- two overflows separated by a turn are two events", total)
+	}
+}

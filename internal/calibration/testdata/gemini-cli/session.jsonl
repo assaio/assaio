@@ -1,0 +1,3 @@
+{"sessionId":"g1","timestamp":"2026-07-01T10:00:00Z","model":"gemini-2.5-pro","tokens":{"input":1000,"output":300,"cached":200,"thoughts":50,"tool":20,"total":1570}}
+{"sessionId":"g1","timestamp":"2026-07-01T10:00:05Z","model":"gemini-2.5-flash","tokens":{"input":500,"output":100,"cached":0,"thoughts":0,"tool":0,"total":600}}
+{"sessionId":"g1","timestamp":"2026-07-01T10:00:10Z","model":"gemini-2.5-pro","tokens":{"input":800,"output":150,"cached":400,"thoughts":30,"tool":10,"total":990}}

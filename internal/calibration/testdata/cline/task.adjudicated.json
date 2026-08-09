@@ -1,0 +1,50 @@
+{
+  "source": "cline",
+  "trace": "task",
+  "capture": "constructed",
+  "origin": "A constructed task directory in Cline's captured shape -- ui_messages.json beside task_metadata.json -- not a redacted real task: Cline is not installed on the maintainer's machine, so there is nothing real to redact. The trace is a directory rather than a file because that is how this source stores a session.",
+  "method": "Counted by reading the two api_req_started payloads and the model sidecar. No call into internal/parser.",
+  "calibrates": [
+    "ai.tokens.total", "ai.tokens.input", "ai.tokens.output",
+    "ai.tokens.cache_read", "ai.tokens.cache_write",
+    "ai.cost.estimated", "ai.sessions.count", "ai.turns.count", "ai.session.active_minutes"
+  ],
+  "totals": {
+    "records": 2,
+    "sessions": 1,
+    "input_tokens": 2100,
+    "output_tokens": 550,
+    "cache_read_tokens": 1200,
+    "cache_write_tokens": 600,
+    "cache_write_1h_tokens": 0,
+    "reasoning_tokens": 0,
+    "lines_added": 0,
+    "lines_removed": 0,
+    "rework_lines": 0,
+    "edits": 0,
+    "tool_calls": 0,
+    "rejected": 0,
+    "tool_errors": 0,
+    "compactions": 0,
+    "skipped": 0
+  },
+  "derivations": {
+    "records": "two api_req_started messages, one per request. Every other message kind in the file is conversation, which carries no accounting.",
+    "sessions": "one task directory is one session; its id is the directory name.",
+    "input_tokens": "1200 + 900. Cline's tokensIn is the non-cached prompt already, published beside cacheReads rather than including it, so nothing is subtracted here -- the opposite convention to Gemini and Codex, and reading it either way for the wrong source is a 2x error in one direction or the other.",
+    "output_tokens": "340 + 210.",
+    "cache_read_tokens": "0 + 1200.",
+    "cache_write_tokens": "600 + 0.",
+    "cache_write_1h_tokens": "Cline publishes no cache-lifetime split.",
+    "reasoning_tokens": "Cline never surfaces a thinking count; its depth row does not claim the signal.",
+    "lines_added": "Cline records no file activity; its depth row claims no line signal.",
+    "lines_removed": "same absence as lines_added.",
+    "rework_lines": "no line activity, so nothing to undo.",
+    "edits": "not recorded by this source.",
+    "tool_calls": "not recorded by this source.",
+    "rejected": "not recorded by this source.",
+    "tool_errors": "not recorded by this source.",
+    "compactions": "not recorded by this source.",
+    "skipped": "both payloads parse; the conversation messages carry no accounting and are not evidence that failed to read."
+  }
+}

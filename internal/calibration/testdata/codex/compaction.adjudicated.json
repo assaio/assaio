@@ -1,0 +1,51 @@
+{
+  "source": "codex",
+  "trace": "compaction.jsonl",
+  "capture": "real",
+  "origin": "A window of a real Codex CLI rollout spanning a context compaction, plus its session_meta. Redacted by field allowlist: the compacted event's payload carries the conversation it replaced and only the fact that it happened is kept. The cumulative token counters are rebased by subtracting the window's opening totals -- every per-turn delta, which is the only thing counted, is unchanged, and without it a mid-session window would open with a 10-million-token first turn that no session ever had.",
+  "method": "Counted from the raw JSONL by a second implementation written against the rollout's shape, never calling internal/parser.",
+  "calibrates": [
+    "ai.tokens.total", "ai.tokens.input", "ai.tokens.output",
+    "ai.tokens.cache_read", "ai.tokens.reasoning",
+    "ai.cost.estimated", "ai.sessions.count", "ai.turns.count", "ai.session.active_minutes",
+    "ai.lines.added", "ai.edits.count", "ai.tool_calls.count", "ai.compactions.count"
+  ],
+  "totals": {
+    "records": 2,
+    "sessions": 1,
+    "input_tokens": 15955,
+    "output_tokens": 410,
+    "cache_read_tokens": 19968,
+    "cache_write_tokens": 0,
+    "cache_write_1h_tokens": 0,
+    "reasoning_tokens": 48,
+    "lines_added": 42,
+    "lines_removed": 0,
+    "rework_lines": 0,
+    "edits": 1,
+    "tool_calls": 1,
+    "rejected": 0,
+    "tool_errors": 0,
+    "compactions": 1,
+    "skipped": 0
+  },
+  "derivations": {
+    "records": "4 token_count events, of which 2 advance the counters. The two that do not are the window's opening baseline and the event Codex writes immediately after compacting, which restates the same totals -- a turn that spent nothing is not a turn.",
+    "sessions": "one session_meta id.",
+    "input_tokens": "the two advancing turns' input deltas with the cached share taken out: (16,368-9,984) + (19,555-9,984) = 15,955.",
+    "cache_read_tokens": "9,984 + 9,984, each clamped to the input delta it is part of.",
+    "output_tokens": "256 + 154.",
+    "reasoning_tokens": "9 + 39, a part of output rather than an addition to it.",
+    "cache_write_tokens": "Codex publishes no cache-write counter, and its depth row no longer claims the signal.",
+    "cache_write_1h_tokens": "no cache write, so no tier of one.",
+    "lines_added": "one 'add' change carrying a 42-line body.",
+    "lines_removed": "no removal in this window.",
+    "rework_lines": "the only file activity is a creation, so there is nothing yet to undo.",
+    "edits": "one applied file change.",
+    "tool_calls": "the same applied file change; Codex records a patch application rather than an edit-tool call.",
+    "rejected": "Codex does not record tool-use denials.",
+    "tool_errors": "Codex marks failures only for file edits, which its depth row excludes.",
+    "compactions": "one top-level event of type 'compacted'. Unlike Claude Code, Codex writes a single line for the overflow, so the count is the count of lines here -- the two sources differ, which is why the number is adjudicated per source rather than assumed.",
+    "skipped": "every line is valid JSON and every shape is one the parser knows."
+  }
+}

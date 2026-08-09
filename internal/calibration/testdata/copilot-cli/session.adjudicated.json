@@ -1,0 +1,50 @@
+{
+  "source": "copilot-cli",
+  "trace": "session.jsonl",
+  "capture": "real",
+  "origin": "A real GitHub Copilot CLI session's events.jsonl, reduced to the two events the parser reads. Redacted by field allowlist: every token and line count is the tool's own, the session id and cwd are stand-ins, and the modified-file paths were dropped rather than renamed.",
+  "method": "Counted by reading the session.shutdown payload, which is where Copilot CLI publishes its own totals. No call into internal/parser.",
+  "calibrates": [
+    "ai.tokens.total", "ai.tokens.input", "ai.tokens.output",
+    "ai.tokens.cache_read", "ai.tokens.cache_write", "ai.tokens.reasoning",
+    "ai.cost.estimated", "ai.sessions.count", "ai.lines.added", "ai.lines.removed"
+  ],
+  "totals": {
+    "records": 1,
+    "sessions": 1,
+    "input_tokens": 8,
+    "output_tokens": 568,
+    "cache_read_tokens": 74370,
+    "cache_write_tokens": 25252,
+    "cache_write_1h_tokens": 0,
+    "reasoning_tokens": 12,
+    "lines_added": 6,
+    "lines_removed": 0,
+    "rework_lines": 0,
+    "edits": 0,
+    "tool_calls": 0,
+    "rejected": 0,
+    "tool_errors": 0,
+    "compactions": 0,
+    "skipped": 0
+  },
+  "derivations": {
+    "records": "one, and the source cannot support more: totals exist only at session.shutdown, so the whole session is one record at 'session' granularity. The four requests it covers are not four records, and labelling them as turns would claim a grain the log does not carry.",
+    "sessions": "one sessionId on the session.start event.",
+    "input_tokens": "tokenDetails.input.tokenCount = 8. The sibling modelMetrics.usage.inputTokens reads 99,630, which is the whole prompt including the 74,370 served from cache and the 25,252 written to it; adding either figure to the cache classes would count the same prompt twice.",
+    "output_tokens": "tokenDetails.output.tokenCount.",
+    "cache_read_tokens": "tokenDetails.cache_read.tokenCount.",
+    "cache_write_tokens": "tokenDetails.cache_write.tokenCount.",
+    "cache_write_1h_tokens": "Copilot CLI publishes no cache-lifetime split.",
+    "reasoning_tokens": "modelMetrics.usage.reasoningTokens, the only usage figure not restated in tokenDetails.",
+    "lines_added": "codeChanges.linesAdded, a whole-session figure with no per-model split. It is credited to the model that made the most requests, which is the documented gap in this source's depth row.",
+    "lines_removed": "codeChanges.linesRemoved.",
+    "rework_lines": "no per-edit sequence exists in this log, so nothing can be shown to undo an earlier addition. Zero here is a structural silence and the depth row does not claim the signal.",
+    "edits": "no edit count in the log; the depth row does not claim it.",
+    "tool_calls": "tool.execution_start events exist in the raw log and carry no accounting, so the parser reads none -- an unread field the v0.10 audit recorded rather than a zero.",
+    "rejected": "not recorded by this source.",
+    "tool_errors": "not recorded by this source.",
+    "compactions": "not recorded by this source.",
+    "skipped": "both lines are valid JSON and both are shapes the parser knows."
+  }
+}

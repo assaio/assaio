@@ -1,0 +1,51 @@
+{
+  "source": "claude-code",
+  "trace": "compaction.jsonl",
+  "capture": "real",
+  "origin": "8 consecutive lines of a real Claude Code transcript, centred on a context overflow. Redacted by field allowlist: the compaction markers and the token counts are the tool's own.",
+  "method": "Counted from the raw JSONL by a second implementation written against the log's shape, never calling internal/parser.",
+  "calibrates": [
+    "ai.tokens.total", "ai.tokens.input", "ai.tokens.output",
+    "ai.tokens.cache_read", "ai.tokens.cache_write",
+    "ai.cost.estimated", "ai.sessions.count", "ai.turns.count", "ai.session.active_minutes",
+    "ai.tool_calls.count", "ai.compactions.count"
+  ],
+  "totals": {
+    "records": 2,
+    "sessions": 1,
+    "input_tokens": 4,
+    "output_tokens": 64,
+    "cache_read_tokens": 487617,
+    "cache_write_tokens": 43328,
+    "cache_write_1h_tokens": 0,
+    "reasoning_tokens": 0,
+    "lines_added": 0,
+    "lines_removed": 0,
+    "rework_lines": 0,
+    "edits": 0,
+    "tool_calls": 2,
+    "rejected": 0,
+    "tool_errors": 0,
+    "compactions": 1,
+    "skipped": 0
+  },
+  "derivations": {
+    "records": "3 assistant lines carry 2 distinct message.id values. The compaction lines emit no record of their own -- they describe what happened to the context, not a request that was billed.",
+    "sessions": "one sessionId across the window.",
+    "input_tokens": "sum of input_tokens over the 2 distinct ids. Nearly everything this window spent was served from cache, which is what a turn straight after an overflow looks like.",
+    "output_tokens": "sum of output_tokens over the 2 ids.",
+    "cache_read_tokens": "sum of cache_read_input_tokens over the 2 ids.",
+    "cache_write_tokens": "sum of cache_creation_input_tokens over the 2 ids.",
+    "cache_write_1h_tokens": "every write here bought the 5-minute tier.",
+    "reasoning_tokens": "Claude Code publishes no thinking count.",
+    "lines_added": "no file change in this window.",
+    "lines_removed": "no file change in this window.",
+    "rework_lines": "no line activity, so nothing to undo.",
+    "edits": "neither tool_use block names an edit tool.",
+    "tool_calls": "2 tool_use blocks.",
+    "rejected": "no denial in this window.",
+    "tool_errors": "no failed tool result in this window.",
+    "compactions": "one. The overflow is written as two adjacent lines -- a system line with subtype 'compact_boundary' and the user-side line flagged isCompactSummary -- and they are one event: the boundary says the context was cut, the summary carries what replaced it. Counting per marker reports two, which is what assaio did until v0.14; on the maintainer's corpus that turned 19 real compactions into 38.",
+    "skipped": "every line is valid JSON; the compaction lines are recognised shapes rather than evidence that failed to read."
+  }
+}

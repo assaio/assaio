@@ -43,9 +43,14 @@ type Depth struct {
 var (
 	costSignals = []string{
 		SignalTokensTotal, SignalTokensInput, SignalTokensOutput,
-		SignalTokensCacheRead, SignalTokensCacheWrite,
+		SignalTokensCacheRead,
 		SignalCostEstimated, SignalSessionsCount,
 	}
+	// cacheWriteSignals are declared per source rather than bundled with cost, for the same
+	// reason reasoning is: Codex and Gemini CLI publish no cache-write counter at all, so a
+	// bundled claim promised a figure their records can only ever leave at zero -- a silence
+	// reported as a measurement, which is the one thing the depth matrix exists to prevent.
+	cacheWriteSignals = []string{SignalTokensCacheWrite}
 	// reasoningSignals are declared per source rather than bundled with cost: Claude Code
 	// and Cline never surface a thinking count, so claiming it for them would report support
 	// for a figure their records can only ever leave at zero.
@@ -78,8 +83,8 @@ var depths = []Depth{
 	{
 		Tool: "claude-code", Tier: Deep,
 		Tokens: true, Activity: true, Attribution: true,
-		Answers: answers(costSignals, perTurnSignals, lineSignals, editSignals, compactionSignals,
-			cacheDetailSignals,
+		Answers: answers(costSignals, cacheWriteSignals, perTurnSignals, lineSignals,
+			editSignals, compactionSignals, cacheDetailSignals,
 			[]string{SignalToolErrorsCount, SignalRejectedCount, SignalSkillTokens, SignalAgentTokens}),
 	},
 	{
@@ -90,6 +95,7 @@ var depths = []Depth{
 		// friction validator excludes it rather than treating silence as success.
 		Answers: answers(costSignals, reasoningSignals, perTurnSignals, lineSignals, editSignals, compactionSignals),
 		Gaps: []string{
+			"no cache-write counter, so a written cache is invisible where a read one is not",
 			"no skill or sub-agent labels, so its turns are absent from the attribution split",
 			"tool-use denials are not recorded, and call failures only for file edits",
 		},
@@ -100,6 +106,7 @@ var depths = []Depth{
 		Answers: answers(costSignals, reasoningSignals, perTurnSignals),
 		Gaps: []string{
 			"no line, edit or tool-call signals, so it contributes cost but no output figures",
+			"no cache-write counter, so a written cache is invisible where a read one is not",
 			"tool-use tokens are folded into output, and ~/.gemini may be shared with other tools",
 		},
 	},
@@ -108,7 +115,7 @@ var depths = []Depth{
 		Tokens: true, Activity: true, Attribution: false,
 		// Lines but nothing else: a whole-session total carries no turn, edit or tool-call
 		// count, so every per-turn signal is absent rather than zero.
-		Answers: answers(costSignals, reasoningSignals, lineSignals),
+		Answers: answers(costSignals, cacheWriteSignals, reasoningSignals, lineSignals),
 		Gaps: []string{
 			"totals exist only when a session ends, so one record covers a whole session and per-turn figures exclude it",
 			"code changes are counted once per session with no per-model split, so they are credited whole to the model that made the most requests",
@@ -117,7 +124,7 @@ var depths = []Depth{
 	{
 		Tool: "cline", Tier: Standard,
 		Tokens: true, Activity: false, Attribution: false,
-		Answers: answers(costSignals, perTurnSignals),
+		Answers: answers(costSignals, cacheWriteSignals, perTurnSignals),
 		Gaps: []string{
 			"no line, edit or tool-call signals, so it contributes cost but no output figures",
 			"its own per-request cost is recorded but recomputed from tokens for cross-tool consistency",

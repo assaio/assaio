@@ -46,7 +46,29 @@ Discussion.
   beside the detailed turns. Zero such rows on the maintainer's store; a store upgraded from
   v0.1.0 may hold some.
 
+### Added
+- **A calibration suite whose expected answers do not come from the parser that produces
+  them** (`B137`). A golden file is a regression test for a parser against itself; nothing in
+  one can notice the parser was wrong the day it was written, which is how v0.12's 2× survived
+  eleven releases. `internal/calibration` holds eight redacted traces across all five sources
+  — each with the totals counted from its own raw bytes and a written derivation per figure,
+  so a reviewer can check a number without running anything — and a test asserting that every
+  signal a source's depth row claims is pinned by one of them. On its first run it found two
+  defects in the flagship parser and one over-claim in the capability matrix, all listed below.
+
 ### Fixed
+- **Every context compaction was counted twice.** Claude Code writes one overflow as two
+  adjacent lines — a `system` boundary and the user-side summary that replaces the context —
+  and the counter fired on each. **Measured on the maintainer's corpus:** all 19 real
+  compactions arrive as that pair and none arrives alone, so the stored figure was 38. The
+  parser now folds a run of markers into one event. The test that covered this asserted the
+  wrong number, which is the golden-file trap the calibration suite exists to close.
+- **`codex` and `gemini-cli` claimed a cache-write signal neither parser can produce.** Both
+  were handed the shared cost bundle, which includes `ai.tokens.cache_write`; neither log
+  publishes a cache-write counter and neither parser ever sets the field, so `signals coverage`
+  promised a figure that could only ever be zero — a silence reported as a measurement, which
+  is what the depth matrix exists to prevent. Cache write is now declared per source, as
+  reasoning and the cache tiers already were, and both rows name the gap.
 - **Every file Claude Code created counted as zero added lines.** A creation arrives as the
   new file's whole body in `content` beside an *empty* `structuredPatch`, and the counter
   walked only the patch — so a created file unmarshaled cleanly and contributed nothing. This

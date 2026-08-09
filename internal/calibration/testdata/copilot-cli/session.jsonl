@@ -1,0 +1,2 @@
+{"type":"session.start","timestamp":"2026-03-02T09:00:00.000Z","data":{"sessionId":"11111111-2222-3333-4444-555555555555","context":{"cwd":"/w/app"}}}
+{"type":"session.shutdown","timestamp":"2026-03-02T09:04:31.000Z","data":{"codeChanges":{"linesAdded":6,"linesRemoved":0},"modelMetrics":{"claude-sonnet-5":{"requests":{"count":4},"usage":{"reasoningTokens":12},"tokenDetails":{"input":{"tokenCount":8},"cache_read":{"tokenCount":74370},"cache_write":{"tokenCount":25252},"output":{"tokenCount":568}}}}}}

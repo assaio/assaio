@@ -1,0 +1,8 @@
+{"type":"session_meta","timestamp":"2026-03-02T09:00:00Z","payload":{"id":"01900000-0000-7000-8000-000000000001","timestamp":"2026-03-02T09:00:00Z","model":null,"cwd":"/w/app"}}
+{"type":"event_msg","timestamp":"2026-03-02T09:00:44.017000Z","payload":{"type":"patch_apply_end","success":true,"changes":{"/w/app/f1.go":{"type":"add","content":"code\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\ncode\n"}}}}
+{"type":"event_msg","timestamp":"2026-03-02T09:00:44.020000Z","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":0,"cached_input_tokens":0,"output_tokens":0,"reasoning_output_tokens":0,"total_tokens":0}}}}
+{"type":"compacted","timestamp":"2026-03-02T09:01:46.565000Z","payload":{}}
+{"type":"turn_context","timestamp":"2026-03-02T09:01:46.569000Z","payload":{"model":"gpt-5.6-sol"}}
+{"type":"event_msg","timestamp":"2026-03-02T09:01:46.588000Z","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":0,"cached_input_tokens":0,"output_tokens":0,"reasoning_output_tokens":0,"total_tokens":0}}}}
+{"type":"event_msg","timestamp":"2026-03-02T09:01:53.320000Z","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":16368,"cached_input_tokens":9984,"output_tokens":256,"reasoning_output_tokens":9,"total_tokens":16624}}}}
+{"type":"event_msg","timestamp":"2026-03-02T09:01:57.750000Z","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":35923,"cached_input_tokens":19968,"output_tokens":410,"reasoning_output_tokens":48,"total_tokens":36333}}}}
