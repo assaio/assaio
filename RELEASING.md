@@ -119,7 +119,9 @@ build-provenance attestations.
    `gh attestation verify <artifact> -o assaio`.
 4. Load <https://assaio.dev/> and confirm it names the version just published. The site
    redeploys on every push to `main`, so this checks the deploy went through, not the copy —
-   the copy was checked before tagging.
+   the copy was checked before tagging. Do not skip it: publishing is not gated on the
+   version guard (see [docs/site.md](docs/site.md#what-that-costs-stated-plainly)), so this
+   load is what actually catches a page that went live naming the wrong release.
 
 ## Rules
 
