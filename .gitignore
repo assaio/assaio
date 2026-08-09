@@ -12,3 +12,4 @@ coverage.out
 docs/superpowers/
 .idea/
 .vscode/
+.DS_Store
