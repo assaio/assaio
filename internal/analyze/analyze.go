@@ -31,12 +31,17 @@ type Delegation struct {
 // context.go, or rework.go for ones that still need Usage/Sessions directly). Recent is
 // the recent-vs-prior window (e.g. 7d) validators use for trend and staleness signals.
 type Input struct {
-	Usage      []store.UsageRow
-	Sessions   []store.SessionRow
-	Prices     pricing.Table
-	Now        time.Time
-	Recent     time.Duration
-	Delegation Delegation
+	// WindowStart is the --since boundary Usage was queried with. It is what a monthly
+	// projection divides by: a window is a span of real days, and the days inside it that
+	// happen to carry no usage are still days a flat plan was paid for. Zero means the caller
+	// scoped no window, and a projection then spans the usage itself.
+	WindowStart time.Time
+	Usage       []store.UsageRow
+	Sessions    []store.SessionRow
+	Prices      pricing.Table
+	Now         time.Time
+	Recent      time.Duration
+	Delegation  Delegation
 	// ByModel is Usage aggregated per model, tier-classified and priced, sorted by
 	// Tokens descending. See ModelStat.
 	ByModel []ModelStat

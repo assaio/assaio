@@ -60,6 +60,7 @@ func BuildDashboard(ctx context.Context, st *store.Store) (dashboard.Data, error
 		return dashboard.Data{}, err
 	}
 	in := analyze.BuildInput(usageRows, sessionRows, table, time.Now(), dashboardRecentWindow, analyze.Delegation{Sub: sub, Total: total})
+	in.WindowStart = since
 	in.TurnSizing = turns
 	in.Skills, in.Agents = skills, agents
 	in.CacheMisses = misses

@@ -67,6 +67,7 @@ func buildDrill(in analyze.Input, subpaths []store.SubpathRow, anonymize bool) *
 		// top-level one -- a known, documented approximation, not a per-project figure.
 		in.Delegation,
 	)
+	scoped.WindowStart = in.WindowStart
 	scoped.Ingested, scoped.ParsedBy = in.Ingested, in.ParsedBy
 	verdicts := runProjectValidators(&scoped)
 	if anonymize {

@@ -4,17 +4,13 @@ import (
 	"strconv"
 
 	"github.com/assaio/assaio/internal/humanize"
-
-	"github.com/assaio/assaio/internal/store"
 )
 
 const (
 	subscriptionName      = "subscription-fit"
 	subscriptionTitle     = "Subscription Fit"
 	subscriptionDescribe  = "Whether a flat monthly plan (Claude Max/Pro, ChatGPT Plus/Pro) pays off vs API pay-as-you-go, from your configured plan cost."
-	subscriptionHowToRead = "This projects your window's API-equivalent cost to a month at your active-day pace, then compares it against the flat plan price you configured. A high multiple means the plan is a bargain at your volume; below 1x means API pay-as-you-go might be cheaper. The API figure is an estimate at public prices, not your actual bill."
-	// monthDays is the active-day count the per-day API-equivalent rate is projected onto.
-	monthDays = 30
+	subscriptionHowToRead = "This projects your window's API-equivalent cost onto a calendar month -- the window's span in real days, not only the days you worked -- and compares it against the flat plan price you configured. A high multiple means the plan is a bargain at your volume; below 1x means API pay-as-you-go might be cheaper. The API figure is an estimate at public prices, not your actual bill."
 )
 
 // planUnsetRead is the neutral faceplate shown when usage exists but no plan cost is
@@ -77,7 +73,7 @@ func (subscriptionValidator) Analyze(in Input) Result {
 	r.Takeaway = subscriptionTakeaway(payingOff, multiple)
 	r.Caveats = []string{
 		"The API-equivalent $ is an estimate at public pay-as-you-go prices, not your actual bill.",
-		"Projected to a month from this window's usage, and it excludes any unpriced-model usage.",
+		"Projected onto 30 calendar days from this window's span -- the days inside it you did not work are still days the plan was paid for -- and it excludes any unpriced-model usage.",
 	}
 	return r
 }
@@ -91,23 +87,7 @@ func projectedMonthlyCost(in *Input) (cost float64, priced bool) {
 	if in.Totals.Cost == nil {
 		return 0, false
 	}
-	days := distinctActiveDays(in.Usage)
-	if days <= 0 {
-		return *in.Totals.Cost, true
-	}
-	return *in.Totals.Cost / float64(days) * monthDays, true
-}
-
-// distinctActiveDays counts the distinct UTC calendar days ("YYYY-MM-DD") the window's usage
-// spans -- the denominator for the per-active-day run-rate projection.
-func distinctActiveDays(rows []store.UsageRow) int {
-	seen := make(map[string]struct{})
-	for i := range rows {
-		if rows[i].Day != "" {
-			seen[rows[i].Day] = struct{}{}
-		}
-	}
-	return len(seen)
+	return MonthlyRate(*in.Totals.Cost, in), true
 }
 
 func subscriptionTakeaway(payingOff bool, multiple float64) string {

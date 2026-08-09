@@ -32,6 +32,15 @@ Discussion.
   `claude-code` ingest watermark so the next `backfill` re-reads every transcript once. On
   the maintainer's store that moves added lines 280,500 → 280,170 and removed lines
   111,920 → 111,296. Nothing is deleted; the first import after upgrading is a slow one.
+- **A projected "per month" figure is now a calendar month, not thirty *active* days**
+  (`B142`). `subscription-fit` and `model-fit`'s savings estimate both divided the window's
+  cost by the days that carried usage and multiplied by 30, so somebody who codes five days a
+  week had a working week priced as a calendar month — and the error ran in the direction that
+  flatters the plan. The denominator is now the window's span in real days, clamped to the
+  first day carrying usage so a new user is not divided by a ninety-day window they were not
+  around for. **On the maintainer's own store** the 30-day API-equivalent moves $107.6K → 
+  $100.6K/mo (552× → 516× the plan) and the model-fit upper bound $84,856 → $79,382/mo. Every
+  existing user's headline moves down; nothing about their usage changed.
 - **`report --format csv` gained three columns** — `task`, `outcome`, `difficulty`, after
   `granularity`. A consumer reading columns by position must be updated; one reading them by
   header name is unaffected.

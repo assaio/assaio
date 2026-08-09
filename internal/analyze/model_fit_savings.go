@@ -19,8 +19,8 @@ type modelSavings struct {
 
 // computeModelSavings returns the estimate and whether one could be computed at all. It
 // requires priced premium usage, at least one cheaper-tier model in use to reprice onto, a
-// positive difference, and at least one active day to project a monthly figure.
-func computeModelSavings(models []ModelStat, prices pricing.Table, activeDays int) (modelSavings, bool) {
+// positive difference, and a window with some usage in it to project a monthly figure from.
+func computeModelSavings(models []ModelStat, prices pricing.Table, in *Input) (modelSavings, bool) {
 	var premium pricing.Tokens
 	var premiumCost float64
 	var premiumPriced bool
@@ -39,7 +39,7 @@ func computeModelSavings(models []ModelStat, prices pricing.Table, activeDays in
 			premiumPriced = true
 		}
 	}
-	if !premiumPriced || activeDays <= 0 {
+	if !premiumPriced || len(in.Usage) == 0 {
 		return modelSavings{}, false
 	}
 	target, counterfactual, ok := cheapestCheaperCost(models, prices, premium)
@@ -50,7 +50,7 @@ func computeModelSavings(models []ModelStat, prices pricing.Table, activeDays in
 	if windowSaving <= 0 {
 		return modelSavings{}, false
 	}
-	return modelSavings{TargetModel: target, MonthlyUpper: windowSaving / float64(activeDays) * 30}, true
+	return modelSavings{TargetModel: target, MonthlyUpper: MonthlyRate(windowSaving, in)}, true
 }
 
 // cheapestCheaperCost reprices the premium token bundle onto every cheaper-tier model in use
@@ -94,6 +94,6 @@ func savingsFigure(s modelSavings) Figure {
 // savingsCaveat is the honesty framing every rendered saving carries.
 func savingsCaveat(s modelSavings) string {
 	return "Est. savings is an upper bound -- it assumes every premium-tier token could move to " +
-		s.TargetModel + " with no quality loss (rarely true) and projects your active-day pace to 30 days; " +
+		s.TargetModel + " with no quality loss (rarely true) and projects this window onto a calendar month; " +
 		"directional, a prompt to review, not a recommendation to switch."
 }

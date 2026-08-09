@@ -174,6 +174,7 @@ func buildAnalyzeInputFiltered(cmd *cobra.Command, st *store.Store, start time.T
 		return analyze.Input{}, err
 	}
 	in := analyze.BuildInput(usageRows, sessionRows, table, time.Now(), analyzeRecentWindow, analyze.Delegation{Sub: sub, Total: total})
+	in.WindowStart = start
 	in.TurnSizing = turns
 	in.Skills, in.Agents = skills, agents
 	in.CacheMisses = misses

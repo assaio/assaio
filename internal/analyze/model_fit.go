@@ -70,7 +70,7 @@ func (modelFitValidator) Analyze(in Input) Result {
 	r.Bars = modelBars(in.ByModel)
 	if unpriceable {
 		r.Caveats = []string{"Most tokens this window ran on a model absent from the price table -- the premium/cheaper split above is not a confident read."}
-	} else if s, ok := computeModelSavings(in.ByModel, in.Prices, distinctDays(in.Usage)); ok {
+	} else if s, ok := computeModelSavings(in.ByModel, in.Prices, &in); ok {
 		r.Figures = append(r.Figures, savingsFigure(s))
 		r.Caveats = append(r.Caveats, savingsCaveat(s))
 	}
