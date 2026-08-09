@@ -8,6 +8,7 @@ assaio-dashboard.html
 *.db-wal
 *.db-shm
 coverage.out
+.wrangler/
 docs/superpowers/
 .idea/
 .vscode/

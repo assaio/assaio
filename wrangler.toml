@@ -1,0 +1,24 @@
+# How https://assaio.dev/ is served: a Worker that has no code, only the static directory.
+# `[assets]` alone is a complete Worker for a site with no build step, which is what site/ is.
+#
+# The routes below are the point of this file. A custom domain declared here has Cloudflare
+# create the DNS records and issue the certificate on deploy, so the domain is part of the
+# repository rather than a state in a dashboard nobody remembers -- which is exactly how the
+# site deploy stayed broken for five releases.
+#
+# www serves the same assets rather than being left dead; the canonical link in index.html
+# points at the apex, and a zone-level Redirect Rule can send www there without this file
+# changing.
+name = "assaio"
+compatibility_date = "2026-08-09"
+
+[assets]
+directory = "./site"
+
+[[routes]]
+pattern = "assaio.dev"
+custom_domain = true
+
+[[routes]]
+pattern = "www.assaio.dev"
+custom_domain = true

@@ -117,8 +117,8 @@ build-provenance attestations.
    user-facing highlights; put any breaking change under a **Breaking** heading first.
 3. Verify provenance of one artifact:
    `gh attestation verify <artifact> -o assaio`.
-4. Load <https://assaio.dev/> and confirm it names the version just published. Cloudflare
-   Pages rebuilds on push to `main`, so this checks the deploy went through, not the copy —
+4. Load <https://assaio.dev/> and confirm it names the version just published. The site
+   redeploys on every push to `main`, so this checks the deploy went through, not the copy —
    the copy was checked before tagging.
 
 ## Rules

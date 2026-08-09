@@ -63,16 +63,19 @@ jobs:
 
   # Self-contained by design: no build step, no CDN, no external asset. A deploy is an upload,
   # so it runs on every push to main rather than only when site/ changed: the published page
-  # is then always exactly what main says, with no state to reconcile.
+  # is then always exactly what main says, with no state to reconcile. Everything the deploy
+  # needs -- the assets directory and both custom domains -- is in wrangler.toml, so the only
+  # thing that lives outside the repository is the credential.
   deploy:
     needs: version
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Publish to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+      # v4 of the action, because v3 defaults to a wrangler 3.x that predates `[assets]`.
+      - name: Publish to Cloudflare
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy site --project-name=assaio --branch=main
+          command: deploy
