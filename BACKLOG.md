@@ -50,13 +50,10 @@ later review finds opens a new pool below rather than reopening this one.
 
 ## Next — "Calibrated measurement"
 
-The guard the v0.12 class of bug needs, which provenance and coverage cannot provide.
+The guard the v0.12 class of bug needs, which provenance and coverage cannot provide. `B137`,
+the conservation and metamorphic suite, shipped in v0.14 as `internal/calibration` and is in
+[CHANGELOG.md](CHANGELOG.md); what it left open is `B144`.
 
-- [x] **B137 · conservation + metamorphic suite** — shipped in v0.14 as `internal/calibration`.
-  Eight adjudicated traces across all five sources, accounting invariants that run over a whole
-  real corpus, two metamorphic properties, and a cross-surface rule. It found two defects in the
-  Claude Code parser and one over-claim in the depth matrix on its first run — see
-  [CHANGELOG.md](CHANGELOG.md). What it left open is `B144` below.
 - [ ] **B144 · calibrate Gemini CLI and Cline against a real capture** — S · both — both are
   calibrated today against a *constructed* sample in the source's shape, because the maintainer's
   machine holds neither a Gemini chat log carrying token counts nor a Cline install. A
