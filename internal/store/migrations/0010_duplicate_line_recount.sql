@@ -1,4 +1,12 @@
--- v0.14 corrected which *lines* of a Claude Code transcript are counted at all.
+-- v0.14 corrected which *lines* of a Claude Code transcript are counted at all, twice: a
+-- repeated line was counted a second time, and a created file was not counted at all. Both
+-- corrections need the same rebuild, so they share this one watermark clear.
+--
+-- A file Claude Code creates arrives as the whole body in `content` beside an empty
+-- structuredPatch, and the counter walked only the patch -- so every created file
+-- contributed zero added lines. Measured across 5,586 real transcripts: added lines
+-- 383,579 -> 1,010,406, and rework 32,550 -> 46,948 once those lines are a budget a later
+-- removal can undo. The corpus had been reporting 38% of what the tool wrote.
 --
 -- A transcript that repeats a line verbatim is a streamed retry, and the guard against that
 -- sat inside the assistant branch of the parser. Every count that actually lives on a user

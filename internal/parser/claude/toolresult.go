@@ -15,13 +15,53 @@ import (
 // stub, not yet complete. FilePath identifies an edit's target file for in-memory
 // rework tracking ONLY -- it is never copied onto a usage.Record or stored (PRIVACY.md).
 type toolResult struct {
-	AgentID         string      `json:"agentId"`
-	AgentType       string      `json:"agentType"`
-	ResolvedModel   string      `json:"resolvedModel"`
-	Usage           *tokenUsage `json:"usage"`
-	ToolStats       *toolStats  `json:"toolStats"`
-	FilePath        string      `json:"filePath"`
-	StructuredPatch []patchHunk `json:"structuredPatch"`
+	AgentID       string      `json:"agentId"`
+	AgentType     string      `json:"agentType"`
+	ResolvedModel string      `json:"resolvedModel"`
+	Usage         *tokenUsage `json:"usage"`
+	ToolStats     *toolStats  `json:"toolStats"`
+	FilePath      string      `json:"filePath"`
+	// Type discriminates how the edit is described: "create" carries the new file's whole
+	// body in Content and an empty StructuredPatch, everything else describes itself as a
+	// patch. Content is read for its line count only and is never stored (PRIVACY.md).
+	//
+	// It stays raw because this one struct covers unrelated tool outcomes that disagree on
+	// the field's type: a created file writes a string there, a completed sub-agent writes
+	// its content blocks as an array. Declaring it `string` failed the whole unmarshal for
+	// the second kind, which silently dropped 477 sub-agent records and 21,369 of their
+	// lines on the maintainer's corpus -- a union arm typed from one arm's evidence.
+	Type            string          `json:"type"`
+	Content         json.RawMessage `json:"content"`
+	StructuredPatch []patchHunk     `json:"structuredPatch"`
+}
+
+// createdFileType is the toolUseResult.type Claude Code stamps on a file it created.
+const createdFileType = "create"
+
+// lineCounts returns what this edit result changed. A creation is the whole file arriving
+// as Content beside an empty patch, so a reader that only walks StructuredPatch counts a
+// created file as zero added lines -- which is what assaio did, for every file Claude Code
+// ever wrote. Measured across 5,602 real transcripts: 5,599 creations carrying 625,012
+// uncounted lines, against 382,278 the corpus reported. Codex described a creation the same
+// way and lost the same lines (B119); the shared counter is parser.ContentLines.
+func (t *toolResult) lineCounts() (added, removed int64) {
+	if body, ok := t.createdBody(); ok {
+		return parser.ContentLines(body), 0
+	}
+	return countPatchLines(t.StructuredPatch)
+}
+
+// createdBody reports the new file's body when this result describes a creation. Content
+// that is not a string belongs to another tool outcome sharing the field, so it is no body.
+func (t *toolResult) createdBody() (string, bool) {
+	if t.Type != createdFileType || len(t.StructuredPatch) != 0 || len(t.Content) == 0 {
+		return "", false
+	}
+	var body string
+	if err := json.Unmarshal(t.Content, &body); err != nil {
+		return "", false
+	}
+	return body, body != ""
 }
 
 // toolStats summarizes a sub-agent's own edits.
@@ -58,7 +98,7 @@ func (st *parseState) applyToolResult(l *line, cf *carryForward) bool {
 	case actionStub:
 		return true
 	case actionEdit:
-		added, removed := countPatchLines(t.StructuredPatch)
+		added, removed := t.lineCounts()
 		st.rework.attribute(st.out, st.last, t.FilePath, added, removed)
 		return true
 	default:

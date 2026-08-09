@@ -3,6 +3,8 @@ package codex
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/assaio/assaio/internal/parser"
 )
 
 // patchFileChange is one file's entry in a patch_apply_end's changes map. Codex writes it
@@ -25,25 +27,11 @@ func changeLineCounts(raw json.RawMessage) (added, removed int64) {
 	}
 	switch c.Type {
 	case "add":
-		return contentLines(c.Content), 0
+		return parser.ContentLines(c.Content), 0
 	case "delete":
-		return 0, contentLines(c.Content)
+		return 0, parser.ContentLines(c.Content)
 	}
 	return diffLineCounts(c.UnifiedDiff)
-}
-
-// contentLines counts the lines of a whole file body. A trailing newline terminates the
-// last line rather than starting an empty one, so this is newlines plus an unterminated
-// remainder -- what a diff of the same creation would have reported.
-func contentLines(s string) int64 {
-	if s == "" {
-		return 0
-	}
-	n := int64(strings.Count(s, "\n"))
-	if !strings.HasSuffix(s, "\n") {
-		n++
-	}
-	return n
 }
 
 // diffLineCounts counts a unified diff's "+"/"-" prefixed body lines. File headers

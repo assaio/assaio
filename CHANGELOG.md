@@ -47,6 +47,19 @@ Discussion.
   v0.1.0 may hold some.
 
 ### Fixed
+- **Every file Claude Code created counted as zero added lines.** A creation arrives as the
+  new file's whole body in `content` beside an *empty* `structuredPatch`, and the counter
+  walked only the patch — so a created file unmarshaled cleanly and contributed nothing. This
+  is the same defect Codex shipped as `B119`, in the flagship parser, and it was found by the
+  first calibration trace rather than by review. **Measured on 5,586 real transcripts:** added
+  lines **383,579 → 1,010,406** — the corpus had been reporting 38% of what the tool wrote —
+  and rework **32,550 → 46,948**, because a file born with no counted additions gave a later
+  removal nothing to undo. Migration `0010` rebuilds it on the next `backfill`.
+- **A completed sub-agent's record depended on a field it does not own.** Reading the created
+  file's body meant declaring `toolUseResult.content`, which a sub-agent result writes as an
+  array rather than a string; typing it from one arm's evidence failed the whole unmarshal for
+  the other and dropped 477 sub-agent records with 21,369 of their lines. Caught by the
+  real-corpus A/B before it shipped, and the field is now read as raw JSON per arm.
 - **A repeated transcript line was counted twice, and every count that mattered lives on the
   repeated kind.** Claude Code writes a streamed retry as the same line again, and the guard
   against that sat inside the assistant branch of the parser — so assistant lines were
