@@ -21,6 +21,51 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-08-10
+
+### Added
+- **`reconcile` — check the `$` figure against the vendor's own numbers, offline (`B19`).**
+  Point it at a billing or usage export you downloaded yourself (CSV or JSON) and it reports
+  where that total and assaio's estimate disagree. No credential, no network: the export is
+  a local file. Three things it does in a fixed order, because the order is the honesty:
+  - **Scope first.** An export window is almost never the queried window, and comparing the
+    two totals directly reports a difference in date ranges as a difference in money. The
+    overlap is computed before any delta, and the money excluded on each side is printed.
+  - **Only evidenced causes are named.** Usage assaio could not price becomes a band, not a
+    figure. Per-model causes are computed only when the two sides' model names actually
+    share values — when they do not, the run says so instead of inventing an explanation
+    out of a guessed name match.
+  - **The residual is the output.** Whatever no named cause accounts for is reported as
+    *unexplained delta*. Nothing is adjusted to close it, and it is never rounded away.
+  The report also states, every run, what no export can answer: a line count, an edit
+  attribution, a per-session split, or anything on a flat-rate plan.
+  No vendor profile is shipped. This repository has never read a real export, so claiming
+  "supports Anthropic Console" would be exactly the kind of unverified claim it refuses;
+  instead columns bind by header alias, the binding is printed, and `--map` overrides it.
+  A redacted real export is the contribution that would change that — see
+  `internal/reconcile/testdata/README.md`.
+
+### Changed
+- **Money reads like money.** Every cost cell in `report`, `effectiveness`, and `movers`
+  was four fixed decimals, which is unreadable at the top of the range (`107640.1234`) and
+  a lie at the bottom (`0.0000` for a real cost). Costs now group thousands and round to
+  cents from a dollar up, keep two significant digits below one (`0.0032`), and state a
+  bound (`<0.0001`) rather than round a real amount into zero. Token and line counts in the
+  same tables group thousands, and numeric headers and totals align with their digits.
+  `--format json` and `--format csv` are untouched: both still carry full precision.
+- **The Assay dashboard is easier to read.** The verdict faceplate no longer leaves a
+  coloured phantom tile when the number of reads does not divide by the column count; each
+  gauge takes its own verdict's colour, so a `WATCH` bar can no longer look like a healthy
+  one; the gauge ratio is captioned instead of floating as a bare decimal. A ledger entry
+  now lays its figures out on a grid rather than a ragged row, runs its ranked bars the full
+  width, and closes with the takeaway set as a banded line in the verdict's colour. The
+  per-entry confidence line is colour-coded only when the basis is weak, replacing a
+  `HIGH` chip that repeated on all nineteen reads.
+- **Validator prose renders a real em dash.** `internal/analyze` writes ` -- ` because the
+  text report prints to terminals that cannot be assumed to render U+2014; the dashboard is
+  HTML and now shows the dash the sentence always meant. A `--flag` in the same sentence
+  keeps its hyphens.
+
 ## [0.14.0] - 2026-08-09
 
 ### Compatibility
@@ -1345,7 +1390,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/assaio/assaio/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/assaio/assaio/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/assaio/assaio/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/assaio/assaio/compare/v0.11.0...v0.12.0
