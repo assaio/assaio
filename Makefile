@@ -15,6 +15,7 @@ fuzz:
 	go test ./internal/parser/gemini/ -fuzz FuzzParse -fuzztime $(FUZZTIME)
 	go test ./internal/parser/copilot/ -fuzz FuzzParse -fuzztime $(FUZZTIME)
 	go test ./internal/parser/cline/ -fuzz FuzzParseTask -fuzztime $(FUZZTIME)
+	go test ./internal/reconcile/ -fuzz FuzzReadCSV -fuzztime $(FUZZTIME)
 	go test ./internal/plugin/ -fuzz FuzzMetricResult -fuzztime $(FUZZTIME)
 	go test ./internal/plugin/ -fuzz FuzzRuleAlerts -fuzztime $(FUZZTIME)
 lint:

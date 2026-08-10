@@ -124,6 +124,15 @@ Labeling is optional and stays optional: an unlabeled session is counted in full
 metric, a report grouped by a label always shows the `unlabeled` group rather than hiding
 it, and nothing in `assaio` scores how much you label.
 
+## A vendor export you point it at
+
+`assaio-agent reconcile <file>` reads one more thing, and only when you name it on the
+command line: a billing or usage export you downloaded yourself. It is read, never written
+and never stored — the comparison happens in memory and only its result is printed. No
+credential is asked for and no network call is made to fetch it; getting the file out of a
+vendor console is your step, deliberately, so the tool never holds an API key that could
+pull your account data.
+
 ## What it never reads
 
 - Prompt text
@@ -186,7 +195,7 @@ requirements.
 ## Network
 
 The core analysis commands — `backfill`, `report`, `effectiveness`, `analyze`, `status`,
-`dashboard` — make **no network calls**. The model price table is embedded into the binary
+`dashboard`, `reconcile` — make **no network calls**. The model price table is embedded into the binary
 at build time, so every report works fully offline; nothing is fetched, uploaded, or
 phoned home.
 
