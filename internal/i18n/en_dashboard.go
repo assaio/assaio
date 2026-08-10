@@ -15,6 +15,7 @@ type Dashboard struct {
 	ToggleDarkLabel    string // masthead: theme toggle button's initial (light-mode) aria-label
 	VerdictLabel       string // "Assay verdict" panel label and faceplate aria-label
 	ProvLabel          string // faceplate cell / ledger entry: the "Prov." caveat-present stamp
+	PurityLabel        string // faceplate cell: caption for the gauge's 0..1 ratio
 	ConfidenceLabel    string // ledger entry: prefix for what a verdict rests on
 	ReadsSuffix        string // panel label: "<n> <ReadsSuffix>"
 	DimensionsSuffix   string // faceplate aria-label: "<n> <DimensionsSuffix>"
@@ -50,6 +51,7 @@ var enDashboard = Dashboard{
 	ToggleDarkLabel:    "Switch to dark theme",
 	VerdictLabel:       "Assay verdict",
 	ProvLabel:          "Prov.",
+	PurityLabel:        "index",
 	ConfidenceLabel:    "Confidence",
 	ReadsSuffix:        "reads",
 	DimensionsSuffix:   "dimensions",

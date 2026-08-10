@@ -19,6 +19,7 @@ var templateSource string
 // validator's own formatting in internal/analyze.
 var templateFuncs = template.FuncMap{
 	"pct":            pctString,
+	"prose":          prose,
 	"facets":         facets,
 	"subpathName":    subpathName,
 	"barsApplicable": func(r analyze.Result) bool { return r.Bars != nil },
