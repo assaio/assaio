@@ -79,6 +79,17 @@ code{font:400 .9em/1 var(--mono)}
 .copybtn:hover{color:var(--fg); background:var(--rule-soft)}
 .note{margin:.85rem 0 0; font-size:.8125rem; color:var(--faint); max-width:36rem}
 
+/* product hunt badge — inlined, both themes, so the page still requests nothing */
+.ph{display:inline-block; margin-top:1.6rem; line-height:0}
+.ph .ph-l{display:block}
+.ph .ph-d{display:none}
+@media (prefers-color-scheme:dark){
+  :root[data-theme="auto"] .ph .ph-l{display:none}
+  :root[data-theme="auto"] .ph .ph-d{display:block}
+}
+:root[data-theme="dark"] .ph .ph-l{display:none}
+:root[data-theme="dark"] .ph .ph-d{display:block}
+
 .gauge{border:1px dashed var(--rule); border-radius:3px; background:var(--cell); padding:1.35rem 1.4rem 1.5rem}
 .gauge .g-sub{margin:.15rem 0 0; font:500 .6875rem/1.4 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
 .g-read{font:600 clamp(1.5rem,3.4vw,2rem)/1 var(--mono); letter-spacing:-.02em; margin:1.5rem 0 0; color:var(--faint)}
@@ -184,6 +195,19 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
 .why p{margin:0 0 1rem; color:var(--dim)}
 .why strong{color:var(--fg); font-weight:600}
 
+/* roadmap */
+.next{border:1px solid var(--signal); border-radius:3px; background:var(--cell); padding:1.35rem 1.4rem}
+.nh{display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; margin-bottom:1.15rem}
+.nv{font:600 1rem/1 var(--mono); letter-spacing:-.02em; color:var(--signal)}
+.nt{font:500 .625rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--amber); border:1px solid var(--amber); border-radius:2px; padding:.4rem .5rem}
+.next ul{margin:0; padding-left:1.1rem}
+.next li{margin:0 0 .8rem; font-size:.9375rem; color:var(--dim)}
+.next li:last-child{margin-bottom:0}
+.next li b{color:var(--fg); font-weight:600}
+.seq{margin-top:1.25rem}
+.card .st{display:block; margin-bottom:.6rem; font:500 .625rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
+.card.now .st{color:var(--signal)}
+
 /* partner */
 .partner{display:grid; grid-template-columns:repeat(auto-fit,minmax(16rem,1fr)); gap:1.25rem}
 .partner .p{border:1px solid var(--rule); border-radius:3px; padding:1.35rem 1.4rem}
@@ -199,8 +223,6 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
 .colo nav a{font:500 .75rem/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--dim); text-decoration:none; border-bottom:1px solid var(--rule); padding-bottom:.25rem}
 .colo nav a:hover{color:var(--fg); border-color:var(--fg)}
 .colo p{margin:.5rem 0 0; max-width:54rem}
-.rel{display:inline-flex; align-items:center; gap:.5rem; font:500 .6875rem/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; border:1px solid var(--rule); border-radius:2px; padding:.45rem .65rem; color:var(--dim); text-decoration:none; margin-bottom:1.1rem}
-.rel:hover{color:var(--fg); border-color:var(--fg)}
 
 @media (max-width:56rem){
   .hero{grid-template-columns:1fr; gap:2.5rem}
@@ -222,6 +244,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
     <a href="#sources">Sources</a>
     <a href="#adapt">Extend</a>
     <a href="#install">Install</a>
+    <a href="#roadmap">Roadmap</a>
     <a href="https://github.com/assaio/assaio">GitHub</a>
   </nav>
   <button class="tog" id="tog" type="button">Theme</button>
@@ -253,6 +276,24 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         </div>
       </div>
       <p class="note">About sixty seconds to your own numbers: <code>init</code> detects your tools, shows every directory it will read <em>before</em> reading it, imports, and prints the report. Want to look before importing anything? <code>assaio-agent demo</code> runs the full reports on bundled sample data.</p>
+      <a class="ph" href="https://www.producthunt.com/products/assaio?utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-assaio" target="_blank" rel="noopener noreferrer">
+        <svg class="ph-l" width="202" height="54" viewBox="0 0 202 54" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Find assaio on Product Hunt">
+          <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+            <rect stroke="#FF6154" stroke-width="1" fill="#FFFFFF" x="0.5" y="0.5" width="201" height="53" rx="10"></rect>
+            <text font-family="Helvetica-Bold, Helvetica" font-size="9" font-weight="bold" fill="#FF6154"><tspan x="53" y="20">FIND US ON</tspan></text>
+            <text font-family="Helvetica-Bold, Helvetica" font-size="21" font-weight="bold" fill="#FF6154"><tspan x="52" y="40">Product Hunt</tspan></text>
+            <g transform="translate(11.000000, 12.000000)"><path d="M31,15.5 C31,24.0603917 24.0603917,31 15.5,31 C6.93960833,31 0,24.0603917 0,15.5 C0,6.93960833 6.93960833,0 15.5,0 C24.0603917,0 31,6.93960833 31,15.5" fill="#FF6154"></path><path d="M17.4329412,15.9558824 L17.4329412,15.9560115 L13.0929412,15.9560115 L13.0929412,11.3060115 L17.4329412,11.3060115 L17.4329412,11.3058824 C18.7018806,11.3058824 19.7305882,12.3468365 19.7305882,13.6308824 C19.7305882,14.9149282 18.7018806,15.9558824 17.4329412,15.9558824 M17.4329412,8.20588235 L17.4329412,8.20601152 L10.0294118,8.20588235 L10.0294118,23.7058824 L13.0929412,23.7058824 L13.0929412,19.0560115 L17.4329412,19.0560115 L17.4329412,19.0558824 C20.3938424,19.0558824 22.7941176,16.6270324 22.7941176,13.6308824 C22.7941176,10.6347324 20.3938424,8.20588235 17.4329412,8.20588235" fill="#FFFFFF"></path></g>
+          </g>
+        </svg>
+        <svg class="ph-d" width="202" height="54" viewBox="0 0 202 54" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Find assaio on Product Hunt">
+          <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+            <rect stroke="#221D21" stroke-width="1" fill="#221D21" x="0.5" y="0.5" width="201" height="53" rx="10"></rect>
+            <text font-family="Helvetica-Bold, Helvetica" font-size="9" font-weight="bold" fill="#EEF2FF"><tspan x="53" y="20">FIND US ON</tspan></text>
+            <text font-family="Helvetica-Bold, Helvetica" font-size="21" font-weight="bold" fill="#EEF2FF"><tspan x="52" y="40">Product Hunt</tspan></text>
+            <g transform="translate(11.000000, 12.000000)"><path d="M31,15.5 C31,24.0603917 24.0603917,31 15.5,31 C6.93960833,31 0,24.0603917 0,15.5 C0,6.93960833 6.93960833,0 15.5,0 C24.0603917,0 31,6.93960833 31,15.5" fill="#FFFFFF"></path><path d="M17.4329412,15.9558824 L17.4329412,15.9560115 L13.0929412,15.9560115 L13.0929412,11.3060115 L17.4329412,11.3060115 L17.4329412,11.3058824 C18.7018806,11.3058824 19.7305882,12.3468365 19.7305882,13.6308824 C19.7305882,14.9149282 18.7018806,15.9558824 17.4329412,15.9558824 M17.4329412,8.20588235 L17.4329412,8.20601152 L10.0294118,8.20588235 L10.0294118,23.7058824 L13.0929412,23.7058824 L13.0929412,19.0560115 L17.4329412,19.0560115 L17.4329412,19.0558824 C20.3938424,19.0558824 22.7941176,16.6270324 22.7941176,13.6308824 C22.7941176,10.6347324 20.3938424,8.20588235 17.4329412,8.20588235" fill="#221D21"></path></g>
+          </g>
+        </svg>
+      </a>
     </div>
     <aside class="gauge">
       <p class="eyebrow">Assay verdict</p>
@@ -574,6 +615,44 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
     </div>
   </section>
 
+  <!-- ROADMAP ────────────────────────────────────────────────────────────── -->
+  <section class="sec" id="roadmap">
+    <div class="wrap">
+      <div class="sec-head"><h2>Where this is going</h2><p class="eyebrow">direction, not commitment</p></div>
+      <p class="intro">
+        This is the order the work is meant to happen in — no dates, no guarantees, and any item
+        can be reshaped or dropped when a bug report or a pull request makes the case.
+        <strong>Nothing in the next-release panel is built yet.</strong> The milestones under it
+        run from one already half-shipped to one that is years of nobody's promise, and each card
+        says which part is which. What you can install is the
+        <a href="https://github.com/assaio/assaio/releases">latest release</a>; the
+        <a href="https://github.com/assaio/assaio/blob/main/FEATURES.md">feature inventory</a> is
+        what that actually gives you.
+      </p>
+      <div class="next">
+        <div class="nh"><span class="nv">The next release</span><span class="nt">not released yet</span></div>
+        <ul>
+          <li><b>A cost figure says how much of itself is missing.</b> Every <code>$</code> is a token count times a vendored price table, and a model the table doesn't know renders a blank behind an asterisk that reads identically at 0.1% and at 45%. The share becomes a number, and <code>doctor --strict</code> can fail on it.</li>
+          <li><b>Nineteen reads stop arriving as nineteen equals.</b> Findings get an order and the order shows its reasons — and a window whose findings are all weak promotes none of them rather than crowning the least weak one.</li>
+          <li><b>A count reads the same on every surface.</b> Validator figures group thousands, so the dashboard stops printing <code>16400 tokens</code> beside a report table printing <code>16,400</code>.</li>
+          <li><b>"Insufficient" stops blaming the wrong thing.</b> A verdict with no coverage says nothing in the window can answer it — even when the real cause is history parsed by an older build, which <code>backfill</code> would fix. Two different facts, two different sentences.</li>
+          <li><b>The faceplate's bare ratio gets a name, or goes.</b> <code>STRONG · 0.46</code> reads as a contradiction when nothing says what the index measures.</li>
+        </ul>
+      </div>
+      <div class="cards seq">
+        <div class="card now"><span class="st">Now · part shipped</span><h3>Calibrated measurement</h3><p>Every figure checked against something that is <em>not</em> assaio. <strong>Shipped:</strong> the conservation and metamorphic suite, and offline <code>reconcile</code> against a vendor's own export. <strong>Open:</strong> the price table nothing watches, a parser fix that can repair the history it invalidates, and a real captured sample for the two sources calibrated against a constructed one.</p></div>
+        <div class="card"><span class="st">Next</span><h3>Worth opening twice</h3><p>A first run produces something worth acting on this week, and a reason to come back the next one: ordered findings, a digest fit for cron, an assay shareable in public with redaction as the feature, and a label nobody has to type.</p></div>
+        <div class="card"><span class="st">Then</span><h3>Everything the logs already say</h3><p>Read every signal the local logs carry and draw more conclusions from it than any vendor dashboard draws from the same file — including the session as a <em>sequence</em> rather than a total, so "why was this one expensive" has an answer.</p></div>
+        <div class="card"><span class="st">After that</span><h3>Evidence graph</h3><p>Which sessions produced which commits and pull requests, what happened in review and CI, and how sure assaio is about every link. Ambiguous stays ambiguous, and what a change costs <em>after</em> it is written becomes countable.</p></div>
+        <div class="card"><span class="st">Then</span><h3>Harness intelligence</h3><p>Whether changing an <code>AGENTS.md</code>, a skill or a model actually helped — deterministic rules carrying their evidence and one reversible experiment, never an LLM narrating a dashboard.</p></div>
+        <div class="card"><span class="st">After that</span><h3>Team, without surveillance</h3><p>A team self-hosts it, sees adoption and delivery outcomes, and cannot build a leaderboard from it. Adoption read as activation → retention → breadth, in bands, with a cohort floor.</p></div>
+        <div class="card"><span class="st">Later</span><h3>Cost truth &amp; interoperability</h3><p>The credentialed billing pull once the offline import has proved itself, long-context pricing, a mapping onto the OpenTelemetry GenAI conventions with content dropped by default, and a connector SDK.</p></div>
+        <div class="card"><span class="st">v1.0</span><h3>Measurements worth depending on</h3><p>Every claimed capability calibrated, the two deep sources reconciled against outside evidence, no known wrong number open, and a correction that can reach history. The contracts freeze last, not first — a frozen contract over an uncalibrated measurement is a stable wrong answer.</p></div>
+      </div>
+      <p class="more">Two of those are blocked on <b>data rather than on time</b>, and neither can be manufactured here: calibrating Gemini CLI and Cline against a <em>real</em> capture needs one redacted session log from somebody who runs them, and the column aliases <code>reconcile</code> binds by need one redacted vendor export. Both are the most useful thing anyone can contribute right now. The full reasoning — why calibration comes before correlation, and what v1.0 has to mean — is in <a href="https://github.com/assaio/assaio/blob/main/ROADMAP.md">ROADMAP.md</a>; the ranked pool with an id per item is <a href="https://github.com/assaio/assaio/blob/main/BACKLOG.md">BACKLOG.md</a>.</p>
+    </div>
+  </section>
+
   <!-- WHY ────────────────────────────────────────────────────────────────── -->
   <section class="sec" id="why">
     <div class="wrap">
@@ -611,7 +690,6 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
 </main>
 
 <footer class="wrap colo">
-  <a class="rel" href="https://github.com/assaio/assaio/blob/main/CHANGELOG.md">Assay report · v0.15.0 → changelog</a>
   <nav>
     <a href="https://github.com/assaio/assaio">GitHub</a>
     <a href="https://github.com/assaio/assaio/releases">Releases</a>

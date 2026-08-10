@@ -12,21 +12,63 @@ directory goes and under which domains — deployment configuration, not a build
 whether to install something, so a feature that exists only on `main` must not appear on it —
 `[Unreleased]` in the changelog means "installing the latest release does not give you this."
 
-A CI job enforces the part that can be checked mechanically: the `Assay report · vX.Y.Z` stamp
-in the hero must equal the highest `v*` tag in the repo. It runs on every push, PR and tag —
-deliberately not path-filtered, because a release cut *without* touching the page is exactly
-the drift worth catching.
+**The page names no version at all, and a CI job holds it to that.** It used to carry an
+`Assay report · vX.Y.Z` stamp in the footer, guarded against the highest `v*` tag, because the
+page had once run three releases behind the binary. Both the stamp and that guard are gone, and
+the reasoning is worth keeping: a version copied onto the page is a fact that has to be updated
+at every tag, and the release that forgets to update it is, by definition, the one nobody
+notices. A fact worth stating once belongs in the one place it cannot rot. For "which version is
+current" that place is the releases page, which the site now links instead of copying.
 
-One version ahead is also allowed, and only one: the release being prepared, recognised as the
-newest `## [X.Y.Z]` section in `CHANGELOG.md` that has no tag yet. Without that exception the
-rule would be unsatisfiable — [RELEASING.md](../RELEASING.md#the-changelog-flow-exact-tag-coupled)
-requires the page and the changelog section to be updated *before* the tag is cut, and `main` is
-protected, so a prep commit that can never be green could never be merged and the tag could never
-exist. The `consistency` workflow is what keeps the pending version to exactly one.
+What replaced the guard is its inverse: `site.yml` fails if a bare `X.Y.Z` appears anywhere in
+`site/index.html`. Reintroducing a stamp is therefore a deliberate act with a red check attached,
+not an easy convenience that quietly creates a chore.
 
-Everything else is a review norm, listed in [RELEASING.md](../RELEASING.md#the-public-surface-check-before-every-tag):
-the supported-tool list, the command list, validator counts, and any "on the roadmap" wording
-about something that has since shipped.
+This removes a mechanical check without removing the obligation behind it. Everything a release
+still has to confirm by hand is listed in
+[RELEASING.md](../RELEASING.md#the-public-surface-check-before-every-tag) — the supported-tool
+list, the command list, validator counts, and the roadmap section. None of that was ever
+mechanical; the version stamp was the only part that was, and it was also the only part that had
+to change on a release that changed nothing else on the page. "On the roadmap" wording about
+something that has since shipped belongs to the same read-through.
+
+### Saying what does not exist yet
+
+That rule governs what the page presents as **available**. The roadmap section is the one place
+it may name work that does not exist, and it earns that only by leaving no room to misread: the
+section states up front that nothing in it is built, the next release carries an explicit *not
+released yet* marker, and the installable build is a link to the releases page rather than a
+claim. Anywhere else on the page, describing a capability is claiming it ships today.
+
+That section names no release either, which is the same rule applied twice. It says *the next
+release*, not `v0.16.0` — the ordering is the information, and a number would only add something
+to keep in sync. This also keeps the page consistent with
+[ROADMAP.md](../ROADMAP.md#the-next-milestones), which deliberately assigns no version to a
+promise for its own stated reason.
+
+The one exception is `v1.0`, which the section uses as the **name of a milestone** rather than as
+a stamp — it is what that promise has been called since the roadmap's first draft, and it names
+no release date and no release contents. The guard draws the same line by requiring three
+components: `v1.0` passes, `v1.0.0` does not.
+
+What the section does need at release time is the obvious thing: an item that shipped leaves it.
+That is a review norm in [RELEASING.md](../RELEASING.md#the-public-surface-check-before-every-tag),
+alongside the tool and command lists, and it is the same judgement they need.
+
+### The page fetches nothing
+
+The colophon ends by promising the page loads nothing: no fonts, no analytics, no third-party
+requests. That is a property of the artifact, so `site.yml` checks it. Every fetching attribute —
+`src`, `srcset`, `poster`, `data` — must hold a `data:` URI, in any quoting form including none,
+because `src="…"` alone would miss the three other ways a pasted embed writes it. A `<link>` may
+only be `canonical` or `alternate`, or carry a `data:` URI: nearly every other `rel` fetches, so
+the check allows the two that do not rather than trying to list the ones that do. And no
+`@import` or `url(//…)`, protocol-relative included. The check exists because the sentence is one
+pasted embed away from being false, and a marketing badge is precisely the shape that arrives as
+one. The Product Hunt badge in the hero is the worked
+example: the official SVG, both themes, inlined. Inlining it also froze its upvote counter, so
+the counter was removed rather than shipped stale — a page arguing that a number should never
+look more certain than it is cannot display a stale one.
 
 ## How it deploys
 
@@ -41,17 +83,18 @@ a fact about the project, and keeping it in the repository is what stops it from
 setting in a dashboard nobody remembers — which is how the site deploy stayed broken for five
 releases.
 
-`site.yml` no longer deploys. It runs the version guard on every push, tag and pull request,
-and nothing else.
+`site.yml` no longer deploys. It runs the two page guards — no version named, nothing fetched
+at render time — on every push, tag and pull request, and nothing else.
 
 ### What that costs, stated plainly
 
-Publishing is no longer downstream of the guard. Cloudflare builds from the commit, not from a
-green check, so a `main` whose page names the wrong version **will go live** and the guard will
-report it afterwards rather than hold it back. The check still fails the branch, which is what
-a reviewer and the release checklist see — but "the site cannot be published stale" is no
-longer true, and the release-time step in
-[RELEASING.md](../RELEASING.md#after-the-workflow-finishes) is now the thing that catches it.
+Publishing is no longer downstream of the guards. Cloudflare builds from the commit, not from a
+green check, so a `main` carrying a stale page **will go live** and the guards will report it
+afterwards rather than hold it back. They still fail the branch, which is what a reviewer and the
+release checklist see — but "the site cannot be published stale" is not true, and the
+release-time step in [RELEASING.md](../RELEASING.md#after-the-workflow-finishes) is what catches
+it. Removing the version stamp shrank what can go stale in the first place, which is a better
+answer than a guard: what is not written down cannot fall behind.
 
 The alternative is to deploy from GitHub Actions with two repository secrets, which keeps the
 guard upstream of publication. Both work; this one trades that guarantee for having no
