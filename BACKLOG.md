@@ -51,8 +51,10 @@ later review finds opens a new pool below rather than reopening this one.
 ## Next — "Calibrated measurement"
 
 The guard the v0.12 class of bug needs, which provenance and coverage cannot provide. `B137`,
-the conservation and metamorphic suite, shipped in v0.14 as `internal/calibration` and is in
-[CHANGELOG.md](CHANGELOG.md); what it left open is `B144`.
+the conservation and metamorphic suite, shipped in v0.14 as `internal/calibration`, and `B19`,
+the offline reconciliation against a vendor's own export, shipped after it — both are in
+[CHANGELOG.md](CHANGELOG.md). What they left open is `B144`, and the one contribution that
+would close it is the same one `B19` needs: a redacted real capture.
 
 - [ ] **B144 · calibrate Gemini CLI and Cline against a real capture** — S · both — both are
   calibrated today against a *constructed* sample in the source's shape, because the maintainer's
@@ -60,14 +62,6 @@ the conservation and metamorphic suite, shipped in v0.14 as `internal/calibratio
   constructed trace proves the reading; only a real one also proves the shape is still what the
   vendor writes, and each trace already declares which it is (`capture: real|constructed`). Needs
   one redacted capture per source from anybody who runs them.
-- [ ] **B19 · offline billing reconciliation** — M · both — import a vendor's own billing or
-  usage export (a CSV or JSON download, no credential, no network) and report the
-  estimate-vs-actual delta with its confidence band, the scope mismatch behind it, and an
-  unexplained-delta figure. This is the only external oracle for aggregate tokens and money the
-  project can have, and it would have surfaced v0.12's 2x on the first run. It never edits a
-  figure to make it agree; a delta it cannot explain is the output, not an error. Cannot check
-  a line count, an edit attribution, a per-session split, or anything on a flat-rate plan —
-  those need `B137`'s invariants and git, and the report says so.
 
 ## Then — "Everything the logs already say"
 
@@ -75,6 +69,28 @@ Depth before breadth, and before correlation. This milestone is the half of the 
 needs no server, no credential and no repository — and the half every other conclusion rests
 on, since a link to a merged pull request is only as good as the session it links.
 
+- [ ] **B147 · agent behaviour trace: the session as a sequence, not a total** — L · both —
+  every figure assaio publishes today is an aggregate, and an aggregate cannot say *why* a
+  session was expensive. The logs already carry the order: plan, search, read, edit, test
+  failure, repeated tool call, compaction, retry, abandon. Store a content-free timeline —
+  step kind, ordinal, model, token delta, outcome — and read detectors off it: retry loop,
+  tool thrashing, the same file read N times, search with no following edit, a large edit
+  before any test, compaction recovery, model switch after failure, dead-end run. No prompt,
+  no code, no file contents; a path is a category, never a name. The refusal that has to
+  hold: a detector fires on a *pattern*, and a pattern is not a fault — a hard bug
+  legitimately looks like thrashing, so every detector ships with what it cannot distinguish.
+  Store cost is the open question: a step row per turn is a different size class from today's
+  daily aggregate and needs its bound and cleanup settled before it lands.
+- [ ] **B148 · which finding is worth acting on** — M · both — nineteen reads render as
+  nineteen reads. A reader with a wall of verdicts acts on none of them, which makes breadth
+  actively harmful past some count. Rank each finding by what is already knowable —
+  evidence strength and coverage (both already on every `Confidence`), how much of the window
+  the finding's subject reaches, and whether anything can be done about it — and surface the
+  few worth a week's attention while the rest stay one click away. Deliberately **not** a
+  score: the ranking is an ordering with its reasons shown, and a window whose findings are
+  all weak ranks nothing rather than promoting the least weak one. Expected impact stays out
+  of v1 — it needs the outcome link (`B84`, `B96`) and guessing it would be the fabricated
+  number this project refuses.
 - [ ] **B107 · Codex cache-write tokens are never read** — S · solo —
   `payload.info.total_token_usage.cache_write_input_tokens` is reported on every Codex
   `token_count` and `usage.Record` gets no value for it. **Measure before claiming a
@@ -211,6 +227,16 @@ does not ship.
   surviving, sliced by tool, model, project, task annotation and confidence band, always
   showing the unattributed and insufficient-evidence share. `evidence explain <edge>` says why
   a link was or was not made. No causal language anywhere in it.
+- [ ] **B153 · what a change costs after it is written** — M/L · both — "AI lines" counts
+  what was produced, never what it took to land. Once a session links to a pull request, the
+  downstream burden becomes countable as named signals rather than adjectives: review rounds
+  and requested changes (`review_tax`), CI failures and the repair cycles after them
+  (`ci_repair_tax`), revert rate, time to merge, and the two ratios that make cost mean
+  something — `cost_per_merged_change` and `cost_per_surviving_change`. Each with its own
+  coverage and confidence, and each **age-matched against human-authored changes of the same
+  age**, which is already the standing rule for bug density and is the only way these are not
+  a smear. They are observations about a process, never a measure of a person; the
+  per-person refusal holds here exactly as everywhere else.
 - [ ] **B18 · survival: per-day correlation + age-matching** — M · both — per-day AI-heavy
   vs quiet-day survival comparison, an age/settle threshold so recent commits are not counted
   as "survived", and rename-following in blame. Only ever age-matched.
@@ -242,6 +268,14 @@ recommendation can rest on outcome rather than on activity.
   behaviour, time to first edit and first test, CI-repair burden, review tax, delivery yield,
   survival. Every result states sample size, confounders and attribution confidence, and is
   labelled an observation, never proof.
+- [ ] **B150 · which model for which kind of work, from your own history** — M/L · both —
+  a person running Claude, Codex, Gemini, Copilot and Cline has no basis for choosing between
+  them beyond feel. The parts are already stored: task class (`mark`), model, cost, retries
+  and failed tools, rework, and — once outcomes link — review and survival. Compare models
+  *within* a task class and repository class, never globally, and publish the comparison with
+  its sample size. The rule that keeps it honest is a floor, not a disclaimer: below a
+  minimum of comparable sessions it reports insufficient evidence and names no winner. A
+  global "best model" is never emitted; benchmarks measure other people's work.
 - [ ] **B84 · deterministic recommendations** — M/L · both — one concrete next step per
   finding: rules over verdicts and outcomes emitting observed pattern, evidence, confidence,
   one action, the follow-up metric and a review window; dismissable, and the dismissal sticks.
@@ -412,6 +446,14 @@ first.
 
 ## Pool — CLI & DX
 
+- [ ] **B152 · a label the person does not have to type** — S/M · both — `mark` works and
+  goes unused, because annotating a session is a chore nobody does twice. The store already
+  holds `git_branch` on every row, and a branch called `fix/…` or `feat/…` states the task
+  class its author already chose. Derive a **suggested** label from what is there — branch
+  prefix first, PR metadata once the evidence graph lands — and keep the derivation visible
+  and overridable: a derived label carries its source, never merges silently into a
+  hand-made one, and a repository with no convention yields nothing rather than a guess. The
+  closed vocabularies and the never-synced rule stay exactly as they are.
 - [ ] **B45 · TUI** — L · both — interactive terminal dashboard (validators +
   project drill), the flagship DX piece once the small wins land.
 - [ ] **B46 · completions + man pages** — S · both — cobra generators, shipped via
@@ -444,6 +486,26 @@ first.
 
 ## Pool — dashboard
 
+- [ ] **B149 · a shareable assay** — M · both — `assaio share --since 30d` renders a single
+  image or page fit to post publicly: tool and model mix, the token/cost trend, a few
+  findings, and the coverage and confidence behind them. Redaction is the feature, not a
+  flag: no repository names, no member names, no file paths, no identifiers, ever, and a
+  preview before anything is written so the person sees exactly what would leave their
+  machine. Carries the line the dashboard already earns — prompts and source code were not
+  collected. The open question is what a figure means once its labels are gone: "your
+  heaviest project" with no name is still a shape someone may recognize, so the redaction
+  rule needs stating before the renderer, not after.
+- [ ] **B145 · what the faceplate ratio is called, and whether it belongs there** — S ·
+  both — *needs a decision, not a patch.* Each cell shows `Purity` as a gauge plus a bare
+  `0.46` now captioned "index". A reader has no way to learn what the index measures, and
+  "STRONG · 0.46" reads as a contradiction. Three ways out: name it honestly in the UI and
+  document it, drop the number and keep only the gauge (the drill's compact faceplate
+  already hides it), or drop both and let the verdict word stand alone.
+- [ ] **B146 · thousands grouping in validator figures** — S · both — `internal/analyze`
+  builds Figure values with `strconv.Itoa`/`FormatInt`, so the dashboard renders `16400
+  tokens` and `1247 calls` while the report tables next to them group thousands. Most
+  figures are small counts where grouping would be noise, so this is a per-figure judgement
+  across ~20 validators, not a sweep.
 - [ ] **B48 · sparklines** — M · both — per-day series for key figures as inline SVG;
   the dashboard stays fully self-contained.
 - [ ] **B49 · multi-window tabs** — M · both — 7d/30d/90d generated into one HTML
@@ -483,6 +545,17 @@ a tool used by one organization is usually better served by an out-of-tree
 - [ ] **B55 · Cursor (Admin API)** — M — local storage verified to lack token counts;
   vendor-aggregate granularity, tagged as such.
 - [ ] **B56 · Kiro** — M — only if its logs turn out to carry real token data.
+- [ ] **B151 · what a plugin declares, and a badge that goes red when a vendor moves** — M ·
+  both — two halves of the same gap. A plugin today is verified for *protocol* conformance
+  (`plugins verify`, `metrics verify`) and declares nothing about itself: whether it touches
+  the network, what it reads, which schema version it supports, what it emits. A manifest
+  carrying permissions, privacy class, input and output signals, supported schema and a
+  checksum makes an install a decision instead of a leap. The second half is a compatibility
+  run over **public fixtures** per source, so a vendor changing a format turns a badge red
+  and notifies the owner rather than being discovered by a wrong number months later — the
+  in-tree drift canaries already do this for the five built-in sources and stop at the repo
+  boundary. Blocked on nothing except the fixture question: a public fixture is a real log,
+  so what may be in one has to be settled before any are accepted.
 - [ ] **B57 · community plugin registry page** — S — a docs page listing community
   exec plugins (parsers and metrics) once a few exist, seeded with the weekend-usage
   example.

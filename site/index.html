@@ -490,6 +490,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="cmd"><b>backfill</b><span>Import local session logs. Incremental: an input already read unchanged is skipped; <code>--full</code> forces a re-parse.</span></div>
         <div class="cmd"><b>report</b><span>Token/cost report. <code>--by day|project|tool|model|entrypoint|member</code>, <code>--format table|json|csv</code>, <code>--compare</code>.</span></div>
         <div class="cmd"><b>effectiveness</b><span>AI output against cost — lines, edits, rejections, $/100 lines — per project.</span></div>
+        <div class="cmd"><b>reconcile</b><span>Check the estimate against the vendor's own numbers. Point it at a billing or usage export you downloaded — no credential, no network — and it reports the scope mismatch first, names only the causes with evidence behind them, and prints the rest as <em>unexplained</em>. Neither side is adjusted to make them agree.</span></div>
         <div class="cmd"><b>analyze</b><span>Run the metric validators and any metric plugins; print each one's directional read. <code>--task|--outcome|--difficulty</code> recompute every one over just the sessions you labelled that way.</span></div>
         <div class="cmd"><b>mark</b><span>Label a session with what the work actually was — task class, outcome, difficulty. Category values only, never free text, never synced; the one fact the logs cannot contain.</span></div>
         <div class="cmd"><b>signals</b><span>What assaio can report, and what <em>your</em> data supports. <code>describe</code> says what one signal counts and what a zero means; <code>coverage</code> reports each as fully, partly or not at all supported — because "no rework happened" and "this source never recorded rework" are different facts.</span></div>
@@ -512,6 +513,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
       <div class="sec-head"><h2>Cost honesty &amp; the team server</h2><p class="eyebrow">estimate, not invoice</p></div>
       <div class="cards">
         <div class="card"><h3>Every $ is an estimate</h3><p>Priced at public pay-as-you-go rates — not your bill. Token counts are computed server-side and unobservable to an offline client.</p></div>
+        <div class="card"><h3>Check it against the invoice</h3><p><code>reconcile</code> compares that estimate with a vendor export you downloaded yourself, offline. A delta it cannot explain is printed as unexplained — the number is never quietly moved to close the gap.</p></div>
         <div class="card"><h3>Declare your real basis</h3><p>On a subscription or a negotiated rate? Set <code>pricing</code> — an effective $/token or a monthly plan cost — and reports show a truer figure. <code>subscription-fit</code> then reads whether the plan pays off.</p></div>
         <div class="card"><h3>Budget gate</h3><p><code>check --max-tokens N</code> exits non-zero over budget — plan-independent by default, for CI or a pre-push hook.</p></div>
         <div class="card"><h3>Team server, self-hosted</h3><p><code>serve</code> pools usage that teammates <code>sync</code> to it and serves one aggregated, pseudonymized dashboard. You host it, on infrastructure you control.</p></div>
@@ -609,7 +611,7 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
 </main>
 
 <footer class="wrap colo">
-  <a class="rel" href="https://github.com/assaio/assaio/blob/main/CHANGELOG.md">Assay report · v0.14.0 → changelog</a>
+  <a class="rel" href="https://github.com/assaio/assaio/blob/main/CHANGELOG.md">Assay report · v0.15.0 → changelog</a>
   <nav>
     <a href="https://github.com/assaio/assaio">GitHub</a>
     <a href="https://github.com/assaio/assaio/releases">Releases</a>

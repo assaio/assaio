@@ -128,15 +128,15 @@ First, where the money goes — spend per project:
 
 ```console
 $ assaio-agent report --since 30d --by project
-+----------+-------+-------+---------+---------+--------+--------+
-| PROJECT  |    IN |   OUT | CACHE R | CACHE W | CACHE% | COST $ |
-+----------+-------+-------+---------+---------+--------+--------+
-| api      | 22680 | 16800 | 1664000 |   38000 |   98.7 | 1.5572 |
-| planning |   270 |  7300 |  430000 |   24000 |   99.9 | 0.5489 |
-| webapp   |  1720 | 15000 |  848000 |   80000 |   99.8 | 1.3076 |
-+----------+-------+-------+---------+---------+--------+--------+
-|          |       |       |         |         | TOTAL  | 3.4136 |
-+----------+-------+-------+---------+---------+--------+--------+
++----------+--------+--------+-----------+---------+--------+--------+
+| PROJECT  |     IN |    OUT |   CACHE R | CACHE W | CACHE% | COST $ |
++----------+--------+--------+-----------+---------+--------+--------+
+| api      | 22,680 | 16,800 | 1,664,000 |  38,000 |   98.7 |   1.56 |
+| planning |    270 |  7,300 |   430,000 |  24,000 |   99.9 |   0.55 |
+| webapp   |  1,720 | 15,000 |   848,000 |  80,000 |   99.8 |   1.31 |
++----------+--------+--------+-----------+---------+--------+--------+
+|          |        |        |           |         |  TOTAL |   3.41 |
++----------+--------+--------+-----------+---------+--------+--------+
 ```
 
 But spend is only half the question. **Which projects turn that spend into code, and
@@ -147,11 +147,11 @@ $ assaio-agent effectiveness --since 30d --by project
 +----------+----------+-------+-----+--------+-------------+
 | PROJECT  | AI LINES | EDITS | REJ | COST $ | $/100 LINES |
 +----------+----------+-------+-----+--------+-------------+
-| api      |       22 |     1 |   1 | 1.5572 |      7.0780 |
-| planning |        0 |     0 |   0 | 0.5489 |           — |
-| webapp   |      336 |     2 |   0 | 1.3076 |      0.3892 |
+| api      |       22 |     1 |   1 |   1.56 |        7.08 |
+| planning |        0 |     0 |   0 |   0.55 |           — |
+| webapp   |      336 |     2 |   0 |   1.31 |        0.39 |
 +----------+----------+-------+-----+--------+-------------+
-| TOTAL    |      358 |     3 |   1 | 3.4136 | 0.9535      |
+| TOTAL    |      358 |     3 |   1 |   3.41 |        0.95 |
 +----------+----------+-------+-----+--------+-------------+
 Efficiency is directional: task type (greenfield vs. debugging) drives lines-per-cost; this is a diagnostic per project, never a performance metric.
 Not every source records changed lines; the ones that do not contribute cost but no line counts -- run `assaio-agent signals coverage` for what your own data supports.
@@ -257,6 +257,7 @@ withholds its verdict ([ADR 0011](docs/adr/0011-capability-gated-metrics.md)).
 | `statusline` | Print **one ambient line** for an editor or shell status bar: today's tokens, AI lines, cost basis, and how fresh the data is. The day is your machine's local day. Read-only, and never fails loudly — see [automation](docs/automation.md#option-c--claude-code-session-hooks-for-statusline). |
 | `explain`  | Print a metric's **long-form page** — what it measures, how to read it, what to do about it, and its limits. Needs no store, so it works before your first import; no argument lists every metric. |
 | `mark`     | Label a session with what the work actually was — task class, outcome, difficulty. Category values only, never free text, and never sent by `sync`. Defaults to the newest session in the repository you are standing in; `--last`, an id prefix, `--list`, `--unmark`. Every metric can then be read per kind of work. |
+| `reconcile` | Compare a vendor's **own billing or usage export** — a CSV or JSON you downloaded, no credential and no network — against assaio's estimate. Computes the scope mismatch first, names only the parts of the delta that have evidence, and reports the rest as **unexplained**. Nothing is ever adjusted to make the two sides agree. `--since`, `--map` to bind columns, `--format text\|json`. See [reconciling](docs/reconcile.md). |
 | `signals`  | `list` what assaio can report; `describe <id>` for what one signal counts, where it is honest, and **what a zero means**; `coverage` reads your own store and says which signals your data actually supports, fully, partly, or not at all. |
 | `clear`    | Delete stored data — needs an explicit scope (`--all`, `--older-than`, `--tool`, `--labels`) and `--yes`. Session labels survive every scope but `--labels`: no re-import can rebuild them. |
 | `compact`  | Reclaim disk space the store freed but still holds — deleting rows alone never shrinks the file. |

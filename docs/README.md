@@ -12,6 +12,9 @@ Where everything lives, in one place.
   parsers and validators, exec parser plugins (any language), exec metric plugins and
   exec rule plugins (any language), custom log paths, the team server, and direct SQL on
   the store.
+- [`reconcile.md`](reconcile.md) — checking the `$` estimate against a vendor's own
+  billing or usage export, offline: how columns bind, how to read the unexplained delta,
+  and what no export can answer.
 - [`config.example.yaml`](../config.example.yaml) — every config key, documented, with
   defaults.
 - [`PRIVACY.md`](../PRIVACY.md) — exactly what is read, extracted, stored, and never
