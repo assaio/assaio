@@ -14,11 +14,11 @@
 </text><text x="20.00px" y="66.20px" xml:space="preserve">+----------+----------+-------+-----+--------+-------------+
 </text><text x="20.00px" y="81.80px" xml:space="preserve">| PROJECT  | AI LINES | EDITS | REJ | COST $ | $/100 LINES |
 </text><text x="20.00px" y="97.40px" xml:space="preserve">+----------+----------+-------+-----+--------+-------------+
-</text><text x="20.00px" y="113.00px" xml:space="preserve">| api      |       22 |     1 |   1 | 1.5572 |      7.0780 |
-</text><text x="20.00px" y="128.60px" xml:space="preserve">| planning |        0 |     0 |   0 | 0.5489 |           — |
-</text><text x="20.00px" y="144.20px" xml:space="preserve">| webapp   |      336 |     2 |   0 | 1.3076 |      0.3892 |
+</text><text x="20.00px" y="113.00px" xml:space="preserve">| api      |       22 |     1 |   1 |   1.56 |        7.08 |
+</text><text x="20.00px" y="128.60px" xml:space="preserve">| planning |        0 |     0 |   0 |   0.55 |           — |
+</text><text x="20.00px" y="144.20px" xml:space="preserve">| webapp   |      336 |     2 |   0 |   1.31 |        0.39 |
 </text><text x="20.00px" y="159.80px" xml:space="preserve">+----------+----------+-------+-----+--------+-------------+
-</text><text x="20.00px" y="175.40px" xml:space="preserve">| TOTAL    |      358 |     3 |   1 | 3.4136 | 0.9535      |
+</text><text x="20.00px" y="175.40px" xml:space="preserve">| TOTAL    |      358 |     3 |   1 |   3.41 |        0.95 |
 </text><text x="20.00px" y="191.00px" xml:space="preserve">+----------+----------+-------+-----+--------+-------------+
 </text><text x="20.00px" y="206.60px" xml:space="preserve">Efficiency is directional: task type (greenfield vs. debugging) drives lines-per-cost; this is a diagnostic per project, never a performance metric.
 </text><text x="20.00px" y="222.20px" xml:space="preserve">AI-line activity is captured for Claude Code today; other tools contribute cost but not line counts (see ROADMAP).

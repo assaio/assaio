@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	prettytable "github.com/jedib0t/go-pretty/v6/table"
+
+	"github.com/assaio/assaio/internal/humanize"
 )
 
 // MoverRow is one group's change in cost and AI lines between two adjacent equal windows:
@@ -90,7 +92,7 @@ func RenderMovers(w io.Writer, movers []MoverRow, by string) error {
 			mark, anyUnpriced = "*", true
 		}
 		tw.AppendRow(prettytable.Row{
-			label, signedFloat(m.DeltaCost) + mark, strconv.FormatFloat(m.CostNow, 'f', 4, 64) + mark,
+			label, signedFloat(m.DeltaCost) + mark, humanize.USDCell(m.CostNow) + mark,
 			signedInt(m.DeltaLines), m.LinesNow,
 		})
 	}
@@ -121,7 +123,7 @@ func absFloat(f float64) float64 {
 // signedFloat formats a cost delta with an explicit leading "+" for gains, so a rise reads
 // distinctly from a fall at a glance.
 func signedFloat(f float64) string {
-	s := strconv.FormatFloat(f, 'f', 4, 64)
+	s := humanize.USDCell(f)
 	if f > 0 {
 		return "+" + s
 	}

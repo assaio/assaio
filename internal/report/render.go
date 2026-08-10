@@ -10,6 +10,8 @@ import (
 
 	prettytable "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+
+	"github.com/assaio/assaio/internal/humanize"
 )
 
 // RenderTable writes rows to w as a human-readable table with a totals footer. by is
@@ -41,7 +43,7 @@ func RenderTable(w io.Writer, rows []Row, by string) error {
 	}
 
 	tw.AppendFooter(append(append(prettytable.Row{}, dimFooter...),
-		"", "", "", "", "TOTAL", strconv.FormatFloat(total, 'f', 4, 64)))
+		"", "", "", "", "TOTAL", humanize.USDCell(total)))
 	tw.Render()
 	if anyUnpriced {
 		if _, err := fmt.Fprintln(w, unpricedFootnote); err != nil {
@@ -90,11 +92,15 @@ func tableDimColumns(grouped bool, by string) (header, footer []interface{}) {
 	return []interface{}{strings.ToUpper(by)}, []interface{}{""}
 }
 
-// rightAlignFrom right-aligns numCols numeric columns following dimCols columns.
+// rightAlignFrom right-aligns numCols numeric columns following dimCols columns. The
+// header goes with the digits: a comma-grouped count is a string, which the table would
+// otherwise left-align away from the column it names.
 func rightAlignFrom(dimCols, numCols int) []prettytable.ColumnConfig {
 	cols := make([]prettytable.ColumnConfig, 0, numCols)
 	for n := dimCols + 1; n <= dimCols+numCols; n++ {
-		cols = append(cols, prettytable.ColumnConfig{Number: n, Align: text.AlignRight})
+		cols = append(cols, prettytable.ColumnConfig{
+			Number: n, Align: text.AlignRight, AlignHeader: text.AlignRight, AlignFooter: text.AlignRight,
+		})
 	}
 	return cols
 }
@@ -104,7 +110,7 @@ func rightAlignFrom(dimCols, numCols int) []prettytable.ColumnConfig {
 func formatCost(r *Row) (cell string, priced float64) {
 	cell = "—"
 	if r.Priced {
-		cell = strconv.FormatFloat(*r.Cost, 'f', 4, 64)
+		cell = humanize.USDCell(*r.Cost)
 		priced = *r.Cost
 	}
 	if r.HasUnpriced {
@@ -125,11 +131,16 @@ func tableRow(r *Row, grouped bool, by, cost string) prettytable.Row {
 		if label == "" {
 			label = emptyDimLabel(by)
 		}
-		return prettytable.Row{label + granularityMark(r.Granularity), r.In, r.Out, r.CacheRead, r.CacheWrite, cacheEffStr, cost}
+		return prettytable.Row{
+			label + granularityMark(r.Granularity),
+			formatCommas(r.In), formatCommas(r.Out), formatCommas(r.CacheRead), formatCommas(r.CacheWrite),
+			cacheEffStr, cost,
+		}
 	}
 	return prettytable.Row{
 		r.Day, r.Tool + granularityMark(r.Granularity), r.Model,
-		r.In, r.Out, r.CacheRead, r.CacheWrite, cacheEffStr, cost,
+		formatCommas(r.In), formatCommas(r.Out), formatCommas(r.CacheRead), formatCommas(r.CacheWrite),
+		cacheEffStr, cost,
 	}
 }
 

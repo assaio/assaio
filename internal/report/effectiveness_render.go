@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	prettytable "github.com/jedib0t/go-pretty/v6/table"
+
+	"github.com/assaio/assaio/internal/humanize"
 )
 
 // effCaveat states that efficiency is a diagnostic signal, never a performance metric.
@@ -42,8 +44,8 @@ func RenderEffectivenessTable(w io.Writer, rows []EffRow, by string) error {
 		tw.AppendRow(effTableRow(r, by, cost))
 	}
 	tw.AppendFooter(prettytable.Row{
-		"TOTAL", totalLines, totalEdits, totalRejected,
-		strconv.FormatFloat(totalCost, 'f', 4, 64), footerRatio(totalCost, totalLines),
+		"TOTAL", formatCommas(totalLines), formatCommas(totalEdits), formatCommas(totalRejected),
+		humanize.USDCell(totalCost), footerRatio(totalCost, totalLines),
 	})
 	tw.Render()
 
@@ -67,7 +69,7 @@ func RenderEffectivenessTable(w io.Writer, rows []EffRow, by string) error {
 func formatEffCost(r *EffRow) (cell string, priced float64) {
 	cell = "—"
 	if r.Cost != nil {
-		cell = strconv.FormatFloat(*r.Cost, 'f', 4, 64)
+		cell = humanize.USDCell(*r.Cost)
 		priced = *r.Cost
 	}
 	if r.HasUnpriced {
@@ -81,7 +83,7 @@ func formatCostPer100(r *EffRow) string {
 	if r.CostPer100Lines == nil {
 		return "—"
 	}
-	cell := strconv.FormatFloat(*r.CostPer100Lines, 'f', 4, 64)
+	cell := humanize.USDCell(*r.CostPer100Lines)
 	if r.HasUnpriced {
 		cell += "*"
 	}
@@ -96,7 +98,7 @@ func effTableRow(r *EffRow, by, cost string) prettytable.Row {
 	if label == "" {
 		label = emptyDimLabel(by)
 	}
-	return prettytable.Row{label, r.LinesAdded, r.Edits, r.Rejected, cost, formatCostPer100(r)}
+	return prettytable.Row{label, formatCommas(r.LinesAdded), formatCommas(r.Edits), formatCommas(r.Rejected), cost, formatCostPer100(r)}
 }
 
 // footerRatio recomputes $/100 lines from column totals rather than averaging each
@@ -105,7 +107,7 @@ func footerRatio(totalCost float64, totalLines int64) string {
 	if totalLines == 0 {
 		return "—"
 	}
-	return strconv.FormatFloat(totalCost/(float64(totalLines)/100), 'f', 4, 64)
+	return humanize.USDCell(totalCost / (float64(totalLines) / 100))
 }
 
 // RenderEffectivenessJSON writes rows to w as indented JSON.
