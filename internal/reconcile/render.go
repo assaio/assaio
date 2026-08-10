@@ -126,7 +126,8 @@ func bandSuffix(e *Estimate) string {
 	case e.Banded():
 		return fmt.Sprintf(" .. %s   (upper bound extrapolates unpriced usage at this window's own $/token)", money(e.Upper()))
 	case e.UnpricedRows > 0:
-		return fmt.Sprintf("   (a point: %d unpriced rows, none carrying tokens to extrapolate from)", e.UnpricedRows)
+		return fmt.Sprintf("   (a point: %d unpriced %s, none carrying tokens to extrapolate from)",
+			e.UnpricedRows, plural(e.UnpricedRows, "row", "rows"))
 	default:
 		return "   (a point: every row in the window carried a known price)"
 	}
@@ -163,6 +164,13 @@ func signed(v float64) string {
 		return "-" + money(-v)
 	}
 	return money(0)
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
 }
 
 func pad(s string, n int) string {
