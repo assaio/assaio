@@ -9,6 +9,8 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/assaio/assaio/internal/cli"
@@ -18,8 +20,9 @@ import (
 var update = flag.Bool("update", false, "update generated files")
 
 const (
+	repoRoot      = "../.."
 	referenceJSON = "../../docs/reference.json"
-	referenceHTML = "../../site/reference.html"
+	referenceHTML = "../../" + docs.ReferenceFile
 	sitePage      = "../../site/index.html"
 	llmsTxt       = "../../site/llms.txt"
 	extendingDocs = "../../docs/extending"
@@ -40,12 +43,41 @@ func TestCommittedReferenceMatchesTheBinary(t *testing.T) {
 }
 
 func TestCommittedReferencePageMatchesTheBinary(t *testing.T) {
-	assertGenerated(t, referenceHTML, docs.HTML(reference()))
+	assertGenerated(t, referenceHTML, docs.HTML(reference(), guides(t)))
+}
+
+// Every published page is generated from the Markdown it is written in, so the two cannot say
+// different things. A link the renderer cannot resolve fails here rather than reaching the site
+// as a 404 -- the published copy is the one a reader trusts.
+func TestCommittedGuidePagesMatchTheirSource(t *testing.T) {
+	all := guides(t)
+	for i := range all {
+		g := &all[i]
+		page, errs := docs.GuidePage(repoRoot, g, all)
+		for _, err := range errs {
+			t.Error(err)
+		}
+		if len(errs) == 0 {
+			assertGenerated(t, filepath.Join(repoRoot, g.File), page)
+		}
+	}
+}
+
+func guides(t *testing.T) []docs.Guide {
+	t.Helper()
+	all, err := docs.Guides(repoRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return all
 }
 
 func assertGenerated(t *testing.T, path string, want []byte) {
 	t.Helper()
 	if *update {
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+			t.Fatal(err)
+		}
 		if err := os.WriteFile(path, want, 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -133,4 +165,81 @@ func report(t *testing.T, problems []docs.Problem) {
 	for _, p := range problems {
 		t.Error(p)
 	}
+}
+
+// A command line printed in a document is an instruction a reader will paste. Checking them
+// against the binary's own command tree is what stops a renamed flag from being discovered by
+// the reader instead of the build.
+func TestDocumentsPrintNoFlagTheBinaryLacks(t *testing.T) {
+	ref := reference()
+	for _, g := range guides(t) {
+		report(t, docs.CheckInvocations(ref, g.Source, read(t, filepath.Join(repoRoot, g.Source))))
+	}
+	for _, f := range []string{"README.md", "CONTRIBUTING.md", "AGENTS.md", "RELEASING.md"} {
+		report(t, docs.CheckInvocations(ref, f, read(t, filepath.Join(repoRoot, f))))
+	}
+}
+
+// The guides recommend helpers by name. A rename that left the advice behind is the defect this
+// catches -- four pages recommended `shareOrDash` for a divide-by-zero, and no package had one.
+func TestRecommendedHelpersExistAndAreRecommended(t *testing.T) {
+	var corpus strings.Builder
+	for _, g := range guides(t) {
+		corpus.WriteString(read(t, filepath.Join(repoRoot, g.Source)))
+	}
+	report(t, docs.CheckRecommendedHelpers(repoRoot, corpus.String()))
+}
+
+// Every link the site makes to itself has to land somewhere, fragment included. A published
+// page is the copy a reader trusts, and a dead link on it is the same class of defect as a
+// stale number -- with the difference that nothing else would notice.
+func TestEveryLinkInsideTheSiteResolves(t *testing.T) {
+	pages := map[string]map[string]bool{}
+	var files []string
+	err := filepath.WalkDir(filepath.Join(repoRoot, "site"), func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || filepath.Ext(p) != ".html" {
+			return err
+		}
+		files = append(files, p)
+		body := read(t, p)
+		ids := map[string]bool{}
+		for _, m := range regexp.MustCompile(`id="([^"]+)"`).FindAllStringSubmatch(body, -1) {
+			ids[m[1]] = true
+		}
+		pages[servedURL(p)] = ids
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range files {
+		for _, m := range regexp.MustCompile(`href="https://assaio\.dev([^"]*)"`).FindAllStringSubmatch(read(t, p), -1) {
+			target, fragment, _ := strings.Cut(m[1], "#")
+			if target == "" {
+				target = "/"
+			}
+			ids, ok := pages[target]
+			if !ok {
+				if _, err := os.Stat(filepath.Join(repoRoot, "site", strings.TrimPrefix(target, "/"))); err == nil {
+					continue // a served asset rather than a page
+				}
+				t.Errorf("%s links to %s, which the site does not serve", servedURL(p), target)
+				continue
+			}
+			if fragment != "" && !ids[fragment] {
+				t.Errorf("%s links to %s#%s, and that page has no such anchor", servedURL(p), target, fragment)
+			}
+		}
+	}
+}
+
+// servedURL is the path Workers Assets serves a file at: the extension is dropped, and
+// index.html is the root.
+func servedURL(path string) string {
+	rel := filepath.ToSlash(strings.TrimPrefix(path, filepath.Join(repoRoot, "site")))
+	rel = strings.TrimSuffix(rel, ".html")
+	if rel == "/index" {
+		return "/"
+	}
+	return rel
 }

@@ -21,6 +21,38 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+- **The documentation is published, and the recipes in it are executed.**
+  [assaio.dev/docs](https://assaio.dev/docs) carries every guide, rendered from the Markdown it
+  is written in — the Markdown stays the only copy, and `make test` fails when a page and its
+  source disagree. The reference moved inside it, at `/docs/reference`, because a table of
+  enumerations beside the documentation rather than inside it is the half of a docs site nobody
+  can learn from.
+- **A cookbook of recipes that are run, not merely printed.** Label rules for branch,
+  ticket-key, skill, sub-agent and entrypoint conventions; `check` as a pre-push hook and a
+  scheduled job; three complete rule plugins; two complete metric plugins and two in-tree
+  validators; the weekly loop and how to deliver a digest. Each YAML recipe is loaded and its
+  derivations asserted, and each plugin is executed against a fixture window with its output held
+  to the protocol — the label rules through `TestRecipeLabelRules`, the plugins through
+  `TestRecipeRulePlugins` and `TestRecipeMetricPlugins`. Where a recipe can only be shape-checked
+  rather than run, the page says which.
+- **Three more ways for a document to be wrong, now checked.** A command line printing a flag the
+  binary does not have; a helper the guides recommend that no package declares; a link anywhere on
+  the site that does not resolve, fragment included. Each of the three found a real defect on the
+  day it was written.
+
+### Fixed
+- **Four pages recommended `shareOrDash` for a divide-by-zero, and no package had such a
+  function.** The helper is `humanize.PercentOrDash`. This is the drift the new helper check was
+  written for, found by writing it.
+- **A published document named releases as `v0.6.0`**, which the `noversion` guard reads as a
+  version stamp — correctly, since it cannot tell one from the other. The sentence means the same
+  with `v0.6`.
+
+### Changed
+- **`site.yml`'s guards walk the whole served tree**, not the top directory: twenty pages are
+  published where two were.
+
 ## [0.18.0] - 2026-08-11
 
 ### Added

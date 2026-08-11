@@ -44,7 +44,10 @@ func newDocsExportCmd() *cobra.Command {
 				enc.SetIndent("", "  ")
 				return enc.Encode(ref)
 			case formatHTML:
-				_, err := cmd.OutOrStdout().Write(docs.HTML(ref))
+				// No guide list: a reader running this has the binary, not the repository.
+				// The published site passes its own, which is what puts the reference inside
+				// the documentation rather than beside it.
+				_, err := cmd.OutOrStdout().Write(docs.HTML(ref, nil))
 				return err
 			default:
 				return fmt.Errorf("unknown format %q (want json or html)", format)

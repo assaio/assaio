@@ -63,7 +63,7 @@ func (weekendUsageValidator) Analyze(in Input) Result {
 	r.Read = readFor(!watch, "Low")
 	r.Purity = clamp01(1 - weekendShare)
 	r.Figures = []Figure{
-		{Label: "weekend token share", Value: shareOrDash(weekendTokens, total, 1)},
+		{Label: "weekend token share", Value: humanize.PercentOrDash(weekendTokens, total, 1)},
 		{Label: "weekend AI lines", Value: strconv.FormatInt(weekendLines, 10)},
 	}
 	r.Caveats = []string{"Directional: a proxy for out-of-hours work, not a burnout measurement."}

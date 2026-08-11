@@ -139,7 +139,7 @@ jobs:
               echo "::error::$ref is linked but site/ serves no such page or asset"
               fail=1
             fi
-          done < <(grep -ohE '(href|content)="(https://assaio\.dev)?/[^"#]*"' site/*.html \
+          done < <(find site -type f -name '*.html' -exec grep -ohE '(href|content)="(https://assaio\.dev)?/[^"#]*"' {} + \
                    | sed -E 's/.*="(https:\/\/assaio\.dev)?([^"]*)"/\2/' | sort -u)
           exit $fail
 
@@ -157,7 +157,7 @@ jobs:
         run: |
           set -euo pipefail
           fail=0
-          for page in site/*.html; do
+          while IFS= read -r page; do
             for tag in 'og:image' 'og:image:width' 'og:image:height' 'og:image:alt' 'twitter:image'; do
               if ! grep -q "\"$tag\"" "$page"; then
                 echo "::error file=$page::$tag is missing -- a shared link renders without a card."
@@ -173,5 +173,5 @@ jobs:
               fi
             done < <(grep -oE 'content="https://assaio\.dev/[^"]+\.(png|jpg|jpeg|webp)"' "$page" \
                      | sed -E 's/content="([^"]*)"/\1/' | sort -u)
-          done
+          done < <(find site -type f -name '*.html' | sort)
           exit $fail

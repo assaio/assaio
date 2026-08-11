@@ -1,6 +1,6 @@
 # Query your own data
 
-*Part of [Extending assaio](../extending.md). Every column below is also described in the [generated reference](https://assaio.dev/reference.html).*
+*Part of [Extending assaio](../extending.md). Every column below is also described in the [generated reference](https://assaio.dev/docs/reference).*
 
 Everything `assaio` collects lives in one SQLite file:
 

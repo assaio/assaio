@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Automating assaio — hooks, scheduled sync, and survival — assaio</title>
+<meta name="description" content="This is the operating recipe for keeping an organization&#39;s AI-usage picture fresh without a">
+<link rel="canonical" href="https://assaio.dev/docs/automation">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://assaio.dev/docs/automation">
+<meta property="og:title" content="Automating assaio — hooks, scheduled sync, and survival — assaio">
+<meta property="og:description" content="This is the operating recipe for keeping an organization&#39;s AI-usage picture fresh without a">
+<meta property="og:image" content="https://assaio.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="assaio — measure whether AI coding spend is delivering">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://assaio.dev/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233E8B79'/%3E%3Cpath d='M9 22 16 10l7 12' stroke='%23EFEAE1' stroke-width='2.4' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>:root{
+  --ink:#14120F; --paper:#EFEAE1;
+  --teal:#3E8B79; --teal-lift:#4F9E8B;
+  --bg:var(--paper); --fg:#1A1713; --dim:#6B6459; --faint:#8D857A;
+  --rule:rgba(20,18,15,.14); --rule-soft:rgba(20,18,15,.07);
+  --cell:rgba(20,18,15,.025); --signal:var(--teal);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --gut:clamp(1.25rem,4vw,2.5rem);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
+    --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
+    --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
+  --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
+  --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans);
+  font-size:15.5px; line-height:1.65; -webkit-font-smoothing:antialiased}
+a{color:var(--signal)}
+.wrap{max-width:84rem; margin:0 auto; padding:0 var(--gut)}
+.top{display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap;
+  padding:1.15rem 0; border-bottom:1px solid var(--rule)}
+.brand{font:600 1rem/1 var(--mono); letter-spacing:-.02em; text-decoration:none; color:var(--fg)}
+.topnav{display:flex; gap:1.1rem; flex-wrap:wrap; font-family:var(--mono); font-size:12px}
+.topnav a{text-decoration:none}
+footer{padding:2.5rem 0 4rem; margin-top:3rem; border-top:1px solid var(--rule-soft);
+  color:var(--faint); font-size:13px}
+footer p{max-width:56rem; margin:0}
+.layout{display:grid; grid-template-columns:15rem minmax(0,1fr); gap:3rem; align-items:start}
+@media (max-width:60rem){.layout{grid-template-columns:minmax(0,1fr); gap:1.5rem}
+  .side{position:static; border-bottom:1px solid var(--rule-soft); padding-bottom:1rem}}
+.side{position:sticky; top:0; padding:2rem 0; max-height:100vh; overflow-y:auto}
+.sidehead{margin:1.4rem 0 .45rem; font:500 .625rem/1 var(--mono); letter-spacing:.14em;
+  text-transform:uppercase; color:var(--faint)}
+.sidehead:first-child{margin-top:0}
+.side ul{list-style:none; margin:0; padding:0}
+.side li{margin:0 0 .3rem}
+.side a{display:block; text-decoration:none; color:var(--dim); font-size:13.5px; line-height:1.4;
+  padding:.15rem 0 .15rem .6rem; border-left:2px solid transparent}
+.side a:hover{color:var(--fg)}
+.side a.on{color:var(--signal); border-left-color:var(--signal)}
+.doc{padding:2rem 0 1rem; max-width:52rem; min-width:0}
+.doc h1{font-size:clamp(1.6rem,4vw,2.15rem); line-height:1.15; letter-spacing:-.015em; margin:0 0 1rem}
+.doc h2{font-size:1.3rem; letter-spacing:-.01em; margin:2.75rem 0 .75rem;
+  padding-top:1.25rem; border-top:1px solid var(--rule-soft)}
+.doc h3{font-size:1.05rem; margin:2rem 0 .5rem}
+.doc h4{font-size:.95rem; margin:1.5rem 0 .4rem; color:var(--dim)}
+.doc h2 a,.doc h3 a,.doc h4 a{text-decoration:none}
+.doc p,.doc li{max-width:44rem}
+.doc p{margin:0 0 1rem}
+.doc .lede{color:var(--dim); font-size:1.02rem}
+.doc ul,.doc ol{margin:0 0 1rem; padding-left:1.35rem}
+.doc li{margin:0 0 .45rem}
+.doc li>ul,.doc li>ol{margin-top:.45rem}
+.doc blockquote{margin:0 0 1rem; padding:.1rem 0 .1rem 1rem; border-left:2px solid var(--rule);
+  color:var(--dim)}
+.doc hr{border:0; border-top:1px solid var(--rule-soft); margin:2.5rem 0}
+.doc strong{font-weight:600}
+.doc img{max-width:100%}
+code{font-family:var(--mono); font-size:.875em}
+:not(pre)>code{background:var(--cell); border:1px solid var(--rule-soft); border-radius:3px;
+  padding:.08em .32em; word-break:break-word}
+pre{background:var(--cell); border:1px solid var(--rule-soft); border-radius:4px;
+  padding:.9rem 1rem; overflow-x:auto; margin:0 0 1.25rem; line-height:1.55}
+pre code{background:none; border:0; padding:0; font-size:12.5px}
+.scroll{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 0 1.25rem}
+table{border-collapse:collapse; width:100%; font-size:13px}
+.doc table{display:block; overflow-x:auto; margin:0 0 1.25rem}
+th,td{text-align:left; vertical-align:top; padding:.5rem .75rem .5rem 0;
+  border-bottom:1px solid var(--rule-soft)}
+th{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--faint); font-weight:500; white-space:nowrap}
+tbody tr:nth-child(odd){background:var(--cell)}
+td.m{white-space:nowrap; color:var(--signal); font-family:var(--mono); font-size:12.5px}
+td.dim{color:var(--dim)}
+section{scroll-margin-top:1rem}
+section h2{font-size:1.3rem; margin:2.75rem 0 .35rem; padding-top:1.25rem;
+  border-top:1px solid var(--rule-soft); letter-spacing:-.01em}
+.note{color:var(--dim); font-size:13.5px; max-width:52rem; margin:0 0 1.25rem}
+h3.sub{font-size:.95rem; margin:1.75rem 0 .5rem; font-weight:600}
+ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
+.cmd{padding:1rem 0; border-bottom:1px solid var(--rule-soft)}
+.cmd h3{font-family:var(--mono); font-size:13px; margin:0 0 .2rem; color:var(--signal); font-weight:500}
+.cmd p{margin:0; color:var(--dim); font-size:13.5px; max-width:44rem}
+.cmd table{margin-top:.6rem}
+</style>
+</head>
+<body><div class="wrap">
+<header class="top">
+  <a class="brand" href="https://assaio.dev/">assaio</a>
+  <nav class="topnav">
+    <a href="https://assaio.dev/">Overview</a>
+    <a href="https://assaio.dev/docs">Docs</a>
+    <a href="https://assaio.dev/docs/reference">Reference</a>
+    <a href="https://github.com/assaio/assaio">GitHub</a>
+    <a href="https://github.com/assaio/assaio/releases">Releases</a>
+  </nav>
+</header>
+<div class="layout"><aside class="side"><nav><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a class="on" href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="automating-assaio--hooks-scheduled-sync-and-survival">Automating assaio — hooks, scheduled sync, and survival</h1>
+<p>This is the operating recipe for keeping an organization's AI-usage picture fresh without a
+daemon: refresh the local store, push it to a self-hosted team server, and run the
+directional <code>survival</code> outcome check on a schedule. Everything here is opt-in, and the only
+network step is <code>sync</code> (pseudonymized by default). A managed cloud is roadmap; today the
+&quot;company server&quot; is one you run yourself with <code>serve</code> (see the <a href="https://github.com/assaio/assaio/blob/main/README.md">team server</a>).</p>
+<h2 id="the-pieces">The pieces</h2>
+<ul>
+<li><strong><code>backfill</code></strong> — re-imports local session logs into the store. Idempotent (deterministic
+dedupe keys), so running it repeatedly never double-counts, and incremental since v0.4:
+an input already parsed unchanged is skipped, so a repeat run costs a fraction of a
+second rather than a minute. Safe — and now cheap — to run often.</li>
+<li><strong><code>statusline</code></strong> — one ambient line for a status bar. It only reads the store, so it is
+as fresh as your last <code>backfill</code>; that is why the line always ends with the data's age.</li>
+<li><strong><code>sync</code></strong> — pushes local usage to a team server over one bearer-token HTTPS call,
+<strong>pseudonymized by default</strong> (<code>--member</code> is an explicit opt-in to a real name). The only
+network path; nothing else leaves the machine.</li>
+<li><strong><code>survival</code></strong> — the directional, local outcome check: how much of a repo's window
+survives in <code>HEAD</code>, beside the AI lines the store recorded. It shells out to <code>git blame</code>,
+so it is heavier than the others — run it periodically (e.g. weekly), not per commit.
+Merge commits are reported apart from the rate: git publishes no line counts for a merge,
+so a hand-resolved conflict is counted in neither the added nor the surviving figure. On a
+merge-heavy repository expect that line to be large, and read the rate as covering the
+ordinary commits only.</li>
+</ul>
+<h2 id="option-a--scheduled-refresh--push-recommended">Option A — scheduled refresh + push (recommended)</h2>
+<p>A small timer keeps the store fresh and pushes it to the company server. This is more
+robust than a git hook: it runs whether or not you committed, and never blocks anything.</p>
+<p>A wrapper script the timer runs — <code>~/.local/bin/assaio-refresh</code>:</p>
+<pre><code class="language-sh">#!/bin/sh
+set -eu
+assaio-agent backfill &gt;/dev/null
+assaio-agent sync --server &quot;https://assaio.example.com&quot; --token &quot;$ASSAIO_SYNC_TOKEN&quot;
+</code></pre>
+<p>Keep the token out of the script — read it from the environment (<code>ASSAIO_SYNC_TOKEN</code>) or a
+secret manager.</p>
+<p><strong>launchd (macOS)</strong> — <code>~/Library/LaunchAgents/com.assaio.refresh.plist</code>, every 30 minutes:</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;plist version=&quot;1.0&quot;&gt;&lt;dict&gt;
+  &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;com.assaio.refresh&lt;/string&gt;
+  &lt;key&gt;ProgramArguments&lt;/key&gt;&lt;array&gt;&lt;string&gt;/Users/you/.local/bin/assaio-refresh&lt;/string&gt;&lt;/array&gt;
+  &lt;key&gt;StartInterval&lt;/key&gt;&lt;integer&gt;1800&lt;/integer&gt;
+  &lt;key&gt;EnvironmentVariables&lt;/key&gt;&lt;dict&gt;&lt;key&gt;ASSAIO_SYNC_TOKEN&lt;/key&gt;&lt;string&gt;…&lt;/string&gt;&lt;/dict&gt;
+&lt;/dict&gt;&lt;/plist&gt;
+</code></pre>
+<p><code>launchctl load ~/Library/LaunchAgents/com.assaio.refresh.plist</code>.</p>
+<p><strong>cron (Linux)</strong> — every 30 minutes:</p>
+<pre><code class="language-cron">*/30 * * * * ASSAIO_SYNC_TOKEN=… /home/you/.local/bin/assaio-refresh &gt;/dev/null 2&gt;&amp;1
+</code></pre>
+<h2 id="option-b--a-git-post-commit-hook">Option B — a git post-commit hook</h2>
+<p>If you'd rather refresh right after each commit, do it <strong>in the background</strong> so the commit
+never waits on a full backfill. <code>.git/hooks/post-commit</code> (make it executable):</p>
+<pre><code class="language-sh">#!/bin/sh
+# Refresh assaio in the background; never block the commit.
+( assaio-agent backfill &gt;/dev/null 2&gt;&amp;1 \
+  &amp;&amp; assaio-agent sync --server &quot;https://assaio.example.com&quot; --token &quot;$ASSAIO_SYNC_TOKEN&quot; ) &amp;
+</code></pre>
+<p>To install it for every repo you clone, point git at a hooks template once:
+<code>git config --global init.templateDir ~/.git-template</code> and drop the hook under
+<code>~/.git-template/hooks/</code>.</p>
+<h2 id="option-c--claude-code-session-hooks-for-statusline">Option C — Claude Code session hooks (for <code>statusline</code>)</h2>
+<p>If you want the status line to track the day as you work, refresh at the two points where
+a transcript has settled. In <code>~/.claude/settings.json</code>:</p>
+<pre><code class="language-json">{
+  &quot;statusLine&quot;: { &quot;type&quot;: &quot;command&quot;, &quot;command&quot;: &quot;assaio-agent statusline&quot; },
+  &quot;hooks&quot;: {
+    &quot;SessionEnd&quot;: [{ &quot;hooks&quot;: [{ &quot;type&quot;: &quot;command&quot;, &quot;command&quot;: &quot;assaio-agent backfill&quot; }] }],
+    &quot;PreCompact&quot;: [{ &quot;hooks&quot;: [{ &quot;type&quot;: &quot;command&quot;, &quot;command&quot;: &quot;assaio-agent backfill&quot; }] }]
+  }
+}
+</code></pre>
+<p><strong>A per-turn (<code>Stop</code>) hook is safe since v0.4</strong>, and it is the closest thing to live data
+assaio has. It used to be the wrong recommendation for a real reason: Claude Code attributes
+a turn's failed tool calls from a <em>later</em> line in the transcript, so ingesting at the end of
+a turn wrote a row before that line existed, with zero errors recorded — and nothing ever
+corrected it, so <code>friction</code> under-reported from then on. v0.4 made a re-read restate those
+columns upward (<code>B68</code>), which removed the objection.</p>
+<p>Since v0.14 a re-read restates an activity column to whatever the current parse says, rather
+than to the larger of the two. That is still safe for a session read mid-write, because each
+attribution rule is monotone in the prefix it read — a longer transcript never yields fewer
+edits or less rework for a turn already emitted, since later lines attach to later turns. What
+it adds is the other direction: when a <em>build</em> corrects a rule, the correction reaches rows
+already stored instead of being pinned at the old, higher figure forever. Token counts still
+take the maximum: those are the vendor's own numbers, not a rule assaio wrote.</p>
+<pre><code class="language-json">&quot;Stop&quot;: [{ &quot;hooks&quot;: [{ &quot;type&quot;: &quot;command&quot;, &quot;command&quot;: &quot;assaio-agent backfill&quot; }] }]
+</code></pre>
+<p>What it costs, measured on a 4.5 GB / 5710-transcript history:</p>
+<table>
+<thead>
+<tr>
+<th>The hook fires and…</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>nothing changed since the last run</td>
+<td>0.07 s</td>
+</tr>
+<tr>
+<td>one typical transcript (112 KB) was appended to</td>
+<td>0.17 s</td>
+</tr>
+<tr>
+<td>the largest transcript on the machine (89 MB) was appended to</td>
+<td>0.99 s</td>
+</tr>
+</tbody>
+</table>
+<p>That is per turn, on the largest local history we have measured; a fresh install is faster.
+The trade is latency against freshness, and it is yours to make — <code>SessionEnd</code> and
+<code>PreCompact</code> alone keep the numbers just as honest, at the cost of a status line that lags
+inside a long session, which is exactly why it always shows its age.</p>
+<h2 id="a-weekly-digest-delivered-by-you">A weekly digest, delivered by you</h2>
+<p><code>digest</code> is the surface built for a scheduler: it writes markdown about what <strong>moved</strong> since
+the last digest, and nothing else. Delivery is deliberately not assaio's job — pipe it wherever
+your team already reads things.</p>
+<pre><code class="language-sh">#!/bin/sh
+# ~/.local/bin/assaio-digest — one week, wherever you read things.
+assaio-agent digest --weekly &gt; &quot;$HOME/assaio-week.md&quot;
+# …then pick one:
+#   mail -s &quot;AI usage this week&quot; you@example.com &lt; &quot;$HOME/assaio-week.md&quot;
+#   curl -sS -X POST -H 'Content-type: application/json' \
+#     --data &quot;$(jq -Rs '{text: .}' &lt; &quot;$HOME/assaio-week.md&quot;)&quot; &quot;$SLACK_WEBHOOK_URL&quot;
+</code></pre>
+<p>Run it on the cadence the window describes — a <code>7d</code> digest every 7 days:</p>
+<pre><code class="language-cron">0 9 * * 1 /home/you/.local/bin/assaio-digest
+</code></pre>
+<p>Two things are worth knowing before you wire it up. <strong>The first run has nothing to compare
+against</strong> and says so rather than reporting every figure as new; the comparison starts with the
+second. And <strong>the digest states when the comparison itself is weak</strong> instead of reporting
+through it — windows that overlap because it ran sooner than the window is long, windows of
+different lengths, and the one a single-window surface cannot have: a parser that changed
+between the two runs, where a mover may be a correction reaching history rather than a change in
+how the tools were used. Use <code>--dry-run</code> to print a digest without recording it as the next
+run's basis.</p>
+<p>Each run stores a small snapshot — totals, per-model and per-project weights, and each
+validator's verdict. Never session content, and bounded to the newest 12 by the same
+transaction that writes it, so it does not grow with time.</p>
+<h2 id="suggested-labels-once-instead-of-per-session">Suggested labels, once instead of per session</h2>
+<p><code>mark --suggest</code> reads what your sessions already recorded — branch, skill, sub-agent,
+entrypoint — and proposes a label for each, showing the evidence. Nothing is written until you
+run <code>mark --accept-suggested</code>, and a label made by hand is never replaced.</p>
+<pre><code class="language-sh">assaio-agent mark --suggest --since 30d          # look
+assaio-agent mark --accept-suggested --since 30d # then write
+</code></pre>
+<p>The built-in rules read branch conventions only (<code>feat/</code>, <code>fix/</code>, <code>test/</code>, <code>refactor/</code>,
+<code>docs/</code>, <code>spike/</code>, <code>review/</code> and their common spellings). If your team spells it differently,
+teach it rather than waiting for a release — <code>labels.rules</code> in the config takes a source, an
+RE2 pattern and the axis value a match implies, and <code>labels.defaults: false</code> drops the built-in
+set if one of them means something else in your repository. A repository with no convention
+derives nothing, which is the intended answer rather than a missing one.</p>
+<p>This is deliberately not automated into a hook: a derived label is a suggestion, and writing
+one without anybody looking is how a vocabulary stops meaning anything.</p>
+<h2 id="survival-on-a-schedule">Survival on a schedule</h2>
+<p><code>survival</code> is the outcome signal — run it per repo, weekly, and log or publish the result.
+Because it blames the window's touched files, give it its own (less frequent) timer:</p>
+<pre><code class="language-sh">#!/bin/sh
+# ~/.local/bin/assaio-survival-report — one repo, appended to a log.
+cd &quot;$1&quot; || exit 1
+assaio-agent survival --since 90d &gt;&gt; &quot;$HOME/assaio-survival.log&quot;
+</code></pre>
+<p>A weekly cron entry per repo:</p>
+<pre><code class="language-cron">0 8 * * 1 /home/you/.local/bin/assaio-survival-report /home/you/src/acme-web
+</code></pre>
+<p>Read it as a trend over weeks: a survival rate that stays high as a repo ages is the honest,
+local answer to &quot;is the AI-written code sticking?&quot; — directional, never a per-line
+attribution (assaio counts lines, it does not store code).</p>
+<p>Beside the rate, each run prints what the window's commits changed by <strong>category</strong> —
+test / source / docs / config / generated / other — and how many of them git itself labelled a
+revert. Those come from the commit observations the run collects
+(<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0009-local-git-evidence-collector.md">ADR 0009</a>), and are the same numbers the evidence
+graph will build on. The categories are a naming heuristic, and no path, branch name or commit
+message ever leaves the repository.</p>
+<h2 id="the-company-server">The company server</h2>
+<p>Run one <code>serve</code> instance on trusted infrastructure and point every agent's <code>sync</code> at it:</p>
+<pre><code class="language-sh">assaio-agent serve --addr :8787 --token &quot;$ASSAIO_SERVER_TOKEN&quot;   # behind a TLS reverse proxy
+</code></pre>
+<p>The server collects pushed usage and serves the aggregated, always-anonymized team
+dashboard at <code>/</code>. It is a deliberate MVP (one shared token, no TLS of its own — run it
+behind a reverse proxy on a trusted network); see the server package doc and <code>ROADMAP.md</code>
+for the hardening path (per-member auth, retention, resumable sync).</p>
+<h2 id="what-is-and-isnt-automated-to-the-server-today">What is and isn't automated to the server today</h2>
+<ul>
+<li><strong>Usage</strong> (tokens, cost, activity) syncs to the server and aggregates into the team
+dashboard. This is the live picture.</li>
+<li><strong>Survival</strong> runs locally and prints its result; it is <strong>not</strong> pushed to the server yet.
+Server-side survival — correlating synced usage against git and issue trackers across the
+whole team — is the roadmap's &quot;Outcome &amp; quality&quot; stage, and the future managed cloud.</li>
+</ul>
+<pre><code></code></pre>
+</main>
+</div>
+<footer>
+<p>Generated from the repository: every page here is rendered from the Markdown it is written in,
+or from the binary's own registries, and a check fails the build when the two disagree. This page
+names no release — which version is current is stated once, on the
+<a href="https://github.com/assaio/assaio/releases">releases page</a>, where it cannot fall behind.
+It loads nothing: no fonts, no analytics, no third-party requests.</p>
+</footer>
+</div><script>
+try{var t=localStorage.getItem('assaio-theme'); if(t) document.documentElement.setAttribute('data-theme',t);}catch(e){}
+</script></body></html>

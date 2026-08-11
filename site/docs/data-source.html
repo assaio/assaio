@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add a data source — assaio</title>
+<meta name="description" content="A data source is one Go package under internal/parser/&lt;tool&gt;/.">
+<link rel="canonical" href="https://assaio.dev/docs/data-source">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://assaio.dev/docs/data-source">
+<meta property="og:title" content="Add a data source — assaio">
+<meta property="og:description" content="A data source is one Go package under internal/parser/&lt;tool&gt;/.">
+<meta property="og:image" content="https://assaio.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="assaio — measure whether AI coding spend is delivering">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://assaio.dev/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233E8B79'/%3E%3Cpath d='M9 22 16 10l7 12' stroke='%23EFEAE1' stroke-width='2.4' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>:root{
+  --ink:#14120F; --paper:#EFEAE1;
+  --teal:#3E8B79; --teal-lift:#4F9E8B;
+  --bg:var(--paper); --fg:#1A1713; --dim:#6B6459; --faint:#8D857A;
+  --rule:rgba(20,18,15,.14); --rule-soft:rgba(20,18,15,.07);
+  --cell:rgba(20,18,15,.025); --signal:var(--teal);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --gut:clamp(1.25rem,4vw,2.5rem);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
+    --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
+    --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
+  --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
+  --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans);
+  font-size:15.5px; line-height:1.65; -webkit-font-smoothing:antialiased}
+a{color:var(--signal)}
+.wrap{max-width:84rem; margin:0 auto; padding:0 var(--gut)}
+.top{display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap;
+  padding:1.15rem 0; border-bottom:1px solid var(--rule)}
+.brand{font:600 1rem/1 var(--mono); letter-spacing:-.02em; text-decoration:none; color:var(--fg)}
+.topnav{display:flex; gap:1.1rem; flex-wrap:wrap; font-family:var(--mono); font-size:12px}
+.topnav a{text-decoration:none}
+footer{padding:2.5rem 0 4rem; margin-top:3rem; border-top:1px solid var(--rule-soft);
+  color:var(--faint); font-size:13px}
+footer p{max-width:56rem; margin:0}
+.layout{display:grid; grid-template-columns:15rem minmax(0,1fr); gap:3rem; align-items:start}
+@media (max-width:60rem){.layout{grid-template-columns:minmax(0,1fr); gap:1.5rem}
+  .side{position:static; border-bottom:1px solid var(--rule-soft); padding-bottom:1rem}}
+.side{position:sticky; top:0; padding:2rem 0; max-height:100vh; overflow-y:auto}
+.sidehead{margin:1.4rem 0 .45rem; font:500 .625rem/1 var(--mono); letter-spacing:.14em;
+  text-transform:uppercase; color:var(--faint)}
+.sidehead:first-child{margin-top:0}
+.side ul{list-style:none; margin:0; padding:0}
+.side li{margin:0 0 .3rem}
+.side a{display:block; text-decoration:none; color:var(--dim); font-size:13.5px; line-height:1.4;
+  padding:.15rem 0 .15rem .6rem; border-left:2px solid transparent}
+.side a:hover{color:var(--fg)}
+.side a.on{color:var(--signal); border-left-color:var(--signal)}
+.doc{padding:2rem 0 1rem; max-width:52rem; min-width:0}
+.doc h1{font-size:clamp(1.6rem,4vw,2.15rem); line-height:1.15; letter-spacing:-.015em; margin:0 0 1rem}
+.doc h2{font-size:1.3rem; letter-spacing:-.01em; margin:2.75rem 0 .75rem;
+  padding-top:1.25rem; border-top:1px solid var(--rule-soft)}
+.doc h3{font-size:1.05rem; margin:2rem 0 .5rem}
+.doc h4{font-size:.95rem; margin:1.5rem 0 .4rem; color:var(--dim)}
+.doc h2 a,.doc h3 a,.doc h4 a{text-decoration:none}
+.doc p,.doc li{max-width:44rem}
+.doc p{margin:0 0 1rem}
+.doc .lede{color:var(--dim); font-size:1.02rem}
+.doc ul,.doc ol{margin:0 0 1rem; padding-left:1.35rem}
+.doc li{margin:0 0 .45rem}
+.doc li>ul,.doc li>ol{margin-top:.45rem}
+.doc blockquote{margin:0 0 1rem; padding:.1rem 0 .1rem 1rem; border-left:2px solid var(--rule);
+  color:var(--dim)}
+.doc hr{border:0; border-top:1px solid var(--rule-soft); margin:2.5rem 0}
+.doc strong{font-weight:600}
+.doc img{max-width:100%}
+code{font-family:var(--mono); font-size:.875em}
+:not(pre)>code{background:var(--cell); border:1px solid var(--rule-soft); border-radius:3px;
+  padding:.08em .32em; word-break:break-word}
+pre{background:var(--cell); border:1px solid var(--rule-soft); border-radius:4px;
+  padding:.9rem 1rem; overflow-x:auto; margin:0 0 1.25rem; line-height:1.55}
+pre code{background:none; border:0; padding:0; font-size:12.5px}
+.scroll{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 0 1.25rem}
+table{border-collapse:collapse; width:100%; font-size:13px}
+.doc table{display:block; overflow-x:auto; margin:0 0 1.25rem}
+th,td{text-align:left; vertical-align:top; padding:.5rem .75rem .5rem 0;
+  border-bottom:1px solid var(--rule-soft)}
+th{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--faint); font-weight:500; white-space:nowrap}
+tbody tr:nth-child(odd){background:var(--cell)}
+td.m{white-space:nowrap; color:var(--signal); font-family:var(--mono); font-size:12.5px}
+td.dim{color:var(--dim)}
+section{scroll-margin-top:1rem}
+section h2{font-size:1.3rem; margin:2.75rem 0 .35rem; padding-top:1.25rem;
+  border-top:1px solid var(--rule-soft); letter-spacing:-.01em}
+.note{color:var(--dim); font-size:13.5px; max-width:52rem; margin:0 0 1.25rem}
+h3.sub{font-size:.95rem; margin:1.75rem 0 .5rem; font-weight:600}
+ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
+.cmd{padding:1rem 0; border-bottom:1px solid var(--rule-soft)}
+.cmd h3{font-family:var(--mono); font-size:13px; margin:0 0 .2rem; color:var(--signal); font-weight:500}
+.cmd p{margin:0; color:var(--dim); font-size:13.5px; max-width:44rem}
+.cmd table{margin-top:.6rem}
+</style>
+</head>
+<body><div class="wrap">
+<header class="top">
+  <a class="brand" href="https://assaio.dev/">assaio</a>
+  <nav class="topnav">
+    <a href="https://assaio.dev/">Overview</a>
+    <a href="https://assaio.dev/docs">Docs</a>
+    <a href="https://assaio.dev/docs/reference">Reference</a>
+    <a href="https://github.com/assaio/assaio">GitHub</a>
+    <a href="https://github.com/assaio/assaio/releases">Releases</a>
+  </nav>
+</header>
+<div class="layout"><aside class="side"><nav><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a class="on" href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="add-a-data-source">Add a data source</h1>
+<p><em>Part of <a href="https://assaio.dev/docs">Extending assaio</a>. No Go, no PR: <a href="https://assaio.dev/docs/parser-plugin">write a parser plugin</a> instead.</em></p>
+<p>A data source is one Go package under <code>internal/parser/&lt;tool&gt;/</code>. It turns a tool's
+on-disk session logs into a slice of normalized <code>usage.Record</code> values. That is the
+entire job — pricing, aggregation, storage, and rendering are the core's responsibility,
+not the parser's.</p>
+<p>A parser exposes exactly two functions:</p>
+<pre><code class="language-go">// Discover returns the log files (or task directories) under one root this tool has
+// written. Sources with more than one root (Codex, Cline) are looped by the caller —
+// one Discover call per root, never a []string of roots.
+func Discover(root string) ([]string, error)
+
+// Parse reads one log and returns its normalized usage records, plus the count of
+// lines that failed to unmarshal as JSON.
+func Parse(r io.Reader) ([]usage.Record, int, error)
+</code></pre>
+<p><code>Discover</code> is a filesystem glob rooted at a path the core resolves for you (see
+<a href="https://github.com/assaio/assaio/blob/main/internal/paths/paths.go"><code>internal/paths</code></a>). Keep the glob narrow — <code>~/.gemini</code>, for
+example, is shared with other tools, so the Gemini discoverer only matches
+<code>tmp/*/chats/session-*.jsonl</code>. <code>Parse</code> takes an <code>io.Reader</code> (not a path) so it is trivial
+to test against a fixture. A source whose unit of work is a directory rather than a single
+file — Cline reads <code>ui_messages.json</code> alongside <code>task_metadata.json</code> — may expose a
+<code>ParseDir(dir string) ([]usage.Record, int, error)</code> helper instead, but the file-oriented
+<code>Parse(io.Reader)</code> shape is the default and the one to reach for first.</p>
+<p><strong>While you work on a parser, run <code>assaio-agent backfill --full</code>.</strong> Ingest skips inputs it
+has already parsed unchanged, and the stored state is keyed on the build's identity — which
+stays constant for a local build, precisely so a rebuild does not force a re-parse of every
+file. A released binary invalidates the state automatically; your development build does
+not, so <code>--full</code> is how you see a parser change take effect.</p>
+<p>Where <code>Discover</code>'s root itself comes from — the built-in default, or a team's own
+override — is a separate, non-code concern; see <a href="https://assaio.dev/docs/parser-plugin#custom-log-source-paths">Custom log-source
+paths</a>.</p>
+<h3 id="declare-what-your-source-can-answer">Declare what your source can answer</h3>
+<p>A parser also adds one row to the depth matrix in
+<a href="https://github.com/assaio/assaio/blob/main/internal/parser/depth.go"><code>internal/parser/depth.go</code></a>, and the part that matters most is
+<code>Answers</code>: the ids of the signals your source can actually produce (<code>assaio-agent signals list</code> prints them all). Do not reach for the nearest tier and move on — the tier's three
+axes are a summary, and <code>Activity: true</code> says nothing about <em>which</em> activity. Copilot CLI
+records changed lines and no edit count, no tool calls, no turns and no rework, so it lists
+two activity signals and not the other four; declaring the axis alone made <code>signals coverage</code>
+report sixteen of eighteen signals as fully supported when the truth was ten.</p>
+<p>What your source writes but you choose <em>not</em> to read belongs in the audit below — <a href="https://assaio.dev/docs/source-fields">What each
+source's log carries</a> — with the reason,
+so the next reader can tell a deliberate omission from an oversight.</p>
+<p>The rule is one question per signal: <strong>would a figure computed from my records be right, or
+merely non-empty?</strong> If the log does not carry it, leave it out — an absent signal is reported
+as &quot;this source cannot answer it&quot;, which is a useful fact, while a claimed one becomes a
+number someone trusts. That applies inside the token group too: <code>ai.tokens.reasoning</code> is
+declared per source rather than inherited, because Claude Code and Cline never surface a
+thinking count and claiming it for them reported full support for a figure their records can
+only leave at zero. A test asserts the ids you list are real and that they do not contradict
+the tier axes (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0008-signal-catalog.md">ADR 0008</a>).</p>
+<p><strong>A metric reads this row before it reads your records.</strong> A validator that reports a
+per-session figure — the session mix, context health, how long sessions run, the rejection
+rate — first asks <code>parser.Answers(tool, id)</code> and keeps only the sessions your source can
+answer for, because a field you never write is not a zero: it is a silence, and averaging it
+in reports a fact about someone's work that came from your parser's gap. Leaving a signal out
+therefore <em>removes</em> your sessions from that figure rather than dragging it down. Spell the id
+with the <code>parser.Signal*</code> constant, never as a literal — a typo answers false for every tool
+and empties a metric instead of failing a build.</p>
+<p>The row does more than describe your source. <code>parser.Tools()</code> and <code>parser.Answers()</code> are how
+everything downstream asks what exists and what it can do — sync validation, <code>clear --tool</code>,
+the confidence envelope on every verdict, and every caveat that used to spell out tool names.
+Wiring your parser into <code>internal/ingest</code> and <code>doctor</code>'s scan is still a separate step, and
+two tests bind the three together: the set ingest reads, the set doctor scans, and the set the
+matrix publishes must be identical. A parser that ships without its row is not merely
+undocumented — its records get rejected by the team server and its data cannot be deleted per
+source, which is exactly what happened to Copilot CLI between v0.6 and v0.8.</p>
+<h3 id="corrupt-line-policy-skip-and-count">Corrupt-line policy: skip and count</h3>
+<p>Session logs are live, append-only files a tool can be writing to while <code>assaio</code> reads
+them — a truncated final line or one bad byte is expected, not exceptional. <code>Parse</code>
+therefore never aborts a file over one malformed line: a line that fails <code>json.Unmarshal</code>
+is counted in the returned <code>skipped</code> int and parsing continues, so the records on either
+side of it are never lost to one corrupt entry. A log line that unmarshals fine but
+carries no usage is simply <em>filtered</em>, not counted as skipped — only unmarshal failures
+count. The scanner itself can still fail (e.g. <code>bufio.ErrTooLong</code> past <code>parser.MaxLineBytes</code>);
+that is a structural problem with the whole file, not one line, so it is returned as an
+error, wrapped with context. <code>internal/ingest.Run</code> mirrors this at the file level: a file
+that cannot be opened or parsed at all is counted as <code>Failed</code> and the run continues with
+the remaining files, so one corrupt log never blocks a <code>backfill</code> of the rest.</p>
+<h2 id="the-usagerecord-contract">The <code>usage.Record</code> contract</h2>
+<p>Every record you emit is one normalized usage event. The struct lives in
+<a href="https://github.com/assaio/assaio/blob/main/internal/usage/record.go"><code>internal/usage/record.go</code></a>; fill in what the log gives you
+and leave the rest at its zero value.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Meaning</th>
+<th>Rules</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Tool</code></td>
+<td><code>string</code></td>
+<td>Stable identifier for the source, e.g. <code>&quot;claude-code&quot;</code>.</td>
+<td>Constant per package. Becomes the <code>tool</code> column and pairs with <code>DedupeKey</code> for uniqueness.</td>
+</tr>
+<tr>
+<td><code>SessionID</code></td>
+<td><code>string</code></td>
+<td>The tool's own session/conversation ID.</td>
+<td>Pass through verbatim; do not synthesize.</td>
+</tr>
+<tr>
+<td><code>Timestamp</code></td>
+<td><code>time.Time</code></td>
+<td>When the usage occurred.</td>
+<td>Stored as UTC RFC3339. Parse the log's timestamp; do not use &quot;now&quot;.</td>
+</tr>
+<tr>
+<td><code>Model</code></td>
+<td><code>string</code></td>
+<td>Model name as the tool records it.</td>
+<td>Pass through verbatim — normalization to the price table happens in the core.</td>
+</tr>
+<tr>
+<td><code>InputTokens</code></td>
+<td><code>int64</code></td>
+<td>Non-cached input tokens.</td>
+<td>If the log's input count <strong>includes</strong> cached tokens (Codex, Gemini do this), subtract them so input and cache-read never double-count.</td>
+</tr>
+<tr>
+<td><code>OutputTokens</code></td>
+<td><code>int64</code></td>
+<td>Generated output tokens.</td>
+<td>Fold tool-use tokens here only if the vendor bills them as output (Gemini); document the choice in a one-line comment and a <code>doctor</code> caveat.</td>
+</tr>
+<tr>
+<td><code>CacheReadTokens</code></td>
+<td><code>int64</code></td>
+<td>Tokens served from prompt cache.</td>
+<td>Feeds the <code>Cache%</code> column and cache-read pricing.</td>
+</tr>
+<tr>
+<td><code>CacheWriteTokens</code></td>
+<td><code>int64</code></td>
+<td>Tokens written to prompt cache.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ReasoningTokens</code></td>
+<td><code>int64</code></td>
+<td>Reasoning/thinking tokens, when reported separately.</td>
+<td>Recorded for transparency; whether they are billed separately is model-dependent.</td>
+</tr>
+<tr>
+<td><code>DedupeKey</code></td>
+<td><code>string</code></td>
+<td>Stable per-record identity within a <code>Tool</code>.</td>
+<td><strong>Must be deterministic</strong> — see below.</td>
+</tr>
+<tr>
+<td><code>Cwd</code></td>
+<td><code>string</code></td>
+<td>The session's full working-directory path, exactly as the log reports it.</td>
+<td><strong>Never persisted.</strong> <code>internal/ingest</code> reads it only to resolve <code>Project</code>/<code>Subpath</code> (<code>internal/projectid</code>) and then discards it. Leave <code>&quot;&quot;</code> if the log has no cwd — never fabricate one.</td>
+</tr>
+<tr>
+<td><code>Project</code></td>
+<td><code>string</code></td>
+<td>The <strong>basename of the git repository root</strong> containing the session's working directory.</td>
+<td>Set it as a <strong>fallback only</strong> — <code>filepath.Base(cwd)</code> — for when ingest cannot resolve a repository root (e.g. <code>Cwd</code> left <code>&quot;&quot;</code>). Whenever <code>Cwd</code> is set, ingest overwrites this with the resolved repo-root basename, so a monorepo's subdirectories roll up to one project.</td>
+</tr>
+<tr>
+<td><code>Subpath</code></td>
+<td><code>string</code></td>
+<td><code>Cwd</code> relative to the resolved repository root (e.g. <code>apps/mobile</code>), or <code>&quot;&quot;</code> at the root.</td>
+<td>Set by ingest, not by parsers — leave it at its zero value. Always relative; never an absolute path.</td>
+</tr>
+<tr>
+<td><code>GitBranch</code></td>
+<td><code>string</code></td>
+<td>Branch name, when the log carries it.</td>
+<td>Else <code>&quot;&quot;</code>.</td>
+</tr>
+<tr>
+<td><code>Entrypoint</code></td>
+<td><code>string</code></td>
+<td>How the tool was invoked, e.g. <code>&quot;cli&quot;</code>, <code>&quot;sdk-py&quot;</code>.</td>
+<td>Else <code>&quot;&quot;</code>.</td>
+</tr>
+<tr>
+<td><code>Granularity</code></td>
+<td><code>string</code></td>
+<td><code>&quot;turn&quot;</code> for per-request records, <code>&quot;session&quot;</code> for session aggregates.</td>
+<td><strong>Honesty rule</strong> — see below.</td>
+</tr>
+<tr>
+<td><code>LinesAdded</code></td>
+<td><code>int64</code></td>
+<td>AI-added code lines for this record — the primary effect proxy.</td>
+<td>Count only the <code>+</code>-prefixed lines of the edit's diff hunks (or a sub-agent's reported added lines). <strong>The code on the line is never stored — only the count.</strong> <code>0</code> if the source exposes no diff.</td>
+</tr>
+<tr>
+<td><code>LinesRemoved</code></td>
+<td><code>int64</code></td>
+<td>AI-removed code lines.</td>
+<td>The <code>-</code>-prefixed diff lines, same rule. <code>0</code> if unknown.</td>
+</tr>
+<tr>
+<td><code>Edits</code></td>
+<td><code>int64</code></td>
+<td>File-editing tool calls (<code>Edit</code>/<code>Write</code>/<code>NotebookEdit</code>/<code>MultiEdit</code>).</td>
+<td>A subset of <code>ToolCalls</code>. <code>0</code> if the log does not expose tool calls.</td>
+</tr>
+<tr>
+<td><code>ToolCalls</code></td>
+<td><code>int64</code></td>
+<td>All tool-use calls in the turn, edits included.</td>
+<td><code>0</code> if unknown.</td>
+</tr>
+<tr>
+<td><code>Rejected</code></td>
+<td><code>int64</code></td>
+<td>Tool proposals the human declined — a friction signal.</td>
+<td><code>0</code> if unknown.</td>
+</tr>
+<tr>
+<td><code>Compactions</code></td>
+<td><code>int64</code></td>
+<td>Context-compaction events attributed to this record — a context-strain signal.</td>
+<td><code>0</code> if the source exposes no compaction/summarization marker.</td>
+</tr>
+<tr>
+<td><code>ReworkLines</code></td>
+<td><code>int64</code></td>
+<td>AI-added lines later removed by a subsequent edit to the same file, within one transcript — a rework/thrash proxy.</td>
+<td>Computed via the shared <a href="https://github.com/assaio/assaio/blob/main/internal/parser/rework.go"><code>internal/parser.Rework</code></a> helper. The file path used to detect it is read transiently and <strong>never</strong> copied onto the record. <code>0</code> if unknown.</td>
+</tr>
+</tbody>
+</table>
+<p>Records with no token usage should be skipped, not emitted with zeros.</p>
+<h3 id="parsers-stay-hermetic--project-resolution-is-ingests-job">Parsers stay hermetic — project resolution is ingest's job</h3>
+<p>A parser's only filesystem access is the <code>io.Reader</code> <code>Parse</code> was handed. It must never
+open, stat, or walk anything else — in particular, it must not import
+<code>internal/projectid</code> or otherwise try to resolve <code>Cwd</code> to a repository root itself. Emit
+<code>Cwd</code> verbatim from the log and, as a fallback <code>Project</code>, your own best guess (typically
+<code>filepath.Base(cwd)</code>); <code>internal/ingest</code> re-resolves <code>Project</code> (and fills <code>Subpath</code>) for
+every record after <code>Parse</code> returns, by walking the real filesystem via
+<code>internal/projectid</code>. This split keeps parsers trivially testable against a fixture
+reader — no temp directories, no <code>.git</code> scaffolding — and keeps the one place that
+touches the filesystem for identity resolution auditable in one file
+(<a href="https://github.com/assaio/assaio/blob/main/internal/ingest/project.go"><code>internal/ingest/project.go</code></a>). It is also why a
+per-file metric can't be built from stored data: the file path itself never survives
+past this step (see <a href="https://assaio.dev/docs/metric-validator#what-a-validator-reads-input">What a validator reads: Input</a>).</p>
+<h3 id="activity-fields-are-optional-honesty-note">Activity fields are optional (honesty note)</h3>
+<p><code>LinesAdded</code>, <code>LinesRemoved</code>, <code>Edits</code>, <code>ToolCalls</code>, <code>Rejected</code>, <code>Compactions</code>, and
+<code>ReworkLines</code> are session-level activity signals that power the <code>effectiveness</code> report
+(AI output vs. cost) and the <code>analyze</code> validators. A new parser <strong>MAY</strong> populate them
+where its source genuinely exposes edit/diff data, and <strong>MUST</strong> leave them at <code>0</code> where
+it does not — an honest zero, never a guess. When you do count lines, count only the
+<code>+</code>/<code>-</code> diff markers; the content of the line is never stored.</p>
+<p><strong>Today the Claude Code and Codex parsers are the two that populate the full set —
+<code>LinesAdded</code>, <code>LinesRemoved</code>, <code>Edits</code>, <code>ToolCalls</code>, <code>Compactions</code>, and <code>ReworkLines</code></strong>
+(Copilot CLI carries the two line counts per session and none of the rest) (Claude Code from structured edit
+results, sub-agent tool stats, and compaction-boundary lines; Codex from
+<code>patch_apply_end</code> diffs, function/custom tool-call events, and <code>compacted</code> events — both
+share the <a href="https://github.com/assaio/assaio/blob/main/internal/parser/rework.go"><code>internal/parser.Rework</code></a> helper for rework
+detection). <code>Rejected</code> is Claude-Code-only: Codex's rollout logs don't surface tool-use
+denials the way Claude Code's do. Gemini and Cline report token usage but leave every
+activity field at <code>0</code>, so they contribute cost but not line counts — which is exactly what
+the <code>effectiveness</code> view discloses.</p>
+<h3 id="dedupekey-determinism-hard-rule">DedupeKey determinism (hard rule)</h3>
+<p>Inserts are idempotent: the store's uniqueness constraint is <code>(tool, dedupe_key)</code>, so
+<code>backfill</code> is safe to run repeatedly. That guarantee only holds if <strong>re-parsing the same
+file always produces the same keys</strong>. A <code>DedupeKey</code> must therefore be a pure function of
+the log's content, never of wall-clock time, iteration randomness, or map ordering.</p>
+<ul>
+<li>When the log gives you a stable per-record UUID, use it directly — Claude Code keys on
+the message <code>uuid</code>.</li>
+<li>Otherwise, derive a positional key like <code>fmt.Sprintf(&quot;%s:%d&quot;, sessionID, index)</code> where
+<code>index</code> counts emitted records in file order — Codex, Gemini, and Cline do this.</li>
+</ul>
+<p>If two parses of one unchanged file disagree on keys, you will silently double-count on
+the next <code>backfill</code>. The golden test below is your guard against exactly that.</p>
+<h3 id="granularity-honesty-hard-rule">Granularity honesty (hard rule)</h3>
+<p><code>assaio</code> will not let session-level data masquerade as per-turn data. If your source only
+reports totals for a whole session (a daily vendor aggregate, a single end-of-session
+summary), you <strong>must</strong> set <code>Granularity: &quot;session&quot;</code>. Emit <code>&quot;turn&quot;</code> only when each record
+genuinely corresponds to one request/response. When in doubt, choose <code>&quot;session&quot;</code> — an
+honest coarse label beats a precise-looking lie.</p>
+<p>The rule bites inside a source, not only between them: a Claude Code transcript is per-turn
+throughout except for the one record summarizing a completed sub-agent, which totals a whole
+run and is therefore <code>&quot;session&quot;</code>. It was labelled <code>&quot;turn&quot;</code> until v0.10, which let every
+per-turn figure count it as a single very large turn. If one shape in your log aggregates,
+label that shape — the field is per record, not per parser.</p>
+<h2 id="golden-file-testing">Golden-file testing</h2>
+<p>Parsers are tested against captured fixtures under the package's <code>testdata/</code> directory,
+compared to a checked-in <code>.golden</code> snapshot of the parsed records. The convention (see
+<a href="https://github.com/assaio/assaio/blob/main/internal/parser/claude/claude_test.go"><code>internal/parser/claude/claude_test.go</code></a>):</p>
+<ul>
+<li>
+<p>A fixture (<code>testdata/session.jsonl</code>) and its golden output (<code>testdata/session.golden</code>,
+the records marshaled as indented JSON).</p>
+</li>
+<li>
+<p>An <code>-update</code> flag that regenerates the golden file:</p>
+<pre><code class="language-sh">go test ./internal/parser/&lt;tool&gt;/ -run TestParseGolden -update
+</code></pre>
+<p>Run it once you have eyeballed the parse, then commit the <code>.golden</code> file. Review it in
+the diff on every future change — a golden mismatch is how you catch a vendor changing
+their format out from under you.</p>
+</li>
+<li>
+<p><strong>Fixtures must be synthetic.</strong> Never commit a real transcript. Fabricate a minimal log
+that exercises the fields and edge cases you care about (dedupe, model switches mid-
+session, cache tokens, missing cwd). Synthetic fixtures keep prompts and code out of the
+repo and make the test's intent legible.</p>
+</li>
+</ul>
+<p>Add a second, assertion-style test for behavior the golden file cannot make obvious —
+that duplicates collapse, that non-usage lines are filtered, that dimensions land on every
+record.</p>
+<h2 id="fuzzing">Fuzzing</h2>
+<p>Every parser must ship a native Go fuzz test — <code>FuzzParse</code> (Cline, whose unit is a task
+directory, uses <code>FuzzParseTask</code>). It seeds <code>f.Add</code> with the package's <code>testdata/</code> fixture
+plus a few hand-written edge seeds (empty input, <code>{}</code>, a truncated JSON line, int64-max
+token values, invalid UTF-8), and asserts the parser's invariants on every returned
+record: <code>Parse</code> never panics (a non-nil error returns early, which is fine), <code>skipped &gt;= 0</code>,
+no token field is negative, <code>Tool</code> equals the package constant, and <code>DedupeKey</code> is
+non-empty. <code>make fuzz</code> runs each fuzzer for <code>FUZZTIME</code> (default <code>20s</code>); a discovered
+crasher is committed as a corpus file under <code>testdata/fuzz/</code> so it becomes a permanent
+regression seed.</p>
+<h2 id="wire-it-in">Wire it in</h2>
+<p>Two touch points connect a finished parser to the CLI.</p>
+<ol>
+<li>
+<p><strong>Ingest</strong> — <a href="https://github.com/assaio/assaio/blob/main/internal/ingest/ingest.go"><code>internal/ingest/ingest.go</code></a>. Add your
+discovery call and append a <code>source</code> (tool name + discovered files + <code>Parse</code> function)
+to the <code>sources</code> slice. Directory-oriented sources follow the Cline branch instead.
+Add the root resolver to <a href="https://github.com/assaio/assaio/blob/main/internal/paths/paths.go"><code>internal/paths</code></a>. If your
+source populates <code>Cwd</code>, project/subpath resolution happens automatically — every
+<code>source</code> and the Cline branch already run through
+<a href="https://github.com/assaio/assaio/blob/main/internal/ingest/project.go"><code>internal/ingest/project.go</code></a> before <code>Insert</code>;
+nothing more to wire up.</p>
+</li>
+<li>
+<p><strong>Doctor</strong> — <a href="https://github.com/assaio/assaio/blob/main/internal/cli/doctor.go"><code>internal/cli/doctor.go</code></a>. Print a discovery
+line so <code>assaio-agent doctor</code> reports how many files were found, and add a one-line
+caveat for any modeling assumption your parser makes (folded token classes, recomputed
+cost, shared directories). Every honesty compromise the parser makes belongs in
+<code>doctor</code> output.</p>
+</li>
+</ol>
+<h2 id="the-intake-path-open-a-connector-issue-first">The intake path: open a connector issue first</h2>
+<p>Before writing code, open a <strong>Connector request</strong> issue
+(<a href="https://github.com/assaio/assaio/blob/main/.github/ISSUE_TEMPLATE/connector.yml"><code>.github/ISSUE_TEMPLATE/connector.yml</code></a>). It
+captures the tool, which channels its data is available through (local logs, vendor API,
+OTLP, editor/CLI hooks), and — most importantly — a redacted sample of the log format.
+That sample becomes the synthetic fixture, and the discussion settles the token-mapping
+questions (does input include cache? how is reasoning billed?) before they turn into
+wrong numbers. A connector is a well-scoped first contribution; the issue is where it
+starts.</p>
+<hr>
+</main>
+</div>
+<footer>
+<p>Generated from the repository: every page here is rendered from the Markdown it is written in,
+or from the binary's own registries, and a check fails the build when the two disagree. This page
+names no release — which version is current is stated once, on the
+<a href="https://github.com/assaio/assaio/releases">releases page</a>, where it cannot fall behind.
+It loads nothing: no fonts, no analytics, no third-party requests.</p>
+</footer>
+</div><script>
+try{var t=localStorage.getItem('assaio-theme'); if(t) document.documentElement.setAttribute('data-theme',t);}catch(e){}
+</script></body></html>

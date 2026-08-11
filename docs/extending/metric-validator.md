@@ -276,7 +276,7 @@ This is not a claim taken on faith — it was verified end to end while writing 
 document, using a throwaway `weekend-usage` validator (the same metric turned into the
 [worked example](metric-validator-example.md) below), then deleted so the tree stays
 clean. With the validator registered and `assaio-agent` rebuilt (the list is elided here — the
-shipped set is in the [generated reference](https://assaio.dev/reference.html#validators), which
+shipped set is in the [generated reference](https://assaio.dev/docs/reference#validators), which
 cannot fall behind the way a pasted transcript does):
 
 ```console
@@ -374,7 +374,7 @@ constraints](../extending.md#honesty-constraints-for-every-extension).
   ```
 
 - Reuse the shared helpers in `internal/analyze/format.go` rather than re-deriving them:
-  `readFor(ok, favorableLabel)` / `noDataRead` for `Read`, `shareOrDash`/`perActiveDay`
+  `readFor(ok, favorableLabel)` for `Read`, `humanize.PercentOrDash`/`perActiveDay`
   for `—`-safe ratios, `clamp01` for `Purity`, `fracOf` for `Bar.Frac`, `groupLabel` for
   an empty dimension value.
 - Render a number through `internal/humanize` so it reads the same here as in the report

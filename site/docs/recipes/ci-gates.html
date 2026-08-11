@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gating CI on what a window cost — assaio</title>
+<meta name="description" content="check is the only command that exits non-zero on purpose. It fails on a token or">
+<link rel="canonical" href="https://assaio.dev/docs/recipes/ci-gates">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://assaio.dev/docs/recipes/ci-gates">
+<meta property="og:title" content="Gating CI on what a window cost — assaio">
+<meta property="og:description" content="check is the only command that exits non-zero on purpose. It fails on a token or">
+<meta property="og:image" content="https://assaio.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="assaio — measure whether AI coding spend is delivering">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://assaio.dev/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233E8B79'/%3E%3Cpath d='M9 22 16 10l7 12' stroke='%23EFEAE1' stroke-width='2.4' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>:root{
+  --ink:#14120F; --paper:#EFEAE1;
+  --teal:#3E8B79; --teal-lift:#4F9E8B;
+  --bg:var(--paper); --fg:#1A1713; --dim:#6B6459; --faint:#8D857A;
+  --rule:rgba(20,18,15,.14); --rule-soft:rgba(20,18,15,.07);
+  --cell:rgba(20,18,15,.025); --signal:var(--teal);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --gut:clamp(1.25rem,4vw,2.5rem);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
+    --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
+    --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
+  --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
+  --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans);
+  font-size:15.5px; line-height:1.65; -webkit-font-smoothing:antialiased}
+a{color:var(--signal)}
+.wrap{max-width:84rem; margin:0 auto; padding:0 var(--gut)}
+.top{display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap;
+  padding:1.15rem 0; border-bottom:1px solid var(--rule)}
+.brand{font:600 1rem/1 var(--mono); letter-spacing:-.02em; text-decoration:none; color:var(--fg)}
+.topnav{display:flex; gap:1.1rem; flex-wrap:wrap; font-family:var(--mono); font-size:12px}
+.topnav a{text-decoration:none}
+footer{padding:2.5rem 0 4rem; margin-top:3rem; border-top:1px solid var(--rule-soft);
+  color:var(--faint); font-size:13px}
+footer p{max-width:56rem; margin:0}
+.layout{display:grid; grid-template-columns:15rem minmax(0,1fr); gap:3rem; align-items:start}
+@media (max-width:60rem){.layout{grid-template-columns:minmax(0,1fr); gap:1.5rem}
+  .side{position:static; border-bottom:1px solid var(--rule-soft); padding-bottom:1rem}}
+.side{position:sticky; top:0; padding:2rem 0; max-height:100vh; overflow-y:auto}
+.sidehead{margin:1.4rem 0 .45rem; font:500 .625rem/1 var(--mono); letter-spacing:.14em;
+  text-transform:uppercase; color:var(--faint)}
+.sidehead:first-child{margin-top:0}
+.side ul{list-style:none; margin:0; padding:0}
+.side li{margin:0 0 .3rem}
+.side a{display:block; text-decoration:none; color:var(--dim); font-size:13.5px; line-height:1.4;
+  padding:.15rem 0 .15rem .6rem; border-left:2px solid transparent}
+.side a:hover{color:var(--fg)}
+.side a.on{color:var(--signal); border-left-color:var(--signal)}
+.doc{padding:2rem 0 1rem; max-width:52rem; min-width:0}
+.doc h1{font-size:clamp(1.6rem,4vw,2.15rem); line-height:1.15; letter-spacing:-.015em; margin:0 0 1rem}
+.doc h2{font-size:1.3rem; letter-spacing:-.01em; margin:2.75rem 0 .75rem;
+  padding-top:1.25rem; border-top:1px solid var(--rule-soft)}
+.doc h3{font-size:1.05rem; margin:2rem 0 .5rem}
+.doc h4{font-size:.95rem; margin:1.5rem 0 .4rem; color:var(--dim)}
+.doc h2 a,.doc h3 a,.doc h4 a{text-decoration:none}
+.doc p,.doc li{max-width:44rem}
+.doc p{margin:0 0 1rem}
+.doc .lede{color:var(--dim); font-size:1.02rem}
+.doc ul,.doc ol{margin:0 0 1rem; padding-left:1.35rem}
+.doc li{margin:0 0 .45rem}
+.doc li>ul,.doc li>ol{margin-top:.45rem}
+.doc blockquote{margin:0 0 1rem; padding:.1rem 0 .1rem 1rem; border-left:2px solid var(--rule);
+  color:var(--dim)}
+.doc hr{border:0; border-top:1px solid var(--rule-soft); margin:2.5rem 0}
+.doc strong{font-weight:600}
+.doc img{max-width:100%}
+code{font-family:var(--mono); font-size:.875em}
+:not(pre)>code{background:var(--cell); border:1px solid var(--rule-soft); border-radius:3px;
+  padding:.08em .32em; word-break:break-word}
+pre{background:var(--cell); border:1px solid var(--rule-soft); border-radius:4px;
+  padding:.9rem 1rem; overflow-x:auto; margin:0 0 1.25rem; line-height:1.55}
+pre code{background:none; border:0; padding:0; font-size:12.5px}
+.scroll{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 0 1.25rem}
+table{border-collapse:collapse; width:100%; font-size:13px}
+.doc table{display:block; overflow-x:auto; margin:0 0 1.25rem}
+th,td{text-align:left; vertical-align:top; padding:.5rem .75rem .5rem 0;
+  border-bottom:1px solid var(--rule-soft)}
+th{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--faint); font-weight:500; white-space:nowrap}
+tbody tr:nth-child(odd){background:var(--cell)}
+td.m{white-space:nowrap; color:var(--signal); font-family:var(--mono); font-size:12.5px}
+td.dim{color:var(--dim)}
+section{scroll-margin-top:1rem}
+section h2{font-size:1.3rem; margin:2.75rem 0 .35rem; padding-top:1.25rem;
+  border-top:1px solid var(--rule-soft); letter-spacing:-.01em}
+.note{color:var(--dim); font-size:13.5px; max-width:52rem; margin:0 0 1.25rem}
+h3.sub{font-size:.95rem; margin:1.75rem 0 .5rem; font-weight:600}
+ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
+.cmd{padding:1rem 0; border-bottom:1px solid var(--rule-soft)}
+.cmd h3{font-family:var(--mono); font-size:13px; margin:0 0 .2rem; color:var(--signal); font-weight:500}
+.cmd p{margin:0; color:var(--dim); font-size:13.5px; max-width:44rem}
+.cmd table{margin-top:.6rem}
+</style>
+</head>
+<body><div class="wrap">
+<header class="top">
+  <a class="brand" href="https://assaio.dev/">assaio</a>
+  <nav class="topnav">
+    <a href="https://assaio.dev/">Overview</a>
+    <a href="https://assaio.dev/docs">Docs</a>
+    <a href="https://assaio.dev/docs/reference">Reference</a>
+    <a href="https://github.com/assaio/assaio">GitHub</a>
+    <a href="https://github.com/assaio/assaio/releases">Releases</a>
+  </nav>
+</header>
+<div class="layout"><aside class="side"><nav><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a class="on" href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="gating-ci-on-what-a-window-cost">Gating CI on what a window cost</h1>
+<p><em>Part of <a href="https://assaio.dev/docs">Extending assaio</a>. The rules that decide a verdict live in <a href="https://assaio.dev/docs/recipes/rule-plugins">rule plugins</a>.</em></p>
+<p><code>check</code> is the only command that exits non-zero on purpose. It fails on a token or
+API-equivalent <code>$</code> budget, and it fails when a configured <a href="https://assaio.dev/docs/recipes/rule-plugins">rule plugin</a> raises
+an <code>error</code> alert — or cannot be evaluated at all. Everything below is a complete, working
+invocation; every command and flag on this page is checked against the binary's own command
+tree, so a renamed flag breaks the build rather than a reader's pipeline.</p>
+<h2 id="the-one-thing-to-decide-first">The one thing to decide first</h2>
+<p><strong>Tokens or dollars.</strong> <code>--max-tokens</code> is plan-independent: it counts what was spent regardless of
+what anybody pays per token. <code>--max-cost</code> is an API-equivalent estimate, and on a subscription it
+is not your bill — it is what the same usage would have cost at list price.</p>
+<p>A cost gate refuses to pass on a partial figure: a window carrying usage the price table cannot
+price <strong>fails</strong> rather than reporting the priced part as if it were the whole. That is deliberate,
+and it is why a token gate is the better default for a team that has not configured its pricing
+basis yet.</p>
+<pre><code class="language-sh"># Fails when the last 7 days exceeded 50M tokens.
+assaio-agent check --since 7d --max-tokens 50000000
+</code></pre>
+<pre><code class="language-sh"># API-equivalent dollars. Fails on an unpriced model rather than under-reporting.
+assaio-agent check --since 30d --max-cost 1500
+</code></pre>
+<h2 id="as-a-pre-push-hook">As a pre-push hook</h2>
+<p>The cheapest place to notice a runaway week, because it costs nothing until you push.</p>
+<pre><code class="language-sh">#!/usr/bin/env sh
+# .git/hooks/pre-push — warn, never block a push on somebody else's budget.
+if ! assaio-agent check --since 7d --max-tokens 50000000; then
+  echo &quot;assaio: this week is over budget. Pushing anyway; see: assaio-agent analyze --since 7d&quot; &gt;&amp;2
+fi
+exit 0
+</code></pre>
+<p>Blocking a push on a <em>team</em> budget punishes whoever pushes last, which is why the recipe warns.
+Block on a rule plugin instead when the thing you want stopped is a property of the change.</p>
+<h2 id="as-a-github-actions-job">As a GitHub Actions job</h2>
+<p><code>check</code> reads a store, so the job needs one. The honest options are a store synced from a
+<a href="https://assaio.dev/docs/team-server">team server</a>, or a store the job builds from artifacts you already collect —
+not the runner's own logs, which contain no agent sessions.</p>
+<pre><code class="language-yaml">name: ai-budget
+on:
+  schedule: [{cron: '0 7 * * 1'}]     # Monday morning, not per-PR: a budget is a window, not a diff
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install assaio
+        run: |
+          curl -fsSL https://github.com/assaio/assaio/releases/latest/download/assaio-agent_Linux_x86_64.tar.gz \
+            | tar -xz -C /usr/local/bin assaio-agent
+      - name: Fetch the team window
+        env:
+          ASSAIO_SYNC_SERVER: ${{ secrets.ASSAIO_SERVER }}
+          ASSAIO_SYNC_TOKEN: ${{ secrets.ASSAIO_TOKEN }}
+        run: assaio-agent check --since 7d --max-tokens 50000000
+</code></pre>
+<p>Note the schedule rather than a <code>pull_request</code> trigger. A per-PR budget gate reads as a
+per-person one within a week, and this project refuses to build those.</p>
+<h2 id="what-a-non-zero-exit-does-and-does-not-mean">What a non-zero exit does and does not mean</h2>
+<p><code>check</code> exits non-zero for three different reasons and it is worth knowing which you got:</p>
+<table>
+<thead>
+<tr>
+<th>Exit</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>over budget</td>
+<td>the window exceeded the number you set</td>
+</tr>
+<tr>
+<td>an <code>error</code> alert</td>
+<td>a rule plugin judged something and said so</td>
+</tr>
+<tr>
+<td>a rule that could not be evaluated</td>
+<td>the gate fails closed rather than passing on an unanswered question</td>
+</tr>
+</tbody>
+</table>
+<p>The third is the one people patch out and should not: a rule that failed to run has told you
+nothing, and treating nothing as a pass is how a gate quietly stops gating.</p>
+<h2 id="before-you-gate-on-cost-check-the-cost">Before you gate on cost, check the cost</h2>
+<p>A budget on an estimate is only as good as the price table under it. <code>doctor --strict</code> fails when
+too much of <em>your</em> store carries no price at all, which is the condition that makes a <code>--max-cost</code>
+gate misleading rather than wrong.</p>
+<pre><code class="language-sh">assaio-agent doctor --strict
+</code></pre>
+<p>Run it in the same job, before the gate. <code>pricing.max_unpriced_share</code> sets the ceiling; the
+default is 5% and <code>0</code> disables the check.</p>
+</main>
+</div>
+<footer>
+<p>Generated from the repository: every page here is rendered from the Markdown it is written in,
+or from the binary's own registries, and a check fails the build when the two disagree. This page
+names no release — which version is current is stated once, on the
+<a href="https://github.com/assaio/assaio/releases">releases page</a>, where it cannot fall behind.
+It loads nothing: no fonts, no analytics, no third-party requests.</p>
+</footer>
+</div><script>
+try{var t=localStorage.getItem('assaio-theme'); if(t) document.documentElement.setAttribute('data-theme',t);}catch(e){}
+</script></body></html>

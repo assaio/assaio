@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Query your own data — assaio</title>
+<meta name="description" content="Everything assaio collects lives in one SQLite file:">
+<link rel="canonical" href="https://assaio.dev/docs/query-your-data">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://assaio.dev/docs/query-your-data">
+<meta property="og:title" content="Query your own data — assaio">
+<meta property="og:description" content="Everything assaio collects lives in one SQLite file:">
+<meta property="og:image" content="https://assaio.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="assaio — measure whether AI coding spend is delivering">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://assaio.dev/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233E8B79'/%3E%3Cpath d='M9 22 16 10l7 12' stroke='%23EFEAE1' stroke-width='2.4' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>:root{
+  --ink:#14120F; --paper:#EFEAE1;
+  --teal:#3E8B79; --teal-lift:#4F9E8B;
+  --bg:var(--paper); --fg:#1A1713; --dim:#6B6459; --faint:#8D857A;
+  --rule:rgba(20,18,15,.14); --rule-soft:rgba(20,18,15,.07);
+  --cell:rgba(20,18,15,.025); --signal:var(--teal);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --gut:clamp(1.25rem,4vw,2.5rem);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
+    --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
+    --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
+  --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
+  --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans);
+  font-size:15.5px; line-height:1.65; -webkit-font-smoothing:antialiased}
+a{color:var(--signal)}
+.wrap{max-width:84rem; margin:0 auto; padding:0 var(--gut)}
+.top{display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap;
+  padding:1.15rem 0; border-bottom:1px solid var(--rule)}
+.brand{font:600 1rem/1 var(--mono); letter-spacing:-.02em; text-decoration:none; color:var(--fg)}
+.topnav{display:flex; gap:1.1rem; flex-wrap:wrap; font-family:var(--mono); font-size:12px}
+.topnav a{text-decoration:none}
+footer{padding:2.5rem 0 4rem; margin-top:3rem; border-top:1px solid var(--rule-soft);
+  color:var(--faint); font-size:13px}
+footer p{max-width:56rem; margin:0}
+.layout{display:grid; grid-template-columns:15rem minmax(0,1fr); gap:3rem; align-items:start}
+@media (max-width:60rem){.layout{grid-template-columns:minmax(0,1fr); gap:1.5rem}
+  .side{position:static; border-bottom:1px solid var(--rule-soft); padding-bottom:1rem}}
+.side{position:sticky; top:0; padding:2rem 0; max-height:100vh; overflow-y:auto}
+.sidehead{margin:1.4rem 0 .45rem; font:500 .625rem/1 var(--mono); letter-spacing:.14em;
+  text-transform:uppercase; color:var(--faint)}
+.sidehead:first-child{margin-top:0}
+.side ul{list-style:none; margin:0; padding:0}
+.side li{margin:0 0 .3rem}
+.side a{display:block; text-decoration:none; color:var(--dim); font-size:13.5px; line-height:1.4;
+  padding:.15rem 0 .15rem .6rem; border-left:2px solid transparent}
+.side a:hover{color:var(--fg)}
+.side a.on{color:var(--signal); border-left-color:var(--signal)}
+.doc{padding:2rem 0 1rem; max-width:52rem; min-width:0}
+.doc h1{font-size:clamp(1.6rem,4vw,2.15rem); line-height:1.15; letter-spacing:-.015em; margin:0 0 1rem}
+.doc h2{font-size:1.3rem; letter-spacing:-.01em; margin:2.75rem 0 .75rem;
+  padding-top:1.25rem; border-top:1px solid var(--rule-soft)}
+.doc h3{font-size:1.05rem; margin:2rem 0 .5rem}
+.doc h4{font-size:.95rem; margin:1.5rem 0 .4rem; color:var(--dim)}
+.doc h2 a,.doc h3 a,.doc h4 a{text-decoration:none}
+.doc p,.doc li{max-width:44rem}
+.doc p{margin:0 0 1rem}
+.doc .lede{color:var(--dim); font-size:1.02rem}
+.doc ul,.doc ol{margin:0 0 1rem; padding-left:1.35rem}
+.doc li{margin:0 0 .45rem}
+.doc li>ul,.doc li>ol{margin-top:.45rem}
+.doc blockquote{margin:0 0 1rem; padding:.1rem 0 .1rem 1rem; border-left:2px solid var(--rule);
+  color:var(--dim)}
+.doc hr{border:0; border-top:1px solid var(--rule-soft); margin:2.5rem 0}
+.doc strong{font-weight:600}
+.doc img{max-width:100%}
+code{font-family:var(--mono); font-size:.875em}
+:not(pre)>code{background:var(--cell); border:1px solid var(--rule-soft); border-radius:3px;
+  padding:.08em .32em; word-break:break-word}
+pre{background:var(--cell); border:1px solid var(--rule-soft); border-radius:4px;
+  padding:.9rem 1rem; overflow-x:auto; margin:0 0 1.25rem; line-height:1.55}
+pre code{background:none; border:0; padding:0; font-size:12.5px}
+.scroll{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 0 1.25rem}
+table{border-collapse:collapse; width:100%; font-size:13px}
+.doc table{display:block; overflow-x:auto; margin:0 0 1.25rem}
+th,td{text-align:left; vertical-align:top; padding:.5rem .75rem .5rem 0;
+  border-bottom:1px solid var(--rule-soft)}
+th{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--faint); font-weight:500; white-space:nowrap}
+tbody tr:nth-child(odd){background:var(--cell)}
+td.m{white-space:nowrap; color:var(--signal); font-family:var(--mono); font-size:12.5px}
+td.dim{color:var(--dim)}
+section{scroll-margin-top:1rem}
+section h2{font-size:1.3rem; margin:2.75rem 0 .35rem; padding-top:1.25rem;
+  border-top:1px solid var(--rule-soft); letter-spacing:-.01em}
+.note{color:var(--dim); font-size:13.5px; max-width:52rem; margin:0 0 1.25rem}
+h3.sub{font-size:.95rem; margin:1.75rem 0 .5rem; font-weight:600}
+ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
+.cmd{padding:1rem 0; border-bottom:1px solid var(--rule-soft)}
+.cmd h3{font-family:var(--mono); font-size:13px; margin:0 0 .2rem; color:var(--signal); font-weight:500}
+.cmd p{margin:0; color:var(--dim); font-size:13.5px; max-width:44rem}
+.cmd table{margin-top:.6rem}
+</style>
+</head>
+<body><div class="wrap">
+<header class="top">
+  <a class="brand" href="https://assaio.dev/">assaio</a>
+  <nav class="topnav">
+    <a href="https://assaio.dev/">Overview</a>
+    <a href="https://assaio.dev/docs">Docs</a>
+    <a href="https://assaio.dev/docs/reference">Reference</a>
+    <a href="https://github.com/assaio/assaio">GitHub</a>
+    <a href="https://github.com/assaio/assaio/releases">Releases</a>
+  </nav>
+</header>
+<div class="layout"><aside class="side"><nav><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a class="on" href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="query-your-own-data">Query your own data</h1>
+<p><em>Part of <a href="https://assaio.dev/docs">Extending assaio</a>. Every column below is also described in the <a href="https://assaio.dev/docs/reference">generated reference</a>.</em></p>
+<p>Everything <code>assaio</code> collects lives in one SQLite file:</p>
+<pre><code>~/.local/share/assaio/assaio.db
+</code></pre>
+<p>The location honors <code>XDG_DATA_HOME</code>. It is an ordinary SQLite database — point <code>sqlite3</code>,
+DB Browser, or any client at it and query directly. <code>assaio</code> never phones home, so this
+file is the whole of your data.</p>
+<h2 id="schema">Schema</h2>
+<p>One table holds your data, <code>usage_record</code>
+(<a href="https://github.com/assaio/assaio/blob/main/internal/store/migrations/0001_init.sql"><code>internal/store/migrations/0001_init.sql</code></a>):</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td><code>INTEGER PRIMARY KEY</code></td>
+<td>Row id.</td>
+</tr>
+<tr>
+<td><code>tool</code></td>
+<td><code>TEXT</code></td>
+<td>Source, e.g. <code>claude-code</code>, <code>codex</code>, <code>gemini-cli</code>, <code>copilot-cli</code>, <code>cline</code>.</td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td><code>TEXT</code></td>
+<td>The tool's session/conversation ID.</td>
+</tr>
+<tr>
+<td><code>ts</code></td>
+<td><code>TEXT</code></td>
+<td>UTC RFC3339 timestamp. Day is <code>substr(ts,1,10)</code>.</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td><code>TEXT</code></td>
+<td>Model name as recorded by the tool.</td>
+</tr>
+<tr>
+<td><code>input_tokens</code></td>
+<td><code>INTEGER</code></td>
+<td>Non-cached input tokens.</td>
+</tr>
+<tr>
+<td><code>output_tokens</code></td>
+<td><code>INTEGER</code></td>
+<td>Output tokens.</td>
+</tr>
+<tr>
+<td><code>cache_read_tokens</code></td>
+<td><code>INTEGER</code></td>
+<td>Tokens served from cache.</td>
+</tr>
+<tr>
+<td><code>cache_write_tokens</code></td>
+<td><code>INTEGER</code></td>
+<td>Tokens written to cache.</td>
+</tr>
+<tr>
+<td><code>reasoning_tokens</code></td>
+<td><code>INTEGER</code></td>
+<td>Reasoning tokens, when reported.</td>
+</tr>
+<tr>
+<td><code>dedupe_key</code></td>
+<td><code>TEXT</code></td>
+<td>Unique with <code>tool</code> (<code>UNIQUE(tool, dedupe_key)</code>).</td>
+</tr>
+<tr>
+<td><code>project</code></td>
+<td><code>TEXT</code></td>
+<td>Basename of the resolved git repository root, or <code>''</code>. Monorepo subdirectories share one value here.</td>
+</tr>
+<tr>
+<td><code>subpath</code></td>
+<td><code>TEXT</code></td>
+<td>Working directory relative to that repository root (e.g. <code>apps/mobile</code>), or <code>''</code> at the root.</td>
+</tr>
+<tr>
+<td><code>git_branch</code></td>
+<td><code>TEXT</code></td>
+<td>Branch name, or <code>''</code>.</td>
+</tr>
+<tr>
+<td><code>entrypoint</code></td>
+<td><code>TEXT</code></td>
+<td>Invocation label, or <code>''</code>.</td>
+</tr>
+<tr>
+<td><code>granularity</code></td>
+<td><code>TEXT</code></td>
+<td><code>turn</code> or <code>session</code>.</td>
+</tr>
+<tr>
+<td><code>lines_added</code></td>
+<td><code>INTEGER</code></td>
+<td>AI-added lines (from diff <code>+</code> markers), or <code>0</code>.</td>
+</tr>
+<tr>
+<td><code>lines_removed</code></td>
+<td><code>INTEGER</code></td>
+<td>AI-removed lines (from diff <code>-</code> markers), or <code>0</code>.</td>
+</tr>
+<tr>
+<td><code>edits</code></td>
+<td><code>INTEGER</code></td>
+<td>File-editing tool calls, or <code>0</code>.</td>
+</tr>
+<tr>
+<td><code>tool_calls</code></td>
+<td><code>INTEGER</code></td>
+<td>All tool-use calls, or <code>0</code>.</td>
+</tr>
+<tr>
+<td><code>rejected</code></td>
+<td><code>INTEGER</code></td>
+<td>Tool proposals the human declined, or <code>0</code>.</td>
+</tr>
+<tr>
+<td><code>compactions</code></td>
+<td><code>INTEGER</code></td>
+<td>Context-compaction events attributed to the record, or <code>0</code>.</td>
+</tr>
+<tr>
+<td><code>rework_lines</code></td>
+<td><code>INTEGER</code></td>
+<td>AI-added lines later undone within the same transcript+file, or <code>0</code>.</td>
+</tr>
+<tr>
+<td><code>member</code></td>
+<td><code>TEXT</code></td>
+<td><code>''</code> for purely local usage; non-empty only on a central store synced from a team member (see <a href="https://assaio.dev/docs/team-server">The team server</a>).</td>
+</tr>
+</tbody>
+</table>
+<p>The activity columns (<code>lines_added</code> … <code>rework_lines</code>) are populated by the Claude Code
+and Codex parsers today, except <code>rejected</code>, which is Claude-Code-only; Gemini and Cline
+store <code>0</code> throughout. They hold <strong>counts only</strong> — never the code content of the lines
+they count. <code>report --format csv</code> covers tokens and cost; <code>effectiveness --format csv</code>
+adds the activity and <code>$</code>/100-lines columns.</p>
+<p><strong>Cost is not stored.</strong> The database holds tokens only; dollar cost is computed at report
+time against the embedded price table, because prices change and unpriced models must stay
+honestly blank. For cost figures, use <code>assaio-agent report --format csv</code> (which carries a
+<code>cost</code> column) rather than SQL.</p>
+<p><strong>Two bookkeeping tables sit beside it</strong>, neither holding usage: <code>ingest_file</code> (one row per
+input already parsed — path, size, mtime, parsing build) makes a repeat <code>backfill</code> nearly
+free, and <code>ingest_source</code> (one row per source per run — files found, files read, records,
+skipped lines, zero-token records) is the baseline the <a href="https://assaio.dev/docs/format-resilience">format-drift
+canaries</a> compare against. Both are caches: dropping them costs one
+slow re-parse and a reset drift baseline, nothing more. <code>ingest_file</code> is pruned to what is
+actually on disk after each pass, and <code>ingest_source</code> keeps only the newest runs per tool,
+so neither grows with how long assaio has been installed. Use <code>assaio-agent compact</code> to
+return freed pages to the filesystem — SQLite does not do that on its own.</p>
+<p><strong>Stability.</strong> The schema may still evolve before v1.0. Changes will be additive where
+possible — new nullable columns rather than renames — but treat direct queries as coupled
+to a version you have pinned, not a frozen contract. The report/JSON/CSV output is the
+more stable surface.</p>
+<h2 id="ready-made-queries">Ready-made queries</h2>
+<pre><code class="language-sh">DB=~/.local/share/assaio/assaio.db
+</code></pre>
+<p><strong>Token spend per project, last 30 days</strong> (the dimension behind <code>report --by project</code>;
+join to your own price sheet for dollars, or use the CSV report):</p>
+<pre><code class="language-sh">sqlite3 -header -column &quot;$DB&quot; &quot;
+  SELECT project,
+         SUM(input_tokens)      AS in_tok,
+         SUM(output_tokens)     AS out_tok,
+         SUM(cache_read_tokens) AS cache_read
+  FROM usage_record
+  WHERE ts &gt;= date('now','-30 days')
+  GROUP BY project
+  ORDER BY out_tok DESC;&quot;
+</code></pre>
+<p><strong>Total tokens per model:</strong></p>
+<pre><code class="language-sh">sqlite3 -header -column &quot;$DB&quot; &quot;
+  SELECT model, SUM(input_tokens + output_tokens) AS total_tok
+  FROM usage_record
+  GROUP BY model
+  ORDER BY total_tok DESC;&quot;
+</code></pre>
+<p><strong>Cache efficiency per project</strong> — cache reads as a share of input + cache reads, the same
+ratio the <code>Cache%</code> column shows:</p>
+<pre><code class="language-sh">sqlite3 -header -column &quot;$DB&quot; &quot;
+  SELECT project,
+         ROUND(100.0 * SUM(cache_read_tokens)
+               / NULLIF(SUM(input_tokens + cache_read_tokens), 0), 1) AS cache_pct
+  FROM usage_record
+  GROUP BY project
+  ORDER BY cache_pct DESC;&quot;
+</code></pre>
+<p><strong>Busiest days:</strong></p>
+<pre><code class="language-sh">sqlite3 -header -column &quot;$DB&quot; &quot;
+  SELECT substr(ts,1,10) AS day,
+         SUM(input_tokens + output_tokens) AS total_tok,
+         COUNT(*)                          AS records
+  FROM usage_record
+  GROUP BY day
+  ORDER BY total_tok DESC
+  LIMIT 10;&quot;
+</code></pre>
+<hr>
+</main>
+</div>
+<footer>
+<p>Generated from the repository: every page here is rendered from the Markdown it is written in,
+or from the binary's own registries, and a check fails the build when the two disagree. This page
+names no release — which version is current is stated once, on the
+<a href="https://github.com/assaio/assaio/releases">releases page</a>, where it cannot fall behind.
+It loads nothing: no fonts, no analytics, no third-party requests.</p>
+</footer>
+</div><script>
+try{var t=localStorage.getItem('assaio-theme'); if(t) document.documentElement.setAttribute('data-theme',t);}catch(e){}
+</script></body></html>

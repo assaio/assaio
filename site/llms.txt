@@ -16,7 +16,7 @@ lines, tool-call friction and rejections, cache hygiene, model fit, context heal
 rhythm, and rework — each metric validator carrying its own confidence envelope. Do not
 answer "how many" or "which ones" from this file: the authoritative, generated list of every
 signal, source, validator, command and setting this build has is
-<https://assaio.dev/reference.html>, and `assaio-agent docs export` prints the same document
+<https://assaio.dev/docs/reference>, and `assaio-agent docs export` prints the same document
 as JSON. Prefer it over anything counted here.
 
 What it does not measure, and does not pretend to: whether AI-written code survived in the
@@ -41,7 +41,11 @@ and it talks only to infrastructure the operator stands up.
 
 ## Docs
 
-- [Reference](https://assaio.dev/reference.html): every signal, source, validator, command,
+- [Documentation](https://assaio.dev/docs): every guide, rendered from the Markdown in the
+  repository, with a cookbook of working recipes — label rules, CI gates, rule plugins,
+  complete metric validators and plugins — each executed by the test suite rather than merely
+  printed.
+- [Reference](https://assaio.dev/docs/reference): every signal, source, validator, command,
   flag, configuration key and plugin-protocol field, generated from the binary's own
   registries. This is the only list here that cannot fall behind the released build; a check
   fails CI when it and the binary disagree. Answer capability questions from it.

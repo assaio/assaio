@@ -1,7 +1,8 @@
 # The website
 
-<https://assaio.dev/> is `site/index.html`, written by hand. No build step, no framework, no
-CDN — the favicon is an inline `data:` SVG and every link is absolute, so the page renders
+<https://assaio.dev/> is `site/index.html`, written by hand: the overview page, and the only one
+anybody edits. Everything under `/docs` is generated. No framework, no CDN — every stylesheet is
+inlined, the favicon is an inline `data:` SVG and every link is absolute, so any page renders
 correctly opened straight from disk. Keep it that way; it is the same posture as the offline
 dashboard the tool itself writes. `wrangler.toml` says where the directory goes and under which
 domains — deployment configuration, not a build step.
@@ -9,16 +10,17 @@ domains — deployment configuration, not a build step.
 Three other files sit beside it in `site/`. One is generated, and two are there because they are
 read by something that is **not** the browser rendering the page:
 
-- **`reference.html`** — the second page, and the only generated one:
-  `assaio-agent docs export --format html`, committed, with `make test` failing when it differs
-  from what the binary would write. It publishes what can be enumerated — every signal, source,
-  validator, command, flag, configuration key and metric-contract field — so the hand-written
-  page never has to list any of it. Regenerate with `make docs`; do not edit it.
-  **It is served at `/reference`, not `/reference.html`**: Workers Assets drops the extension and
-  `307`s the file name away, the same handling that serves `index.html` at `/`. A link or a
-  canonical naming the file therefore points at a redirect — which looks correct in review and in
-  a browser opened on the file, and is only wrong against the deployed site. The `servedpaths`
-  job holds every internal link and canonical to a path the host actually serves.
+- **`docs.html` and everything under `docs/`** — the documentation section, all of it generated
+  and none of it edited by hand. Each page is rendered from the Markdown it is written in under
+  the repository's own `docs/`, and `docs/reference.html` is rendered from the binary's
+  registries; `make docs` rewrites the set and `make test` fails when any of it differs from what
+  the generator would produce. **The Markdown is the only copy** — a page here cannot say
+  something the repository does not.
+  **They are served without the extension**: `site/docs/reference.html` answers at
+  `/docs/reference`, the same handling that serves `index.html` at `/`. A link or a canonical
+  naming the file points at a redirect — which looks correct in review and in a browser opened on
+  the file, and is only wrong against the deployed site. The `servedpaths` job holds every
+  internal link and canonical to a path the host actually serves.
 
 - **`og.png`** — the card a shared link renders as. Every Open Graph tag was present except
   this one, so LinkedIn and the rest showed a bare grey line; a `data:` URI cannot stand in,
@@ -52,7 +54,7 @@ What replaced the guard is its inverse: `site.yml` fails if a bare `X.Y.Z` appea
 `site/`. Reintroducing a stamp is therefore a deliberate act with a red check attached, not an
 easy convenience that quietly creates a chore. Two shapes are masked before the search, because
 neither is a stamp: SVG geometry attributes, whose optimized path data writes implicit separators
-(`d="M12.5.5…"`), and dotted quads, because `reference.html` publishes `serve --addr`'s default of
+(`d="M12.5.5…"`), and dotted quads, because the reference page publishes `serve --addr`'s default of
 `127.0.0.1:8787`. Masking is the same move both times — say what is *not* a version, then look.
 
 ### The claims the page is held to
@@ -74,7 +76,7 @@ name every capability, not every subcommand of one.
 
 `site/llms.txt` cannot carry attributes, so it gets the weaker form of the same rule: every
 source has to be named somewhere in it, matched the way prose writes names ("Claude Code"
-satisfies `claude-code`). It states no counts at all any more — it points at `reference.html`
+satisfies `claude-code`). It states no counts at all any more — it points at the reference
 and tells the assistant reading it to answer capability questions from there.
 
 ### Saying what does not exist yet
