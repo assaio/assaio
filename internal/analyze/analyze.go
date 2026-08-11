@@ -145,6 +145,17 @@ type Result struct {
 	// rest is stamped by Evaluate, which is how every Result carries it -- including a
 	// validator written out of tree.
 	Confidence Confidence `json:"confidence"`
+	// Lead marks the few reads worth a week's attention, set by MarkLead and absent
+	// everywhere else -- including on every read of a window that promoted none, which is a
+	// real answer rather than a missing one. A validator never sets it: which findings lead
+	// is a question about the window, and no metric can see the others.
+	Lead *Lead `json:"lead,omitempty"`
+}
+
+// Lead is a read's place in the window's ordering and the reasons that put it there.
+type Lead struct {
+	Rank    int      `json:"rank"`
+	Reasons []string `json:"reasons"`
 }
 
 // Validator is one independently testable, self-describing metric. Name is a stable

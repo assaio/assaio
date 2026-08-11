@@ -30,7 +30,7 @@ func RenderEffectivenessTable(w io.Writer, rows []EffRow, by string) error {
 
 	var totalLines, totalEdits, totalRejected int64
 	var totalCost float64
-	var anyUnpriced bool
+	var unpriced Unpriced
 	for i := range rows {
 		r := &rows[i]
 		cost, priced := formatEffCost(r)
@@ -38,19 +38,21 @@ func RenderEffectivenessTable(w io.Writer, rows []EffRow, by string) error {
 		totalLines += r.LinesAdded
 		totalEdits += r.Edits
 		totalRejected += r.Rejected
+		unpriced.Tokens += r.UnpricedTokens
+		unpriced.Total += r.TokensTotal
 		if r.HasUnpriced {
-			anyUnpriced = true
+			unpriced.Rows++
 		}
 		tw.AppendRow(effTableRow(r, by, cost))
 	}
 	tw.AppendFooter(prettytable.Row{
-		"TOTAL", formatCommas(totalLines), formatCommas(totalEdits), formatCommas(totalRejected),
+		"TOTAL", humanize.Int(totalLines), humanize.Int(totalEdits), humanize.Int(totalRejected),
 		humanize.USDCell(totalCost), footerRatio(totalCost, totalLines),
 	})
 	tw.Render()
 
-	if anyUnpriced {
-		if _, err := fmt.Fprintln(w, unpricedFootnote); err != nil {
+	if note := UnpricedDisclosure(&unpriced, "the tokens in this table"); note != "" {
+		if _, err := fmt.Fprintln(w, note); err != nil {
 			return err
 		}
 	}
@@ -98,7 +100,7 @@ func effTableRow(r *EffRow, by, cost string) prettytable.Row {
 	if label == "" {
 		label = emptyDimLabel(by)
 	}
-	return prettytable.Row{label, formatCommas(r.LinesAdded), formatCommas(r.Edits), formatCommas(r.Rejected), cost, formatCostPer100(r)}
+	return prettytable.Row{label, humanize.Int(r.LinesAdded), humanize.Int(r.Edits), humanize.Int(r.Rejected), cost, formatCostPer100(r)}
 }
 
 // footerRatio recomputes $/100 lines from column totals rather than averaging each

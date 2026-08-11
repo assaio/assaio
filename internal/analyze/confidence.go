@@ -62,6 +62,13 @@ type Confidence struct {
 	// both answer questions Label cannot.
 	Ingested time.Time `json:"ingested,omitempty"`
 	ParsedBy string    `json:"parsedBy,omitempty"`
+	// Recorded is whether this verdict's subject could have been recorded in these rows at
+	// all. It only ever explains a zero Signal: covering none of a window because nothing
+	// here writes the field, and covering none of it because the rows were read before assaio
+	// captured it, are the same number with different cures. nil on every metric whose
+	// subject is the window itself, and on any Result that did not compute it -- an exec
+	// plugin's, whose value for this field is discarded at the wire.
+	Recorded *bool `json:"subjectRecorded,omitempty"`
 }
 
 // Evaluate runs v and stamps the window-level confidence onto its Result, so every verdict
@@ -130,6 +137,17 @@ func (r *Result) restsOn(n int, unit string) {
 // covering is Confidence.Covering for a validator holding a Result, matching restsOn above.
 func (r *Result) covering(share float64) { r.Confidence.Covering(share) }
 
+// missingCaptureWhen declares whether a zero reach would be capture this build never wrote,
+// rather than a subject the window does not contain. The caller passes the only test that
+// separates them: whether the subject's own denominator exists *among the rows that could
+// have carried it* -- work done by a source that records the field. Asking the depth matrix
+// instead ("does some tool here record it") answers about a different source than the one
+// whose rows produced the zero, and sends the reader after a `backfill` that cannot change
+// the figure, which is the one thing this reason must never do.
+func (r *Result) missingCaptureWhen(capableDenominatorExists bool) {
+	r.Confidence.Recorded = &capableDenominatorExists
+}
+
 // Covering records how much of the window this verdict's subject describes, 0..1. A metric
 // whose figure is computed from part of the window declares that part; leaving it undeclared
 // claims the whole window, which is what most metrics honestly do. Exported for the same
@@ -159,20 +177,24 @@ func ConfidenceSummary(c *Confidence) string {
 	if c.Label == ConfidenceInsufficient {
 		return ConfidenceInsufficient + " — " + c.insufficientReason()
 	}
-	line := fmt.Sprintf("%s · %d %s", c.Label, c.Samples, c.Unit)
+	line := c.Label + " · " + humanize.Int(int64(c.Samples)) + " " + c.Unit
 	if axis, share, weak := weakestAxis(c); weak {
 		line += fmt.Sprintf(" · %s coverage %s", axis, humanize.Percent(share))
 	}
 	return line
 }
 
-// insufficientReason says which of the three ways a verdict can rest on nothing applies.
-// They are different facts about different things: the window may be full of usage none of
-// which can answer this question, the metric may have counted none of its own observations,
-// or it may never have said what it rests on -- which is what an exec metric plugin that
-// omits its sample basis means. One sentence for all three read a full store as an empty one.
+// insufficientReason says which of the four ways a verdict can rest on nothing applies.
+// They are different facts about different things: the rows may predate the build that
+// captures this subject, the window may be full of usage none of which can answer the
+// question, the metric may have counted none of its own observations, or it may never have
+// said what it rests on -- which is what an exec metric plugin that omits its sample basis
+// means. One sentence for all four read a full store as an empty one, and blamed a source
+// for history it does record.
 func (c *Confidence) insufficientReason() string {
 	switch {
+	case c.staleParse():
+		return "a source here records it, but your stored rows predate that capture -- `backfill` re-reads them"
 	case c.Signal != nil && *c.Signal <= 0:
 		return "nothing in this window can answer it"
 	case c.Unit != "":
@@ -180,6 +202,12 @@ func (c *Confidence) insufficientReason() string {
 	default:
 		return "no stated basis"
 	}
+}
+
+// staleParse is the one insufficient reason with a cure: the subject covers none of the
+// window although a source that ran in it does record the subject.
+func (c *Confidence) staleParse() bool {
+	return c.Signal != nil && *c.Signal <= 0 && c.Recorded != nil && *c.Recorded
 }
 
 // weakestAxis names the coverage component holding the label back, if any is below the

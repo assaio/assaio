@@ -112,7 +112,11 @@ func runAnalyze(cmd *cobra.Command, names []string, since *string, format string
 	if err != nil {
 		return err
 	}
-	return renderAnalyzeResults(cmd, results, format)
+	// Which findings are worth a week is a question about the whole window, and it can only be
+	// asked of a run that computed the whole window. A named subset or a label filter has
+	// nothing to rank the survivors against: leading such a run with "nothing worth acting on"
+	// reports an all-clear over the reads it never ran.
+	return renderAnalyzeResults(cmd, results, format, len(names) == 0 && filter.Empty())
 }
 
 // narrowAnalysis states what a label filter selected and returns the validators that can
@@ -184,18 +188,23 @@ func buildAnalyzeInputFiltered(cmd *cobra.Command, st *store.Store, start time.T
 	return in, nil
 }
 
-func renderAnalyzeResults(cmd *cobra.Command, results []analyze.Result, format string) error {
+func renderAnalyzeResults(cmd *cobra.Command, results []analyze.Result, format string, wholeWindow bool) error {
 	switch format {
 	case "text":
-		return renderAnalyzeText(cmd, results)
+		return renderAnalyzeText(cmd, results, wholeWindow)
 	case "json":
-		return renderAnalyzeJSON(cmd, results)
+		return renderAnalyzeJSON(cmd, results, wholeWindow)
 	default:
 		return fmt.Errorf("unknown format %q (want text|json)", format)
 	}
 }
 
-func renderAnalyzeText(cmd *cobra.Command, results []analyze.Result) error {
+func renderAnalyzeText(cmd *cobra.Command, results []analyze.Result, wholeWindow bool) error {
+	if wholeWindow {
+		if err := analyze.RenderRankingText(cmd.OutOrStdout(), analyze.Rank(results), len(results)); err != nil {
+			return err
+		}
+	}
 	for i := range results {
 		if err := analyze.RenderResultText(cmd.OutOrStdout(), results[i]); err != nil {
 			return err
@@ -205,9 +214,14 @@ func renderAnalyzeText(cmd *cobra.Command, results []analyze.Result) error {
 	return err
 }
 
-// renderAnalyzeJSON writes the Results as a JSON array. Each Result already carries its
-// own Name, so no wrapping map is needed to identify which entry is which.
-func renderAnalyzeJSON(cmd *cobra.Command, results []analyze.Result) error {
+// renderAnalyzeJSON writes the Results as a JSON array. Each Result already carries its own
+// Name, so no wrapping map is needed to identify which entry is which -- and the ordering
+// rides on the few Results it promotes rather than wrapping the array, because a shape change
+// here breaks every script already reading this output.
+func renderAnalyzeJSON(cmd *cobra.Command, results []analyze.Result, wholeWindow bool) error {
+	if wholeWindow {
+		analyze.MarkLead(results)
+	}
 	enc := json.NewEncoder(cmd.OutOrStdout())
 	enc.SetIndent("", "  ")
 	return enc.Encode(results)

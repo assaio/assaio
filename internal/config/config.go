@@ -98,7 +98,11 @@ type Sync struct {
 }
 
 func defaults() Config {
-	return Config{Since: "30d", Format: "table", Privacy: Privacy{Anonymize: true}}
+	return Config{
+		Since: "30d", Format: "table",
+		Privacy: Privacy{Anonymize: true},
+		Pricing: Pricing{MaxUnpricedShare: DefaultMaxUnpricedShare},
+	}
 }
 
 // Load merges defaults < config file at path (if present) < ASSAIO_-prefixed

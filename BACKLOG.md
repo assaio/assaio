@@ -33,7 +33,7 @@ the source-depth matrix (`B58`, `B59`, `B69`, `B81`, `B82`, `B83`, all v0.5), an
 annotations with per-kind-of-work stratification (`B80`, v0.6) alongside the GitHub Copilot
 CLI parser (`B53`, v0.6). See [CHANGELOG.md](CHANGELOG.md) and [FEATURES.md](FEATURES.md).
 
-## Now — "Correctness lockdown"
+## Shipped — "Correctness lockdown"
 
 Nothing new is built on top of a surface that is known to be wrong. Every item here is a
 defect in something already shipped, each with the reproduction that found it, and they are
@@ -48,13 +48,17 @@ store, a team-server push that could never correct a partial figure, and an acti
 correction that could not reach a stored row at all. **The milestone is closed** — what a
 later review finds opens a new pool below rather than reopening this one.
 
-## Next — "Calibrated measurement"
+## Now — "Calibrated measurement"
 
 The guard the v0.12 class of bug needs, which provenance and coverage cannot provide. `B137`,
 the conservation and metamorphic suite, shipped in v0.14 as `internal/calibration`, and `B19`,
-the offline reconciliation against a vendor's own export, shipped after it — both are in
-[CHANGELOG.md](CHANGELOG.md). What they left open is `B144`, and the one contribution that
-would close it is the same one `B19` needs: a redacted real capture.
+the offline reconciliation against a vendor's own export, shipped after it — and `B139`, the
+price table nothing watched, which was the largest error left in the `$` figure. All three are in
+[CHANGELOG.md](CHANGELOG.md). One item remains and it cannot be closed here at all: `B144` needs
+a redacted real capture, the same contribution `B19`'s column aliases need. The milestone also
+depends on `B116` and `B118`, which live in the code-health pool below because they are
+corrections to a shipped mechanism rather than calibration work; `B116` is additionally a v1.0
+condition.
 
 - [ ] **B144 · calibrate Gemini CLI and Cline against a real capture** — S · both — both are
   calibrated today against a *constructed* sample in the source's shape, because the maintainer's
@@ -62,6 +66,39 @@ would close it is the same one `B19` needs: a redacted real capture.
   constructed trace proves the reading; only a real one also proves the shape is still what the
   vendor writes, and each trace already declares which it is (`capture: real|constructed`). Needs
   one redacted capture per source from anybody who runs them.
+
+## Next — "Worth opening twice"
+
+The items that decide whether the analysis already shipped reaches anybody. The first of them —
+findings that arrive ordered, with the ordering's reasons shown (`B148`) — shipped; three remain.
+Not a detour from depth: this is the only milestone that answers the questions
+[ROADMAP.md](ROADMAP.md#how-we-prioritize) names as the measure of whether the project is
+working — how long from install to a first useful insight, whether someone runs a second report
+the following week, how often a finding is acted on. Every one of these sat in an unscheduled
+pool until now, which is exactly why none of them ever came up for air.
+
+- [ ] **B11 · weekly digest** — S/M · both — `digest --weekly`: markdown summary
+  (top movers, verdict changes, anomalies) fit for cron/launchd; delivery stays the
+  user's own script (mail, Slack, …). It reads the window every other surface reads and reports
+  what *moved* rather than restating what is, which is what makes a second one worth receiving;
+  the ordering that shipped in `B148` is what decides which movers lead it.
+- [ ] **B149 · a shareable assay** — M · both — `assaio share --since 30d` renders a single
+  image or page fit to post publicly: tool and model mix, the token/cost trend, a few
+  findings, and the coverage and confidence behind them. Redaction is the feature, not a
+  flag: no repository names, no member names, no file paths, no identifiers, ever, and a
+  preview before anything is written so the person sees exactly what would leave their
+  machine. Carries the line the dashboard already earns — prompts and source code were not
+  collected. The open question is what a figure means once its labels are gone: "your
+  heaviest project" with no name is still a shape someone may recognize, so the redaction
+  rule needs stating before the renderer, not after.
+- [ ] **B152 · a label the person does not have to type** — S/M · both — `mark` works and
+  goes unused, because annotating a session is a chore nobody does twice. The store already
+  holds `git_branch` on every row, and a branch called `fix/…` or `feat/…` states the task
+  class its author already chose. Derive a **suggested** label from what is there — branch
+  prefix first, PR metadata once the evidence graph lands — and keep the derivation visible
+  and overridable: a derived label carries its source, never merges silently into a
+  hand-made one, and a repository with no convention yields nothing rather than a guess. The
+  closed vocabularies and the never-synced rule stay exactly as they are.
 
 ## Then — "Everything the logs already say"
 
@@ -81,16 +118,6 @@ on, since a link to a merged pull request is only as good as the session it link
   legitimately looks like thrashing, so every detector ships with what it cannot distinguish.
   Store cost is the open question: a step row per turn is a different size class from today's
   daily aggregate and needs its bound and cleanup settled before it lands.
-- [ ] **B148 · which finding is worth acting on** — M · both — nineteen reads render as
-  nineteen reads. A reader with a wall of verdicts acts on none of them, which makes breadth
-  actively harmful past some count. Rank each finding by what is already knowable —
-  evidence strength and coverage (both already on every `Confidence`), how much of the window
-  the finding's subject reaches, and whether anything can be done about it — and surface the
-  few worth a week's attention while the rest stay one click away. Deliberately **not** a
-  score: the ranking is an ordering with its reasons shown, and a window whose findings are
-  all weak ranks nothing rather than promoting the least weak one. Expected impact stays out
-  of v1 — it needs the outcome link (`B84`, `B96`) and guessing it would be the fabricated
-  number this project refuses.
 - [ ] **B107 · Codex cache-write tokens are never read** — S · solo —
   `payload.info.total_token_usage.cache_write_input_tokens` is reported on every Codex
   `token_count` and `usage.Record` gets no value for it. **Measure before claiming a
@@ -316,8 +343,6 @@ leaderboard from it.
   aggregated bands, pseudonymized.
 - [ ] **B41 · team efficiency spread** — M · team — distribution bands of turn-efficiency
   signals across members; "the team needs prompting practice" without naming anyone.
-- [ ] **B25 · Postgres backend** — L · team — once a single SQLite file stops being enough
-  for a central store.
 
 ## Later — "Cost truth, policy & interoperability"
 
@@ -353,7 +378,8 @@ The one milestone that keeps a version number, because there the number *is* the
 a frozen contract over an uncalibrated measurement is a stable wrong answer, which is worse than
 a breaking correct one. The six conditions are spelled out in
 [ROADMAP.md](ROADMAP.md#what-v10-has-to-mean); the contract freeze is the last of them, not the
-first.
+first. `B24` used to sit here and no longer does — its own entry says it is not a v1.0
+condition, so it moved to the reserved pool below rather than contradicting itself in place.
 
 - [ ] **B23 · protocol freeze** — M · both — declare the exec plugin protocols (parser,
   metric, rule), the canonical event and signal contracts and the sync API stable under semver,
@@ -362,6 +388,15 @@ first.
   it will not be the last, so freezing the store would make every future correction a breaking
   change and create pressure to leave a wrong number in place. It stays internally versioned
   and migratable — a promise about correctability, not the absence of one.
+## Pool — reserved: waiting on a condition, not on time
+
+Neither of these is scheduled, and neither is dropped. Each waits for a fact to become true —
+a scale that does not exist yet, and a mechanism that has not been chosen — so listing them
+anywhere else would misrepresent them as work anyone is about to pick up. `B24` in particular
+was under the v1.0 heading while its own text said it is not a v1.0 condition.
+
+- [ ] **B25 · Postgres backend** — L · team — once a single SQLite file stops being enough
+  for a central store. Not before: the current shape has not been shown to hurt.
 - [ ] **B24 · in-process plugin API (research first)** — L · both — **no longer a v1.0
   condition**: it is a research question, not a readiness bar. The mechanism is **not**
   decided, and native Go plugins are explicitly not a v1 requirement: they need cgo, do not
@@ -446,14 +481,6 @@ first.
 
 ## Pool — CLI & DX
 
-- [ ] **B152 · a label the person does not have to type** — S/M · both — `mark` works and
-  goes unused, because annotating a session is a chore nobody does twice. The store already
-  holds `git_branch` on every row, and a branch called `fix/…` or `feat/…` states the task
-  class its author already chose. Derive a **suggested** label from what is there — branch
-  prefix first, PR metadata once the evidence graph lands — and keep the derivation visible
-  and overridable: a derived label carries its source, never merges silently into a
-  hand-made one, and a repository with no convention yields nothing rather than a guess. The
-  closed vocabularies and the never-synced rule stay exactly as they are.
 - [ ] **B45 · TUI** — L · both — interactive terminal dashboard (validators +
   project drill), the flagship DX piece once the small wins land.
 - [ ] **B46 · completions + man pages** — S · both — cobra generators, shipped via
@@ -476,9 +503,6 @@ first.
   chrome, statusline words, the 18 explain pages); what remains is translating it and choosing
   how a locale is selected. Data-derived validator text stays out of scope: translating it
   needs message templates for the interpolated numbers.
-- [ ] **B11 · weekly digest** — S/M · both — `digest --weekly`: markdown summary
-  (top movers, verdict changes, anomalies) fit for cron/launchd; delivery stays the
-  user's own script (mail, Slack, …).
 - [ ] **B86 · contributor entry points** — S · both — public issues cut from the top
   backlog items, labels (`good first issue`, `help wanted`, `connector`, `metric`,
   `parser-drift`, `research-needed`, `privacy-review`), Discussions categories, and a short
@@ -486,26 +510,6 @@ first.
 
 ## Pool — dashboard
 
-- [ ] **B149 · a shareable assay** — M · both — `assaio share --since 30d` renders a single
-  image or page fit to post publicly: tool and model mix, the token/cost trend, a few
-  findings, and the coverage and confidence behind them. Redaction is the feature, not a
-  flag: no repository names, no member names, no file paths, no identifiers, ever, and a
-  preview before anything is written so the person sees exactly what would leave their
-  machine. Carries the line the dashboard already earns — prompts and source code were not
-  collected. The open question is what a figure means once its labels are gone: "your
-  heaviest project" with no name is still a shape someone may recognize, so the redaction
-  rule needs stating before the renderer, not after.
-- [ ] **B145 · what the faceplate ratio is called, and whether it belongs there** — S ·
-  both — *needs a decision, not a patch.* Each cell shows `Purity` as a gauge plus a bare
-  `0.46` now captioned "index". A reader has no way to learn what the index measures, and
-  "STRONG · 0.46" reads as a contradiction. Three ways out: name it honestly in the UI and
-  document it, drop the number and keep only the gauge (the drill's compact faceplate
-  already hides it), or drop both and let the verdict word stand alone.
-- [ ] **B146 · thousands grouping in validator figures** — S · both — `internal/analyze`
-  builds Figure values with `strconv.Itoa`/`FormatInt`, so the dashboard renders `16400
-  tokens` and `1247 calls` while the report tables next to them group thousands. Most
-  figures are small counts where grouping would be noise, so this is a per-figure judgement
-  across ~20 validators, not a sweep.
 - [ ] **B48 · sparklines** — M · both — per-day series for key figures as inline SVG;
   the dashboard stays fully self-contained.
 - [ ] **B49 · multi-window tabs** — M · both — 7d/30d/90d generated into one HTML
@@ -526,7 +530,6 @@ a tool used by one organization is usually better served by an out-of-tree
   cache{read,write}}`, `cost`, `modelID`, and — richest of any candidate — the `edit` tool
   persists a structured `filediff{additions,deletions,patch}`, so lines +/- are stored
   directly, no diff parsing. The best activity target after the current four.
-- [ ] **B54 · Factory droid** — M — session-granularity local logs (per ROADMAP).
 - [ ] **B88 · Antigravity — activity-only, no cost** — M · both — research verified
   (2026-07-31), and the answer is unusual enough to record: Google Antigravity stores a lot
   locally and **no token counts anywhere**. Its CLI keeps one SQLite database per
@@ -544,7 +547,6 @@ a tool used by one organization is usually better served by an out-of-tree
   reason to refuse the source. Decision record first, code second.
 - [ ] **B55 · Cursor (Admin API)** — M — local storage verified to lack token counts;
   vendor-aggregate granularity, tagged as such.
-- [ ] **B56 · Kiro** — M — only if its logs turn out to carry real token data.
 - [ ] **B151 · what a plugin declares, and a badge that goes red when a vendor moves** — M ·
   both — two halves of the same gap. A plugin today is verified for *protocol* conformance
   (`plugins verify`, `metrics verify`) and declares nothing about itself: whether it touches
@@ -571,11 +573,6 @@ a tool used by one organization is usually better served by an out-of-tree
   `tmp/*/chats`), and tokens are in a raw-API `usageMetadata` object, not Gemini's
   normalized `tokens{…}`. It also persists tool-call args, so unlike Gemini it carries edit
   activity. Needs its own parser, not the Gemini one; verify a real sample first.
-- [ ] **B62 · Continue** — M — `~/.continue` dev-data event logs reportedly carry
-  token counts; verify shape via a connector issue before building.
-- [ ] **B63 · Goose** — M — local session JSONL reportedly carries usage; verify.
-- [ ] **B64 · Amp / Crush** — M — local thread/session storage; token presence
-  unverified for both; research first (connector issues).
 - [ ] **B65 · Cursor local activity source** — M — `~/.cursor/ai-tracking/`'s
   AI-code-tracking database is a potential **activity-only** source (AI-attributed
   code, no token counts — Cursor's local storage is verified to lack them). Would ship
@@ -586,6 +583,18 @@ a tool used by one organization is usually better served by an out-of-tree
   prompt_tokens,completion_tokens,total_tokens,cost}`, `time` in epoch seconds, no session
   id or cache split); `.aider.chat.history.md` is markdown-only. No structured per-edit field
   — Aider auto-commits, so lines +/- come from git, not the logs.
+- [ ] **B154 · unverified connector candidates — one intake, not five entries** — M · both —
+  five tools whose local storage nobody here has read: **Factory droid** (session-granularity
+  logs), **Kiro**, **Continue** (`~/.continue` dev-data event logs reportedly carry token
+  counts), **Goose** (local session JSONL reportedly carries usage) and **Amp / Crush** (local
+  thread/session storage, token presence unverified for both). Each held its own line for
+  months and each said the same sentence — *verify a real sample first* — which is a wish list
+  wearing a backlog's clothes, and it made the connector pool the longest in this file while
+  none of it was actionable. They collapse into one intake: a candidate leaves this line and
+  earns its own id **when somebody opens a connector issue with a redacted sample showing token
+  counts exist**, and not before. Supersedes `B54`, `B56` and `B62`–`B64`, whose ids are
+  retired rather than reused. The candidates above keep their entries because a verified
+  on-disk format is a different kind of fact from a rumour about one.
 
 ## Pool — code health (from earlier reviews)
 
@@ -620,14 +629,6 @@ they wait behind features but keep the growing metric surface maintainable.
   field landed.) The i18n one is the interesting case rather than the largest: it is a block of
   prose per metric, so splitting it by metric group is a different judgement from splitting
   code, and doing it badly makes the catalog harder to translate (`B08`), not easier.
-- [ ] **B115 · `insufficient` blames the source where the cause is a stale parse** — S · solo —
-  a verdict whose signal coverage is zero prints "nothing in this window can answer it". On the
-  maintainer's own store `explore-produce` and `friction` print exactly that directly above
-  their own caveat saying the real cause is history parsed by a build that did not capture the
-  field yet — two sentences, one contradiction. The fix is a fourth reason, not a reworded
-  third: "no source records it" and "your stored rows predate the capture" are different facts
-  and only the second has an action (`backfill`). Needs a way to tell them apart, which today
-  means asking the depth matrix whether *any* source in the window could have answered.
 - [ ] **B118 · does a cross-source line rate get to keep its denominator?** — M · both — a
   source recording no changed line contributes a true zero to a line *total*, so `AI lines
   total` is honest. A **rate** is the open question: `throughput`'s lines/active-day counts
@@ -668,23 +669,10 @@ they wait behind features but keep the growing metric surface maintainable.
 ## Pool — from the v0.13 whole-codebase review
 
 Same rule as the pool below: reproduced against the maintainer's own store before being
-written down. What v0.13 fixed is in [CHANGELOG.md](CHANGELOG.md) and not repeated here.
+written down. What v0.13 fixed is in [CHANGELOG.md](CHANGELOG.md) and not repeated here. `B139`
+left this pool for the calibration milestone above — an unwatched price table is a figure checked
+against nothing, which is that milestone's subject rather than a cleanup — and shipped from it.
 
-- [ ] **B139 · nothing notices when the price table falls behind the models in use** — M ·
-  both — v0.13 refreshed the vendored LiteLLM snapshot and the acute case is gone: on the
-  maintainer's store 45.5% of tokens (22.7B of 49.8B) had no price because `claude-opus-5` was
-  absent, and the window's estimate rose $23,750.98 → $39,203.40 once it had one. **The
-  mechanism that let it happen is untouched.** Three parts, none of them a bigger asterisk.
-  (1) A refresh is a release chore with no owner and no test that fails when the table lags the
-  models in a real store — a stale table is indistinguishable from a complete one from inside,
-  which is why five weeks of drift produced no signal at all. (2) The `*` marker discloses the
-  condition wherever cost renders but **never quantifies it**: "includes unpriced usage" reads
-  the same at 0.1% and at 45%, and the reader cannot tell which they are looking at. (3)
-  `doctor` prints `pricing: N models, snapshot <date>` — a fact about the table, not about
-  *your* window — and `--strict` does not fire on it, so the largest single source of error in
-  the headline number stayed invisible to the gate that exists to catch exactly that. `B34`
-  proposes the validator; this is the diagnostic, the disclosure and the release gate, and it
-  wants a decision on what unpriced share is worth failing on.
 - [ ] **B140 · a Claude `<synthetic>` message is counted as a turn** — S · solo — Claude Code
   writes locally-generated assistant messages (API errors, refusals to continue) with
   `"model": "<synthetic>"` and an all-zero usage block. **Measured:** 551 of 163,976 records
@@ -722,3 +710,8 @@ and all three shipped in v0.14:
 - No lines-of-code or token leaderboards; nothing ranked per named individual, ever.
 - No per-person analytics outside a deliberate, governed team-mode opt-in.
 - No cohort/percentile comparisons without a minimum cohort size and explicit consent.
+- No wrapping `analyze --format json` in an object. The ordering (`B148`) wanted a
+  `{worthAttention, results}` document and it would read better, but the array is what every
+  script already reads and a shape change breaks them all silently. The ordering rides on the
+  results it promotes instead, as `lead`. Decided during v0.16; revisit only at a major, and
+  only with the break stated in the changelog before anyone hits it.

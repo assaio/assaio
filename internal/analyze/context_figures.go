@@ -18,9 +18,9 @@ import (
 func contextFigures(stats *report.SessionStats, sessions []store.SessionRow) []Figure {
 	codeMedian, codeMedianOK := medianActiveMinutesForCodeSessions(sessions)
 	return []Figure{
-		{Label: "sessions", Value: strconv.Itoa(stats.Count)},
+		{Label: "sessions", Value: humanize.Int(int64(stats.Count))},
 		basisFigure("median turns", strconv.FormatInt(stats.MedianTurns, 10), "", stats.Turned),
-		basisFigure("peak context", strconv.FormatInt(stats.MedianPeakContextTokens, 10)+" tokens", "", stats.Turned),
+		basisFigure("peak context", humanize.Count(stats.MedianPeakContextTokens)+" tokens", "", stats.Turned),
 		activeWorkFigure(stats, codeMedian, codeMedianOK),
 		basisFigure("compaction rate", humanize.PercentAt(stats.CompactionRate, 0), "", stats.Compacting),
 		codeSessionsFigure(stats),

@@ -73,7 +73,7 @@ func (rhythmValidator) Analyze(in Input) Result {
 	r.Read = rhythmRead(sufficient, steady)
 	r.Purity = rhythmPurity(p, sufficient)
 	r.Figures = []Figure{
-		{Label: "sessions timed", Value: strconv.Itoa(len(timed))},
+		{Label: "sessions timed", Value: humanize.Int(int64(len(timed)))},
 		{Label: "off-hours", Value: humanize.PercentAt(p.OffHoursShare, 0), Note: humanize.PercentAt(p.WeekendShare, 0) + " on weekends"},
 		basisFigure("longest sessions", minutesLabel(p.P95ActiveMinutes)+" p95", "focused work", len(paced)),
 		basisFigure("marathons", humanize.PercentAt(p.MarathonShare, 0), "over "+strconv.Itoa(rhythmMarathonMinutes)+" min focused", len(paced)),

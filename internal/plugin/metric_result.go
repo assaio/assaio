@@ -55,6 +55,14 @@ func parseMetricResult(doc []byte, pluginName string) (analyze.Result, []string,
 	for i := range r.Bars {
 		r.Bars[i].Frac = clampFrac(r.Bars[i].Frac)
 	}
+	// Two fields are answers about the window rather than about this metric, so a plugin's
+	// value for them is discarded rather than validated. Recorded decides whether assaio
+	// prints the one insufficient reason that names a cure, and Lead decides which findings
+	// the window promotes -- a metric cannot see the others, so it cannot rank itself among
+	// them. Both became decodable the moment they were added to Result; clearing them here is
+	// what keeps the contract the same after as before.
+	r.Confidence.Recorded = nil
+	r.Lead = nil
 	return r, nil, nil
 }
 

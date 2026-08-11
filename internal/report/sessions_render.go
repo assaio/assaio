@@ -27,7 +27,7 @@ func RenderSessionsBlock(w io.Writer, stats *SessionStats) error {
 		return err
 	}
 	if _, err := fmt.Fprintf(w, "  %s output tokens/session · %s · %s · %s/active day\n",
-		formatCommas(stats.MedianOutputTokens), codePhrase(stats), compactionPhrase(stats),
+		humanize.Int(stats.MedianOutputTokens), codePhrase(stats), compactionPhrase(stats),
 		strconv.FormatFloat(stats.SessionsPerActiveDay, 'f', 1, 64)); err != nil {
 		return err
 	}

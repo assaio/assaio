@@ -179,6 +179,53 @@ func TestPartialActivityDoesNotCountAsActivityCoverage(t *testing.T) {
 	}
 }
 
+// A window whose rows were read before assaio classified a tool call blamed the source for
+// history the source does record, directly above its own caveat naming `backfill` as the
+// cure. Only tool calls that exist can be missing their purpose: a window that made none is
+// not stale history, and must not be sent after a backfill that would change nothing.
+func TestInsufficientTellsStaleHistoryFromASourceThatRecordsNothing(t *testing.T) {
+	tests := []struct {
+		name string
+		rows []store.UsageRow
+		want string
+	}{
+		{
+			name: "calls exist but carry no purpose -- the rows predate the capture",
+			rows: []store.UsageRow{
+				{Tool: "claude-code", Model: "claude-sonnet-4-5", Granularity: "turn", In: 1000, ToolCalls: 40},
+			},
+			want: "your stored rows predate that capture",
+		},
+		{
+			name: "no call was made at all -- nothing here to have classified",
+			rows: []store.UsageRow{
+				{Tool: "claude-code", Model: "claude-sonnet-4-5", Granularity: "turn", In: 1000},
+			},
+			want: "nothing in this window can answer it",
+		},
+		{
+			name: "the only source records no tool call at all",
+			rows: []store.UsageRow{
+				{Tool: "copilot-cli", Model: "claude-sonnet-4-5", Granularity: "session", In: 1000},
+			},
+			want: "nothing in this window can answer it",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := window(t, tt.rows)
+			v, _ := Get("explore-produce")
+			got := Evaluate(v, &in)
+			if got.Confidence.Label != ConfidenceInsufficient {
+				t.Fatalf("Label = %q, want %q", got.Confidence.Label, ConfidenceInsufficient)
+			}
+			if summary := ConfidenceSummary(&got.Confidence); !strings.Contains(summary, tt.want) {
+				t.Fatalf("summary = %q, want it to say %q", summary, tt.want)
+			}
+		})
+	}
+}
+
 // TestConfidenceIsInsufficientWhenNothingWasCounted separates "the data says no" from
 // "there was nothing to say it about" -- the distinction a caveat cannot carry.
 func TestConfidenceIsInsufficientWhenNothingWasCounted(t *testing.T) {
@@ -295,17 +342,20 @@ func withSignals(in *Input, turns []store.ModelTurns, skills, agents []store.Att
 	return *in
 }
 
-// A verdict can rest on nothing in three unrelated ways, and one sentence for all three read
+// A verdict can rest on nothing in four unrelated ways, and one sentence for all four read
 // a store holding 119,896 records as an empty window -- explore-produce, friction and
 // skill-economics all printed it beside their own caveat saying the opposite.
 func TestInsufficientNamesWhichWayTheVerdictRestsOnNothing(t *testing.T) {
 	zero := 0.0
+	recorded, absent := true, false
 	for _, tc := range []struct {
 		name string
 		c    Confidence
 		want string
 	}{
+		{"rows predate the capture", Confidence{Samples: 40, Unit: "tool calls", Signal: &zero, Recorded: &recorded}, "your stored rows predate that capture"},
 		{"no signal in the window", Confidence{Samples: 40, Unit: "active days", Signal: &zero}, "nothing in this window can answer it"},
+		{"a source here records none of it", Confidence{Samples: 40, Unit: "tool calls", Signal: &zero, Recorded: &absent}, "nothing in this window can answer it"},
 		{"counted none of its own unit", Confidence{Unit: "tool calls"}, "0 tool calls"},
 		{"never said what it rests on", Confidence{}, "no stated basis"},
 	} {

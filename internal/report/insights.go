@@ -40,8 +40,10 @@ type Inventory struct {
 	// TotalCost is USD cost summed from priced usage only; nil when nothing priced.
 	TotalCost *float64
 	// HasUnpriced reports whether some usage was excluded from TotalCost because its
-	// model has no known price.
+	// model has no known price, and Unpriced says by how much -- the difference between a
+	// disclosure worth acting on and one worth ignoring.
 	HasUnpriced bool
+	Unpriced    Unpriced
 	// TotalLinesAdded is AI-added code lines across all queried usage.
 	TotalLinesAdded int64
 }
@@ -129,11 +131,15 @@ func BuildInventory(rows []store.UsageRow, t pricing.Table) Inventory {
 		days[r.Day] = struct{}{}
 		inv.TotalLinesAdded += r.LinesAdded
 
+		tokens := RowTokens(r)
+		inv.Unpriced.Total += tokens
 		if c, ok := t.CostTokens(r.Model, pricing.Tokens{In: r.In, Out: r.Out, CacheWrite: r.CacheWrite, CacheRead: r.CacheRead, CacheWrite1h: r.CacheWrite1h}); ok {
 			cost += c
 			hasCost = true
 		} else {
 			inv.HasUnpriced = true
+			inv.Unpriced.Rows++
+			inv.Unpriced.Tokens += tokens
 		}
 	}
 	inv.Projects, inv.Models, inv.Tools, inv.Entrypoints, inv.Days = len(projects), len(models), len(tools), len(entrypoints), len(days)

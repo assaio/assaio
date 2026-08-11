@@ -101,9 +101,10 @@ func statuslineText(cmd *cobra.Command, now time.Time) (string, error) {
 
 // dayTotals is one window rolled up to what the line shows.
 type dayTotals struct {
-	tokens, lines int64
-	cost          float64
-	hasUnpriced   bool
+	tokens, lines  int64
+	cost           float64
+	hasUnpriced    bool
+	unpricedTokens int64
 }
 
 // statuslineDay rolls up every record at or after start. It prices through report.Build
@@ -119,7 +120,10 @@ func statuslineDay(ctx context.Context, st *store.Store, start time.Time) (dayTo
 		return dayTotals{}, err
 	}
 	totals := sumCheckTotals(report.Build(rows, table))
-	out := dayTotals{tokens: totals.Tokens, cost: totals.Cost, hasUnpriced: totals.HasUnpriced}
+	out := dayTotals{
+		tokens: totals.Tokens, cost: totals.Cost,
+		hasUnpriced: totals.HasUnpriced(), unpricedTokens: totals.UnpricedTokens,
+	}
 	for i := range rows {
 		out.lines += rows[i].LinesAdded
 	}
@@ -139,22 +143,28 @@ func costBasisSegment(ctx context.Context, st *store.Store, now time.Time, p con
 		if err != nil || month.cost == 0 {
 			return ""
 		}
-		return "$" + humanize.USD(month.cost) + unpricedMark(month.hasUnpriced) +
+		return "$" + humanize.USD(month.cost) + unpricedMark(month) +
 			"/$" + humanize.USD(p.MonthlySubscriptionCost) + " " + l.StatuslineMonth
 	}
 	if today.cost == 0 {
 		return ""
 	}
-	return "~$" + humanize.USD(today.cost) + unpricedMark(today.hasUnpriced) + " " + l.StatuslineAPIEquiv
+	return "~$" + humanize.USD(today.cost) + unpricedMark(today) + " " + l.StatuslineAPIEquiv
 }
 
-// unpricedMark carries report's convention that a cost excluding unpriced models is a
-// floor, not a total.
-func unpricedMark(hasUnpriced bool) string {
-	if hasUnpriced {
+// unpricedMark carries report's convention that a cost excluding unpriced models is a floor,
+// not a total, and states how far below the total it is: one line has no room for the full
+// sentence, and a bare "*" reads the same whether a percent or half the window is missing.
+func unpricedMark(t dayTotals) string {
+	u := report.Unpriced{Tokens: t.unpricedTokens, Total: t.tokens}
+	switch {
+	case u.Missing():
+		return "*" + humanize.Percent(u.Share())
+	case t.hasUnpriced:
 		return "*"
+	default:
+		return ""
 	}
-	return ""
 }
 
 // statuslineAge reports how long ago the newest ingest ran -- how current the figures are,

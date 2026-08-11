@@ -55,7 +55,7 @@ func (intentValidator) Analyze(in Input) Result {
 
 	if tally.labeled == 0 {
 		r.Read = noDataRead
-		r.Figures = []Figure{{Label: "labeled sessions", Value: fmt.Sprintf("0 of %d", len(in.Sessions))}}
+		r.Figures = []Figure{{Label: "labeled sessions", Value: "0 of " + humanize.Int(int64(len(in.Sessions)))}}
 		r.Takeaway = "Nothing is labeled yet -- 'assaio-agent mark --task <kind>' after a session unlocks reading every metric per kind of work."
 		r.Caveats = intentCaveats
 		return r
@@ -69,7 +69,7 @@ func (intentValidator) Analyze(in Input) Result {
 	}
 	r.Figures = []Figure{
 		{
-			Label: "labeled sessions", Value: fmt.Sprintf("%d of %d", tally.labeled, len(in.Sessions)),
+			Label: "labeled sessions", Value: humanize.Int(int64(tally.labeled)) + " of " + humanize.Int(int64(len(in.Sessions))),
 			Note: humanize.Percent(r.Purity),
 		},
 		{Label: "task classes used", Value: strconv.Itoa(len(tally.byTask))},
@@ -77,7 +77,7 @@ func (intentValidator) Analyze(in Input) Result {
 			Label: "classes big enough to compare", Value: strconv.Itoa(tally.comparableClasses),
 			Note: fmt.Sprintf("at least %d sessions each", intentComparableClass),
 		},
-		{Label: "outcome recorded", Value: fmt.Sprintf("%d of %d labeled", tally.withOutcome, tally.labeled)},
+		{Label: "outcome recorded", Value: humanize.Int(int64(tally.withOutcome)) + " of " + humanize.Int(int64(tally.labeled)) + " labeled"},
 	}
 	r.Bars = intentBars(tally.byTask)
 	r.Takeaway = intentTakeaway(tally)
@@ -146,7 +146,7 @@ func intentBars(byTask map[string]int) []Bar {
 	for _, name := range names {
 		bars = append(bars, Bar{
 			Label: name,
-			Value: strconv.Itoa(byTask[name]),
+			Value: humanize.Int(int64(byTask[name])),
 			Frac:  fracOf(int64(byTask[name]), int64(maxN)),
 		})
 	}
@@ -158,6 +158,6 @@ func intentTakeaway(t intentTally) string {
 		return fmt.Sprintf("%d task classes have enough sessions to compare -- run any metric with --%s <kind> to read it per kind of work.",
 			t.comparableClasses, label.Task)
 	}
-	return fmt.Sprintf("%d sessions labeled so far; a second task class with %d or more sessions makes filtered comparisons meaningful.",
-		t.labeled, intentComparableClass)
+	return fmt.Sprintf("%s sessions labeled so far; a second task class with %d or more sessions makes filtered comparisons meaningful.",
+		humanize.Int(int64(t.labeled)), intentComparableClass)
 }

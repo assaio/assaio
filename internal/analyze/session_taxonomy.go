@@ -103,7 +103,7 @@ func taxonomyCoverageCaveat(coverage float64) string {
 }
 
 func taxonomyBar(label string, n, total int64) Bar {
-	return Bar{Label: label, Value: strconv.FormatInt(n, 10) + " (" + humanize.PercentOrDash(n, total, 0) + ")", Frac: fracOf(n, total)}
+	return Bar{Label: label, Value: humanize.Int(n) + " (" + humanize.PercentOrDash(n, total, 0) + ")", Frac: fracOf(n, total)}
 }
 
 // taxonomyLabel names the dominant bucket for the faceplate, short enough for the label slot.

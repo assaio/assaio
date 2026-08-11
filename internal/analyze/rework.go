@@ -1,7 +1,6 @@
 package analyze
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/assaio/assaio/internal/humanize"
@@ -58,7 +57,7 @@ func (reworkValidator) Analyze(in Input) Result {
 		reworkFigure(&churn),
 		{
 			Label: "rejection rate", Value: humanize.PercentOrDash(f.Rejected, f.Refusable, 1),
-			Note: strconv.FormatInt(f.Rejected, 10) + " of " + strconv.FormatInt(f.Refusable, 10) + " calls that record a refusal",
+			Note: humanize.Int(f.Rejected) + " of " + humanize.Int(f.Refusable) + " calls that record a refusal",
 		},
 	}
 	r.Caveats = reworkCaveats(rejectionKnown, churn.Rows < len(in.Usage))
@@ -74,7 +73,7 @@ func reworkFigure(churn *report.ChurnStat) Figure {
 	}
 	return Figure{
 		Label: "rework", Value: humanize.PercentOrDash(churn.ReworkLines, churn.LinesAdded, 0),
-		Note: strconv.FormatInt(churn.ReworkLines, 10) + " lines, within-session thrash proxy",
+		Note: humanize.Int(churn.ReworkLines) + " lines, within-session thrash proxy",
 	}
 }
 

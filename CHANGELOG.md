@@ -21,6 +21,55 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+- **A cost figure now says how much of itself is missing (`B139`).** Every `$` assaio prints is
+  a token count times a vendored price table, and the `*` that disclosed a model the table does
+  not carry read identically at 0.1% and at the 45.5% that once left a window's estimate
+  $15,452.42 short for five weeks. The marker now carries the share, the token counts behind it,
+  and the set it was computed over — `report`, `effectiveness`, `report --compare`, `status`,
+  `check`, the statusline and the dashboard colophon all render the same sentence. `doctor`
+  gains an `unpriced:` line about *your* window rather than about the table, naming the models a
+  refresh has to cover, and `doctor --strict` fails above `pricing.max_unpriced_share` (default
+  5% of the reported window's tokens; `0` turns that half of the gate off). The ceiling is
+  measured, not chosen: on the maintainer's own corpus a newly adopted model reaches 12.0% of a
+  7-day window on its second day and 10.0% of a 30-day window on its third. A new calibration
+  test fails when a trace in this repository names a model the vendored table cannot cost, and
+  refreshing the table is now a named step in `RELEASING.md` rather than a chore with no owner.
+- **Nineteen reads stop arriving as nineteen equals (`B148`).** `analyze`, `demo` and the Assay
+  dashboard now lead with the few findings worth a week's attention, ordered by evidence
+  strength and how much of the window each subject reaches, with those reasons printed beside
+  each one. It is deliberately an ordering and never a score: a window whose reads are all fine,
+  withheld or too thin promotes none of them rather than crowning the least weak, and expected
+  impact stays out entirely — it needs the outcome link, and guessing it would be the fabricated
+  number this project refuses. A run narrowed to named metrics or a label filter prints no
+  ordering at all, because it never saw the reads it would be ranking against. `--format json`
+  keeps its array shape and stamps `lead` on the promoted entries.
+
+### Changed
+- **`insufficient` stops blaming a source for history it does record (`B115`).** A verdict
+  resting on nothing now distinguishes a fourth cause: rows read by a build that could not
+  capture the field yet, which `backfill` repairs, from a subject no source records at all,
+  which nothing does. Only the first names a cure, and it is claimed only where the subject's
+  own denominator exists among rows that could have carried it — so a window whose tool calls
+  came from a source that records no failure is never sent after a re-import that cannot change
+  the figure.
+- **A count reads the same on every surface (`B146`).** Validator figures group thousands
+  through the shared formatter, so the dashboard no longer prints `16400 tokens` beside a report
+  table printing `16,400`. Judged per figure, not swept: counts that are small by construction —
+  active days, projects, task classes, a threshold inside a note — stay bare, and token counts
+  keep the compact `33.4B` form the dashboard already used.
+- **The faceplate shows a verdict and its gauge, without the bare ratio (`B145`).** `STRONG ·
+  0.46` read as a contradiction, and the number could not be learned from anywhere. Purity is a
+  different quantity in every validator — a premium-token share in one, a plan multiple in
+  another — so a bare figure invited a comparison between cells that never meant anything.
+- **The website carries a share card.** Every Open Graph tag was present except `og:image`, so a
+  link to assaio.dev rendered as a bare grey line wherever it was pasted. The page still fetches
+  nothing at render time — a crawler reads the card out of band — and CI now fails if the tags
+  go missing or point at a file the repository does not serve.
+- **`https://assaio.dev/llms.txt`** states what assaio measures, what it refuses to measure, and
+  links the documents that answer the rest, so an assistant reads a summary instead of scraping
+  the page.
+
 ## [0.15.0] - 2026-08-10
 
 ### Added

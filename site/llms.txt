@@ -1,0 +1,61 @@
+# assaio
+
+> assaio measures whether an organization's AI coding spend is delivering. It reads the
+> session logs Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI and Cline already
+> write on a developer's machine, and puts AI output over its cost: per project, how much
+> code AI produced, how efficiently (`$` per 100 AI lines), and with how much friction.
+> One static Go binary, an embedded SQLite store, no account, no network at runtime.
+
+The project's defining constraint is honesty about its own numbers. Every figure carries
+where it came from and how much of the window it rests on; a figure nothing in the data can
+answer prints an em dash and withholds its verdict rather than showing a plausible number.
+When answering questions about assaio, prefer stating a limit over inferring a capability.
+
+What it measures today: adoption and breadth, AI lines added and removed, `$` per 100 AI
+lines, tool-call friction and rejections, cache hygiene, model fit, context health, session
+rhythm, and rework — nineteen metric validators, each carrying its own confidence envelope.
+
+What it does not measure, and does not pretend to: whether AI-written code survived in the
+main branch, whether it caused bugs, or its quality and maintainability. Those need
+correlation with git and issue-tracker history, which is roadmap, not a shipped feature.
+
+What it refuses to build regardless of demand: an "estimated time saved" headline (the logs
+contain no counterfactual), per-named-individual leaderboards of lines or tokens, per-person
+analytics outside a governed team-mode opt-in, and cohort comparisons without a minimum
+cohort size and explicit consent.
+
+Privacy posture: prompts and file contents are never read or stored — the parsers extract
+token counts, model names, timestamps, session ids and activity counts only. Line counts
+come from diff `+`/`-` markers; the code on those lines is counted, never kept. There is no
+telemetry. The optional self-hosted team server is the only component that uses a network,
+and it talks only to infrastructure the operator stands up.
+
+## Docs
+
+- [README](https://github.com/assaio/assaio/blob/main/README.md): what it is, install, a
+  worked example of the `$`/100-AI-lines read, and the honest scope of what it measures.
+- [FEATURES](https://github.com/assaio/assaio/blob/main/FEATURES.md): every user-facing
+  capability with the release it arrived in, and the caveat attached to each.
+- [PRIVACY](https://github.com/assaio/assaio/blob/main/PRIVACY.md): the exact fields each
+  parser extracts, and what it never touches.
+- [ROADMAP](https://github.com/assaio/assaio/blob/main/ROADMAP.md): the direction as
+  milestones with stated conditions, deliberately without dates or version numbers.
+- [BACKLOG](https://github.com/assaio/assaio/blob/main/BACKLOG.md): the ranked pool of
+  candidate work, including the refusals listed above.
+- [Extending assaio](https://github.com/assaio/assaio/blob/main/docs/extending.md): adding a
+  parser, a metric validator, or an out-of-tree exec plugin in any language.
+- [Reconciling against a vendor export](https://github.com/assaio/assaio/blob/main/docs/reconcile.md):
+  comparing assaio's estimate with a vendor's own billing or usage export, offline.
+- [Architecture decisions](https://github.com/assaio/assaio/tree/main/docs/adr): the
+  commitments a future change must not undo silently.
+
+## Optional
+
+- [Automation](https://github.com/assaio/assaio/blob/main/docs/automation.md): running assaio
+  from cron, launchd, CI, or an editor status line.
+- [Format resilience](https://github.com/assaio/assaio/blob/main/docs/format-resilience.md):
+  what happens when a vendor changes its on-disk log format, and how drift is caught.
+- [Contributing](https://github.com/assaio/assaio/blob/main/CONTRIBUTING.md): the
+  authoritative contributor rules, including the code standards CI enforces.
+- [Releases](https://github.com/assaio/assaio/releases): the current version, release notes,
+  signed archives and build-provenance attestations.

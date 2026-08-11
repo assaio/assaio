@@ -195,24 +195,39 @@ button{font:inherit;}
 .cell__read--good{color:var(--verdigris);}
 .cell__read--watch{color:var(--oxide);}
 .cell__read--neutral{color:var(--muted);}
-.cell__foot{
-  margin-top:auto;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
+/* lead -- the few findings worth a week, each carrying the reasons that ordered it */
+.lead{
+  box-shadow:0 0 0 1px var(--seam);
+  background:var(--surface);
+  padding:18px;
+  margin-bottom:24px;
 }
-.cell__ratio{
+.lead__list{list-style:none;counter-reset:lead;}
+.lead__item{
+  counter-increment:lead;
   display:flex;
+  flex-wrap:wrap;
   align-items:baseline;
-  justify-content:space-between;
-  gap:8px;
-  font-size:11px;
-  color:var(--muted);
+  gap:4px 10px;
+  padding:8px 0;
+  border-bottom:1px solid var(--hairline);
 }
-.cell__ratio-key{font:600 9px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;}
+.lead__item:last-child{border-bottom:0;}
+.lead__item::before{
+  content:counter(lead);
+  font:600 10px/1 var(--font-mono);
+  color:var(--muted);
+  min-width:14px;
+}
+.lead__title{font-weight:600;}
+.lead__why{font-size:11px;color:var(--muted);}
+.lead__rule,.lead__none{font-size:11px;color:var(--muted);margin-top:10px;}
+.lead__none{margin-top:0;}
 
-/* gauge (purity bar) -- fill takes the read's own colour, so bar and word never disagree */
+/* gauge (purity bar) -- fill takes the read's own colour, so bar and word never disagree;
+   unlabelled because purity is a different quantity in each validator and does not compare */
 .gauge{
+  margin-top:auto;
   position:relative;
   height:6px;
   border-radius:3px;
@@ -355,7 +370,6 @@ button{font:inherit;}
 .faceplate--compact .cell{padding:14px 14px 12px;gap:7px;}
 .faceplate--compact .cell__label{font-size:9px;}
 .faceplate--compact .cell__read{font-size:15px;}
-.faceplate--compact .cell__ratio{display:none;}
 .faceplate--compact .gauge{height:5px;}
 
 .table-scroll{overflow-x:auto;margin-top:4px;}
@@ -491,6 +505,27 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   </section>
 
   <div class="panel-label">
+    <span><strong>{{(locale).WorthAttentionLabel}}</strong></span>
+    <span>{{(locale).OfSuffix}} {{len .Verdicts}} {{(locale).ReadsSuffix}}</span>
+  </div>
+
+  <section class="lead">
+    {{if .WorthAttention}}
+    <ol class="lead__list">
+      {{range .WorthAttention}}
+      <li class="lead__item">
+        <span class="lead__title">{{.Title}}</span>
+        <span class="lead__why">{{join .Reasons " · "}}</span>
+      </li>
+      {{end}}
+    </ol>
+    <p class="lead__rule">{{(locale).RankingRule}}</p>
+    {{else}}
+    <p class="lead__none">{{(locale).NothingWorthAttention}}</p>
+    {{end}}
+  </section>
+
+  <div class="panel-label">
     <span><strong>{{(locale).AssayLabel}}</strong> · {{(locale).AllProjects}}</span>
     <span>{{.Inventory.Sessions}} {{(locale).SessionsLabel}} · {{.Inventory.ActiveDays}} {{(locale).ActiveDaysSuffix}}</span>
   </div>
@@ -602,7 +637,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
 {{/* faceplateCell renders one faceplate cell from a facetView {N, R analyze.Result}.
      Reused by the top-level faceplate and the drill's compact faceplate -- CSS alone
-     (.faceplate--compact) handles the size/ratio-visibility difference between them. */}}
+     (.faceplate--compact) handles the size difference between them. */}}
 {{define "faceplateCell"}}
 <div class="cell cell--{{.R.Read.Key}}">
   <span class="cell__label">{{printf "%02d" .N}} · {{.R.Title}}</span>
@@ -610,13 +645,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--{{.R.Read.Key}}">{{.R.Read.Label}}</span>
     {{if .R.Caveats}}<span class="prov">{{(locale).ProvLabel}}</span>{{end}}
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:{{pct .R.Purity}}%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">{{(locale).PurityLabel}}</span>
-      <span class="tnum">{{printf "%.2f" .R.Purity}}</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:{{pct .R.Purity}}%"></span></div>
 </div>
 {{end}}
 

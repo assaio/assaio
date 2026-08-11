@@ -19,15 +19,12 @@ AI-engineering analytics platform.**
 
 ---
 
-Teams pour real money into AI coding tools and can't answer the question that actually
-matters: **is it delivering?** Vendor dashboards count tokens and dollars — spend, never
-output — and each is a per-vendor silo with weeks-long retention that never adds up
-across the tools your engineers really use. `assaio` reads the session logs already
-sitting on your machine and puts AI output *over* its cost: per project, how much code
-AI produced, how efficiently (**`$` per 100 AI lines** — the headline), and with how much
-friction — so you can see which projects turn spend into code and which mostly burn it.
-Fully offline today, no account, no upload, in about 60 seconds. Cost is the denominator
-now, not the headline.
+Vendor dashboards count tokens and dollars — spend, never output — and each is a per-vendor
+silo with weeks-long retention that never adds up across the tools your engineers really
+use. `assaio` reads the session logs already sitting on your machine and puts AI output
+*over* its cost: per project, how much code AI produced, how efficiently (**`$` per 100 AI
+lines** — the headline), and with how much friction. No account, no upload, about 60 seconds.
+Cost is the denominator now, not the headline.
 
 <p align="center">
   <img src="docs/assets/report-by-project.svg" alt="assaio-agent effectiveness --by project: AI lines produced, edits, rejections, cost, and $ per 100 AI lines for each project" width="720">
@@ -51,14 +48,10 @@ and needs no network at all.
 
 Full detail, including the exact fields extracted: [PRIVACY.md](PRIVACY.md).
 
-**The optional team server.** assaio also ships an early, self-hostable team server:
-`assaio-agent serve` pools a team's usage in one place and `assaio-agent sync` pushes each
-member's records to it, with a per-member team dashboard. Running it uses the network — the
-offline guarantee above is about the local analysis — and it talks only to infrastructure
-you stand up. Team views stay aggregated and pseudonymized by default; a per-member view is
-a deliberate, governed opt-in, never a surveillance leaderboard. The **deeper** work —
-correlating with git and issue trackers for survival / bug / quality — is still ahead. Both
-documents cover this in full: [PRIVACY.md](PRIVACY.md), [ROADMAP.md](ROADMAP.md).
+**The optional team server** (`serve` + `sync`) pools a team's usage on infrastructure you
+stand up. It is the one piece that uses the network — the guarantee above is about the local
+analysis. Team views stay aggregated and pseudonymized by default; a per-member view is a
+deliberate, governed opt-in, never a surveillance leaderboard.
 
 ## Install
 
@@ -71,9 +64,17 @@ macOS, Linux, and Windows (amd64/arm64), and the test suite runs in CI on all th
 brew install assaio/tap/assaio-agent
 ```
 
-**Linux / macOS, manual** — grab your platform's archive from
-[Releases](https://github.com/assaio/assaio/releases) and put the binary on your
-`PATH`, e.g.:
+**Any platform, with Go 1.25+:**
+
+```sh
+go install github.com/assaio/assaio/cmd/assaio-agent@latest
+```
+
+Or take your platform's archive straight from
+[Releases](https://github.com/assaio/assaio/releases).
+
+<details>
+<summary>Manual install recipes — Linux / macOS and Windows</summary>
 
 ```sh
 VER=$(curl -fsSL https://api.github.com/repos/assaio/assaio/releases/latest |
@@ -83,8 +84,6 @@ tar xzf "assaio_${VER}_linux_amd64.tar.gz" assaio-agent
 sudo install assaio-agent /usr/local/bin/
 ```
 
-**Windows** (PowerShell) — download the zip, unpack, add to `PATH`:
-
 ```powershell
 $ver = (Invoke-RestMethod https://api.github.com/repos/assaio/assaio/releases/latest).tag_name.TrimStart('v')
 Invoke-WebRequest "https://github.com/assaio/assaio/releases/download/v$ver/assaio_${ver}_windows_amd64.zip" -OutFile assaio.zip
@@ -92,14 +91,10 @@ Expand-Archive assaio.zip -DestinationPath "$env:LOCALAPPDATA\assaio"
 [Environment]::SetEnvironmentVariable("Path", "$([Environment]::GetEnvironmentVariable('Path','User'));$env:LOCALAPPDATA\assaio", "User")
 ```
 
-(New terminal after the `PATH` change; on ARM replace `amd64` with `arm64`. Scoop and
-winget packages are on the [backlog](BACKLOG.md).)
+New terminal after the `PATH` change; on ARM replace `amd64` with `arm64`. Scoop and winget
+packages are on the [backlog](BACKLOG.md).
 
-**Any platform, with Go 1.25+:**
-
-```sh
-go install github.com/assaio/assaio/cmd/assaio-agent@latest
-```
+</details>
 
 Every release artifact ships with checksums and a build-provenance attestation —
 verify one with `gh attestation verify <archive> -o assaio`.
@@ -227,18 +222,23 @@ usage; it does not yet reach into your repos):
 
 So today's answer is *"how much is AI producing, how efficiently, and with how much
 friction"* — a per-project diagnostic. *"Did it actually work, and was it worth it in
-quality terms"* is the roadmap. Two more honesty limits already baked in: AI-line signals
-come only from the sources that record changed lines, and what each one can answer is
-published per signal rather than per tool (`assaio-agent signals coverage` reads your own
-mix), and any usage on a model missing from the price table is shown blank, never faked.
+quality terms"* is the roadmap.
 
-That second limit is enforced, not just documented: **a figure is computed only over the
+One more limit is enforced rather than documented: **a figure is computed only over the
 sources that record its field.** A tool that never writes an edit count is absent from the
 session mix rather than counted as a window full of conversations, the reach is stated as the
 verdict's signal coverage, and a figure nothing in your window can answer prints `—` and
 withholds its verdict ([ADR 0011](docs/adr/0011-capability-gated-metrics.md)).
+`assaio-agent signals coverage` reads your own mix and says what it supports.
 
 ## Commands
+
+The ones a first week actually needs: `demo` to see it on sample data, `backfill` to import
+your history, `effectiveness` for the headline, `analyze` for the fuller read, `dashboard`
+for something to hand a teammate, and `doctor` when a number looks wrong.
+
+<details>
+<summary>Every command</summary>
 
 | Command    | What it does |
 |------------|--------------|
@@ -247,12 +247,12 @@ withholds its verdict ([ADR 0011](docs/adr/0011-capability-gated-metrics.md)).
 | `backfill` | Import all historical local session logs into the store. |
 | `report`   | Print a token/cost report. `--since 7d`, `--by day\|project\|tool\|model\|entrypoint\|member`, `--format table\|json\|csv`, `--compare` for period-over-period top movers. |
 | `effectiveness` | Print AI output vs. cost — AI lines, edits, rejections, and **`$`/100 AI lines** — per project. Same `--since`, `--by`, `--format`, `--compare` flags (defaults to `--by project`). A directional, per-project diagnostic. |
-| `analyze` | Run metric validators — adoption, model fit, context health, throughput, rework, plus any configured [metric plugins](docs/extending.md#write-a-metric-plugin-any-language) — and print each one's directional report. `--since`, `--format text\|json`, `--list`, or pass `[name...]` to run a subset. |
+| `analyze` | Run metric validators — adoption, model fit, context health, throughput, rework, plus any configured [metric plugins](docs/extending.md#write-a-metric-plugin-any-language) — and print each one's directional report, led by the few findings **worth a week's attention** with the reasons that ordered them. A window with nothing worth acting on says so instead of promoting the least weak read. `--since`, `--format text\|json`, `--list`, or pass `[name...]` to run a subset. |
 | `check`    | Exit non-zero when usage exceeds a budget — `--max-tokens N` (plan-independent default) or `--max-cost N` (labeled API-equivalent) — or when a configured [rule plugin](docs/extending.md#write-a-rule-plugin-any-language) raises an `error` alert. A CI / pre-push gate. |
 | `dashboard` | Write a self-contained, offline **HTML dashboard** — stat tiles, hot/going-stale projects, model/tool mix, inventory. `--since`, `--output`. Project names are pseudonymized by default so it's safe to share; `--no-anonymize` for real names. |
 | `serve`    | Run the self-hosted **team server**: collects usage pushed by teammates' `sync` and serves the aggregated, pseudonymized-by-default team dashboard. |
 | `sync`     | Push this machine's local usage to a team server — pseudonymous by default, `--member` is an explicit opt-in to a real name. |
-| `doctor`   | Show detected tools, log locations, store inventory and size, format-drift canaries, and accuracy caveats. `--strict` exits non-zero for cron/CI. |
+| `doctor`   | Show detected tools, log locations, store inventory and size, format-drift canaries, how much of your store the price table cannot cost, and accuracy caveats. `--strict` exits non-zero for cron/CI — including when too much of the store carries no model price for `$` to mean anything (`pricing.max_unpriced_share`, default 5%). |
 | `status`   | A terminal overview: inventory, headline `$`/100 lines, hottest projects, and what's going stale — projects only. `--since`. |
 | `statusline` | Print **one ambient line** for an editor or shell status bar: today's tokens, AI lines, cost basis, and how fresh the data is. The day is your machine's local day. Read-only, and never fails loudly — see [automation](docs/automation.md#option-c--claude-code-session-hooks-for-statusline). |
 | `explain`  | Print a metric's **long-form page** — what it measures, how to read it, what to do about it, and its limits. Needs no store, so it works before your first import; no argument lists every metric. |
@@ -265,6 +265,8 @@ withholds its verdict ([ADR 0011](docs/adr/0011-capability-gated-metrics.md)).
 | `plugins`  | `list` configured exec parser plugins; `verify <name>` runs one and reports protocol conformance without storing. |
 | `metrics`  | `list` configured exec **metric** plugins; `verify <name>` runs one on your real window and reports contract conformance plus the rendered result — nothing stored. |
 | `version`  | Print the version (also `--version`). |
+
+</details>
 
 ## Configuration
 
@@ -295,8 +297,13 @@ Today `assaio` reads five sources:
   (`saoudrizwan.claude-dev`) and the Cline CLI's `~/.cline/data/tasks`.
 
 Costs are computed from a vendored snapshot of the
-[LiteLLM](https://github.com/BerriAI/litellm) price table. We are honest about what we
-can and cannot measure — `assaio-agent doctor` prints these caveats every run:
+[LiteLLM](https://github.com/BerriAI/litellm) price table, and `doctor` reports how much of
+*your* store that table cannot price rather than leaving you to find out from a figure that
+looks complete. We are honest about what we can and cannot measure — `assaio-agent doctor`
+prints these caveats every run, so this list is a preview, not the only place it lives:
+
+<details>
+<summary>The accuracy caveats <code>doctor</code> prints</summary>
 
 - Claude `input_tokens` can be a streaming placeholder, so totals may diverge slightly
   from the Anthropic Console.
@@ -317,75 +324,64 @@ can and cannot measure — `assaio-agent doctor` prints these caveats every run:
   it ends does not restate an already-imported turn.
 - All on-disk log formats are vendor-internal and may change between tool versions.
 
+</details>
+
 When a model is missing from the price table, `assaio` never fakes a `$0` cost: the
-table shows `—`, JSON reports `"cost": null`, CSV leaves the cell empty, and the row is
-excluded from the `TOTAL`. Wrong-but-precise numbers are worse than an honest blank.
+table shows `—`, JSON reports `"cost": null`, CSV leaves the cell empty, the row is
+excluded from the `TOTAL`, and the footnote states what share of the window's tokens the
+cost could not see. Wrong-but-precise numbers are worse than an honest blank.
 
 More tools (opencode, Aider, Factory droid, Cursor) are on the
 [roadmap](ROADMAP.md).
 
 ## Adapt it to your organization
 
-`assaio` is built to be adapted, not just installed. Eight extension surfaces are
-available today:
-
-| Surface | What you do |
-|---------|-------------|
-| Add a data source (in-tree) | Teach `assaio` to read another tool's logs — one Go package plus golden and fuzz tests, merged in-tree via PR. See the [extensibility guide](docs/extending.md). |
-| Write an exec plugin (any language) | An out-of-tree parser as a standalone executable — Python, Rust, shell — declared in your `config.yaml` and speaking a simple stdout protocol; `plugins verify` checks conformance. See [writing a plugin](docs/extending.md#write-a-plugin-any-language). |
-| Write a **metric plugin** (any language) | An out-of-tree **analyzer**: reads the same prepared data every built-in metric reads (as JSON on stdin) and returns one result — it appears in `analyze` and on the dashboard beside the built-ins, no fork, no rebuild. `metrics verify` checks conformance. See [writing a metric plugin](docs/extending.md#write-a-metric-plugin-any-language). |
-| Write a **rule plugin** (any language) | An out-of-tree **gate**: reads the window's verdicts (as JSON on stdin) and emits alerts with a severity — an `error` alert makes `assaio-agent check` exit non-zero, so your thresholds gate CI without living in our tree. See [writing a rule plugin](docs/extending.md#write-a-rule-plugin-any-language). |
-| Add a metric validator (in-tree) | Teach `assaio analyze` a new diagnostic — one file under `internal/analyze/` implementing `Validator`, self-registered via `init()`. See [adding a metric validator](docs/extending.md#adding-a-metric-validator). |
-| Query the store directly | The SQLite schema is documented and stable enough to query with `sqlite3`, DB Browser, or any SQL client — build your own metrics and classifiers. See the [schema section](docs/extending.md#schema). |
-| Pipe machine-readable output | `report --format json` or `--format csv` feeds your own tooling, BI, or spreadsheets. |
-| Tune configuration per team | Point each team at its own `config.yaml` (or `ASSAIO_`-prefixed env vars) for different defaults. |
+`assaio` is built to be adapted, not just installed. Three out-of-tree surfaces need no fork
+and no rebuild, each an executable in any language declared in your config: a **parser
+plugin** reads another tool's logs, a **metric plugin** renders beside the built-in verdicts,
+and a **rule plugin** gates `check` on your own thresholds. In-tree you can add a data source
+or a metric validator; outside the binary you can query the documented SQLite schema
+directly or pipe `--format json|csv` into your own tooling. The
+[extensibility guide](docs/extending.md) has every contract, with a `verify` command per
+protocol.
 
 One honest limit: **out-of-tree Go plugins that import `assaio` as a library are not
-possible yet.** The core lives under Go's `internal/` on purpose while the API
-stabilizes, so external packages cannot import it. Exec plugins — parsers *and*
-metrics — are the supported out-of-tree path today: their contract is a versioned data
-format, not a Go API, so they survive core refactors. A dynamically loaded, in-process
-Go API for connectors, metrics, and rules is still ahead; see the [roadmap](ROADMAP.md).
+possible yet.** The core lives under Go's `internal/` on purpose while the API stabilizes.
+Exec plugins are the supported path today — their contract is a versioned data format, not a
+Go API, so they survive core refactors. An in-process Go API is still ahead; see the
+[roadmap](ROADMAP.md).
 
 ## Status and roadmap
 
-`assaio` is pre-1.0, and it already reaches well past an offline token reporter: five tool
-parsers, AI-line/edit/rework activity extraction for Claude Code and Codex, nineteen metric
-validators that each carry a confidence envelope, the `effectiveness` and `analyze`
-diagnostics, format-drift canaries and a published source-depth matrix, the offline
-**Assay** HTML dashboard, and a self-hosted team-server MVP — `serve` plus `sync` — that
-aggregates a team's usage into one pseudonymized-by-default dashboard and CLI. All of it
-runs today; the team server is the one piece that needs a network, and you host it
-yourself, on infrastructure you control. [FEATURES.md](FEATURES.md) is the maintained
-inventory, with the release each capability arrived in.
+`assaio` is pre-1.0 and already reaches well past an offline token reporter: five parsers,
+nineteen metric validators that each carry a confidence envelope, format-drift canaries, a
+published source-depth matrix, offline reconciliation against a vendor's own export, the
+offline **Assay** dashboard, and a self-hosted team-server MVP.
+[FEATURES.md](FEATURES.md) is the maintained inventory, with the release each capability
+arrived in.
 
 What it still can't do is connect a session to the change it produced — whether AI-written
 code reached a pull request, passed review and CI, **survived** in `main`, or **caused
 bugs**. That needs correlating usage with git and pull-request history, and it is the next
-milestone, not a shipped feature.
-[ROADMAP.md](ROADMAP.md) lays out that direction as a conceptual, feedback-driven plan —
-not a committed schedule; [BACKLOG.md](BACKLOG.md) is the concrete, ranked pool of
-candidate work items behind it, and [FEATURES.md](FEATURES.md) inventories exactly what
-exists today and since which release.
+milestone, not a shipped feature. [ROADMAP.md](ROADMAP.md) is that direction as a
+feedback-driven plan, never a committed schedule; [BACKLOG.md](BACKLOG.md) is the ranked
+pool behind it.
 
 The core is Apache-2.0 and stays that way; a hosted or enterprise offering may fund
 development later.
 
 ## Why "assaio"?
 
-An *assay* is the metallurgist's test: the procedure that determines how much real
-precious metal is in a piece of ore. Ore can glitter and still be worthless — only the
-assay tells you what it is actually worth.
+An *assay* is the metallurgist's test: what tells you how much real metal is in a piece of
+ore. Ore can glitter and still be worthless — which is exactly the position engineering
+organizations are in with AI coding tools: tokens burned, seats bought, dashboards full of
+activity, and very little honest measurement of what any of it is worth. **assaio** (*assay*
++ *io*) is built to be that test, and it would rather show you an honest blank than a
+precise-looking number that is wrong.
 
-That is precisely the question engineering organizations face with AI coding tools:
-plenty of glitter — tokens burned, seats bought, dashboards full of activity — and very
-little honest measurement of what any of it is worth. **assaio** (*assay* + *io*) is
-built to be that test. It measures the real value in the ore, and it would rather show
-you an honest blank than a precise-looking number that is wrong.
-
-The metaphor also sets the project's ethics: an assay examines the metal, never the
-miner. assaio measures **value, not people** — team-level aggregation and
-pseudonymization are the defaults in everything built on top of this agent.
+The metaphor also sets the ethics: an assay examines the metal, never the miner. assaio
+measures **value, not people** — aggregation and pseudonymization are the defaults in
+everything built on this agent.
 
 ## Contributing
 
@@ -395,14 +391,9 @@ the authoritative set of rules. In short: sign your commits with the
 (squash before review), Conventional Commit subjects, and a green CI gate (`gofmt`,
 `go vet`, `golangci-lint`, `go test -race`).
 
-Code standards are enforced by linters and optional hooks and documented in
-[CONTRIBUTING.md](CONTRIBUTING.md); AI assistants get the same rules via
-[AGENTS.md](AGENTS.md).
-
-Adding support for a new AI tool is a well-scoped first contribution: one parser
-package, golden-file tests, and a connector issue template to guide you. The
-[extensibility guide](docs/extending.md) walks through adding a data source, querying the
-SQLite store directly, and where custom metrics are headed.
+AI assistants get the same rules via [AGENTS.md](AGENTS.md). Adding support for a new AI tool
+is a well-scoped first contribution: one parser package, golden-file tests, and a connector
+issue template to guide you — the [extensibility guide](docs/extending.md) walks it through.
 
 ## Security
 
@@ -419,13 +410,15 @@ from the LiteLLM project (MIT); attribution is in [NOTICE](NOTICE).
 assaio is at the beginning of its roadmap, and the most valuable thing at this stage is
 real-world usage.
 
-- **Pilot organizations & design partners.** If your team wants to see what its AI
-  coding spend produces per project today — and, next, whether that code survives and
-  holds up in quality terms — we want to build the team server ([v0.2](ROADMAP.md))
-  against your reality, not our assumptions. Direct influence on the roadmap; no
-  commitment beyond honest feedback.
+- **Pilot organizations & design partners.** If your team wants to see what its AI coding
+  spend produces per project today — and, next, whether that code survives and holds up in
+  quality terms — we want to build the [next milestone](ROADMAP.md) against your reality,
+  not our assumptions. Direct influence on the roadmap; no commitment beyond honest feedback.
 - **Tool vendors & integrators.** If you build an AI coding tool and want it measured
   fairly, help us get your connector right.
+- **Anyone running Gemini CLI or Cline.** One redacted session log closes the one gap
+  nothing here can close alone: both are calibrated against a sample written in the source's
+  shape, never a real capture. A redacted vendor billing export is the same kind of gift.
 - **Contributors.** One tool = one package; one metric = one file. The codebase is
   deliberately small and readable — a good place to make your first open-source
   contribution count.

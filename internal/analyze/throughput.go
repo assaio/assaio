@@ -1,8 +1,7 @@
 package analyze
 
 import (
-	"strconv"
-
+	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/report"
 )
 
@@ -49,7 +48,7 @@ func (throughputValidator) Analyze(in Input) Result {
 	r.Read = readFor(ramping, "Ramping")
 	r.Purity = trendPurity(changePct, trendOK)
 	r.Figures = []Figure{
-		{Label: "AI lines total", Value: strconv.FormatInt(in.Totals.Lines, 10)},
+		{Label: "AI lines total", Value: humanize.Int(in.Totals.Lines)},
 		{Label: "lines/active-day", Value: perActiveDay(in.Totals.Lines, int64(inv.Days))},
 		trendFigure(recent, prior, changePct, trendOK),
 	}
@@ -92,7 +91,7 @@ func topProjectBars(projects []ProjectStat, topN int) []Bar {
 	for i := range kept {
 		bars[i] = Bar{
 			Label: groupLabel(kept[i].Project),
-			Value: strconv.FormatInt(kept[i].Lines, 10) + " lines",
+			Value: humanize.Int(kept[i].Lines) + " lines",
 			Frac:  fracOf(kept[i].Lines, maxLines),
 		}
 	}

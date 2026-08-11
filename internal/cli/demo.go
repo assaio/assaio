@@ -98,7 +98,9 @@ func runDemoReports(cmd *cobra.Command, st *store.Store, start time.Time, lw *li
 	if err != nil {
 		return err
 	}
-	return renderAnalyzeResults(cmd, runValidatorResults(analyze.Validators(), &in), "text")
+	// The demo runs every validator over the bundled window, so the ordering has the whole
+	// window to rank -- which is the part of the report worth showing first.
+	return renderAnalyzeResults(cmd, runValidatorResults(analyze.Validators(), &in), "text", true)
 }
 
 func demoHeader(lw *lineWriter, title string) {
