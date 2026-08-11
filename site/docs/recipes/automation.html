@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Running it without being asked — assaio</title>
-<meta name="description" content="[Automation](../automation.md) covers the schedulers themselves ">
+<meta name="description" content="Automation covers the schedulers themselves — cron, launchd, editor status lines.">
 <link rel="canonical" href="https://assaio.dev/docs/recipes/automation">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://assaio.dev/docs/recipes/automation">
 <meta property="og:title" content="Running it without being asked — assaio">
-<meta property="og:description" content="[Automation](../automation.md) covers the schedulers themselves ">
+<meta property="og:description" content="Automation covers the schedulers themselves — cron, launchd, editor status lines.">
 <meta property="og:image" content="https://assaio.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -166,13 +166,17 @@ against an afternoon rather than against last week.</p>
 <h2 id="when-the-schedule-itself-is-the-thing-that-broke">When the schedule itself is the thing that broke</h2>
 <p>A scheduled job that stops running produces no output, and no output is indistinguishable from a
 quiet week. The cheap guard is to let the <em>store's</em> age answer instead of the job's:</p>
-<pre><code class="language-sh"># Non-zero when nothing has been imported recently enough to trust a report.
-assaio-agent statusline
+<p><code>statusline</code> is the wrong tool: it prints today's tokens, AI lines, cost basis and how fresh the
+data is, and it <strong>never fails loudly</strong> — every path exits 0, which is what makes it right for a
+prompt and useless as an alarm.</p>
+<p><code>doctor</code> is the one that exits non-zero, and the condition it exits on is a configured source
+with no inputs — which is what a schedule that stopped running eventually looks like.</p>
+<pre><code class="language-sh"># Exits non-zero on suspected drift, on a configured source with no inputs, on a store it
+# cannot read, and above the unpriced-token ceiling.
+assaio-agent doctor --strict
 </code></pre>
-<p><code>statusline</code> prints today's tokens, AI lines, cost basis and how fresh the data is, and it never
-fails loudly — which makes it right for a prompt and wrong as a monitor. For a monitor, read the
-data age it prints and decide in your own script; assaio will not invent a staleness threshold,
-because how stale is too stale depends on how often your team actually runs an agent.</p>
+<p>For staleness specifically, read the data age yourself and decide: assaio will not invent a
+threshold, because how stale is too stale depends on how often your team actually runs an agent.</p>
 <h2 id="what-not-to-automate">What not to automate</h2>
 <p>Nothing on this page writes a label. <code>mark --accept-suggested</code> is safe to schedule in a
 repository whose conventions you wrote and trust — but a scheduled labeller in a repository

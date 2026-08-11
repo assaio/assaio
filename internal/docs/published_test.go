@@ -46,6 +46,22 @@ func TestCommittedReferencePageMatchesTheBinary(t *testing.T) {
 	assertGenerated(t, referenceHTML, docs.HTML(reference(), guides(t)))
 }
 
+// The reference was published at /reference before it moved inside the documentation, and a
+// static host cannot redirect. The page left behind is what keeps a link shared in that window
+// working.
+func TestCommittedRedirectMatches(t *testing.T) {
+	assertGenerated(t, filepath.Join(repoRoot, docs.RedirectFile), docs.Redirect())
+}
+
+// A document under docs/ is published or excused, and never neither: a guide added to the tree
+// and forgotten is exactly the drift this section exists to remove. Guides() enforces it, and
+// this is what runs the enforcement without generating anything.
+func TestEveryDocumentIsPublishedOrExcused(t *testing.T) {
+	if _, err := docs.Guides(repoRoot); err != nil {
+		t.Error(err)
+	}
+}
+
 // Every published page is generated from the Markdown it is written in, so the two cannot say
 // different things. A link the renderer cannot resolve fails here rather than reaching the site
 // as a 404 -- the published copy is the one a reader trusts.
@@ -242,4 +258,22 @@ func servedURL(path string) string {
 		return "/"
 	}
 	return rel
+}
+
+// Every recipe is checked by something, and the somethings are not equally strong. This holds
+// the classification to the pages in both directions, so "each recipe on these pages is checked"
+// stays a statement about what the suite does rather than about what it once did.
+func TestEveryRecipeIsClassified(t *testing.T) {
+	var found []string
+	for _, g := range guides(t) {
+		if !strings.HasPrefix(g.Source, "docs/recipes/") {
+			continue
+		}
+		for _, r := range docs.ExtractRecipes(read(t, filepath.Join(repoRoot, g.Source))) {
+			found = append(found, r.Name)
+		}
+	}
+	report(t, docs.CheckRecipeCoverage(found))
+	report(t, docs.CheckCoverageCounts("docs/extending.md", read(t, repoRoot+"/docs/extending.md")))
+	t.Logf("recipe coverage: %s", docs.CoverageSummary())
 }

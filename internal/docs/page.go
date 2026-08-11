@@ -75,7 +75,7 @@ func writeSidebar(b *strings.Builder, p *pageSpec) {
 	b.WriteString(`<aside class="side"><nav>`)
 	for _, group := range GroupsInOrder() {
 		entries := InGroup(p.Guides, group)
-		if group == GroupRef {
+		if group == GroupRef && len(entries) == 0 {
 			entries = []Guide{{URL: ReferenceURL, Title: "Every signal, source and setting"}}
 		}
 		if len(entries) == 0 {
@@ -87,7 +87,13 @@ func writeSidebar(b *strings.Builder, p *pageSpec) {
 			if g.URL == p.Current {
 				class = ` class="on"`
 			}
-			b.WriteString(`<li><a` + class + ` href="` + Host + g.URL + `">` + esc(g.Title) + `</a></li>`)
+			// A fragment addresses this page; everything else is another page on the site, and
+			// absolute so the file also works opened from disk.
+			href := Host + g.URL
+			if strings.HasPrefix(g.URL, "#") {
+				href = g.URL
+			}
+			b.WriteString(`<li><a` + class + ` href="` + href + `">` + esc(g.Title) + `</a></li>`)
 		}
 		b.WriteString(`</ul>`)
 	}

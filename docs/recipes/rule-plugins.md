@@ -7,8 +7,10 @@ It is the only extension point that can fail `check`, and the only one where "wh
 considers unacceptable" belongs — assaio ships thresholds for nothing, because a threshold is a
 policy and policies are local.
 
-Each plugin below is complete. Every one is executed by `TestRecipeRulePlugins` against a
-fixture window and asserted on: they are run, not merely printed.
+Each plugin below is complete, and each is **executed** by `TestRecipeRulePlugins` against a
+fixture window with its alerts asserted — they are run, not merely printed. The config block is
+loaded by assaio's own configuration loader; the one `check` invocation is checked against the
+command tree and nothing runs the shell around it.
 
 ## Wiring one up
 

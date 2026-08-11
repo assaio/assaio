@@ -3,6 +3,7 @@ package docs
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -51,33 +52,49 @@ type sourceError struct {
 func (e *sourceError) Error() string { return e.source + " " + e.err.Error() }
 func (e *sourceError) Unwrap() error { return e.err }
 
-// describe takes the page's own first sentence of prose as its meta description, so a shared
-// link says what the page is without anyone maintaining a second summary of it.
+// describe takes the page's own first sentence as its meta description, so a shared link says
+// what the page is without anyone maintaining a second summary of it. It joins the paragraph
+// first: docs/ is hard-wrapped, so a single line is almost never a whole sentence, and a
+// description cut at the wrap reads as a truncation rather than as a summary.
 func describe(doc string) string {
+	var para []string
 	for line := range strings.Lines(doc) {
 		line = strings.TrimSpace(line)
 		switch {
-		case line == "", strings.HasPrefix(line, "#"), strings.HasPrefix(line, "*Part of"),
-			strings.HasPrefix(line, ">"), strings.HasPrefix(line, "|"), strings.HasPrefix(line, "-"):
+		case line == "" && len(para) == 0:
+			continue
+		case line == "":
+			return summarize(strings.Join(para, " "))
+		case strings.HasPrefix(line, "#"), strings.HasPrefix(line, "*Part of"),
+			strings.HasPrefix(line, ">"), strings.HasPrefix(line, "|"),
+			strings.HasPrefix(line, "-"), strings.HasPrefix(line, "```"):
 			continue
 		}
-		return summarize(line)
+		para = append(para, line)
 	}
-	return "Documentation for assaio."
+	if len(para) == 0 {
+		return "Documentation for assaio."
+	}
+	return summarize(strings.Join(para, " "))
 }
 
-// summarize strips the inline Markdown a meta tag cannot render and cuts to one sentence.
-func summarize(line string) string {
-	line = strings.NewReplacer("`", "", "**", "", "*", "", "_", "").Replace(line)
-	for _, end := range []string{". ", " — ", ": "} {
-		if at := strings.Index(line, end); at > 60 {
-			return line[:at+1]
+// summarize strips the inline Markdown a meta tag cannot render, drops link syntax down to its
+// text, and cuts at the first sentence end past a readable minimum.
+func summarize(text string) string {
+	text = mdLink.ReplaceAllString(text, "$1")
+	text = strings.NewReplacer("`", "", "**", "", "*", "", "_", "").Replace(text)
+	text = strings.Join(strings.Fields(text), " ")
+	for _, end := range []string{". ", "? ", " — ", ": "} {
+		if at := strings.Index(text, end); at > 60 {
+			return strings.TrimSpace(text[:at+1])
 		}
 	}
-	if len(line) > 200 {
-		if cut := strings.LastIndex(line[:200], " "); cut > 0 {
-			return line[:cut] + "…"
+	if len(text) > 200 {
+		if cut := strings.LastIndex(text[:200], " "); cut > 0 {
+			return text[:cut] + "…"
 		}
 	}
-	return line
+	return text
 }
+
+var mdLink = regexp.MustCompile(`\[([^\]]*)\]\([^)]*\)`)

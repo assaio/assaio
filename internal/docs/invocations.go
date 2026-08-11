@@ -10,18 +10,36 @@ import (
 // renamed, or a command that never existed, is a defect the reader discovers instead of the
 // build -- which is the same failure the published surfaces had before they were checked. This
 // reads the invocations out of the prose and holds each one to the command tree.
-var invocation = regexp.MustCompile(`\bassaio(?:-agent)?\s+([a-z][^\n\x60|>]*)`)
+// The binary's full name only: a bare "assaio" is the project, and inside a fenced block it is
+// followed by English as often as by a command ("the catalog of what assaio can report"). Tabs
+// and spaces rather than \s, because \s crosses a newline and would read the next line of a
+// shell script as arguments to the last word of this one.
+var invocation = regexp.MustCompile("(?m)\\bassaio-agent[ \t]+([a-z][^\n\x60|>]*)")
 
 // CheckInvocations reports every `assaio-agent …` line in a document that names a command or a
-// flag the binary does not have.
+// flag the binary does not have. It reads only code -- fenced blocks and inline spans -- because
+// in prose the binary's name is followed by a verb ("assaio measures whether…") rather than by a
+// subcommand, and a check that could not tell the two apart would have to skip both.
 func CheckInvocations(ref *Reference, file, content string) []Problem {
 	ix := newIndex(ref)
 	flags := flagIndex(ref)
 	var problems []Problem
-	for _, m := range invocation.FindAllStringSubmatch(content, -1) {
-		path, args := splitInvocation(ix, strings.Fields(m[1]))
+	for _, m := range invocation.FindAllStringSubmatch(codeRegions(content), -1) {
+		words := strings.Fields(m[1])
+		for i := range words {
+			// A shell script quotes the whole invocation, so the last word carries the closing
+			// quote and the first carries nothing else.
+			words[i] = strings.Trim(words[i], `"'`+"`")
+		}
+		path, args := splitInvocation(ix, words)
 		if path == "" {
-			continue // a prose sentence that happens to follow the binary's name
+			// Inside code, a word after the binary's name is a command or a mistake. Skipping
+			// it would abandon the flags with it, which is how a renamed command and a
+			// misspelled flag both pass unnoticed.
+			problems = append(problems, Problem{File: file, Text: fmt.Sprintf(
+				"prints `assaio-agent %s`, and the binary has no such command", words[0],
+			)})
+			continue
 		}
 		for _, arg := range args {
 			name, ok := flagArg(arg)
@@ -62,7 +80,7 @@ func flagArg(word string) (string, bool) {
 		return "", false
 	}
 	name, _, _ := strings.Cut(strings.TrimPrefix(word, "--"), "=")
-	name = strings.TrimRight(name, ".,;:)")
+	name = strings.TrimRight(name, `.,;:)"'`)
 	if name == "" {
 		return "", false
 	}

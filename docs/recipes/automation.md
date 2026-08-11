@@ -58,15 +58,21 @@ against an afternoon rather than against last week.
 A scheduled job that stops running produces no output, and no output is indistinguishable from a
 quiet week. The cheap guard is to let the *store's* age answer instead of the job's:
 
+`statusline` is the wrong tool: it prints today's tokens, AI lines, cost basis and how fresh the
+data is, and it **never fails loudly** — every path exits 0, which is what makes it right for a
+prompt and useless as an alarm.
+
+`doctor` is the one that exits non-zero, and the condition it exits on is a configured source
+with no inputs — which is what a schedule that stopped running eventually looks like.
+
 ```sh #freshness
-# Non-zero when nothing has been imported recently enough to trust a report.
-assaio-agent statusline
+# Exits non-zero on suspected drift, on a configured source with no inputs, on a store it
+# cannot read, and above the unpriced-token ceiling.
+assaio-agent doctor --strict
 ```
 
-`statusline` prints today's tokens, AI lines, cost basis and how fresh the data is, and it never
-fails loudly — which makes it right for a prompt and wrong as a monitor. For a monitor, read the
-data age it prints and decide in your own script; assaio will not invent a staleness threshold,
-because how stale is too stale depends on how often your team actually runs an agent.
+For staleness specifically, read the data age yourself and decide: assaio will not invent a
+threshold, because how stale is too stale depends on how often your team actually runs an agent.
 
 ## What not to automate
 
@@ -75,3 +81,4 @@ repository whose conventions you wrote and trust — but a scheduled labeller in
 without a convention writes nothing at all, and a scheduled labeller in a repository whose
 convention you guessed writes the wrong thing everywhere at once. Run
 [`--suggest`](label-rules.md) by hand until its output is boring.
+

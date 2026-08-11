@@ -130,8 +130,10 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
 It is the only extension point that can fail <code>check</code>, and the only one where &quot;what my company
 considers unacceptable&quot; belongs — assaio ships thresholds for nothing, because a threshold is a
 policy and policies are local.</p>
-<p>Each plugin below is complete. Every one is executed by <code>TestRecipeRulePlugins</code> against a
-fixture window and asserted on: they are run, not merely printed.</p>
+<p>Each plugin below is complete, and each is <strong>executed</strong> by <code>TestRecipeRulePlugins</code> against a
+fixture window with its alerts asserted — they are run, not merely printed. The config block is
+loaded by assaio's own configuration loader; the one <code>check</code> invocation is checked against the
+command tree and nothing runs the shell around it.</p>
 <h2 id="wiring-one-up">Wiring one up</h2>
 <pre><code class="language-yaml">rules:
   - name: house-rules

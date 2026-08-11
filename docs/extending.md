@@ -43,11 +43,19 @@ every depth row, and [the worked example](extending/metric-validator-example.md)
 
 ## Recipes
 
-The guides describe the contracts; these are working examples to copy. Every recipe on these
-pages is **executed by the test suite** — the label rules are loaded and their derivations
-asserted, the plugins are run against a fixture window and their output held to the protocol —
-so a recipe that stopped working fails the build instead of a reader's afternoon. Where a recipe
-can only be shape-checked rather than run, the page says so.
+The guides describe the contracts; these are working examples to copy. **Every recipe is held to
+still working, and not all of them equally** — the classification is code, and a recipe missing
+from it fails the build:
+
+| how | what it means | how many |
+|---|---|---|
+| executed | run, and the output asserted — the label rules through the rule engine, the plugins against a fixture window with their output held to the protocol | 10 |
+| commands-checked | every `assaio-agent` invocation in it names a real command and real flags; nothing runs the surrounding shell | 11 |
+| loaded | parsed by assaio's own configuration loader and validated | 2 |
+| shape-checked | parsed, and the method set held to the `Validator` interface: a renamed method fails, a wrong number does not | 2 |
+
+A shell recipe is the weak one, and it is weak in a specific way worth knowing: the flags are
+real, and whether the pipeline around them does what the prose says is a reviewer's judgement.
 
 - [Extensions, written out in full](recipes/extensions.md) — complete validators and metric
   plugins, including the one thing that separates a metric from a mistake: gating on what the
