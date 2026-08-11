@@ -100,6 +100,13 @@ Discussion.
   prefix. Masking what is structurally not a version is the same move the guard already made for
   SVG geometry attributes.
 - **854 bytes of stylesheet for the deleted roadmap section** left `site/index.html` with it.
+- **The site deploy no longer resolves its own tooling at build time.** `npx wrangler deploy`
+  took whatever npm called `latest` when the build ran, and on 2026-08-11 that was a wrangler
+  published 88 seconds earlier whose `miniflare` dependency was not resolvable yet: `ETARGET`,
+  three deploys skipped, the site serving an older commit while every other check stayed green.
+  `package.json` and its lockfile pin the tool — the version is now a line in a diff rather than
+  a race, and Cloudflare caches the dependency instead of reinstalling it each time. Nothing in
+  that file builds the page; `site/` is still copied, not compiled.
 - **Every internal link and canonical names a path the host actually serves.** Workers Assets
   serves `site/reference.html` at `/reference` and `307`s the extension away, so the first cut
   of the reference page pointed its own canonical at a redirect — correct in review and in a
