@@ -98,6 +98,11 @@ Discussion.
   prefix. Masking what is structurally not a version is the same move the guard already made for
   SVG geometry attributes.
 - **854 bytes of stylesheet for the deleted roadmap section** left `site/index.html` with it.
+- **Every internal link and canonical names a path the host actually serves.** Workers Assets
+  serves `site/reference.html` at `/reference` and `307`s the extension away, so the first cut
+  of the reference page pointed its own canonical at a redirect — correct in review and in a
+  browser opened on the file, wrong against the deployed site. A new `servedpaths` job checks
+  it, because that is a fact about the artifact and nothing was reading it.
 
 ## [0.17.0] - 2026-08-11
 

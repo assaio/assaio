@@ -14,6 +14,11 @@ read by something that is **not** the browser rendering the page:
   from what the binary would write. It publishes what can be enumerated — every signal, source,
   validator, command, flag, configuration key and metric-contract field — so the hand-written
   page never has to list any of it. Regenerate with `make docs`; do not edit it.
+  **It is served at `/reference`, not `/reference.html`**: Workers Assets drops the extension and
+  `307`s the file name away, the same handling that serves `index.html` at `/`. A link or a
+  canonical naming the file therefore points at a redirect — which looks correct in review and in
+  a browser opened on the file, and is only wrong against the deployed site. The `servedpaths`
+  job holds every internal link and canonical to a path the host actually serves.
 
 - **`og.png`** — the card a shared link renders as. Every Open Graph tag was present except
   this one, so LinkedIn and the rest showed a bare grey line; a `data:` URI cannot stand in,

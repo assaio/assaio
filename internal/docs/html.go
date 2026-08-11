@@ -5,7 +5,9 @@ import "strings"
 // HTML renders the reference as one self-contained page. It is generated and committed as
 // site/reference.html, which is why it names no version: a served file may not carry a stamp
 // that has to be updated at every tag (docs/site.md), and the schema version belongs in the
-// JSON, where a tool reads it.
+// JSON, where a tool reads it. Every URL below drops the ".html": Cloudflare Workers Assets
+// serves the file at /reference and 307s the extension away, so a canonical naming the file
+// would point at a redirect.
 func HTML(ref *Reference) []byte {
 	var b strings.Builder
 	b.WriteString(head)
@@ -36,9 +38,9 @@ const head = `<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>assaio reference — every signal, source, validator, command and setting</title>
 <meta name="description" content="The enumerable surfaces of assaio, generated from the binary's own registries: the signal catalog, the source-depth matrix, the metric validators, the command tree, the configuration keys and the metric-plugin protocol.">
-<link rel="canonical" href="https://assaio.dev/reference.html">
+<link rel="canonical" href="https://assaio.dev/reference">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://assaio.dev/reference.html">
+<meta property="og:url" content="https://assaio.dev/reference">
 <meta property="og:title" content="assaio reference">
 <meta property="og:description" content="Every signal, source, validator, command and setting — generated from the binary, not transcribed.">
 <meta property="og:image" content="https://assaio.dev/og.png">
