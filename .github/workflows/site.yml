@@ -115,6 +115,34 @@ jobs:
           done < <(find site -type f -name '*.html' | sort)
           exit $fail
 
+  # Workers Assets serves site/reference.html at /reference and 307s the extension away, so a
+  # link or a canonical naming the file points at a redirect rather than at the page. That is
+  # invisible in review and in a local browser, where opening the file works either way -- it
+  # only shows up against the deployed site. This is the same failure mode as the version stamp:
+  # a fact about the artifact that nothing checked. Every internal link and canonical has to name
+  # a path the host actually serves.
+  servedpaths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every internal link names a path the host serves
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS= read -r ref; do
+            case "$ref" in
+              /) continue ;;   # index.html, served at the root
+              *.html) echo "::error::$ref names a file; Workers Assets serves it without the extension"; fail=1; continue ;;
+            esac
+            # Anything else must be an extensionless page or a real asset in the directory.
+            if [ ! -f "site/${ref#/}.html" ] && [ ! -f "site/${ref#/}" ]; then
+              echo "::error::$ref is linked but site/ serves no such page or asset"
+              fail=1
+            fi
+          done < <(grep -ohE '(href|content)="(https://assaio\.dev)?/[^"#]*"' site/*.html \
+                   | sed -E 's/.*="(https:\/\/assaio\.dev)?([^"]*)"/\2/' | sort -u)
+          exit $fail
+
   # A link to assaio.dev rendered as a bare grey line on LinkedIn and every other reader for as
   # long as the page shipped without an og:image -- the tags were all there except the one that
   # makes a card exist. It is not covered by `selfcontained`: a crawler fetches og:image out of
