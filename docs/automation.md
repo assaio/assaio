@@ -125,6 +125,62 @@ The trade is latency against freshness, and it is yours to make — `SessionEnd`
 `PreCompact` alone keep the numbers just as honest, at the cost of a status line that lags
 inside a long session, which is exactly why it always shows its age.
 
+## A weekly digest, delivered by you
+
+`digest` is the surface built for a scheduler: it writes markdown about what **moved** since
+the last digest, and nothing else. Delivery is deliberately not assaio's job — pipe it wherever
+your team already reads things.
+
+```sh
+#!/bin/sh
+# ~/.local/bin/assaio-digest — one week, wherever you read things.
+assaio-agent digest --weekly > "$HOME/assaio-week.md"
+# …then pick one:
+#   mail -s "AI usage this week" you@example.com < "$HOME/assaio-week.md"
+#   curl -sS -X POST -H 'Content-type: application/json' \
+#     --data "$(jq -Rs '{text: .}' < "$HOME/assaio-week.md")" "$SLACK_WEBHOOK_URL"
+```
+
+Run it on the cadence the window describes — a `7d` digest every 7 days:
+
+```cron
+0 9 * * 1 /home/you/.local/bin/assaio-digest
+```
+
+Two things are worth knowing before you wire it up. **The first run has nothing to compare
+against** and says so rather than reporting every figure as new; the comparison starts with the
+second. And **the digest states when the comparison itself is weak** instead of reporting
+through it — windows that overlap because it ran sooner than the window is long, windows of
+different lengths, and the one a single-window surface cannot have: a parser that changed
+between the two runs, where a mover may be a correction reaching history rather than a change in
+how the tools were used. Use `--dry-run` to print a digest without recording it as the next
+run's basis.
+
+Each run stores a small snapshot — totals, per-model and per-project weights, and each
+validator's verdict. Never session content, and bounded to the newest 12 by the same
+transaction that writes it, so it does not grow with time.
+
+## Suggested labels, once instead of per session
+
+`mark --suggest` reads what your sessions already recorded — branch, skill, sub-agent,
+entrypoint — and proposes a label for each, showing the evidence. Nothing is written until you
+run `mark --accept-suggested`, and a label made by hand is never replaced.
+
+```sh
+assaio-agent mark --suggest --since 30d          # look
+assaio-agent mark --accept-suggested --since 30d # then write
+```
+
+The built-in rules read branch conventions only (`feat/`, `fix/`, `test/`, `refactor/`,
+`docs/`, `spike/`, `review/` and their common spellings). If your team spells it differently,
+teach it rather than waiting for a release — `labels.rules` in the config takes a source, an
+RE2 pattern and the axis value a match implies, and `labels.defaults: false` drops the built-in
+set if one of them means something else in your repository. A repository with no convention
+derives nothing, which is the intended answer rather than a missing one.
+
+This is deliberately not automated into a hook: a derived label is a suggestion, and writing
+one without anybody looking is how a vocabulary stops meaning anything.
+
 ## Survival on a schedule
 
 `survival` is the outcome signal — run it per repo, weekly, and log or publish the result.

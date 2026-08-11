@@ -16,7 +16,8 @@ Out-of-tree metrics are subprocesses speaking a stdio protocol, mirroring ADR 00
 metric plugin is any executable that, invoked as `<command> analyze` with
 `ASSAIO_METRIC_PROTOCOL=1`, reads one JSON envelope on stdin — the same prepared
 `Input` bundle every built-in validator reads (usage, sessions, delegation, byModel,
-byProject, totals, prices, answers), versioned as `assaio_metric_input: 1` — and writes to
+byProject, totals, prices, answers, windowStart, planMonthlyCost, skills, agents, turnSizing,
+cacheMisses), versioned as `assaio_metric_input: 1` — and writes to
 stdout a one-line handshake (`{"assaio_metric":1,"name":"<name>"}`) followed by exactly
 one JSON `Result` document, in the same shape `analyze --format json` emits.
 
@@ -71,5 +72,14 @@ Rejected alternatives:
 - The prepared-`Input` JSON becomes a versioned public surface; widening it is cheap,
   reshaping it is a breaking protocol change to be called out in release notes.
 - The in-tree validator path (docs/extending.md) remains the route for upstreamable
-  metrics and for signals the wire envelope does not carry; the dynamically loaded
-  in-process Go API stays roadmap.
+  metrics; the dynamically loaded in-process Go API stays roadmap.
+- **The envelope carries every `analyze.Input` field, and that is now a test rather than an
+  intention** (v0.17). It was not true when this ADR was written: six fields — `windowStart`,
+  `planMonthlyCost`, `skills`, `agents`, `turnSizing`, `cacheMisses` — never crossed the
+  boundary, while five shipped validators read them, so "the same prepared `Input` bundle
+  every built-in validator reads" was a claim the wire did not honour and an out-of-tree
+  author could not reproduce a third of what the core published. A reflective canary now fails
+  the build when a new `Input` field reaches neither the envelope nor a listed exception with
+  its reason; the only standing exceptions are `recent` (sent as `recentDays`) and
+  `ingested`/`parsedBy` (which the core stamps onto the plugin's own `Result`). An extension
+  surface weaker than the core it extends is a demonstration, not a contract.

@@ -930,7 +930,13 @@ parser protocol's `assaio_plugin`):
                 "cacheRead":0.0000015,"cacheWrite":0.00001875,
                 "cacheWrite1h":0.00003}},
   "answers":   {"claude-code":["ai.compactions.count","ai.edits.count","..."],
-                "copilot-cli":["ai.cost.estimated","ai.lines.added","..."]}
+                "copilot-cli":["ai.cost.estimated","ai.lines.added","..."]},
+  "windowStart": "2026-07-10T00:00:00Z",
+  "planMonthlyCost": 200,
+  "skills":     [{"name":"brainstorming","tokens":0,"lines":0,"records":0,"sessions":0}],
+  "agents":     [{"name":"reviewer","tokens":0,"lines":0,"records":0,"sessions":0}],
+  "turnSizing": [{"model":"claude-opus-5","turns":0,"smallTurns":0}],
+  "cacheMisses":[{"tool":"claude-code","reason":"ttl_expired","turns":0}]
 }
 ```
 
@@ -1055,6 +1061,30 @@ covering none of the window reads as the second row.
 
 Declaring `samples: 0` with a unit is therefore better than omitting the field: "zero
 sessions" is a measurement, "no stated basis" is an absence of one.
+
+#### The window, not just its rows (since v0.17)
+
+Six fields answer questions about the **window** that no sum over `usage` can reach, and until
+v0.17 none of them crossed this boundary — which meant five shipped validators read data an
+out-of-tree author could not. They are on the envelope now, and the parity is enforced by a
+test: an `analyze.Input` field must either appear here or be listed as a deliberate exception
+with its reason.
+
+| Field | What it is, and the trap in it |
+|---|---|
+| `windowStart` | the `--since` boundary the usage was queried with. The zero time means the caller scoped no window. A monthly projection divides by *real days*, including the ones inside the window that carry no usage — those are still days a flat plan was paid for |
+| `planMonthlyCost` | the configured flat subscription price. `0` means nobody configured one, **never** a plan that costs nothing — comparing against it as if it were free reports a saving that does not exist |
+| `skills`, `agents` | per-skill and per-sub-agent totals. A row carrying no attribution is absent rather than bucketed under `""`, and both lists are empty when no tool in the window records attribution at all. That emptiness is a coverage fact to state, not a zero to publish |
+| `turnSizing` | per-model turn counts at the raw per-turn grain the daily `usage` rows aggregate away. `smallTurns` is a **subset** of `turns`, not a separate population |
+| `cacheMisses` | turns that stated a cache-miss reason, per tool. A turn that hit cache states nothing and is absent, as is every turn from a source that reports no reason — so this is never a denominator |
+
+`skills`, `agents` and `cacheMisses` are all shaped the same way: **present means recorded,
+absent means not recorded, and neither means zero.** Before publishing a figure over any of
+them, check `answers` for whether the tools in this window record it at all, and declare the
+coverage you actually had.
+
+The envelope stays `assaio_metric_input: 1`: these fields are additive, and a plugin written
+against the earlier shape keeps working and simply ignores them.
 
 ### What the boundary enforces
 

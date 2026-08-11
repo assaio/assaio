@@ -69,36 +69,30 @@ condition.
 
 ## Next — "Worth opening twice"
 
-The items that decide whether the analysis already shipped reaches anybody. The first of them —
-findings that arrive ordered, with the ordering's reasons shown (`B148`) — shipped; three remain.
-Not a detour from depth: this is the only milestone that answers the questions
+The items that decide whether the analysis already shipped reaches anybody. Most of it has now
+shipped — findings that arrive ordered with their reasons shown (`B148`), a digest that reports
+what *moved* and declares when the comparison itself is weak (`B11`), a label derived through a
+rule engine rather than typed (`B152`), and the extension surface no longer weaker than the core
+it extends (`B155`). All four are in [CHANGELOG.md](CHANGELOG.md). One remains: an assay that can
+be posted in public. Not a detour from depth: this is the only milestone that answers the questions
 [ROADMAP.md](ROADMAP.md#how-we-prioritize) names as the measure of whether the project is
 working — how long from install to a first useful insight, whether someone runs a second report
 the following week, how often a finding is acted on. Every one of these sat in an unscheduled
 pool until now, which is exactly why none of them ever came up for air.
 
-- [ ] **B11 · weekly digest** — S/M · both — `digest --weekly`: markdown summary
-  (top movers, verdict changes, anomalies) fit for cron/launchd; delivery stays the
-  user's own script (mail, Slack, …). It reads the window every other surface reads and reports
-  what *moved* rather than restating what is, which is what makes a second one worth receiving;
-  the ordering that shipped in `B148` is what decides which movers lead it.
 - [ ] **B149 · a shareable assay** — M · both — `assaio share --since 30d` renders a single
   image or page fit to post publicly: tool and model mix, the token/cost trend, a few
   findings, and the coverage and confidence behind them. Redaction is the feature, not a
   flag: no repository names, no member names, no file paths, no identifiers, ever, and a
   preview before anything is written so the person sees exactly what would leave their
   machine. Carries the line the dashboard already earns — prompts and source code were not
-  collected. The open question is what a figure means once its labels are gone: "your
-  heaviest project" with no name is still a shape someone may recognize, so the redaction
-  rule needs stating before the renderer, not after.
-- [ ] **B152 · a label the person does not have to type** — S/M · both — `mark` works and
-  goes unused, because annotating a session is a chore nobody does twice. The store already
-  holds `git_branch` on every row, and a branch called `fix/…` or `feat/…` states the task
-  class its author already chose. Derive a **suggested** label from what is there — branch
-  prefix first, PR metadata once the evidence graph lands — and keep the derivation visible
-  and overridable: a derived label carries its source, never merges silently into a
-  hand-made one, and a repository with no convention yields nothing rather than a guess. The
-  closed vocabularies and the never-synced rule stay exactly as they are.
+  collected. **The redaction rule is settled, and it is stated here because it constrains the
+  renderer rather than following it:** tools and models are named, because which coding agent
+  and which model ran is a public fact about the vendor, not about the person; projects are
+  never named and never pseudonymized, because a stable pseudonym preserves the ordering and
+  proportions someone who knows the setup can read — they appear only as a count and a sorted
+  distribution ("5 repositories, the heaviest 43% of spend"). A figure that cannot be rendered
+  under that rule is not rendered.
 
 ## Then — "Everything the logs already say"
 
@@ -388,6 +382,7 @@ condition, so it moved to the reserved pool below rather than contradicting itse
   it will not be the last, so freezing the store would make every future correction a breaking
   change and create pressure to leave a wrong number in place. It stays internally versioned
   and migratable — a promise about correctability, not the absence of one.
+
 ## Pool — reserved: waiting on a condition, not on time
 
 Neither of these is scheduled, and neither is dropped. Each waits for a fact to become true —
@@ -478,6 +473,71 @@ was under the v1.0 heading while its own text said it is not a v1.0 condition.
   unauthenticated request.
 - [ ] **B12 · GitHub Action** — M · team — packaged action running `check` as a gate
   plus a PR comment with movers/effectiveness for the changed window.
+
+## Pool — from the 2026-08 needs research
+
+Sourced from public evidence rather than from this machine, which is the point: the roadmap
+had been growing from one maintainer's dogfooding, and that is a sample of one.
+
+- [ ] **B156 · the history that was deleted, and the history never written** — S/M · both —
+  Claude Code deletes transcripts after **30 days by default** (`cleanupPeriodDays`), and
+  several settings stop them being written at all; Anthropic added its own warnings for this in
+  2.1.217 (2026-07-21, [changelog](https://code.claude.com/docs/en/changelog); see
+  [claude-code#64999](https://github.com/anthropics/claude-code/issues/64999)). assaio's
+  coverage model measures what it *read*; nothing measures what expired or was never recorded,
+  so "offline-first sees everything" is wrong on a fresh install. A `doctor` check that reads
+  the retention settings, and a history-horizon line on every window that renders a trend.
+- [ ] **B157 · Cline's second root** — S · both — the standalone Cline CLI stores tasks under
+  `~/.cline/tasks/<id>/`, overridable by `--data-dir` / `CLINE_DATA_DIR`
+  ([docs.cline.bot/cli/cli-reference](https://docs.cline.bot/cli/cli-reference), retrieved
+  2026-08-11); assaio discovers only the VS Code root, so a Cline-CLI user gets zero rows and
+  no warning. Discovery work, not new parsing.
+- [ ] **B158 · Copilot's OTel file exporter** — M · both — `COPILOT_OTEL_ENABLED=true` with a
+  file exporter writes token, cache and reasoning counts to `~/.copilot/otel/*.jsonl`
+  ([ccusage.com/guide/copilot](https://ccusage.com/guide/copilot/); GitHub shipped
+  enterprise-managed OTel export [2026-07-08](https://github.blog/changelog/2026-07-08-enterprise-managed-opentelemetry-export-for-vs-code-and-cli/)).
+  A second, opt-in path beside the `session.shutdown` totals already parsed — and the template
+  for every tool that speaks OTel, which is where cloud-executed sessions surface at all.
+  Carries a calibration caveat: Claude Code 2.1.216 fixed telemetry double-counting on streams
+  emitting multiple cumulative `message_delta` frames, so OTel figures predating it are inflated.
+- [ ] **B159 · an AI-tool inventory an auditor accepts** — S/M · both — ISO 42001 has moved
+  from standard to procurement requirement, and buyers now ask for an inventory of the AI
+  systems and services a supplier relies on. `report` already knows tools, models, projects and
+  first/last-seen; a stable `inventory` export (tools × models × repos × window, counts only,
+  no persons, no paths) answers that questionnaire offline. Aggregate-only by construction, so
+  it clears the never-a-performance-metric refusal without a flag. The EU AI Act angle was
+  checked and is **not** applicable: Article 50 targets generated content and deepfakes.
+- [ ] **B160 · the reopen window: cost per accepted change** — M · both — the measure that
+  decides whether AI improved delivery sits just outside session data: not tokens, but the
+  second and third attempt at the same change. What ships today stops at the session boundary —
+  `rework` counts within-session churn and rejections and says so, and `survival` checks git
+  blame directionally. Neither answers how often a file an agent touched is touched again
+  within two weeks, which is what turns cost per session into cost per accepted change — the
+  number an engineering lead can defend at a budget review. This is the **git engine**, separate
+  from log parsing by construction, and its first universal analyser. Raised in public feedback
+  on the launch post, 2026-08-11; converges with the evidence-graph milestone below.
+- [ ] **B163 · a digest that can tell a prune from a change** — M · both — v0.17 made `clear`
+  drop the digest's comparison basis, which fixes the case assaio itself causes. It does not
+  cover a store edited by anything else, or the general question: the digest compares two
+  reports and has no way to know the population under them changed. A row count per snapshot
+  would catch a shrink, but cannot distinguish a prune from a genuine fall in usage — which is
+  why this is a design question rather than a patch, and why the shipped answer is a caveat
+  about what could not be checked instead of a claim about what happened.
+- [ ] **B161 · documentation generated from the registries** — M · both — `docs export
+  --format json` from the live registers (signals, source-depth matrix, validators, command
+  tree, config keys), a site tab built from it, and a `consistency` check that reddens CI when
+  the published JSON drifts from the binary. Narrative stays Markdown in `docs/`; only the
+  enumerable surfaces are generated. The problem it solves is real and recurring: the site has
+  gone stale behind the binary before, and nothing failed.
+
+- [ ] **B162 · a destructive command that cannot be pointed at the wrong store** — S/M · both —
+  `clear` has no `--db`: it always acts on the default local store, and there is no environment
+  variable either. v0.17 made it print the path and record count before deleting, which is the
+  cheap half. The open question is the other half — whether a command that deletes should accept
+  a target at all (making the mistake possible in a new way), or should refuse when the store it
+  found is not the one the invocation implies. Raised by a real incident: a tooling run set a
+  variable that does not exist, expected `clear --all --yes` to apply to a copy, and emptied a
+  513,617-row store. `--yes` skipping the prompt is the other half of why it was silent.
 
 ## Pool — CLI & DX
 
@@ -643,6 +703,14 @@ they wait behind features but keep the growing metric surface maintainable.
   question — so it wants a paragraph in [ADR 0011](docs/adr/0011-capability-gated-metrics.md)
   and its own real-data proof, not a quiet change to a figure people quote. The generic
   invariant test deliberately leaves `LinesAdded` out until this is settled.
+  **Settled, pending the patch:** the denominator is gated by capability, and the share it
+  excludes is quantified beside the figure — the shape `B139` established for unpriced tokens.
+  `$`/100 lines then answers "per line-visible spend" and says so; a window where sources
+  recording no lines carry a material share of the cost states that share rather than letting
+  the rate read as if it covered everything. Leaving the denominator and disclosing an
+  understatement was rejected: it keeps a known-wrong number on screen, and the honest rate is
+  the one a reader can act on. Still needs the ADR 0011 paragraph and its own proof — zero
+  effect on the audited store means the proof will be `constructed`.
 - [ ] **B117 · `metrics verify` prints a blank confidence label** — S · both — the verify path
   renders a plugin's `Result` without `analyze.Stamp`, so the label the summary leads with is
   empty (`Confidence:  · 3 usage rows · activity coverage 0%`) while the coverage axes beside

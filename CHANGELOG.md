@@ -21,6 +21,89 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+- **The extension surface stops being weaker than the core it extends (`B155`).** Six fields of
+  the prepared `Input` never crossed the metric-plugin boundary — `windowStart`,
+  `planMonthlyCost`, `skills`, `agents`, `turnSizing`, `cacheMisses` — while five shipped
+  validators read them (`cache-hygiene`, `model-right-sizing`, `monthrate`, `subscription-fit`,
+  `skill-economics`). An out-of-tree author could therefore not reproduce roughly a third of what
+  assaio itself publishes, which made ADR 0004's claim that a plugin receives "the same prepared
+  `Input` bundle every built-in validator reads" untrue in exactly six places. All six are on the
+  wire now, additively, so the envelope stays `assaio_metric_input: 1` and a plugin written
+  against the earlier shape keeps working. A reflective canary fails the build when a new `Input`
+  field reaches neither the envelope nor a listed exception with the reason a plugin cannot need
+  it; the only standing exceptions are `recent` (sent as `recentDays`) and `ingested`/`parsedBy`,
+  which the core stamps onto the plugin's own `Result`.
+- **A label nobody has to type, as a rule engine rather than one convention (`B152`).**
+  `mark --suggest` derives a proposed label from what the store already recorded and shows the
+  evidence for each one; `mark --accept-suggested` writes them. A label made by hand is never
+  replaced, never merged into silently, and re-running after accepting is a no-op. The derivation
+  is a **rule engine over configurable sources** — branch, skill, sub-agent, entrypoint crossed
+  with RE2 patterns under `labels.rules` — not a reader of one naming convention, and `labels.defaults`
+  turns the built-in rules off for a repository that spells one of them differently. Built-in rules
+  cover branch conventions only: a skill name is one team's toolchain, and shipping a default over
+  it would encode whoever wrote it. Sources that disagree derive **nothing** for that axis rather
+  than picking one, and a repository with no convention yields nothing rather than a guess —
+  measured on the maintainer's own store, that is 2,257 of 2,355 sessions, which is the intended
+  answer and not a missing one.
+- **A digest that reports what moved (`B11`).** `digest --weekly` writes markdown for cron or
+  launchd — totals, per-model and per-project movers, and every validator whose verdict changed,
+  led by the same findings `analyze` leads with. Delivery stays your own script. Each run records
+  what it reported so the next one has a basis; the first run says it has none instead of
+  reporting every figure as new. Crucially it also states when the comparison itself is weak:
+  windows that overlap because it was run sooner than the window is long, windows of different
+  lengths, and — the failure a single-window surface cannot have — **a parser that changed between
+  the two runs**, where a mover may be a correction reaching history rather than a change in how
+  the tools were used. The snapshot table is bounded to the newest 12 by the same transaction that
+  writes it, and records no session content: totals, weights and verdicts only.
+
+### Fixed
+- **`clear` names the store it is about to empty.** It has no `--db` and always acts on the
+  default local store, so somebody who believes they are clearing a copy gets exactly one
+  chance to notice — and the deletion is not reversible. It now prints the path and the record
+  count before deleting anything, even under `--yes`. Found the hard way: a tooling run set an
+  environment variable that does not exist, ran `clear --all --yes` expecting it to apply to a
+  copy, and emptied a real 513,617-row store instead.
+- **`clear` drops the digest's comparison basis with the records it described.** Deleting rows
+  is not a change in how the tools were used, and nothing downstream could tell the difference:
+  the next digest would have reported a pruned store as "tokens −62%, this model gone", with
+  none of its caveats applying. The snapshot table now goes with the usage rows, and the next
+  digest says it has no basis.
+- **`mark <id> --accept-suggested` no longer ignores the session it was given.** The accept
+  path returned before the target was resolved, so naming a session — or passing `--last`, an
+  axis flag, or `--unmark` — silently wrote derived labels across the entire `--since` window.
+  Labels are the one thing no re-import can rebuild. Every one of those combinations is now a
+  hard error naming what to run instead.
+- **A suggestion never reaches a session anyone has already annotated.** Clearing a single axis
+  leaves the row in place, so a blank there is a decision rather than a gap; treating it as
+  unanswered let `--accept-suggested` re-derive exactly what somebody had removed.
+- **Derived labels respect the member boundary.** Signals were keyed on `session_id` alone, so
+  on a store holding more than one machine's rows a branch recorded by one member could derive
+  the label written onto another's session — the leak every other label path avoids by
+  correlating on `(session_id, member)`.
+- **The digest stops reporting things that did not move.** A verdict change now carries the
+  confidence it rests on, so a read that moved on `insufficient` data is marked as the noise it
+  is instead of reading like a real change; a metric that did not run (a failed metric plugin)
+  is named as missing rather than rendered as a verdict that vanished; and a move into or out of
+  `neutral` is stated as the metric gaining or losing the data it reads, not as an improvement.
+- **The digest's cost figure carries the same error bar as every other cost surface.** It stored
+  no notion of what the price table could not cost, so a week where a new model went unpriced
+  rendered as a fall in spend. It now quotes the disclosure `report` prints, keyed on the share
+  of tokens missing a price rather than on the mere presence of a price-less row — and the first
+  run, which also prints a cost, no longer omits the caveats entirely.
+- **Project names in a digest are pseudonymized by default**, like every other file assaio
+  writes to be shared (`privacy.anonymize`, default true). The pseudonym is applied when the
+  digest renders, never to the stored comparison key, so toggling the setting cannot make every
+  project read as one that appeared beside one that vanished.
+- **The digest's stored basis is bounded and matched per window.** The bound trimmed the newest
+  12 across all windows while the read filtered by window, so twelve daily runs could evict a
+  monthly basis and silently turn that digest into a first run.
+- **`labels.rules` is validated where every other config section is.** A malformed rule set
+  passed `config` and `doctor` and only failed when `mark --suggest` ran.
+- **The metric-plugin parity canary can no longer pass on a field it never maps.** It compared
+  field names only, so a field present on the envelope but never filled by `buildMetricInput`
+  would have reached every plugin as an honest-looking empty.
+
 ## [0.16.0] - 2026-08-11
 
 ### Added

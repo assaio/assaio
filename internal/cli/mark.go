@@ -13,7 +13,7 @@ import (
 
 func newMarkCmd() *cobra.Command {
 	var since string
-	var last, list, unmark bool
+	var last, list, unmark, suggest, accept bool
 	c := &cobra.Command{
 		Use:   "mark [session]",
 		Short: "Label a session with what kind of work it was, how it ended, and how hard it was",
@@ -31,7 +31,10 @@ labels stay on this machine: they are not sent by 'sync'. Sessions nobody labels
 counted everywhere; an unlabeled session is not a failed one.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runMark(cmd, args, markFlags{since: &since, last: last, list: list, unmark: unmark})
+			return runMark(cmd, args, markFlags{
+				since: &since, last: last, list: list, unmark: unmark,
+				suggest: suggest, accept: accept,
+			})
 		},
 	}
 	c.Flags().String(label.Task, "", "what kind of work it was: "+label.Values(label.Task))
@@ -40,17 +43,21 @@ counted everywhere; an unlabeled session is not a failed one.`,
 	c.Flags().BoolVar(&last, "last", false, "target the most recent session in any project")
 	c.Flags().BoolVar(&list, "list", false, "list recent sessions and their labels instead of marking")
 	c.Flags().BoolVar(&unmark, "unmark", false, "remove the session's labels")
-	c.Flags().StringVar(&since, "since", "7d", "window for --list, e.g. 30d")
+	c.Flags().BoolVar(&suggest, "suggest", false, "show the labels the window's sessions derive, without writing any")
+	c.Flags().BoolVar(&accept, "accept-suggested", false, "write the derived labels, leaving hand-made ones untouched")
+	c.Flags().StringVar(&since, "since", "7d", "window for --list/--suggest, e.g. 30d")
 	addDBFlag(c)
 	return c
 }
 
 // markFlags carries the mode switches, so runMark's signature stays readable.
 type markFlags struct {
-	since  *string
-	last   bool
-	list   bool
-	unmark bool
+	since   *string
+	last    bool
+	list    bool
+	unmark  bool
+	suggest bool
+	accept  bool
 }
 
 func runMark(cmd *cobra.Command, args []string, f markFlags) error {
@@ -67,6 +74,9 @@ func runMark(cmd *cobra.Command, args []string, f markFlags) error {
 	if err != nil {
 		return err
 	}
+	if f.suggest || f.accept {
+		return suggestOrAccept(cmd, st, args, f, changed)
+	}
 	if !f.unmark && !changed {
 		return fmt.Errorf("nothing to set: pass --%s, --%s, --%s or --unmark (see 'mark --list')",
 			label.Task, label.Outcome, label.Difficulty)
@@ -82,6 +92,31 @@ func runMark(cmd *cobra.Command, args []string, f markFlags) error {
 		return unmarkSession(cmd, st, ref)
 	}
 	return markSession(cmd, st, ref, set)
+}
+
+// suggestOrAccept guards the one path in mark that writes across a whole window. Every
+// other mode acts on one session, so a session id, --last or an axis flag passed here is a
+// person expecting exactly that -- and accepting silently over the window instead would
+// write the one thing no re-import can rebuild.
+func suggestOrAccept(cmd *cobra.Command, st *store.Store, args []string, f markFlags, changed bool) error {
+	mode := "--suggest"
+	if f.accept {
+		mode = "--accept-suggested"
+	}
+	switch {
+	case len(args) > 0:
+		return fmt.Errorf("%s reads the whole --since window and cannot take a session; "+
+			"label that one with 'mark %s --%s <value>'", mode, args[0], label.Task)
+	case f.last:
+		return fmt.Errorf("%s reads the whole --since window and cannot be combined with --last", mode)
+	case changed:
+		return fmt.Errorf("%s derives the labels itself and cannot be combined with setting one", mode)
+	case f.unmark:
+		return fmt.Errorf("%s cannot be combined with --unmark", mode)
+	case f.suggest && f.accept:
+		return errors.New("--suggest shows what would be written and --accept-suggested writes it; pass one")
+	}
+	return runMarkSuggest(cmd, st, *f.since, f.accept)
 }
 
 // requestedLabels reads the three axis flags, validating each against its vocabulary.

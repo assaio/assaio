@@ -106,7 +106,7 @@ answer does not come from the parser, is the next milestone rather than a later 
 | **Intent** ✓ | Metrics can be read per kind of work | shipped in v0.6: a session can be labeled task class / outcome / difficulty, any metric stratified by it, and unlabeled data stays fully counted (`B80`) |
 | **Correctness lockdown** ✓ | Every known wrong number, false green and silent data loss in a shipped surface is closed before anything new is built on top | shipped across v0.13 and v0.14, each defect with the reproduction that found it. **v0.13 closed the eight that carried a wrong number or destroyed data**: Codex's dropped file creations (`B119`), the DSN that can open the wrong database (`B120`), `clear` leaving a store that no `backfill` refills (`B121`), `--labels` ignoring every scope flag (`B122`), `doctor --strict` exiting 0 on a broken store (`B123`), units chosen before rounding (`B127`), a real cost rendered `$0` (`B131`) and a rework rate that can exceed 100% (`B132`). **v0.14 closed the remaining ten** — non-ASCII paths leaving the survival rate and a failed blame read as "did not survive" (`B124`, `B125`), worktrees collapsing into a project named `..` (`B126`), an eight-day "seven-day" window (`B128`), unattributed usage counted as a project (`B129`), anonymous CSV rows (`B130`), the unbounded plugin timestamp (`B133`), `init --db` importing to one store and reporting from another (`B134`), a share totalled in the wrong dimension (`B135`) and a full gauge beside a withheld verdict (`B136`) — **and four the same review found**: a repeated Claude transcript line counted twice (460 added and 656 removed lines on the maintainer's corpus), a superseded sub-agent aggregate left in the store, a team-server push that could never correct a partial figure, and — the one that gates the rest — an activity correction that `MAX` made unable to reach a stored row at all, which is the second half of `B116` |
 | **Calibrated measurement** | Every figure assaio publishes has been checked against something that is not assaio, and a semantic mis-read fails a test instead of shipping | the conservation and metamorphic suite, shipped in v0.14 as `internal/calibration`: adjudicated traces for all five sources whose totals were counted outside the parser, accounting invariants that run over a whole real corpus, metamorphic properties holding two encodings of one fact to one total, and a cross-surface rule (`B137`) — it found two defects in the flagship parser and one over-claim in the capability matrix on its first run; the offline reconciliation against a vendor's own billing or usage export, reporting scope mismatch and unexplained delta rather than forcing agreement (`B19`), which computes the scope overlap before any delta and names only the causes that have evidence; the price table that fell behind the models a store actually holds with nothing to notice (`B139`), which was the largest error left in the `$` figure and the one of these that needed nobody else's data: the unpriced share is now quantified wherever a cost renders and `doctor --strict` gates a window on it; still open, a parser fix that can find and rebuild every stored row it invalidates (`B116`, `B118`), and a real capture for the two sources calibrated against a constructed one (`B144`) |
-| **Worth opening twice** | A first run produces something worth acting on this week, and a reason to come back the next one | shipped, findings are ordered by what is worth a week's attention rather than rendered as a wall of equals, with the ordering's reasons shown and nothing promoted when everything is weak (`B148`); still open, a digest fit for cron says what moved without anyone opening a terminal (`B11`); an assay can be shared publicly with redaction as the feature rather than a flag (`B149`); and the label that makes every metric comparable per kind of work stops being a chore nobody does twice (`B152`) |
+| **Worth opening twice** | A first run produces something worth acting on this week, and a reason to come back the next one | shipped, findings are ordered by what is worth a week's attention rather than rendered as a wall of equals, with the ordering's reasons shown and nothing promoted when everything is weak (`B148`); a digest fit for cron says what moved without anyone opening a terminal, and declares when the comparison itself cannot be trusted (`B11`); the label that makes every metric comparable per kind of work is derived through a rule engine instead of typed (`B152`); and the metric-plugin envelope carries every field a built-in validator reads, so an outside author can reproduce what the core publishes (`B155`); still open, an assay can be shared publicly with redaction as the feature rather than a flag (`B149`) |
 | **Everything the logs already say** | Without a server, a repository or a credential, `assaio` reads every signal the local logs carry, proves the reading is right, and turns it into more conclusions than any vendor dashboard draws from the same file | every source's unread fields are inventoried and either extracted or documented as deliberately skipped, done in v0.10 ([the audit](docs/extending.md#what-each-sources-log-carries-and-what-assaio-reads)); what it found is extracted (`B107`–`B114`, of which the cache tier and miss cause shipped in v0.12 as `B108`); the activity gap closes where a log carries the data (`B39`, `B72`); the local-view metrics land as one file each with their caveats (`B28`–`B37`, `B02`, `B78`, `B79`); and a parser proves itself against evidence it did not generate, so a mis-read fails a test instead of shipping, shipped in v0.14 (`B137`); and the session stops being only a total — a content-free timeline of what the agent actually did, read for the patterns that make a session expensive, so "why did this cost so much" has an answer (`B147`) — which the milestone above is what keeps readable, since every detector this adds is one more finding competing for the same week's attention |
 | **Evidence graph** | You can see which AI sessions produced commits and pull requests, what happened in review and CI, and how sure `assaio` is about every link | the canonical event contract ([ADR 0007](docs/adr/0007-canonical-event-contract.md)) and the signal catalog ([ADR 0008](docs/adr/0008-signal-catalog.md)) exist, both shipped; local git commit metadata is a content-free observation, shipped, and GitHub PR/review/check metadata is not yet; the conformance corpus that defines what an honest link is, shipped ahead of the engine ([ADR 0010](docs/adr/0010-attribution-conformance-corpus.md)); attribution edges carry method, confidence, alternatives and ambiguity; ambiguous stays ambiguous; `outcomes` shows the funnel with its unattributed share and `evidence explain` says why a link was or was not made; and what a change costs *after* it is written — review rounds, CI repair, revert risk, cost per merged and per surviving change — becomes countable, age-matched against human work of the same age (`B92`, `B94`, `B85`, `B18`, `B21`, `B153`, `B100`–`B104`) |
 | **Harness intelligence** | You learn which agent configuration and workflow changes actually helped, and each finding comes with one reversible experiment | agent config artifacts are inventoried without storing their content; cohorts can be compared before and after a harness version changed; recommendations are deterministic rules carrying evidence, one action, a follow-up metric and a review window, and abstain when outcome coverage is thin — never an LLM narrating a dashboard; and which model earns which kind of work is answered from your own comparable sessions, with a floor below which it names no winner (`B95`, `B96`, `B84`, `B97`, `B87`, `B150`, `B17`, `B44`) |
@@ -192,21 +192,26 @@ The table is the intended sequence; this is the current position in it. Delibera
 version number, for the reason given above the table — the next tag is simply the next minor, and
 what it carries is a list, not a schedule. Items drop out of it, and a bug report can add one.
 
-- `B11` — a weekly digest fit for cron, saying what *moved* rather than restating what is. The
-  ordering that shipped decides which movers lead it, which is why it waited for one.
-- `B152` — a suggested label derived from what the store already holds, so reading every metric
-  per kind of work stops depending on a chore nobody does twice.
 - `B149` — an assay that can be posted in public, with redaction as the feature rather than a
-  flag. The open question is what a figure means once its labels are gone, and that rule has to
-  be stated before the renderer, not after.
+  flag. The rule is now settled — tools and models named, projects only as a count and a sorted
+  distribution — which is what it was waiting for; the renderer follows next.
 - `B116` and `B118` — whether a parser fix can reach the rows it invalidates, and whether a
-  cross-source rate may keep its denominator. `B116` is a v1.0 condition in its own right.
+  cross-source rate may keep its denominator. `B118`'s question is answered — the denominator is
+  gated by capability and the excluded share is quantified beside it — and what remains is the
+  ADR paragraph and its proof. `B116` is a v1.0 condition in its own right.
 
-What came off this list is in [CHANGELOG.md](CHANGELOG.md): the unpriced share is quantified
-wherever a cost renders and `doctor --strict` gates on it (`B139`), findings arrive ordered with
-their reasons shown (`B148`), validator figures group thousands (`B146`), `insufficient` names
-the history a `backfill` repairs apart from the subject nothing records (`B115`), and the
-faceplate's bare ratio is gone (`B145`).
+What came off this list is in [CHANGELOG.md](CHANGELOG.md). Most recently: the extension surface
+stopped being weaker than the core it extends — six prepared-input fields never crossed the
+metric-plugin boundary while five shipped validators read them, so an out-of-tree author could
+not reproduce a third of what assaio publishes, and a canary now fails the build when a new one
+does not cross (`B155`); a digest reports what *moved* and declares when the comparison itself is
+weak, including the failure a single-window surface cannot have — a parser that changed between
+the runs (`B11`); and a label is derived through a rule engine over configurable sources rather
+than typed, yielding nothing where a repository has no convention (`B152`). Before those: the
+unpriced share is quantified wherever a cost renders and `doctor --strict` gates on it (`B139`),
+findings arrive ordered with their reasons shown (`B148`), validator figures group thousands
+(`B146`), `insufficient` names the history a `backfill` repairs apart from the subject nothing
+records (`B115`), and the faceplate's bare ratio is gone (`B145`).
 
 What genuinely cannot be finished here is **blocked on data, not on time**. One redacted Gemini
 CLI or Cline capture closes `B144`; one redacted vendor export settles the column aliases
@@ -433,9 +438,9 @@ a packaged GitHub Action (the `check` gate plus a PR comment — `B12`), shell c
 man pages (`B46`), data exports (OpenMetrics for Grafana, ndjson/parquet for data teams —
 `B47`), and growing the i18n scaffold into real locales as people ask (`B08`).
 
-Two of those moved onto the *Worth opening twice* milestone rather than staying here: the weekly
-digest (`B11`) and the label nobody has to type (`B152`). A daily habit is what that promise is
-made of, so they belong to a promise rather than to a pool.
+Two of those moved onto the *Worth opening twice* milestone rather than staying here, and both
+have since shipped: the weekly digest (`B11`) and the label nobody has to type (`B152`). A daily
+habit is what that promise is made of, so they belonged to a promise rather than to a pool.
 
 Every one of those is a **surface over the same analysis**, never a second implementation of
 it. A number that differs between `report`, the dashboard, the TUI and MCP is a bug, and the

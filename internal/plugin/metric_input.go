@@ -1,13 +1,6 @@
 package plugin
 
-import (
-	"time"
-
-	"github.com/assaio/assaio/internal/parser"
-
-	"github.com/assaio/assaio/internal/analyze"
-	"github.com/assaio/assaio/internal/store"
-)
+import "time"
 
 // metricInputVersion is the stdin envelope's protocol version, carried in the
 // assaio_metric_input key.
@@ -36,6 +29,26 @@ type metricInput struct {
 	// the rows whose tool answers the matching signal, exactly as a built-in validator does
 	// (ADR 0011). Without this the wire made that impossible to get right.
 	Answers map[string][]string `json:"answers"`
+	// WindowStart is the --since boundary usage was queried with; the zero time means the
+	// caller scoped no window, and a rate then spans the usage itself rather than the
+	// window. A projection over real days divides by this, because a day inside the window
+	// carrying no usage is still a day a flat plan was paid for.
+	WindowStart time.Time `json:"windowStart"`
+	// PlanMonthlyCost is the configured flat subscription price. Zero means nobody
+	// configured one, never a plan that costs nothing.
+	PlanMonthlyCost float64 `json:"planMonthlyCost"`
+	// Skills and Agents are the window's per-skill and per-sub-agent totals. Rows carrying
+	// no attribution are absent rather than bucketed under an empty name, and both are
+	// empty when no tool in the window records attribution at all -- which is a coverage
+	// fact to state, not a zero to publish.
+	Skills []metricAttributionRow `json:"skills"`
+	Agents []metricAttributionRow `json:"agents"`
+	// TurnSizing is per-model turn counts at the raw per-turn grain the daily usage rows
+	// aggregate away, so a metric about turns measures turns rather than day totals.
+	TurnSizing []metricModelTurns `json:"turnSizing"`
+	// CacheMisses is the window's stated cache-miss reasons per tool. A turn that hit cache
+	// states no reason and is absent, as is every turn from a source that reports none.
+	CacheMisses []metricCacheMissRow `json:"cacheMisses"`
 }
 
 type metricUsageRow struct {
@@ -132,42 +145,4 @@ type metricPrice struct {
 	// model the table gives only one write rate, which is the vendor charging one rate rather
 	// than the tier being free.
 	CacheWrite1h float64 `json:"cacheWrite1h"`
-}
-
-func buildMetricInput(in *analyze.Input) metricInput {
-	return metricInput{
-		Version:    metricInputVersion,
-		Now:        in.Now,
-		RecentDays: int(in.Recent / (24 * time.Hour)),
-		Usage:      usageWire(in.Usage),
-		Sessions:   sessionWire(in.Sessions),
-		Delegation: metricDelegation{Sub: in.Delegation.Sub, Total: in.Delegation.Total},
-		ByModel:    modelWire(in.ByModel),
-		ByProject:  projectWire(in.ByProject),
-		Totals: metricTotals{
-			Tokens: in.Totals.Tokens, Input: in.Totals.Input, Output: in.Totals.Output,
-			CacheRead: in.Totals.CacheRead, CacheWrite: in.Totals.CacheWrite,
-			Lines: in.Totals.Lines, Cost: in.Totals.Cost, Priced: in.Totals.Priced,
-			CacheEfficiency: in.Totals.CacheEfficiency,
-		},
-		Prices:  pricesWire(in.Usage, in.Prices),
-		Answers: answersWire(in.Usage, in.Sessions),
-	}
-}
-
-// answersWire declares what every tool in this window can record. Only the tools actually
-// present are sent: a plugin needs the capability of the data it was handed, and shipping
-// the whole matrix would make the envelope a second publication of internal/parser.
-func answersWire(usage []store.UsageRow, sessions []store.SessionRow) map[string][]string {
-	out := make(map[string][]string)
-	for i := range usage {
-		out[usage[i].Tool] = nil
-	}
-	for i := range sessions {
-		out[sessions[i].Tool] = nil
-	}
-	for tool := range out {
-		out[tool] = parser.SignalsAnsweredBy(tool)
-	}
-	return out
 }

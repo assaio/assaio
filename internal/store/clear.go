@@ -49,6 +49,13 @@ func (s *Store) Clear(ctx context.Context, before time.Time, tool string) (int64
 			return 0, err
 		}
 	}
+	// A digest compares this window against what the last run reported. Rows deleted here are
+	// not a change in how the tools were used, but nothing downstream can tell the difference
+	// -- so the comparison basis goes with the records it described, and the next digest says
+	// it has none rather than reporting the deletion as movement.
+	if _, err := tx.ExecContext(ctx, `DELETE FROM digest_snapshot`); err != nil {
+		return 0, err
+	}
 	return n, tx.Commit()
 }
 

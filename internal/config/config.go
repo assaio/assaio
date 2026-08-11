@@ -47,6 +47,9 @@ type Config struct {
 	// Pricing lets a subscription or negotiated-rate user declare their real cost basis;
 	// unset keeps every cost an API pay-as-you-go estimate. See the Pricing type.
 	Pricing Pricing `koanf:"pricing"`
+	// Labels configures the suggested-label derivation read by `mark --suggest`. See the
+	// Labels type.
+	Labels Labels `koanf:"labels"`
 }
 
 // Sources overrides the filesystem roots assaio discovers each tool's session logs
@@ -155,6 +158,9 @@ func (c Config) Validate() error {
 		if err := r.Validate(); err != nil {
 			return fmt.Errorf("rule %q: %w", r.Name, err)
 		}
+	}
+	if err := c.Labels.Validate(); err != nil {
+		return fmt.Errorf("labels.rules: %w", err)
 	}
 	if name := dupName(c.Plugins); name != "" {
 		return fmt.Errorf("duplicate plugin name %q", name)

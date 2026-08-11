@@ -107,3 +107,26 @@ format: table
 #   mode: subscription              # "api" (default) or "subscription"; override ASSAIO_PRICING_MODE
 #   effective_per_token: 0.0        # your blended $/token (e.g. monthly cost / tokens used)
 #   monthly_subscription_cost: 0.0  # flat plan price per month, to compare vs API-equivalent spend
+
+# Suggested labels (`assaio-agent mark --suggest`): turn what a session already recorded
+# into a proposed annotation, so reading metrics per kind of work stops depending on a
+# chore nobody does twice. Nothing here ever writes a label on its own -- `--suggest`
+# shows, `--accept-suggested` writes, and a label made by hand is never replaced.
+#
+# The built-in rules read branch naming conventions only (feat/, fix/, test/, refactor/,
+# docs/, spike/, review/ and their common spellings), because a branch prefix is the one
+# convention that is widespread and tool independent. Nothing about skills or sub-agents
+# ships as a default: a skill name is one team's toolchain, and a default over it would
+# encode whoever wrote it. Add your own below -- source is branch|skill|agent|entrypoint,
+# match is an RE2 pattern, and value must be in that axis's closed vocabulary.
+# labels:
+#   defaults: true            # false drops the built-in branch rules, leaving only yours
+#   rules:
+#     - source: branch
+#       match: "(?i)^[A-Z]+-[0-9]+-fix"   # e.g. a JIRA convention: PROJ-1234-fix-...
+#       axis: task
+#       value: bugfix
+#     - source: skill
+#       match: "(?i)debug"
+#       axis: task
+#       value: bugfix
