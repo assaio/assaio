@@ -1,0 +1,2146 @@
+{
+  "assaio_docs": 1,
+  "signals": [
+    {
+      "id": "ai.agent.tokens",
+      "title": "Tokens per sub-agent",
+      "unit": "tokens",
+      "status": "observed",
+      "grains": [
+        "window"
+      ],
+      "zeroMeans": "this source has no sub-agents, or does not label them -- absent, not zero",
+      "describe": "Tokens spent inside a named sub-agent type.",
+      "sources": [
+        "claude-code"
+      ]
+    },
+    {
+      "id": "ai.cache.miss_reason",
+      "title": "Cache-miss reason",
+      "unit": "count",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "no turn in the window stated a reason -- either the cache was hit or this source does not report one",
+      "describe": "The vendor's own reason a prompt could not be served from cache, from its closed vocabulary. A category label, never content.",
+      "sources": [
+        "claude-code"
+      ]
+    },
+    {
+      "id": "ai.compactions.count",
+      "title": "Context compactions",
+      "unit": "count",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "this source does not mark a context overflow -- absent, not a session that never overflowed",
+      "describe": "Times a session's context overflowed and was auto-summarized, counted from the tool's own boundary marker.",
+      "sources": [
+        "claude-code",
+        "codex"
+      ]
+    },
+    {
+      "id": "ai.cost.estimated",
+      "title": "Estimated cost",
+      "unit": "usd",
+      "status": "estimated",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "no priced usage -- a model absent from the price table is excluded, never counted as free",
+      "describe": "Tokens priced at public pay-as-you-go rates. Not your bill: a flat plan bills differently, and long-context and cache tiers are not modelled.",
+      "sources": [
+        "claude-code",
+        "cline",
+        "codex",
+        "copilot-cli",
+        "gemini-cli"
+      ]
+    },
+    {
+      "id": "ai.edits.count",
+      "title": "Edit operations",
+      "unit": "count",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "this source records no edit activity -- absent, not zero",
+      "describe": "How many edit-type tool calls ran, regardless of how many lines each moved.",
+      "sources": [
+        "claude-code",
+        "codex"
+      ]
+    },
+    {
+      "id": "ai.lines.added",
+      "title": "AI lines added",
+      "unit": "lines",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "this source records no edit activity -- absent, not zero",
+      "describe": "Added lines counted from the tool's own edit records. The code itself is never stored.",
+      "sources": [
+        "claude-code",
+        "codex",
+        "copilot-cli"
+      ]
+    },
+    {
+      "id": "ai.lines.removed",
+      "title": "AI lines removed",
+      "unit": "lines",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "this source records no edit activity -- absent, not zero",
+      "describe": "Removed lines counted from the tool's own edit records.",
+      "sources": [
+        "claude-code",
+        "codex",
+        "copilot-cli"
+      ]
+    },
+    {
+      "id": "ai.rejected.count",
+      "title": "Declined tool calls",
+      "unit": "count",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "this source does not record a human declining a call -- absent, not a run nobody stopped",
+      "describe": "Tool proposals a person refused, counted only where a source records the refusal at all.",
+      "sources": [
+        "claude-code"
+      ]
+    },
+    {
+      "id": "ai.rework.lines",
+      "title": "Rework lines",
+      "unit": "lines",
+      "status": "derived",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "no added line was undone later in the same transcript, or the source records no edits",
+      "describe": "Added lines a later edit in the same session removed again. A churn proxy; healthy iteration churns too.",
+      "sources": [
+        "claude-code",
+        "codex"
+      ]
+    },
+    {
+      "id": "ai.session.active_minutes",
+      "title": "Focused minutes",
+      "unit": "minutes",
+      "status": "derived",
+      "grains": [
+        "session",
+        "window"
+      ],
+      "zeroMeans": "no measurable gap-free activity",
+      "describe": "Time between turns with gaps over 30 minutes excluded, so a resumed session's idle time is not counted as work.",
+      "sources": [
+        "claude-code",
+        "cline",
+        "codex",
+        "gemini-cli"
+      ]
+    },
+    {
+      "id": "ai.sessions.count",
+      "title": "Sessions",
+      "unit": "sessions",
+      "status": "observed",
+      "grains": [
+        "day",
+        "window"
+      ],
+      "zeroMeans": "no sessions in the window",
+      "describe": "Distinct sessions seen. A resumed session keeps its id, so one session can span days.",
+      "sources": [
+        "claude-code",
+        "cline",
+        "codex",
+        "copilot-cli",
+        "gemini-cli"
+      ]
+    },
+    {
+      "id": "ai.skill.tokens",
+      "title": "Tokens per skill",
+      "unit": "tokens",
+      "status": "observed",
+      "grains": [
+        "window"
+      ],
+      "zeroMeans": "this source does not label turns with a skill -- absent from the split, not zero",
+      "describe": "Tokens the tool itself attributed to a named skill.",
+      "sources": [
+        "claude-code"
+      ]
+    },
+    {
+      "id": "ai.tokens.cache_read",
+      "title": "Cache-read tokens",
+      "unit": "tokens",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "nothing was served from the prompt cache -- real for one-shot work",
+      "describe": "Prompt tokens billed at the cache-read rate.",
+      "sources": [
+        "claude-code",
+        "cline",
+        "codex",
+        "copilot-cli",
+        "gemini-cli"
+      ]
+    },
+    {
+      "id": "ai.tokens.cache_write",
+      "title": "Cache-write tokens",
+      "unit": "tokens",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "nothing was written to the prompt cache",
+      "describe": "Prompt tokens billed at the cache-write rate; wasted when never read back.",
+      "sources": [
+        "claude-code",
+        "cline",
+        "copilot-cli"
+      ]
+    },
+    {
+      "id": "ai.tokens.cache_write_1h",
+      "title": "1-hour cache-write tokens",
+      "unit": "tokens",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "this source does not report the cache lifetime a write bought, or every write was the 5-minute tier -- the two are indistinguishable here",
+      "describe": "The portion of cache-write tokens that bought a 1-hour cache lifetime, billed at its own higher rate. A subset of cache-write, never added to a total.",
+      "sources": [
+        "claude-code"
+      ]
+    },
+    {
+      "id": "ai.tokens.input",
+      "title": "Input tokens",
+      "unit": "tokens",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "no billable usage in the window",
+      "describe": "Uncached prompt tokens. Claude's own figure can be a streaming placeholder, so totals may drift from the vendor console.",
+      "sources": [
+        "claude-code",
+        "cline",
+        "codex",
+        "copilot-cli",
+        "gemini-cli"
+      ]
+    },
+    {
+      "id": "ai.tokens.output",
+      "title": "Output tokens",
+      "unit": "tokens",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "no billable usage in the window",
+      "describe": "Tokens the model produced, including any reasoning portion.",
+      "sources": [
+        "claude-code",
+        "cline",
+        "codex",
+        "copilot-cli",
+        "gemini-cli"
+      ]
+    },
+    {
+      "id": "ai.tokens.reasoning",
+      "title": "Reasoning tokens",
+      "unit": "tokens",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "this source does not report reasoning separately -- not that none was spent",
+      "describe": "The thinking portion already counted inside output, for the sources that surface one.",
+      "sources": [
+        "codex",
+        "copilot-cli",
+        "gemini-cli"
+      ]
+    },
+    {
+      "id": "ai.tokens.total",
+      "title": "Total tokens",
+      "unit": "tokens",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "no billable usage in the window",
+      "describe": "Input, output and both cache directions summed. Reasoning is inside output and never re-added.",
+      "sources": [
+        "claude-code",
+        "cline",
+        "codex",
+        "copilot-cli",
+        "gemini-cli"
+      ]
+    },
+    {
+      "id": "ai.tool_calls.count",
+      "title": "Tool calls",
+      "unit": "count",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "this source does not name its tool calls -- absent, not zero",
+      "describe": "Every tool invocation in a turn, split by purpose where the source names them.",
+      "sources": [
+        "claude-code",
+        "codex"
+      ]
+    },
+    {
+      "id": "ai.tool_errors.count",
+      "title": "Failed tool calls",
+      "unit": "count",
+      "status": "observed",
+      "grains": [
+        "turn",
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "this source does not mark call outcomes -- absent, not a clean run",
+      "describe": "Calls that came back an error, counted only where a source marks the outcome of every call.",
+      "sources": [
+        "claude-code"
+      ]
+    },
+    {
+      "id": "ai.turns.count",
+      "title": "Turns",
+      "unit": "count",
+      "status": "observed",
+      "grains": [
+        "session",
+        "day",
+        "window"
+      ],
+      "zeroMeans": "no turns recorded -- a session-total source contributes none",
+      "describe": "Model requests. A source that totals a whole session cannot contribute here, which is what turn-level coverage reports.",
+      "sources": [
+        "claude-code",
+        "cline",
+        "codex",
+        "gemini-cli"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "tool": "claude-code",
+      "tier": "deep",
+      "tokens": true,
+      "activity": true,
+      "attribution": true,
+      "answers": [
+        "ai.agent.tokens",
+        "ai.cache.miss_reason",
+        "ai.compactions.count",
+        "ai.cost.estimated",
+        "ai.edits.count",
+        "ai.lines.added",
+        "ai.lines.removed",
+        "ai.rejected.count",
+        "ai.rework.lines",
+        "ai.session.active_minutes",
+        "ai.sessions.count",
+        "ai.skill.tokens",
+        "ai.tokens.cache_read",
+        "ai.tokens.cache_write",
+        "ai.tokens.cache_write_1h",
+        "ai.tokens.input",
+        "ai.tokens.output",
+        "ai.tokens.total",
+        "ai.tool_calls.count",
+        "ai.tool_errors.count",
+        "ai.turns.count"
+      ],
+      "gaps": []
+    },
+    {
+      "tool": "codex",
+      "tier": "standard",
+      "tokens": true,
+      "activity": true,
+      "attribution": false,
+      "answers": [
+        "ai.compactions.count",
+        "ai.cost.estimated",
+        "ai.edits.count",
+        "ai.lines.added",
+        "ai.lines.removed",
+        "ai.rework.lines",
+        "ai.session.active_minutes",
+        "ai.sessions.count",
+        "ai.tokens.cache_read",
+        "ai.tokens.input",
+        "ai.tokens.output",
+        "ai.tokens.reasoning",
+        "ai.tokens.total",
+        "ai.tool_calls.count",
+        "ai.turns.count"
+      ],
+      "gaps": [
+        "no cache-write counter, so a written cache is invisible where a read one is not",
+        "no skill or sub-agent labels, so its turns are absent from the attribution split",
+        "tool-use denials are not recorded, and call failures only for file edits"
+      ]
+    },
+    {
+      "tool": "gemini-cli",
+      "tier": "standard",
+      "tokens": true,
+      "activity": false,
+      "attribution": false,
+      "answers": [
+        "ai.cost.estimated",
+        "ai.session.active_minutes",
+        "ai.sessions.count",
+        "ai.tokens.cache_read",
+        "ai.tokens.input",
+        "ai.tokens.output",
+        "ai.tokens.reasoning",
+        "ai.tokens.total",
+        "ai.turns.count"
+      ],
+      "gaps": [
+        "no line, edit or tool-call signals, so it contributes cost but no output figures",
+        "no cache-write counter, so a written cache is invisible where a read one is not",
+        "tool-use tokens are folded into output, and ~/.gemini may be shared with other tools"
+      ]
+    },
+    {
+      "tool": "copilot-cli",
+      "tier": "standard",
+      "tokens": true,
+      "activity": true,
+      "attribution": false,
+      "answers": [
+        "ai.cost.estimated",
+        "ai.lines.added",
+        "ai.lines.removed",
+        "ai.sessions.count",
+        "ai.tokens.cache_read",
+        "ai.tokens.cache_write",
+        "ai.tokens.input",
+        "ai.tokens.output",
+        "ai.tokens.reasoning",
+        "ai.tokens.total"
+      ],
+      "gaps": [
+        "totals exist only when a session ends, so one record covers a whole session and per-turn figures exclude it",
+        "code changes are counted once per session with no per-model split, so they are credited whole to the model that made the most requests"
+      ]
+    },
+    {
+      "tool": "cline",
+      "tier": "standard",
+      "tokens": true,
+      "activity": false,
+      "attribution": false,
+      "answers": [
+        "ai.cost.estimated",
+        "ai.session.active_minutes",
+        "ai.sessions.count",
+        "ai.tokens.cache_read",
+        "ai.tokens.cache_write",
+        "ai.tokens.input",
+        "ai.tokens.output",
+        "ai.tokens.total",
+        "ai.turns.count"
+      ],
+      "gaps": [
+        "no line, edit or tool-call signals, so it contributes cost but no output figures",
+        "its own per-request cost is recorded but recomputed from tokens for cross-tool consistency"
+      ]
+    }
+  ],
+  "validators": [
+    {
+      "name": "adoption",
+      "title": "Adoption \u0026 Usage Breadth",
+      "describe": "Sessions, active days, and project/tool breadth: how broad AI usage is, and whether it's growing.",
+      "scope": "project"
+    },
+    {
+      "name": "burn-anomaly",
+      "title": "Burn Anomaly",
+      "describe": "Days whose token burn stands far outside this window's typical day.",
+      "scope": "project"
+    },
+    {
+      "name": "cache-hygiene",
+      "title": "Cache Hygiene",
+      "describe": "Prompt-cache reuse: how much billed input was served from cache vs re-sent, which lifetime the writes bought, and why a miss happened.",
+      "scope": "project"
+    },
+    {
+      "name": "concentration",
+      "title": "Spend Concentration",
+      "describe": "How token spend spreads across projects, and whether the heaviest spenders produced output to match.",
+      "scope": "project"
+    },
+    {
+      "name": "context",
+      "title": "Context Health",
+      "describe": "Conversation depth, peak context size, active time, and how often sessions hit compaction.",
+      "scope": "project"
+    },
+    {
+      "name": "coverage",
+      "title": "Coverage \u0026 Confidence",
+      "describe": "How much of this window is high-confidence data: the share of tokens from tools with full activity capture, and the share priced.",
+      "scope": "project"
+    },
+    {
+      "name": "explore-produce",
+      "title": "Explore vs Produce",
+      "describe": "What the tool calls were for: reading and searching the codebase versus writing code in it.",
+      "scope": "project"
+    },
+    {
+      "name": "friction",
+      "title": "Friction",
+      "describe": "How often tool calls fail outright, beside how often a human declines one.",
+      "scope": "project"
+    },
+    {
+      "name": "intent",
+      "title": "Task Intent Coverage",
+      "describe": "How much of the window carries a task label, and whether that is enough to read any other metric per kind of work.",
+      "scope": "project"
+    },
+    {
+      "name": "model-fit",
+      "title": "Model Fit",
+      "describe": "Premium vs. cheaper model token share, lines-per-token contrast, and real sub-agent delegation share.",
+      "scope": "project"
+    },
+    {
+      "name": "model-right-sizing",
+      "title": "Model Right-Sizing",
+      "describe": "Turns on a premium model that produced very little output -- small tasks a cheaper, faster model might handle just as well.",
+      "scope": "window"
+    },
+    {
+      "name": "reasoning-share",
+      "title": "Reasoning Share",
+      "describe": "How much generated output is extended-thinking (reasoning) tokens, among tools that report it -- flagging deep reasoning spent on shallow tasks.",
+      "scope": "project"
+    },
+    {
+      "name": "rework",
+      "title": "Rework \u0026 Rejection",
+      "describe": "Within-session code churn and human tool-call rejections -- a directional friction proxy.",
+      "scope": "project"
+    },
+    {
+      "name": "rhythm",
+      "title": "Work Rhythm",
+      "describe": "When AI sessions run -- the off-hours and weekend share -- and how long the longest focused sessions last.",
+      "scope": "project"
+    },
+    {
+      "name": "session-taxonomy",
+      "title": "Session Taxonomy",
+      "describe": "What kind of work sessions are: conversational (no edits), light-edit, or heavy-edit, and how the mix splits.",
+      "scope": "project"
+    },
+    {
+      "name": "skill-economics",
+      "title": "Skill \u0026 Agent Economics",
+      "describe": "Which skills and sub-agents the tokens went to, and how much code each produced.",
+      "scope": "window"
+    },
+    {
+      "name": "subscription-fit",
+      "title": "Subscription Fit",
+      "describe": "Whether a flat monthly plan (Claude Max/Pro, ChatGPT Plus/Pro) pays off vs API pay-as-you-go, from your configured plan cost.",
+      "scope": "window"
+    },
+    {
+      "name": "throughput",
+      "title": "Throughput",
+      "describe": "Total AI-added lines, lines per active day, top projects by lines, and the week-over-week trend.",
+      "scope": "project"
+    },
+    {
+      "name": "turn-efficiency",
+      "title": "Turn Efficiency",
+      "describe": "Getting more per prompt: one-shot rate, median turns per code-producing session, and output tokens per turn.",
+      "scope": "project"
+    }
+  ],
+  "commands": [
+    {
+      "path": "analyze",
+      "short": "Run metric validators and print each one's directional text report",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "difficulty",
+          "type": "string",
+          "default": "",
+          "usage": "only sessions labeled with this difficulty: low|medium|high"
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "default": "text",
+          "usage": "output format: text|json"
+        },
+        {
+          "name": "list",
+          "type": "bool",
+          "default": "false",
+          "usage": "list registered validators and exit"
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "default": "",
+          "usage": "only sessions labeled with this outcome: done|partial|abandoned"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        },
+        {
+          "name": "task",
+          "type": "string",
+          "default": "",
+          "usage": "only sessions labeled with this task class: bugfix|feature|test|refactor|docs|research|review|other"
+        }
+      ]
+    },
+    {
+      "path": "backfill",
+      "short": "Import all historical local session logs into the store",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "full",
+          "type": "bool",
+          "default": "false",
+          "usage": "re-parse every input, ignoring stored ingest state"
+        }
+      ]
+    },
+    {
+      "path": "check",
+      "short": "Exit non-zero when usage exceeds a budget or a rule plugin raises an error (CI/pre-push gate)",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "max-cost",
+          "type": "float64",
+          "default": "0",
+          "usage": "fail if API-equivalent cost exceeds this budget in dollars (0 = unset)"
+        },
+        {
+          "name": "max-tokens",
+          "type": "int64",
+          "default": "0",
+          "usage": "fail if total tokens exceed this budget (0 = unset)"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        }
+      ]
+    },
+    {
+      "path": "clear",
+      "short": "Delete stored usage data (all, older-than, or per-tool)",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "all",
+          "type": "bool",
+          "default": "false",
+          "usage": "delete all records"
+        },
+        {
+          "name": "labels",
+          "type": "bool",
+          "default": "false",
+          "usage": "delete the session labels in the same scope too (never removed by the other flags)"
+        },
+        {
+          "name": "older-than",
+          "type": "string",
+          "default": "",
+          "usage": "delete records older than e.g. 90d; 0d means everything up to now"
+        },
+        {
+          "name": "tool",
+          "type": "string",
+          "default": "",
+          "usage": "restrict to one tool (claude-code|codex|gemini-cli|copilot-cli|cline|plugin:\u003cname\u003e)"
+        },
+        {
+          "name": "yes",
+          "type": "bool",
+          "default": "false",
+          "usage": "confirm deletion"
+        }
+      ]
+    },
+    {
+      "path": "compact",
+      "short": "Reclaim disk space the store freed but is still holding",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        }
+      ]
+    },
+    {
+      "path": "config",
+      "short": "Show the effective configuration",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "dashboard",
+      "short": "Write a self-contained offline HTML Assay report of local AI usage",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "anonymize",
+          "type": "bool",
+          "default": "true",
+          "usage": "pseudonymize project and member names (default: from config privacy.anonymize)"
+        },
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "no-anonymize",
+          "type": "bool",
+          "default": "false",
+          "usage": "show real project and member names, overriding --anonymize"
+        },
+        {
+          "name": "output",
+          "type": "string",
+          "default": "assaio-dashboard.html",
+          "usage": "HTML output path"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        }
+      ]
+    },
+    {
+      "path": "demo",
+      "short": "Show assaio's reports on bundled sample data, no local logs needed",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "dashboard",
+          "type": "bool",
+          "default": "false",
+          "usage": "also write the sample HTML Assay dashboard and print its path"
+        }
+      ]
+    },
+    {
+      "path": "digest",
+      "short": "Report in markdown what moved since the last digest",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "dry-run",
+          "type": "bool",
+          "default": "false",
+          "usage": "print the digest without recording this run as a comparison basis"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "7d",
+          "usage": "window to summarize, e.g. 30d"
+        },
+        {
+          "name": "weekly",
+          "type": "bool",
+          "default": "false",
+          "usage": "shorthand for --since 7d, the cadence this is built for"
+        }
+      ]
+    },
+    {
+      "path": "docs",
+      "short": "The enumerable surfaces of this binary, for people and for tools",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "docs export",
+      "short": "Write the reference as JSON, or as a self-contained HTML page",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "format",
+          "type": "string",
+          "default": "json",
+          "usage": "output format: json|html"
+        }
+      ]
+    },
+    {
+      "path": "doctor",
+      "short": "Diagnose detected AI tools, log locations, and store health",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "strict",
+          "type": "bool",
+          "default": "false",
+          "usage": "exit non-zero on suspected format drift or a configured source with no inputs"
+        }
+      ]
+    },
+    {
+      "path": "effectiveness",
+      "short": "Print AI-line output vs. cost per project, a directional efficiency signal",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "by",
+          "type": "string",
+          "default": "project",
+          "usage": "group by: project|tool|model|entrypoint|day|member|task|outcome|difficulty"
+        },
+        {
+          "name": "compare",
+          "type": "bool",
+          "default": "false",
+          "usage": "show period-over-period top movers vs the previous equal window (renders a movers table, not --format)"
+        },
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "default": "table",
+          "usage": "output format: table|json|csv"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        }
+      ]
+    },
+    {
+      "path": "explain",
+      "short": "Print a metric's long-form page: what it measures, how to read it, what to do about it",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "init",
+      "short": "Set up a first run: show what will be read, import it, write the report",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "non-interactive",
+          "type": "bool",
+          "default": "false",
+          "usage": "skip the confirmation prompt"
+        }
+      ]
+    },
+    {
+      "path": "mark",
+      "short": "Label a session with what kind of work it was, how it ended, and how hard it was",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "accept-suggested",
+          "type": "bool",
+          "default": "false",
+          "usage": "write the derived labels, leaving hand-made ones untouched"
+        },
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "difficulty",
+          "type": "string",
+          "default": "",
+          "usage": "how hard it was: low|medium|high"
+        },
+        {
+          "name": "last",
+          "type": "bool",
+          "default": "false",
+          "usage": "target the most recent session in any project"
+        },
+        {
+          "name": "list",
+          "type": "bool",
+          "default": "false",
+          "usage": "list recent sessions and their labels instead of marking"
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "default": "",
+          "usage": "how it ended: done|partial|abandoned"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "7d",
+          "usage": "window for --list/--suggest, e.g. 30d"
+        },
+        {
+          "name": "suggest",
+          "type": "bool",
+          "default": "false",
+          "usage": "show the labels the window's sessions derive, without writing any"
+        },
+        {
+          "name": "task",
+          "type": "string",
+          "default": "",
+          "usage": "what kind of work it was: bugfix|feature|test|refactor|docs|research|review|other"
+        },
+        {
+          "name": "unmark",
+          "type": "bool",
+          "default": "false",
+          "usage": "remove the session's labels"
+        }
+      ]
+    },
+    {
+      "path": "metrics",
+      "short": "Inspect and validate configured exec metric plugins",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "metrics list",
+      "short": "List configured metric plugins and their resolved command paths",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "metrics verify",
+      "short": "Run a configured metric plugin on real store data and report protocol conformance, without storing anything",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        }
+      ]
+    },
+    {
+      "path": "plugins",
+      "short": "Inspect and validate configured exec plugins",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "plugins list",
+      "short": "List configured plugins and their resolved command paths",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "plugins verify",
+      "short": "Run a configured plugin and report protocol conformance, without storing results",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "reconcile",
+      "short": "Compare a vendor's own billing export against assaio's estimate, offline",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "default": "text",
+          "usage": "output format: text|json"
+        },
+        {
+          "name": "map",
+          "type": "string",
+          "default": "",
+          "usage": "bind export columns explicitly, e.g. cost=amount,day=usage_date"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        }
+      ]
+    },
+    {
+      "path": "report",
+      "short": "Print a token/cost report from stored usage",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "by",
+          "type": "string",
+          "default": "day",
+          "usage": "group by: day|project|tool|model|entrypoint|member|task|outcome|difficulty"
+        },
+        {
+          "name": "compare",
+          "type": "bool",
+          "default": "false",
+          "usage": "show period-over-period top movers vs the previous equal window (renders a movers table, not --format)"
+        },
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "default": "table",
+          "usage": "output format: table|json|csv"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        }
+      ]
+    },
+    {
+      "path": "serve",
+      "short": "Run the team server: collect pushed usage and serve the aggregated dashboard",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "addr",
+          "type": "string",
+          "default": "127.0.0.1:8787",
+          "usage": "listen address (loopback by default; widen deliberately)"
+        },
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "central store path (default: assaio-server.db under the data dir)"
+        },
+        {
+          "name": "token",
+          "type": "string",
+          "default": "",
+          "usage": "shared bearer token clients must present (required; also ASSAIO_SERVER_TOKEN)"
+        }
+      ]
+    },
+    {
+      "path": "signals",
+      "short": "What assaio can report, what each figure means, and what your data supports",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "signals coverage",
+      "short": "Which signals your own data can actually support",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "window to read, e.g. 7d"
+        }
+      ]
+    },
+    {
+      "path": "signals describe",
+      "short": "Explain one signal: what it counts, where it is honest, and what a zero means",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "signals list",
+      "short": "List every signal with its unit, status and the source capability it needs",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "status",
+      "short": "Show a local usage dashboard: hot projects, going-stale activity, dormant tools",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        }
+      ]
+    },
+    {
+      "path": "statusline",
+      "short": "Print one ambient line: today's tokens, AI lines, cost basis, and how fresh the data is",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        }
+      ]
+    },
+    {
+      "path": "survival",
+      "short": "Directional AI-code survival: how much of a repo's recent commits still live in HEAD, beside your AI usage",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "repo",
+          "type": "string",
+          "default": ".",
+          "usage": "path to the git repository to analyze"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "90d",
+          "usage": "window, e.g. 90d"
+        }
+      ]
+    },
+    {
+      "path": "sync",
+      "short": "Push local usage records to a team server",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "member",
+          "type": "string",
+          "default": "",
+          "usage": "self-identify with this name instead of an auto-derived pseudonym (opt-in)"
+        },
+        {
+          "name": "server",
+          "type": "string",
+          "default": "",
+          "usage": "team server base URL, e.g. http://localhost:8787 (required; also ASSAIO_SYNC_SERVER)"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "how far back to export local records, e.g. 30d"
+        },
+        {
+          "name": "token",
+          "type": "string",
+          "default": "",
+          "usage": "shared bearer token (required; also ASSAIO_SYNC_TOKEN)"
+        }
+      ]
+    },
+    {
+      "path": "version",
+      "short": "Print the version",
+      "hidden": false,
+      "flags": []
+    }
+  ],
+  "globalFlags": [
+    {
+      "name": "config",
+      "type": "string",
+      "default": "",
+      "usage": "config file path"
+    }
+  ],
+  "config": [
+    {
+      "key": "format",
+      "env": "ASSAIO_FORMAT",
+      "type": "string",
+      "default": "table"
+    },
+    {
+      "key": "labels.defaults",
+      "env": "ASSAIO_LABELS_DEFAULTS",
+      "type": "boolean",
+      "default": "",
+      "optional": true
+    },
+    {
+      "key": "labels.rules",
+      "type": "entries",
+      "default": "",
+      "list": true
+    },
+    {
+      "key": "labels.rules[].axis",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "labels.rules[].match",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "labels.rules[].source",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "labels.rules[].value",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "metrics",
+      "type": "entries",
+      "default": "",
+      "list": true
+    },
+    {
+      "key": "metrics[].command",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "metrics[].name",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "metrics[].timeout",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "plugins",
+      "type": "entries",
+      "default": "",
+      "list": true
+    },
+    {
+      "key": "plugins[].command",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "plugins[].name",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "plugins[].timeout",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "pricing.effective_per_token",
+      "env": "ASSAIO_PRICING_EFFECTIVE_PER_TOKEN",
+      "type": "number",
+      "default": ""
+    },
+    {
+      "key": "pricing.max_unpriced_share",
+      "env": "ASSAIO_PRICING_MAX_UNPRICED_SHARE",
+      "type": "number",
+      "default": "0.05"
+    },
+    {
+      "key": "pricing.mode",
+      "env": "ASSAIO_PRICING_MODE",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "pricing.monthly_subscription_cost",
+      "env": "ASSAIO_PRICING_MONTHLY_SUBSCRIPTION_COST",
+      "type": "number",
+      "default": ""
+    },
+    {
+      "key": "privacy.anonymize",
+      "env": "ASSAIO_PRIVACY_ANONYMIZE",
+      "type": "boolean",
+      "default": "true"
+    },
+    {
+      "key": "rules",
+      "type": "entries",
+      "default": "",
+      "list": true
+    },
+    {
+      "key": "rules[].command",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "rules[].name",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "rules[].timeout",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "server.addr",
+      "env": "ASSAIO_SERVER_ADDR",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "server.token",
+      "env": "ASSAIO_SERVER_TOKEN",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "since",
+      "env": "ASSAIO_SINCE",
+      "type": "string",
+      "default": "30d"
+    },
+    {
+      "key": "sources.claude",
+      "env": "ASSAIO_SOURCES_CLAUDE",
+      "type": "strings",
+      "default": ""
+    },
+    {
+      "key": "sources.cline",
+      "env": "ASSAIO_SOURCES_CLINE",
+      "type": "strings",
+      "default": ""
+    },
+    {
+      "key": "sources.codex",
+      "env": "ASSAIO_SOURCES_CODEX",
+      "type": "strings",
+      "default": ""
+    },
+    {
+      "key": "sources.copilot",
+      "env": "ASSAIO_SOURCES_COPILOT",
+      "type": "strings",
+      "default": ""
+    },
+    {
+      "key": "sources.gemini",
+      "env": "ASSAIO_SOURCES_GEMINI",
+      "type": "strings",
+      "default": ""
+    },
+    {
+      "key": "sync.member",
+      "env": "ASSAIO_SYNC_MEMBER",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "sync.server",
+      "env": "ASSAIO_SYNC_SERVER",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "sync.token",
+      "env": "ASSAIO_SYNC_TOKEN",
+      "type": "string",
+      "default": ""
+    }
+  ],
+  "validatorInput": [
+    {
+      "name": "WindowStart",
+      "type": "time.Time"
+    },
+    {
+      "name": "Usage",
+      "type": "[]store.UsageRow"
+    },
+    {
+      "name": "Sessions",
+      "type": "[]store.SessionRow"
+    },
+    {
+      "name": "Prices",
+      "type": "pricing.Table"
+    },
+    {
+      "name": "Now",
+      "type": "time.Time"
+    },
+    {
+      "name": "Recent",
+      "type": "time.Duration"
+    },
+    {
+      "name": "Delegation",
+      "type": "analyze.Delegation"
+    },
+    {
+      "name": "ByModel",
+      "type": "[]analyze.ModelStat"
+    },
+    {
+      "name": "ByProject",
+      "type": "[]analyze.ProjectStat"
+    },
+    {
+      "name": "Totals",
+      "type": "analyze.Totals"
+    },
+    {
+      "name": "PlanMonthlyCost",
+      "type": "float64"
+    },
+    {
+      "name": "Skills",
+      "type": "[]store.AttributionRow"
+    },
+    {
+      "name": "Agents",
+      "type": "[]store.AttributionRow"
+    },
+    {
+      "name": "TurnSizing",
+      "type": "[]store.ModelTurns"
+    },
+    {
+      "name": "CacheMisses",
+      "type": "[]store.CacheMissRow"
+    },
+    {
+      "name": "Ingested",
+      "type": "time.Time"
+    },
+    {
+      "name": "ParsedBy",
+      "type": "string"
+    }
+  ],
+  "metricWire": {
+    "input": [
+      {
+        "path": "agents",
+        "type": "array of object"
+      },
+      {
+        "path": "agents[].lines",
+        "type": "number"
+      },
+      {
+        "path": "agents[].name",
+        "type": "string"
+      },
+      {
+        "path": "agents[].records",
+        "type": "number"
+      },
+      {
+        "path": "agents[].sessions",
+        "type": "number"
+      },
+      {
+        "path": "agents[].tokens",
+        "type": "number"
+      },
+      {
+        "path": "answers",
+        "type": "object keyed by string, values array of string"
+      },
+      {
+        "path": "assaio_metric_input",
+        "type": "number"
+      },
+      {
+        "path": "byModel",
+        "type": "array of object"
+      },
+      {
+        "path": "byModel[].cacheRead",
+        "type": "number"
+      },
+      {
+        "path": "byModel[].cacheWrite",
+        "type": "number"
+      },
+      {
+        "path": "byModel[].cost",
+        "type": "number",
+        "nullable": true
+      },
+      {
+        "path": "byModel[].input",
+        "type": "number"
+      },
+      {
+        "path": "byModel[].lines",
+        "type": "number"
+      },
+      {
+        "path": "byModel[].model",
+        "type": "string"
+      },
+      {
+        "path": "byModel[].output",
+        "type": "number"
+      },
+      {
+        "path": "byModel[].priced",
+        "type": "boolean"
+      },
+      {
+        "path": "byModel[].tier",
+        "type": "string"
+      },
+      {
+        "path": "byModel[].tokenShare",
+        "type": "number"
+      },
+      {
+        "path": "byModel[].tokens",
+        "type": "number"
+      },
+      {
+        "path": "byProject",
+        "type": "array of object"
+      },
+      {
+        "path": "byProject[].cost",
+        "type": "number",
+        "nullable": true
+      },
+      {
+        "path": "byProject[].lines",
+        "type": "number"
+      },
+      {
+        "path": "byProject[].priced",
+        "type": "boolean"
+      },
+      {
+        "path": "byProject[].project",
+        "type": "string"
+      },
+      {
+        "path": "byProject[].tokenShare",
+        "type": "number"
+      },
+      {
+        "path": "cacheMisses",
+        "type": "array of object"
+      },
+      {
+        "path": "cacheMisses[].reason",
+        "type": "string"
+      },
+      {
+        "path": "cacheMisses[].tool",
+        "type": "string"
+      },
+      {
+        "path": "cacheMisses[].turns",
+        "type": "number"
+      },
+      {
+        "path": "delegation",
+        "type": "object"
+      },
+      {
+        "path": "delegation.sub",
+        "type": "number"
+      },
+      {
+        "path": "delegation.total",
+        "type": "number"
+      },
+      {
+        "path": "now",
+        "type": "timestamp"
+      },
+      {
+        "path": "planMonthlyCost",
+        "type": "number"
+      },
+      {
+        "path": "prices",
+        "type": "object keyed by string, values object"
+      },
+      {
+        "path": "prices{}.cacheRead",
+        "type": "number"
+      },
+      {
+        "path": "prices{}.cacheWrite",
+        "type": "number"
+      },
+      {
+        "path": "prices{}.cacheWrite1h",
+        "type": "number"
+      },
+      {
+        "path": "prices{}.input",
+        "type": "number"
+      },
+      {
+        "path": "prices{}.output",
+        "type": "number"
+      },
+      {
+        "path": "recentDays",
+        "type": "number"
+      },
+      {
+        "path": "sessions",
+        "type": "array of object"
+      },
+      {
+        "path": "sessions[].activeMinutes",
+        "type": "number"
+      },
+      {
+        "path": "sessions[].compactions",
+        "type": "number"
+      },
+      {
+        "path": "sessions[].edits",
+        "type": "number"
+      },
+      {
+        "path": "sessions[].firstTs",
+        "type": "timestamp"
+      },
+      {
+        "path": "sessions[].lastTs",
+        "type": "timestamp"
+      },
+      {
+        "path": "sessions[].member",
+        "type": "string"
+      },
+      {
+        "path": "sessions[].model",
+        "type": "string"
+      },
+      {
+        "path": "sessions[].outputTokens",
+        "type": "number"
+      },
+      {
+        "path": "sessions[].peakContextTokens",
+        "type": "number"
+      },
+      {
+        "path": "sessions[].project",
+        "type": "string"
+      },
+      {
+        "path": "sessions[].sessionId",
+        "type": "string"
+      },
+      {
+        "path": "sessions[].tool",
+        "type": "string"
+      },
+      {
+        "path": "sessions[].turns",
+        "type": "number"
+      },
+      {
+        "path": "skills",
+        "type": "array of object"
+      },
+      {
+        "path": "skills[].lines",
+        "type": "number"
+      },
+      {
+        "path": "skills[].name",
+        "type": "string"
+      },
+      {
+        "path": "skills[].records",
+        "type": "number"
+      },
+      {
+        "path": "skills[].sessions",
+        "type": "number"
+      },
+      {
+        "path": "skills[].tokens",
+        "type": "number"
+      },
+      {
+        "path": "totals",
+        "type": "object"
+      },
+      {
+        "path": "totals.cacheEfficiency",
+        "type": "number"
+      },
+      {
+        "path": "totals.cacheRead",
+        "type": "number"
+      },
+      {
+        "path": "totals.cacheWrite",
+        "type": "number"
+      },
+      {
+        "path": "totals.cost",
+        "type": "number",
+        "nullable": true
+      },
+      {
+        "path": "totals.input",
+        "type": "number"
+      },
+      {
+        "path": "totals.lines",
+        "type": "number"
+      },
+      {
+        "path": "totals.output",
+        "type": "number"
+      },
+      {
+        "path": "totals.priced",
+        "type": "boolean"
+      },
+      {
+        "path": "totals.tokens",
+        "type": "number"
+      },
+      {
+        "path": "turnSizing",
+        "type": "array of object"
+      },
+      {
+        "path": "turnSizing[].model",
+        "type": "string"
+      },
+      {
+        "path": "turnSizing[].smallTurns",
+        "type": "number"
+      },
+      {
+        "path": "turnSizing[].turns",
+        "type": "number"
+      },
+      {
+        "path": "usage",
+        "type": "array of object"
+      },
+      {
+        "path": "usage[].cacheRead",
+        "type": "number"
+      },
+      {
+        "path": "usage[].cacheWrite",
+        "type": "number"
+      },
+      {
+        "path": "usage[].cacheWrite1h",
+        "type": "number"
+      },
+      {
+        "path": "usage[].compactions",
+        "type": "number"
+      },
+      {
+        "path": "usage[].day",
+        "type": "string"
+      },
+      {
+        "path": "usage[].edits",
+        "type": "number"
+      },
+      {
+        "path": "usage[].entrypoint",
+        "type": "string"
+      },
+      {
+        "path": "usage[].granularity",
+        "type": "string"
+      },
+      {
+        "path": "usage[].in",
+        "type": "number"
+      },
+      {
+        "path": "usage[].linesAdded",
+        "type": "number"
+      },
+      {
+        "path": "usage[].linesRemoved",
+        "type": "number"
+      },
+      {
+        "path": "usage[].member",
+        "type": "string"
+      },
+      {
+        "path": "usage[].model",
+        "type": "string"
+      },
+      {
+        "path": "usage[].out",
+        "type": "number"
+      },
+      {
+        "path": "usage[].project",
+        "type": "string"
+      },
+      {
+        "path": "usage[].reasoning",
+        "type": "number"
+      },
+      {
+        "path": "usage[].rejected",
+        "type": "number"
+      },
+      {
+        "path": "usage[].reworkLines",
+        "type": "number"
+      },
+      {
+        "path": "usage[].tool",
+        "type": "string"
+      },
+      {
+        "path": "usage[].toolCalls",
+        "type": "number"
+      },
+      {
+        "path": "windowStart",
+        "type": "timestamp"
+      }
+    ],
+    "result": [
+      {
+        "path": "bars",
+        "type": "array of object",
+        "omitEmpty": true
+      },
+      {
+        "path": "barsAreProjects",
+        "type": "boolean",
+        "omitEmpty": true
+      },
+      {
+        "path": "barsPseudonym",
+        "type": "string",
+        "omitEmpty": true
+      },
+      {
+        "path": "bars[].frac",
+        "type": "number"
+      },
+      {
+        "path": "bars[].label",
+        "type": "string"
+      },
+      {
+        "path": "bars[].value",
+        "type": "string"
+      },
+      {
+        "path": "caveats",
+        "type": "array of string",
+        "omitEmpty": true
+      },
+      {
+        "path": "confidence",
+        "type": "object"
+      },
+      {
+        "path": "confidence.activityCoverage",
+        "type": "number"
+      },
+      {
+        "path": "confidence.ingested",
+        "type": "timestamp",
+        "omitEmpty": true
+      },
+      {
+        "path": "confidence.label",
+        "type": "string"
+      },
+      {
+        "path": "confidence.parsedBy",
+        "type": "string",
+        "omitEmpty": true
+      },
+      {
+        "path": "confidence.pricedCoverage",
+        "type": "number"
+      },
+      {
+        "path": "confidence.samples",
+        "type": "number"
+      },
+      {
+        "path": "confidence.samplesUnit",
+        "type": "string",
+        "omitEmpty": true
+      },
+      {
+        "path": "confidence.signalCoverage",
+        "type": "number",
+        "nullable": true,
+        "omitEmpty": true
+      },
+      {
+        "path": "confidence.subjectRecorded",
+        "type": "boolean",
+        "nullable": true,
+        "omitEmpty": true
+      },
+      {
+        "path": "confidence.turnCoverage",
+        "type": "number"
+      },
+      {
+        "path": "describe",
+        "type": "string"
+      },
+      {
+        "path": "figures",
+        "type": "array of object",
+        "omitEmpty": true
+      },
+      {
+        "path": "figures[].label",
+        "type": "string"
+      },
+      {
+        "path": "figures[].note",
+        "type": "string",
+        "omitEmpty": true
+      },
+      {
+        "path": "figures[].value",
+        "type": "string"
+      },
+      {
+        "path": "howToRead",
+        "type": "string"
+      },
+      {
+        "path": "lead",
+        "type": "object",
+        "nullable": true,
+        "omitEmpty": true
+      },
+      {
+        "path": "lead.rank",
+        "type": "number"
+      },
+      {
+        "path": "lead.reasons",
+        "type": "array of string"
+      },
+      {
+        "path": "name",
+        "type": "string"
+      },
+      {
+        "path": "purity",
+        "type": "number"
+      },
+      {
+        "path": "read",
+        "type": "object"
+      },
+      {
+        "path": "read.key",
+        "type": "string"
+      },
+      {
+        "path": "read.label",
+        "type": "string"
+      },
+      {
+        "path": "takeaway",
+        "type": "string"
+      },
+      {
+        "path": "title",
+        "type": "string"
+      }
+    ]
+  }
+}

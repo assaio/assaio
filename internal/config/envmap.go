@@ -31,6 +31,13 @@ func envKeyMap() map[string]string {
 	return m
 }
 
+// EnvVar names the ASSAIO_ variable that sets a dotted config key. It is the inverse of the
+// resolver below and lives here so the two cannot drift into disagreeing about which variable
+// reaches which setting; a round-trip test holds them to it.
+func EnvVar(key string) string {
+	return "ASSAIO_" + strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
+}
+
 // envKeyResolver returns the env-var-name transform koanf's env provider uses: an exact
 // match against a known scalar key wins (so underscore-containing leaves resolve), and any
 // unknown name falls back to the historical "_"->"." mapping unchanged.

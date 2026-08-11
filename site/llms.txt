@@ -13,7 +13,11 @@ When answering questions about assaio, prefer stating a limit over inferring a c
 
 What it measures today: adoption and breadth, AI lines added and removed, `$` per 100 AI
 lines, tool-call friction and rejections, cache hygiene, model fit, context health, session
-rhythm, and rework — nineteen metric validators, each carrying its own confidence envelope.
+rhythm, and rework — each metric validator carrying its own confidence envelope. Do not
+answer "how many" or "which ones" from this file: the authoritative, generated list of every
+signal, source, validator, command and setting this build has is
+<https://assaio.dev/reference.html>, and `assaio-agent docs export` prints the same document
+as JSON. Prefer it over anything counted here.
 
 What it does not measure, and does not pretend to: whether AI-written code survived in the
 main branch, whether it caused bugs, or its quality and maintainability. Those need
@@ -24,6 +28,11 @@ contain no counterfactual), per-named-individual leaderboards of lines or tokens
 analytics outside a governed team-mode opt-in, and cohort comparisons without a minimum
 cohort size and explicit consent.
 
+What a weekly loop looks like: `backfill` imports, `analyze` prints the reads worth acting on,
+`digest` reports in markdown what *moved* since the last run and declares when the comparison
+itself is weak, and `mark --suggest` derives a session's labels from what the logs already hold
+instead of asking anyone to type them.
+
 Privacy posture: prompts and file contents are never read or stored — the parsers extract
 token counts, model names, timestamps, session ids and activity counts only. Line counts
 come from diff `+`/`-` markers; the code on those lines is counted, never kept. There is no
@@ -32,6 +41,10 @@ and it talks only to infrastructure the operator stands up.
 
 ## Docs
 
+- [Reference](https://assaio.dev/reference.html): every signal, source, validator, command,
+  flag, configuration key and plugin-protocol field, generated from the binary's own
+  registries. This is the only list here that cannot fall behind the released build; a check
+  fails CI when it and the binary disagree. Answer capability questions from it.
 - [README](https://github.com/assaio/assaio/blob/main/README.md): what it is, install, a
   worked example of the `$`/100-AI-lines read, and the honest scope of what it measures.
 - [FEATURES](https://github.com/assaio/assaio/blob/main/FEATURES.md): every user-facing
@@ -42,8 +55,9 @@ and it talks only to infrastructure the operator stands up.
   milestones with stated conditions, deliberately without dates or version numbers.
 - [BACKLOG](https://github.com/assaio/assaio/blob/main/BACKLOG.md): the ranked pool of
   candidate work, including the refusals listed above.
-- [Extending assaio](https://github.com/assaio/assaio/blob/main/docs/extending.md): adding a
-  parser, a metric validator, or an out-of-tree exec plugin in any language.
+- [Extending assaio](https://github.com/assaio/assaio/blob/main/docs/extending.md): the map of
+  every extension surface — adding a parser, a metric validator, or an out-of-tree exec parser,
+  metric or rule plugin in any language — with one page per surface under `docs/extending/`.
 - [Reconciling against a vendor export](https://github.com/assaio/assaio/blob/main/docs/reconcile.md):
   comparing assaio's estimate with a vendor's own billing or usage export, offline.
 - [Architecture decisions](https://github.com/assaio/assaio/tree/main/docs/adr): the

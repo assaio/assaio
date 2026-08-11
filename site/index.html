@@ -200,19 +200,6 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
 .why p{margin:0 0 1rem; color:var(--dim)}
 .why strong{color:var(--fg); font-weight:600}
 
-/* roadmap */
-.next{border:1px solid var(--signal); border-radius:3px; background:var(--cell); padding:1.35rem 1.4rem}
-.nh{display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; margin-bottom:1.15rem}
-.nv{font:600 1rem/1 var(--mono); letter-spacing:-.02em; color:var(--signal)}
-.nt{font:500 .625rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--amber); border:1px solid var(--amber); border-radius:2px; padding:.4rem .5rem}
-.next ul{margin:0; padding-left:1.1rem}
-.next li{margin:0 0 .8rem; font-size:.9375rem; color:var(--dim)}
-.next li:last-child{margin-bottom:0}
-.next li b{color:var(--fg); font-weight:600}
-.seq{margin-top:1.25rem}
-.card .st{display:block; margin-bottom:.6rem; font:500 .625rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
-.card.now .st{color:var(--signal)}
-
 /* partner */
 .partner{display:grid; grid-template-columns:repeat(auto-fit,minmax(16rem,1fr)); gap:1.25rem}
 .partner .p{border:1px solid var(--rule); border-radius:3px; padding:1.35rem 1.4rem}
@@ -249,7 +236,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
     <a href="#sources">Sources</a>
     <a href="#adapt">Extend</a>
     <a href="#install">Install</a>
-    <a href="#roadmap">Roadmap</a>
+    <a href="/reference.html">Reference</a>
     <a href="https://github.com/assaio/assaio">GitHub</a>
   </nav>
   <button class="tog" id="tog" type="button">Theme</button>
@@ -351,7 +338,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
           <span class="qt">adoption</span>
         </div>
       </div>
-      <p class="more">Nineteen reads in all, each one file in the codebase, each printing a directional verdict with its caveat rather than a bare score — and each able to be recomputed over just the sessions you labelled a given kind of work, so <code>$</code>/100 lines on bugfixes stops being averaged in with greenfield features.</p>
+      <p class="more"><span data-claim="validators.count">Nineteen</span> reads in all, each one file in the codebase, each printing a directional verdict with its caveat rather than a bare score — and each able to be recomputed over just the sessions you labelled a given kind of work, so <code>$</code>/100 lines on bugfixes stops being averaged in with greenfield features.</p>
     </div>
   </section>
 
@@ -387,7 +374,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- FACEPLATE ──────────────────────────────────────────────────────────── -->
   <section class="sec" id="analyze">
     <div class="wrap">
-      <div class="sec-head"><h2>Nineteen reads, one faceplate</h2><p class="eyebrow">analyze</p></div>
+      <div class="sec-head"><h2><span data-claim="validators.count">Nineteen</span> reads, one faceplate</h2><p class="eyebrow">analyze</p></div>
       <p class="intro">
         <code>analyze</code> prints a directional verdict for each dimension, always with its
         caveat and always with <strong>what it rests on</strong>: how much of your window the
@@ -459,7 +446,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="pr">
           <span class="pn">Principle 02</span>
           <h3>Every fact carries its provenance</h3>
-          <p>Nothing here is a bare number. Each source publishes what it can actually answer, signal by signal, so <code>signals coverage</code> tells you which of the twenty-two figures <em>your</em> data can carry. Format drift is detected rather than absorbed: per-source canaries compare each import against a baseline of recent runs and warn when a vendor changes a log format under you.</p>
+          <p>Nothing here is a bare number. Each source publishes what it can actually answer, signal by signal, so <code>signals coverage</code> tells you which of the <span data-claim="signals.count">twenty-two</span> figures <em>your</em> data can carry. Format drift is detected rather than absorbed: per-source canaries compare each import against a baseline of recent runs and warn when a vendor changes a log format under you.</p>
         </div>
         <div class="pr">
           <span class="pn">Principle 03</span>
@@ -497,13 +484,13 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <!-- SOURCES ────────────────────────────────────────────────────────────── -->
   <section class="sec" id="sources">
     <div class="wrap">
-      <div class="sec-head"><h2>What it reads</h2><p class="eyebrow">five sources · declared depth, not a checkmark</p></div>
-      <div class="tools">
-        <div class="tool"><b>Claude Code</b><code>~/.claude/projects/**/*.jsonl</code><span class="cap full">tokens + activity</span></div>
-        <div class="tool"><b>OpenAI Codex CLI</b><code>~/.codex/sessions/**</code><span class="cap full">tokens + activity</span></div>
-        <div class="tool"><b>Gemini CLI</b><code>~/.gemini/tmp/&lt;hash&gt;/chats/*.jsonl</code><span class="cap">tokens · cost only</span></div>
-        <div class="tool"><b>GitHub Copilot CLI</b><code>~/.copilot/session-state/&lt;id&gt;/events.jsonl</code><span class="cap full">tokens + lines · per session</span></div>
-        <div class="tool"><b>Cline</b><code>globalStorage/saoudrizwan.claude-dev · ~/.cline</code><span class="cap">tokens · cost only</span></div>
+      <div class="sec-head"><h2>What it reads</h2><p class="eyebrow"><span data-claim="sources.count">five</span> sources · declared depth, not a checkmark</p></div>
+      <div class="tools" data-covers="sources">
+        <div class="tool" data-claim="source.claude-code"><b>Claude Code</b><code>~/.claude/projects/**/*.jsonl</code><span class="cap full">tokens + activity</span></div>
+        <div class="tool" data-claim="source.codex"><b>OpenAI Codex CLI</b><code>~/.codex/sessions/**</code><span class="cap full">tokens + activity</span></div>
+        <div class="tool" data-claim="source.gemini-cli"><b>Gemini CLI</b><code>~/.gemini/tmp/&lt;hash&gt;/chats/*.jsonl</code><span class="cap">tokens · cost only</span></div>
+        <div class="tool" data-claim="source.copilot-cli"><b>GitHub Copilot CLI</b><code>~/.copilot/session-state/&lt;id&gt;/events.jsonl</code><span class="cap full">tokens + lines · per session</span></div>
+        <div class="tool" data-claim="source.cline"><b>Cline</b><code>globalStorage/saoudrizwan.claude-dev · ~/.cline</code><span class="cap">tokens · cost only</span></div>
       </div>
       <p class="intro" style="margin-top:1.5rem">
         "Supports Gemini CLI" is misleading when it means tokens but no edits. Each source
@@ -530,25 +517,27 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   <section class="sec" id="commands">
     <div class="wrap">
       <div class="sec-head"><h2>Commands</h2><p class="eyebrow">one binary, no runtime deps</p></div>
-      <div class="cmds">
-        <div class="cmd"><b>init</b><span>A first run end to end: detects your tools, prints every directory it will read <em>before</em> reading it, imports, reports, and names what to run next. No config needed.</span></div>
-        <div class="cmd"><b>demo</b><span>Full reports on bundled sample data — the sixty-second first look, no logs needed.</span></div>
-        <div class="cmd"><b>backfill</b><span>Import local session logs. Incremental: an input already read unchanged is skipped; <code>--full</code> forces a re-parse.</span></div>
-        <div class="cmd"><b>report</b><span>Token/cost report. <code>--by day|project|tool|model|entrypoint|member</code>, <code>--format table|json|csv</code>, <code>--compare</code>.</span></div>
-        <div class="cmd"><b>effectiveness</b><span>AI output against cost — lines, edits, rejections, $/100 lines — per project.</span></div>
-        <div class="cmd"><b>reconcile</b><span>Check the estimate against the vendor's own numbers. Point it at a billing or usage export you downloaded — no credential, no network — and it reports the scope mismatch first, names only the causes with evidence behind them, and prints the rest as <em>unexplained</em>. Neither side is adjusted to make them agree.</span></div>
-        <div class="cmd"><b>analyze</b><span>Run the metric validators and any metric plugins; print each one's directional read. <code>--task|--outcome|--difficulty</code> recompute every one over just the sessions you labelled that way.</span></div>
-        <div class="cmd"><b>mark</b><span>Label a session with what the work actually was — task class, outcome, difficulty. Category values only, never free text, never synced; the one fact the logs cannot contain.</span></div>
-        <div class="cmd"><b>signals</b><span>What assaio can report, and what <em>your</em> data supports. <code>describe</code> says what one signal counts and what a zero means; <code>coverage</code> reports each as fully, partly or not at all supported — because "no rework happened" and "this source never recorded rework" are different facts.</span></div>
-        <div class="cmd"><b>survival</b><span>Directional local outcome: how much of a repo's window still lives in <code>HEAD</code>, beside its AI lines, plus what those commits changed by category and how many were reverts. Merge commits are reported apart from the rate, and a file git could not read is counted and named rather than passed over.</span></div>
-        <div class="cmd"><b>dashboard</b><span>Write the self-contained offline HTML Assay report; pseudonymized by default.</span></div>
-        <div class="cmd"><b>check</b><span>Exit non-zero over a token or API-equivalent $ budget — a CI or pre-push gate. Also runs your <b>rule plugins</b>: an <code>error</code> alert, or a rule that could not be evaluated, fails the gate.</span></div>
-        <div class="cmd"><b>explain</b><span>The long-form page for a metric — what it measures, how to read it, what to do, and its limits. Needs no store.</span></div>
-        <div class="cmd"><b>statusline</b><span>One ambient line for your status bar: today's tokens, AI lines, cost basis and data age. Read-only, never fails loudly.</span></div>
-        <div class="cmd"><b>serve · sync</b><span>Self-hosted team server and the push to it — pseudonymous by default, on infrastructure you control.</span></div>
-        <div class="cmd"><b>doctor · status</b><span>Detected tools, resolved log roots, store size, the per-source depth matrix, and format-drift canaries. <code>doctor --strict</code> exits non-zero on suspected drift — for cron.</span></div>
-        <div class="cmd"><b>plugins · metrics</b><span><code>list</code> / <code>verify</code> out-of-tree exec parser, metric and rule plugins — nothing stored.</span></div>
-        <div class="cmd"><b>config · clear · compact</b><span>Print the effective config; delete stored data with an explicit scope and <code>--yes</code>; return freed pages to the filesystem.</span></div>
+      <div class="cmds" data-covers="commands">
+        <div class="cmd"><b><span data-claim="command.init">init</span></b><span>A first run end to end: detects your tools, prints every directory it will read <em>before</em> reading it, imports, reports, and names what to run next. No config needed.</span></div>
+        <div class="cmd"><b><span data-claim="command.demo">demo</span></b><span>Full reports on bundled sample data — the sixty-second first look, no logs needed.</span></div>
+        <div class="cmd"><b><span data-claim="command.backfill">backfill</span></b><span>Import local session logs. Incremental: an input already read unchanged is skipped; <code>--full</code> forces a re-parse.</span></div>
+        <div class="cmd"><b><span data-claim="command.report">report</span></b><span>Token/cost report. <code>--by day|project|tool|model|entrypoint|member</code>, <code>--format table|json|csv</code>, <code>--compare</code>.</span></div>
+        <div class="cmd"><b><span data-claim="command.effectiveness">effectiveness</span></b><span>AI output against cost — lines, edits, rejections, $/100 lines — per project.</span></div>
+        <div class="cmd"><b><span data-claim="command.reconcile">reconcile</span></b><span>Check the estimate against the vendor's own numbers. Point it at a billing or usage export you downloaded — no credential, no network — and it reports the scope mismatch first, names only the causes with evidence behind them, and prints the rest as <em>unexplained</em>. Neither side is adjusted to make them agree.</span></div>
+        <div class="cmd"><b><span data-claim="command.analyze">analyze</span></b><span>Run the metric validators and any metric plugins; print each one's directional read. <code>--task|--outcome|--difficulty</code> recompute every one over just the sessions you labelled that way.</span></div>
+        <div class="cmd"><b><span data-claim="command.mark">mark</span></b><span>Label a session with what the work actually was — task class, outcome, difficulty. <code data-claim="flag.mark.suggest">--suggest</code> derives them instead of asking: RE2 rules over the branch, skill, agent and entrypoint a session already recorded, yours in config, and nothing at all where a repository has no convention. Category values only, never free text, never synced; the one fact the logs cannot contain.</span></div>
+        <div class="cmd"><b><span data-claim="command.signals">signals</span></b><span>What assaio can report, and what <em>your</em> data supports. <code>describe</code> says what one signal counts and what a zero means; <code>coverage</code> reports each as fully, partly or not at all supported — because "no rework happened" and "this source never recorded rework" are different facts.</span></div>
+        <div class="cmd"><b><span data-claim="command.survival">survival</span></b><span>Directional local outcome: how much of a repo's window still lives in <code>HEAD</code>, beside its AI lines, plus what those commits changed by category and how many were reverts. Merge commits are reported apart from the rate, and a file git could not read is counted and named rather than passed over.</span></div>
+        <div class="cmd"><b><span data-claim="command.dashboard">dashboard</span></b><span>Write the self-contained offline HTML Assay report; pseudonymized by default.</span></div>
+        <div class="cmd"><b><span data-claim="command.check">check</span></b><span>Exit non-zero over a token or API-equivalent $ budget — a CI or pre-push gate. Also runs your <b>rule plugins</b>: an <code>error</code> alert, or a rule that could not be evaluated, fails the gate.</span></div>
+        <div class="cmd"><b><span data-claim="command.digest">digest</span></b><span>What <em>moved</em> since the last run, in markdown for a weekly thread — and where the comparison itself is weak: overlapping windows, a different window length, a parser that changed between the two runs, a verdict that moved on thin confidence.</span></div>
+        <div class="cmd"><b><span data-claim="command.explain">explain</span></b><span>The long-form page for a metric — what it measures, how to read it, what to do, and its limits. Needs no store.</span></div>
+        <div class="cmd"><b><span data-claim="command.statusline">statusline</span></b><span>One ambient line for your status bar: today's tokens, AI lines, cost basis and data age. Read-only, never fails loudly.</span></div>
+        <div class="cmd"><b><span data-claim="command.serve">serve</span> · <span data-claim="command.sync">sync</span></b><span>Self-hosted team server and the push to it — pseudonymous by default, on infrastructure you control.</span></div>
+        <div class="cmd"><b><span data-claim="command.doctor">doctor</span> · <span data-claim="command.status">status</span></b><span>Detected tools, resolved log roots, store size, the per-source depth matrix, and format-drift canaries. <code>doctor --strict</code> exits non-zero on suspected drift — for cron.</span></div>
+        <div class="cmd"><b><span data-claim="command.docs">docs</span></b><span>Everything this binary can enumerate about itself — signals, sources, validators, commands, settings, the plugin protocol — as JSON or as a page. The <a href="/reference.html">published reference</a> is generated from it, and a check fails the build when this site and the binary disagree.</span></div>
+        <div class="cmd"><b><span data-claim="command.plugins">plugins</span> · <span data-claim="command.metrics">metrics</span></b><span><code>list</code> / <code>verify</code> out-of-tree exec parser, metric and rule plugins — nothing stored.</span></div>
+        <div class="cmd"><b><span data-claim="command.config">config</span> · <span data-claim="command.clear">clear</span> · <span data-claim="command.compact">compact</span></b><span>Print the effective config; delete stored data with an explicit scope and <code>--yes</code>; return freed pages to the filesystem.</span></div>
       </div>
     </div>
   </section>
@@ -625,34 +614,21 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
     <div class="wrap">
       <div class="sec-head"><h2>Where this is going</h2><p class="eyebrow">direction, not commitment</p></div>
       <p class="intro">
-        This is the order the work is meant to happen in — no dates, no guarantees, and any item
-        can be reshaped or dropped when a bug report or a pull request makes the case.
-        <strong>Nothing in the next-release panel is built yet.</strong> The milestones under it
-        run from one already half-shipped to one that is years of nobody's promise, and each card
-        says which part is which. What you can install is the
-        <a href="https://github.com/assaio/assaio/releases">latest release</a>; the
-        <a href="https://github.com/assaio/assaio/blob/main/FEATURES.md">feature inventory</a> is
-        what that actually gives you.
+        The order the work is meant to happen in — no dates, no guarantees, and any item can be
+        reshaped or dropped when a bug report or a pull request makes the case — lives in
+        <a href="https://github.com/assaio/assaio/blob/main/ROADMAP.md">ROADMAP.md</a>, next to the
+        reasoning behind the ordering and the conditions <code>v1.0</code> has to meet. It used to
+        be copied onto this page as eight cards, which meant a section that had to be re-read at
+        every tag and could describe things that do not exist. A promise is worth stating once, in
+        the place it cannot fall behind.
       </p>
-      <div class="next">
-        <div class="nh"><span class="nv">The next release</span><span class="nt">not released yet</span></div>
-        <ul>
-          <li><b>An assay you can post in public.</b> One image or page: tool and model mix, the trend, a few findings, and the coverage behind them. Redaction is the feature rather than a flag, with a preview before anything is written. The rule is now settled — tools and models are named, because which agent and model ran is a fact about the vendor; projects appear only as a count and a sorted distribution, because a stable pseudonym still preserves the shape someone who knows the setup can read.</li>
-          <li><b>A correction that can reach the history it invalidates.</b> A parser fix today repairs some stored columns and silently cannot touch others. Still a decision before it is a patch. Its sibling is answered: a rate computed across sources that record different things gates its denominator by capability and quantifies the share that leaves out, so <code>$</code>/100 lines says it means <em>per line-visible spend</em> instead of quietly understating itself.</li>
-          <li><b>Cost per accepted change.</b> The measure that decides whether AI improved delivery sits just outside session data — not tokens, but the second and third attempt at the same change. What ships today stops at the session boundary. How often a file an agent touched is touched again within two weeks is a <em>separate engine</em> from log parsing, and it is what turns cost per session into a number an engineering lead can defend at a budget review.</li>
-        </ul>
-      </div>
-      <div class="cards seq">
-        <div class="card now"><span class="st">Now · part shipped</span><h3>Calibrated measurement</h3><p>Every figure checked against something that is <em>not</em> assaio. <strong>Shipped:</strong> the conservation and metamorphic suite, offline <code>reconcile</code> against a vendor's own export, and a price table that is now watched — every cost says what share of itself it could not see, and <code>doctor --strict</code> fails on it. <strong>Open:</strong> a parser fix that can repair the history it invalidates, and a real captured sample for the two sources calibrated against a constructed one.</p></div>
-        <div class="card"><span class="st">Next · part shipped</span><h3>Worth opening twice</h3><p>A first run produces something worth acting on this week, and a reason to come back the next one. <strong>Shipped:</strong> findings arrive ordered with the ordering's reasons shown; a digest that reports what <em>moved</em> and says so when the comparison itself is weak; and a label nobody has to type, derived through a rule engine that yields nothing where a repository has no convention. <strong>Open:</strong> an assay shareable in public, with redaction as the feature rather than a flag.</p></div>
-        <div class="card"><span class="st">Then</span><h3>Everything the logs already say</h3><p>Read every signal the local logs carry and draw more conclusions from it than any vendor dashboard draws from the same file — including the session as a <em>sequence</em> rather than a total, so "why was this one expensive" has an answer.</p></div>
-        <div class="card"><span class="st">After that</span><h3>Evidence graph</h3><p>Which sessions produced which commits and pull requests, what happened in review and CI, and how sure assaio is about every link. Ambiguous stays ambiguous, and what a change costs <em>after</em> it is written becomes countable.</p></div>
-        <div class="card"><span class="st">Then</span><h3>Harness intelligence</h3><p>Whether changing an <code>AGENTS.md</code>, a skill or a model actually helped — deterministic rules carrying their evidence and one reversible experiment, never an LLM narrating a dashboard.</p></div>
-        <div class="card"><span class="st">After that</span><h3>Team, without surveillance</h3><p>A team self-hosts it, sees adoption and delivery outcomes, and cannot build a leaderboard from it. Adoption read as activation → retention → breadth, in bands, with a cohort floor.</p></div>
-        <div class="card"><span class="st">Later</span><h3>Cost truth &amp; interoperability</h3><p>The credentialed billing pull once the offline import has proved itself, long-context pricing, a mapping onto the OpenTelemetry GenAI conventions with content dropped by default, and a connector SDK.</p></div>
-        <div class="card"><span class="st">v1.0</span><h3>Measurements worth depending on</h3><p>Every claimed capability calibrated, the two deep sources reconciled against outside evidence, no known wrong number open, and a correction that can reach history. The contracts freeze last, not first — a frozen contract over an uncalibrated measurement is a stable wrong answer.</p></div>
-      </div>
-      <p class="more">Two of those are blocked on <b>data rather than on time</b>, and neither can be manufactured here: calibrating Gemini CLI and Cline against a <em>real</em> capture needs one redacted session log from somebody who runs them, and the column aliases <code>reconcile</code> binds by need one redacted vendor export. Both are the most useful thing anyone can contribute right now. The full reasoning — why calibration comes before correlation, and what v1.0 has to mean — is in <a href="https://github.com/assaio/assaio/blob/main/ROADMAP.md">ROADMAP.md</a>; the ranked pool with an id per item is <a href="https://github.com/assaio/assaio/blob/main/BACKLOG.md">BACKLOG.md</a>.</p>
+      <p class="intro">
+        What you can install today is the
+        <a href="https://github.com/assaio/assaio/releases">latest release</a>; the
+        <a href="https://github.com/assaio/assaio/blob/main/FEATURES.md">feature inventory</a> says
+        what that gives you, and the <a href="/reference.html">reference</a> is generated from the
+        binary itself — every signal, source, validator, command and setting it actually has.
+      </p>
     </div>
   </section>
 
@@ -695,6 +671,7 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
 <footer class="wrap colo">
   <nav>
     <a href="https://github.com/assaio/assaio">GitHub</a>
+    <a href="/reference.html">Reference</a>
     <a href="https://github.com/assaio/assaio/releases">Releases</a>
     <a href="https://github.com/assaio/assaio/blob/main/CHANGELOG.md">Changelog</a>
     <a href="https://github.com/assaio/assaio/blob/main/ROADMAP.md">Roadmap</a>

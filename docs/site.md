@@ -1,13 +1,19 @@
 # The website
 
-<https://assaio.dev/> is one page: `site/index.html`. No build step, no framework, no CDN —
-the favicon is an inline `data:` SVG and every link is absolute, so the page renders correctly
-opened straight from disk. Keep it that way; it is the same posture as the offline dashboard
-the tool itself writes. `wrangler.toml` says where the directory goes and under which domains —
-deployment configuration, not a build step.
+<https://assaio.dev/> is `site/index.html`, written by hand. No build step, no framework, no
+CDN — the favicon is an inline `data:` SVG and every link is absolute, so the page renders
+correctly opened straight from disk. Keep it that way; it is the same posture as the offline
+dashboard the tool itself writes. `wrangler.toml` says where the directory goes and under which
+domains — deployment configuration, not a build step.
 
-Two other files sit beside it in `site/`, and both are there because they are read by something
-that is **not** the browser rendering the page:
+Three other files sit beside it in `site/`. One is generated, and two are there because they are
+read by something that is **not** the browser rendering the page:
+
+- **`reference.html`** — the second page, and the only generated one:
+  `assaio-agent docs export --format html`, committed, with `make test` failing when it differs
+  from what the binary would write. It publishes what can be enumerated — every signal, source,
+  validator, command, flag, configuration key and metric-contract field — so the hand-written
+  page never has to list any of it. Regenerate with `make docs`; do not edit it.
 
 - **`og.png`** — the card a shared link renders as. Every Open Graph tag was present except
   this one, so LinkedIn and the rest showed a bare grey line; a `data:` URI cannot stand in,
@@ -37,40 +43,46 @@ at every tag, and the release that forgets to update it is, by definition, the o
 notices. A fact worth stating once belongs in the one place it cannot rot. For "which version is
 current" that place is the releases page, which the site now links instead of copying.
 
-What replaced the guard is its inverse: `site.yml` fails if a bare `X.Y.Z` appears anywhere in
-`site/index.html`. Reintroducing a stamp is therefore a deliberate act with a red check attached,
-not an easy convenience that quietly creates a chore.
+What replaced the guard is its inverse: `site.yml` fails if a bare `X.Y.Z` appears anywhere under
+`site/`. Reintroducing a stamp is therefore a deliberate act with a red check attached, not an
+easy convenience that quietly creates a chore. Two shapes are masked before the search, because
+neither is a stamp: SVG geometry attributes, whose optimized path data writes implicit separators
+(`d="M12.5.5…"`), and dotted quads, because `reference.html` publishes `serve --addr`'s default of
+`127.0.0.1:8787`. Masking is the same move both times — say what is *not* a version, then look.
 
-This removes a mechanical check without removing the obligation behind it. Everything a release
-still has to confirm by hand is listed in
-[RELEASING.md](../RELEASING.md#the-public-surface-check-before-every-tag) — the supported-tool
-list, the command list, validator counts, and the roadmap section. None of that was ever
-mechanical; the version stamp was the only part that was, and it was also the only part that had
-to change on a release that changed nothing else on the page. "On the roadmap" wording about
-something that has since shipped belongs to the same read-through.
+### The claims the page is held to
+
+The rest of what a release used to re-read by hand is now a test. `site/index.html` declares which
+of its claims are checkable — `data-claim="command.digest"` on the entry that describes it,
+`data-covers="commands"` on the list that promises to enumerate them, `data-claim="sources.count"`
+on the word "five" — and `internal/docs` checks exactly those against the binary's own registries.
+It runs in both directions, and the second one is the one that matters: a claim with nothing
+behind it fails, **and so does a shipped capability the page never names**. `digest` and
+`mark --suggest` shipped in v0.17.0 and this page said neither for a whole release.
+
+What it deliberately does not check is prose. "Nineteen reads, one faceplate" has its number
+verified and its sentence trusted; the questions-it-answers section, the honest-scope section and
+the colophon are checked by a reader, not a regex. A guard that implied otherwise would be the
+false green this project exists to refuse. The set of covered claims is `commands`, `sources`,
+`signals`, `validators` and `config`, and only top-level commands are enumerable — a page has to
+name every capability, not every subcommand of one.
+
+`site/llms.txt` cannot carry attributes, so it gets the weaker form of the same rule: every
+source has to be named somewhere in it, matched the way prose writes names ("Claude Code"
+satisfies `claude-code`). It states no counts at all any more — it points at `reference.html`
+and tells the assistant reading it to answer capability questions from there.
 
 ### Saying what does not exist yet
 
-That rule governs what the page presents as **available**. The roadmap section is the one place
-it may name work that does not exist, and it earns that only by leaving no room to misread: the
-section states up front that nothing in it is built, the next release carries an explicit *not
-released yet* marker, and the installable build is a link to the releases page rather than a
-claim. Anywhere else on the page, describing a capability is claiming it ships today.
+The page no longer describes unreleased work at all. It used to carry a roadmap section — eight
+cards, 10.5% of the file — with an explicit *not released yet* marker on the next-release panel.
+That section was deleted rather than guarded, for the reason the version stamp was: it duplicated
+[ROADMAP.md](../ROADMAP.md), which is linked, and it had to be re-read at every tag. Describing a
+capability anywhere on the page is now, without exception, claiming it ships today.
 
-That section names no release either, which is the same rule applied twice. It says *the next
-release*, not `v0.16.0` — the ordering is the information, and a number would only add something
-to keep in sync. This also keeps the page consistent with
-[ROADMAP.md](../ROADMAP.md#the-next-milestones), which deliberately assigns no version to a
-promise for its own stated reason.
-
-The one exception is `v1.0`, which the section uses as the **name of a milestone** rather than as
-a stamp — it is what that promise has been called since the roadmap's first draft, and it names
-no release date and no release contents. The guard draws the same line by requiring three
-components: `v1.0` passes, `v1.0.0` does not.
-
-What the section does need at release time is the obvious thing: an item that shipped leaves it.
-That is a review norm in [RELEASING.md](../RELEASING.md#the-public-surface-check-before-every-tag),
-alongside the tool and command lists, and it is the same judgement they need.
+The one place a version-shaped string survives is `v1.0`, used as the **name of a milestone**
+rather than as a stamp. The guard draws the same line by requiring three components: `v1.0`
+passes, `v1.0.0` does not.
 
 ### The page fetches nothing
 
@@ -100,8 +112,11 @@ a fact about the project, and keeping it in the repository is what stops it from
 setting in a dashboard nobody remembers — which is how the site deploy stayed broken for five
 releases.
 
-`site.yml` no longer deploys. It runs the two page guards — no version named, nothing fetched
-at render time — on every push, tag and pull request, and nothing else.
+`site.yml` no longer deploys. It runs the three artifact guards — no version named, nothing
+fetched at render time, a share card that exists — over every served page on each push, tag and
+pull request, and nothing else. The content guards are Go tests, so they run in `make test`
+locally and in `ci.yml`: keeping them in the language that owns the registries is what lets them
+compare against the registries rather than against another copy of the answer.
 
 ### What that costs, stated plainly
 

@@ -22,7 +22,7 @@ can be reshaped or dropped.
 - Effort: **S**mall / **M**edium / **L**arge. Scope: **solo** / **team** / **both**.
 - Want to pick one up? Comment on or open an issue first so the approach is agreed
   before the work — connectors additionally follow the
-  [connector intake flow](docs/extending.md#the-intake-path-open-a-connector-issue-first).
+  [connector intake flow](docs/extending/data-source.md#the-intake-path-open-a-connector-issue-first).
 
 ## Shipped — "Trust the dataset" and "Intent"
 
@@ -523,13 +523,6 @@ had been growing from one maintainer's dogfooding, and that is a sample of one.
   would catch a shrink, but cannot distinguish a prune from a genuine fall in usage — which is
   why this is a design question rather than a patch, and why the shipped answer is a caveat
   about what could not be checked instead of a claim about what happened.
-- [ ] **B161 · documentation generated from the registries** — M · both — `docs export
-  --format json` from the live registers (signals, source-depth matrix, validators, command
-  tree, config keys), a site tab built from it, and a `consistency` check that reddens CI when
-  the published JSON drifts from the binary. Narrative stays Markdown in `docs/`; only the
-  enumerable surfaces are generated. The problem it solves is real and recurring: the site has
-  gone stale behind the binary before, and nothing failed.
-
 - [ ] **B162 · a destructive command that cannot be pointed at the wrong store** — S/M · both —
   `clear` has no `--db`: it always acts on the default local store, and there is no environment
   variable either. v0.17 made it print the path and record count before deleting, which is the
@@ -581,9 +574,9 @@ had been growing from one maintainer's dogfooding, and that is a sample of one.
 
 ## Pool — connectors
 
-Each follows the [connector intake flow](docs/extending.md#the-intake-path-open-a-connector-issue-first);
+Each follows the [connector intake flow](docs/extending/data-source.md#the-intake-path-open-a-connector-issue-first);
 a tool used by one organization is usually better served by an out-of-tree
-[exec plugin](docs/extending.md#write-a-plugin-any-language).
+[exec plugin](docs/extending/parser-plugin.md#write-a-plugin-any-language).
 
 - [ ] **B52 · opencode** — M — `~/.local/share/opencode/storage/message/**` JSON (plus a
   newer relational `opencode.db`). Assistant messages carry `tokens{input,output,reasoning,

@@ -2,7 +2,7 @@ BIN := bin/assaio-agent
 LDFLAGS := -X github.com/assaio/assaio/internal/version.Version=$(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 FUZZTIME := 20s
 
-.PHONY: build test lint fmt tidy snapshot hooks vuln fuzz
+.PHONY: build test lint fmt tidy snapshot hooks vuln fuzz docs
 build:
 	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/assaio-agent
 test:
@@ -22,6 +22,11 @@ lint:
 	gofmt -l .
 	go vet ./...
 	golangci-lint run
+# Regenerates docs/reference.json and site/reference.html from the binary's own registries.
+# `make test` fails when either differs from what this build would print, so a registry that
+# grows and a published surface that does not is a red check rather than a stale page.
+docs:
+	go test ./internal/docs/ -run 'TestCommittedReference' -update
 fmt:
 	golangci-lint fmt
 tidy:

@@ -45,15 +45,19 @@ jobs:
           # grep exits 2 on a missing file and `if` reads that as "no match", so the guard would
           # pass on a page it never opened. Every check below assumes the file was read.
           test -f site/index.html || { echo "::error::site/index.html is missing"; exit 1; }
-          # Geometry attributes are stripped first: optimized path data writes implicit separators
-          # (`d="M12.5.5…"`, which SVGO emits by default), and a dotted triple there is coordinates,
-          # not a version. sed keeps line count, so grep -n still reports the real line.
+          # Two shapes are masked before the search, because neither is a version stamp and
+          # both would otherwise read as one. Geometry attributes go first: optimized path data
+          # writes implicit separators (`d="M12.5.5…"`, which SVGO emits by default), and a
+          # dotted triple there is coordinates. Dotted quads go next: reference.html publishes
+          # `serve --addr`'s default of 127.0.0.1:8787, and an IPv4 literal contains a
+          # three-component prefix. Masking is the same move both times -- say what is not a
+          # version, then look for one. sed keeps line count, so grep -n reports the real line.
           # Every text file under site/ is served, so every one of them can carry a stamp that
           # rots. The rule was written for the page and inherited by llms.txt the day it landed;
           # naming only index.html here would move the chore rather than remove it.
           fail=0
           while IFS= read -r page; do
-            if sed -E 's/ (d|points|viewBox|transform)="[^"]*"//g' "$page" \
+            if sed -E 's/ (d|points|viewBox|transform)="[^"]*"//g; s/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/IPV4/g' "$page" \
                | grep -nE '\bv?[0-9]+\.[0-9]+\.[0-9]+\b'; then
               echo "::error file=$page::This served file names a version. They deliberately do not:"
               echo "::error file=$page::a stamp here has to be updated at every tag, and the release that forgets is the one nobody catches."
@@ -68,6 +72,9 @@ jobs:
   # embed to make it false, and a marketing badge is exactly the shape that arrives as one, so
   # the promise gets a check rather than a reviewer's memory. Inline the asset, or change the
   # sentence: both are fine, silently breaking it is not.
+  #
+  # Every served page is held to it, not just index.html: reference.html makes the same promise
+  # in its own footer, and a rule that named one file would have to be remembered at the next.
   selfcontained:
     runs-on: ubuntu-latest
     steps:
@@ -77,28 +84,35 @@ jobs:
           set -euo pipefail
           test -f site/index.html || { echo "::error::site/index.html is missing"; exit 1; }
           fail=0
-          # Every attribute a browser fetches without being asked, in each quoting form it can
-          # take. Checking only src="..." would miss srcset=, a single-quoted src, and an
-          # unquoted one -- three ways a pasted embed arrives.
-          if grep -nEo '(src|srcset|poster|data)=("[^"]*"|'"'"'[^'"'"']*'"'"'|[^ >]+)' site/index.html \
-             | grep -vE '=["'"'"']?data:'; then
-            echo "::error file=site/index.html::A fetched attribute points somewhere other than a data: URI."
-            fail=1
-          fi
-          # A <link> fetches on nearly every rel -- icon, manifest, preload, stylesheet. Listing
-          # the ones that fetch means forgetting one, so this allows only the two that do not.
-          if grep -nE '<link[^>]*>' site/index.html \
-             | grep -vE 'rel="(canonical|alternate)"' | grep -v 'href="data:'; then
-            echo "::error file=site/index.html::A <link> fetches a subresource."
-            fail=1
-          fi
-          if grep -nE '@import|url\(["'"'"']?(https?:)?//' site/index.html; then
-            echo "::error file=site/index.html::A stylesheet rule pulls a remote resource."
-            fail=1
-          fi
-          if [ "$fail" -ne 0 ]; then
-            echo "::error file=site/index.html::The colophon promises this page loads nothing. Inline the asset, or change the promise."
-          fi
+          while IFS= read -r page; do
+            # Per page, so a failure on one does not annotate the next as broken -- pointing a
+            # fixer at a generated file whose only edit path is internal/docs/style.go.
+            page_fail=0
+            # Every attribute a browser fetches without being asked, in each quoting form it
+            # can take. Checking only src="..." would miss srcset=, a single-quoted src, and an
+            # unquoted one -- three ways a pasted embed arrives.
+            if grep -nEo '(src|srcset|poster|data)=("[^"]*"|'"'"'[^'"'"']*'"'"'|[^ >]+)' "$page" \
+               | grep -vE '=["'"'"']?data:'; then
+              echo "::error file=$page::A fetched attribute points somewhere other than a data: URI."
+              page_fail=1
+            fi
+            # A <link> fetches on nearly every rel -- icon, manifest, preload, stylesheet.
+            # Listing the ones that fetch means forgetting one, so this allows only the two
+            # that do not.
+            if grep -nE '<link[^>]*>' "$page" \
+               | grep -vE 'rel="(canonical|alternate)"' | grep -v 'href="data:'; then
+              echo "::error file=$page::A <link> fetches a subresource."
+              page_fail=1
+            fi
+            if grep -nE '@import|url\(["'"'"']?(https?:)?//' "$page"; then
+              echo "::error file=$page::A stylesheet rule pulls a remote resource."
+              page_fail=1
+            fi
+            if [ "$page_fail" -ne 0 ]; then
+              echo "::error file=$page::This page promises it loads nothing. Inline the asset, or change the promise."
+              fail=1
+            fi
+          done < <(find site -type f -name '*.html' | sort)
           exit $fail
 
   # A link to assaio.dev rendered as a bare grey line on LinkedIn and every other reader for as
@@ -115,19 +129,21 @@ jobs:
         run: |
           set -euo pipefail
           fail=0
-          for tag in 'og:image' 'og:image:width' 'og:image:height' 'og:image:alt' 'twitter:image'; do
-            if ! grep -q "\"$tag\"" site/index.html; then
-              echo "::error file=site/index.html::$tag is missing -- a shared link renders without a card."
-              fail=1
-            fi
+          for page in site/*.html; do
+            for tag in 'og:image' 'og:image:width' 'og:image:height' 'og:image:alt' 'twitter:image'; do
+              if ! grep -q "\"$tag\"" "$page"; then
+                echo "::error file=$page::$tag is missing -- a shared link renders without a card."
+                fail=1
+              fi
+            done
+            # Every image the tags name has to be a file this repository actually serves.
+            while read -r url; do
+              path="site/${url#https://assaio.dev/}"
+              if [ ! -f "$path" ]; then
+                echo "::error file=$page::$url is referenced but $path is not in the repository."
+                fail=1
+              fi
+            done < <(grep -oE 'content="https://assaio\.dev/[^"]+\.(png|jpg|jpeg|webp)"' "$page" \
+                     | sed -E 's/content="([^"]*)"/\1/' | sort -u)
           done
-          # Every image the tags name has to be a file this repository actually serves.
-          while read -r url; do
-            path="site/${url#https://assaio.dev/}"
-            if [ ! -f "$path" ]; then
-              echo "::error file=site/index.html::$url is referenced but $path is not in the repository."
-              fail=1
-            fi
-          done < <(grep -oE 'content="https://assaio\.dev/[^"]+\.(png|jpg|jpeg|webp)"' site/index.html \
-                   | sed -E 's/content="([^"]*)"/\1/' | sort -u)
           exit $fail

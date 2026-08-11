@@ -36,6 +36,7 @@ mattering the moment a second release exists.
 | `config` | v0.1 | Prints the effective merged configuration and its source path. |
 | `plugins` | v0.1 | `list` / `verify` for exec **parser** plugins (protocol conformance, nothing stored). |
 | `metrics` | v0.1 | `list` / `verify` for exec **metric** plugins (runs on your real window, prints violations + rendered result). |
+| `docs` | v0.18 | `export --format json\|html` writes what this binary can enumerate about itself, read from the live registers rather than a maintained list: every signal with what a zero means, every source's depth per signal, every validator with its scope, the whole command tree with flags and defaults, every configuration key with its environment variable, and both halves of the metric contract — the in-tree `analyze.Input` and the plugin wire, side by side. Carries `assaio_docs` as its schema version and deliberately not the build's, so the committed copy is identical on every machine. |
 | `version` | v0.1 | Prints the version (also `--version`). |
 
 ## Metric validators (`assaio analyze` + dashboard)
@@ -71,14 +72,15 @@ Exec **metric plugins** (below) render beside these, namespaced `plugin:<name>`.
 
 | Surface | Since | Contract |
 |---------|-------|----------|
-| In-tree parser (new data source) | v0.1 | One Go package under `internal/parser/` + golden & fuzz tests ([guide](docs/extending.md#add-a-data-source)). |
+| In-tree parser (new data source) | v0.1 | One Go package under `internal/parser/` + golden & fuzz tests ([guide](docs/extending/data-source.md)). |
 | Exec **parser** plugin, any language | v0.1 | `<command> scan`, handshake + JSONL records on stdout; `plugins:` in config (ADR 0003). Since v0.14 a record field the protocol does not define is a named violation rather than a silent zero, matching the metric and rule protocols. |
 | Exec **metric** plugin, any language | v0.1 | `<command> analyze`, Input JSON on stdin → handshake + one Result on stdout; `metrics:` in config (ADR 0004). |
 | Exec **rule** plugin, any language | v0.3 | `<command> evaluate`, the window's verdicts on stdin → handshake + one alerts document on stdout; `rules:` in config; gates `check` (ADR 0005). |
-| In-tree metric validator | v0.1 | One file implementing `Validator`, registered via `init()` ([guide](docs/extending.md#adding-a-metric-validator)). |
+| In-tree metric validator | v0.1 | One file implementing `Validator`, registered via `init()` ([guide](docs/extending/metric-validator.md)). |
 | Direct SQL on the store | v0.1 | Documented `usage_record` schema, any SQLite client. |
 | JSON/CSV pipes | v0.1 | `report`/`effectiveness` `--format json\|csv` into your own tooling. Since v0.14 the CSV carries `task`, `outcome` and `difficulty`, so a row grouped by a session annotation names the group it belongs to. |
 | Per-team configuration | v0.1 | `config.yaml` + `ASSAIO_*` env vars (sources, plugins, metrics, privacy, server, sync, pricing). |
+| Generated reference of every surface | v0.18 | `docs export --format json\|html` from the live registers — signals, source depth, validators and scope, the command tree with flags and defaults, config keys with their environment variables, and both halves of the metric contract. Published as [assaio.dev/reference.html](https://assaio.dev/reference.html); `make test` fails when a published surface and the binary disagree, in both directions. |
 
 ## Data sources (parsers)
 
@@ -92,7 +94,7 @@ same questions as one that reports both. Every source therefore publishes its **
 | Claude Code | v0.1 | **deep** | ✔ (incl. sub-agent turns) | ✔ full, incl. rejections | ✔ |
 | OpenAI Codex CLI | v0.1 | standard | ✔ (exact, delta-based) | ✔ except rejections; since v0.13 a created file contributes its lines, which it did not before | — |
 | Gemini CLI | v0.1 | standard | ✔ | — (cost only, see ROADMAP) | — |
-| GitHub Copilot CLI | v0.6 | standard | ✔ (exact, per model, incl. reasoning) | ✔ lines added/removed per session; edit and tool-call counts are in the log but not extracted yet ([audit](docs/extending.md#what-each-sources-log-carries-and-what-assaio-reads)) | — |
+| GitHub Copilot CLI | v0.6 | standard | ✔ (exact, per model, incl. reasoning) | ✔ lines added/removed per session; edit and tool-call counts are in the log but not extracted yet ([audit](docs/extending/source-fields.md)) | — |
 | Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (cost only, see ROADMAP) | — |
 | Exec parser plugins | v0.1 | declared per record | ✔ (validated at the boundary) | — (protocol carries tokens only) | — |
 
@@ -161,7 +163,7 @@ discovered across VS Code, VS Code Insiders, VSCodium, and Cursor.
   rates over stored columns as well as per-session figures, and an out-of-tree metric plugin
   is told each source's capability on the wire (`answers`) so it can apply the same rule.
   What each source's log carries and what is deliberately skipped is inventoried per source
-  ([the audit](docs/extending.md#what-each-sources-log-carries-and-what-assaio-reads), v0.10).
+  ([the audit](docs/extending/source-fields.md), v0.10).
 - Shares never round in the direction that hides a signal: a small but nonzero share reads
   `<1%` rather than `0%`, and a share just under whole reads `>99%` rather than `100%`
   (v0.11). A whole sub-agent run is never counted as one turn (v0.11).

@@ -247,8 +247,8 @@ for something to hand a teammate, and `doctor` when a number looks wrong.
 | `backfill` | Import all historical local session logs into the store. |
 | `report`   | Print a token/cost report. `--since 7d`, `--by day\|project\|tool\|model\|entrypoint\|member`, `--format table\|json\|csv`, `--compare` for period-over-period top movers. |
 | `effectiveness` | Print AI output vs. cost — AI lines, edits, rejections, and **`$`/100 AI lines** — per project. Same `--since`, `--by`, `--format`, `--compare` flags (defaults to `--by project`). A directional, per-project diagnostic. |
-| `analyze` | Run metric validators — adoption, model fit, context health, throughput, rework, plus any configured [metric plugins](docs/extending.md#write-a-metric-plugin-any-language) — and print each one's directional report, led by the few findings **worth a week's attention** with the reasons that ordered them. A window with nothing worth acting on says so instead of promoting the least weak read. `--since`, `--format text\|json`, `--list`, or pass `[name...]` to run a subset. |
-| `check`    | Exit non-zero when usage exceeds a budget — `--max-tokens N` (plan-independent default) or `--max-cost N` (labeled API-equivalent) — or when a configured [rule plugin](docs/extending.md#write-a-rule-plugin-any-language) raises an `error` alert. A CI / pre-push gate. |
+| `analyze` | Run metric validators — adoption, model fit, context health, throughput, rework, plus any configured [metric plugins](docs/extending/metric-plugin.md) — and print each one's directional report, led by the few findings **worth a week's attention** with the reasons that ordered them. A window with nothing worth acting on says so instead of promoting the least weak read. `--since`, `--format text\|json`, `--list`, or pass `[name...]` to run a subset. |
+| `check`    | Exit non-zero when usage exceeds a budget — `--max-tokens N` (plan-independent default) or `--max-cost N` (labeled API-equivalent) — or when a configured [rule plugin](docs/extending/rule-plugin.md) raises an `error` alert. A CI / pre-push gate. |
 | `dashboard` | Write a self-contained, offline **HTML dashboard** — stat tiles, hot/going-stale projects, model/tool mix, inventory. `--since`, `--output`. Project names are pseudonymized by default so it's safe to share; `--no-anonymize` for real names. |
 | `serve`    | Run the self-hosted **team server**: collects usage pushed by teammates' `sync` and serves the aggregated, pseudonymized-by-default team dashboard. |
 | `sync`     | Push this machine's local usage to a team server — pseudonymous by default, `--member` is an explicit opt-in to a real name. |
@@ -265,6 +265,7 @@ for something to hand a teammate, and `doctor` when a number looks wrong.
 | `config`   | Print the effective configuration and where it was loaded from. |
 | `plugins`  | `list` configured exec parser plugins; `verify <name>` runs one and reports protocol conformance without storing. |
 | `metrics`  | `list` configured exec **metric** plugins; `verify <name>` runs one on your real window and reports contract conformance plus the rendered result — nothing stored. |
+| `docs`     | `export` writes everything this binary can enumerate about itself — signals, sources with their depth, validators with their scope, the whole command tree with flags and defaults, every config key with its environment variable, and both halves of the metric contract — as JSON, or as a self-contained HTML page. The published [reference](https://assaio.dev/reference.html) is generated from it, and a test fails when the website or the docs and the binary disagree. |
 | `version`  | Print the version (also `--version`). |
 
 </details>

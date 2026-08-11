@@ -100,7 +100,10 @@ type Sync struct {
 	Member string `koanf:"member"`
 }
 
-func defaults() Config {
+// Defaults is the configuration in effect before any file or environment variable is read.
+// Exported because "what does this setting default to" is a question the generated reference
+// answers, and answering it from Load would fold in whatever ASSAIO_ vars happen to be set.
+func Defaults() Config {
 	return Config{
 		Since: "30d", Format: "table",
 		Privacy: Privacy{Anonymize: true},
@@ -112,7 +115,7 @@ func defaults() Config {
 // env vars, in that order, and returns the resulting Config.
 func Load(path string) (Config, error) {
 	k := koanf.New(".")
-	if err := k.Load(structs.Provider(defaults(), "koanf"), nil); err != nil {
+	if err := k.Load(structs.Provider(Defaults(), "koanf"), nil); err != nil {
 		return Config{}, err
 	}
 	if err := k.Load(file.Provider(path), yaml.Parser()); err != nil {

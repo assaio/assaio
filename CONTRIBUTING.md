@@ -169,18 +169,18 @@ larger one.
 
 - **Connector** (new data source): today, one Go package under
   `internal/parser/<name>/` with golden and fuzz tests, wired into ingest and doctor —
-  see [Add a data source](docs/extending.md#add-a-data-source), and open a
+  see [Add a data source](docs/extending/data-source.md), and open a
   [connector issue](.github/ISSUE_TEMPLATE/connector.yml) first. A tool only your
   organization uses is usually better served by an out-of-tree
-  [exec plugin](docs/extending.md#write-a-plugin-any-language) (any language, no PR).
+  [exec plugin](docs/extending/parser-plugin.md#write-a-plugin-any-language) (any language, no PR).
 - **Metric**: today, one file under `internal/analyze/<name>.go` implementing
   `Validator`, self-registered from its own `init()` — it appears in `analyze` and the
   dashboard automatically; see
-  [Adding a metric validator](docs/extending.md#adding-a-metric-validator). A
+  [Adding a metric validator](docs/extending/metric-validator.md). A
   company-specific metric can instead ship as an out-of-tree
-  [metric plugin](docs/extending.md#write-a-metric-plugin-any-language), no fork needed.
+  [metric plugin](docs/extending/metric-plugin.md), no fork needed.
 - **Rule** (alerting/policy units): out-of-tree only, as an exec
-  [rule plugin](docs/extending.md#write-a-rule-plugin-any-language) — it reads the
+  [rule plugin](docs/extending/rule-plugin.md) — it reads the
   window's verdicts and its `error` alerts fail `assaio-agent check`. Thresholds are
   organizational, so in-tree rules are not a surface we ship; the in-process
   `plugin/rule/` tree stays roadmap (`ROADMAP.md`).

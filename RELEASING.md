@@ -67,16 +67,18 @@ The binary is not the only thing a release ships. Before preparing the changelog
 each of these describes the version being cut — a page or a table that lags the binary is
 how an honesty-first product starts making false claims about itself:
 
-- `site/index.html` — the page served at <https://assaio.dev/>. The supported-tool list, the
-  command list, validator counts, the **roadmap section** (an item that shipped leaves the "next
-  release" panel), and any "on the roadmap" wording about something that has since shipped.
-  **Update it before tagging**, not after. The page deliberately names no version — that stamp
-  was removed precisely because it was a chore attached to every tag, and CI now fails if a
-  version reappears on it (see [docs/site.md](docs/site.md)) — so nothing here is enforced
-  mechanically any more. It is a read-through, and it is on this list because it was once
-  skipped.
-  It deploys itself from `main` (see [docs/site.md](docs/site.md)), so a merge publishes it
-  immediately — there is no separate step that would prompt a review.
+- `site/index.html` — the page served at <https://assaio.dev/>. **Most of what used to be on
+  this line is now a test.** The supported-source list, the command list and the validator and
+  signal counts are annotated claims checked against the binary's own registries by
+  `make test`, in both directions: a claim with nothing behind it fails, and so does a shipped
+  capability the page never names — which is how `digest` sat unpublished for a whole release.
+  `site/reference.html` and `docs/reference.json` are generated; regenerate with `make docs`
+  and commit the result. The roadmap section is gone for the same reason the version stamp was:
+  it was a duplicate of `ROADMAP.md` that had to be re-read at every tag.
+  What is left here is the judgement no test can make — whether the prose is still *true*: the
+  narrative sections, the caveat lists, and any "on the roadmap" wording about something that
+  has since shipped. It deploys itself from `main` (see [docs/site.md](docs/site.md)), so a
+  merge publishes it immediately — there is no separate step that would prompt a review.
 - `FEATURES.md` — a row per user-facing capability, with the release it arrived in.
 - `ROADMAP.md` and `BACKLOG.md` — levels and items marked shipped, shipped entries deleted
   from the backlog, and any scope deliberately moved recorded on the item that inherited it.
@@ -94,7 +96,9 @@ how an honesty-first product starts making false claims about itself:
   nobody here has run yet. That gap is why this line is on the list.
 
 This list exists because it was skipped: `site/index.html` still advertised v0.2 while
-v0.5.0 was being tagged, listing an already-shipped connector as a roadmap item.
+v0.5.0 was being tagged, listing an already-shipped connector as a roadmap item. The
+mechanical half of it became a test after it was skipped a second time, in a quieter way —
+`digest` and `mark --suggest` shipped in v0.17.0 and the page said neither.
 
 ## Cutting a release
 

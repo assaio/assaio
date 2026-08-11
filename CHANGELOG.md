@@ -21,6 +21,84 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+- **The published surfaces are generated from the binary, or checked against it (`B161`).**
+  `assaio-agent docs export --format json|html` projects the live registers into one document —
+  every signal with what a zero means, every source's depth per signal, every validator with its
+  scope, the whole command tree with flags and defaults, every configuration key with its
+  environment variable, and both halves of the metric contract: the in-tree `analyze.Input` and
+  the plugin wire, side by side. It is a projection, not a second registry: each block reads the
+  package that already owns the answer, so a fact stated twice cannot disagree with itself. The
+  payload carries `assaio_docs` as its *schema* version and deliberately not the build's —
+  `version.Version` is `"dev"` locally and a tag on a release build, and a stamped version would
+  make the committed copy differ on every machine. `docs/reference.json` and the new
+  [`site/reference.html`](https://assaio.dev/reference.html) are generated and committed;
+  `make docs` rewrites them and `make test` fails when either differs from what the binary would
+  write.
+- **The website declares which of its claims are checkable, and a test holds it to them.**
+  `data-claim="command.digest"` on the entry describing it, `data-covers="commands"` on the list
+  that promises to enumerate them, `data-claim="sources.count"` on the word "five". The check
+  runs in both directions, and the second is the one that matters: a claim with nothing behind it
+  fails, **and so does a shipped capability the page never names**. A covered set is satisfied
+  only from *inside* the element that promises to enumerate it, comments are stripped before
+  anything is read, and a count claim whose element states no number fails rather than passing
+  unread — each of those is a way a guard can be green over a page it never checked. Prose stays
+  deliberately outside it: the covered sets are named, and everything else is a reader's job.
+- **The reference publishes an environment variable only where one works.** 17 of the 35
+  configuration keys have none — a list of entries cannot be built from one string, and
+  `ASSAIO_PLUGINS=demo` makes koanf's decode fail so hard that every command exits — so those
+  rows carry a blank rather than a name that bricks the binary or, for a list *element*, a
+  bracketed string no shell can export. A default that was never set is published as `unset`
+  rather than as a blank the section note would read as `false`: `labels.defaults` is a nil
+  `*bool` whose absence *keeps* the built-in rules.
+- **The metric-contract tables describe shape, not obligation.** What a plugin must return is
+  enforced by `validateMetricResult`, not by a struct tag, so a "Required" column derived from
+  `,omitempty` would have marked `name`, `lead` and `purity` required while the core overwrites
+  or discards them. The columns are now the two facts reflection can actually answer: whether a
+  field is `null` when it has no value — which is how the three unpriced-cost fields keep the
+  distinction the whole product rests on — and when the encoder omits it. A map value is
+  addressed as `prices{}.input` rather than `prices[].input`, so nobody iterates a model-keyed
+  object as a list.
+
+### Fixed
+- **`digest` and `mark --suggest` shipped in v0.17.0 and the website said neither.** The
+  Commands section listed 23 of 25 subcommands; `digest` appeared once, inside the roadmap
+  section, and the string `--suggest` appeared nowhere under `site/`. Both are on the page now,
+  and the gate above is what makes the third occurrence of this impossible rather than merely
+  unlikely. `site/llms.txt` did not contain the word `digest` either.
+- **Six contract fields were absent from the documentation a metric author reads.** The
+  extension docs never described `WindowStart`, `CacheMisses`, `Ingested` or `ParsedBy` on the
+  in-tree `analyze.Input` — the other half of the gap `B155` closed on the wire — nor, on the
+  return path, that `lead` and `confidence.recorded` are decoded and then discarded because they
+  are answers about the window rather than about one metric. All three contracts now have a
+  canary that fails when a field is named nowhere in a code span or fenced block, so the English
+  word "skills" no longer counts as evidence that the `skills` field is documented.
+- **Two documentation anchors had never resolved**, in `docs/extending.md`'s data-source section
+  and in `README.md`'s link to the statusline automation guide. Both were found by checking every
+  Markdown link and anchor in the repository while splitting the extension docs.
+
+### Changed
+- **`docs/extending.md` is a map, not a manual.** 1,923 lines in one file became an index —
+  the surfaces, the honesty constraints that bind all of them, and where each one is documented —
+  with one page per surface under `docs/extending/`. The stale `analyze --list` transcript pasted
+  into the metric guide, which showed five validators when nineteen ship, is elided and points at
+  the generated reference instead.
+- **The website's roadmap section is gone** — 6,519 bytes and eight cards duplicating
+  `ROADMAP.md`, which is linked. It is replaced by two sentences and that link, for the reason the
+  version stamp was removed: a promise copied onto the page is a promise that has to be re-read at
+  every tag, and it was the one place on the page permitted to describe things that do not exist.
+  `RELEASING.md`'s public-surface check is shorter by everything that became a test.
+- **`site/llms.txt` states no counts.** It pointed at "nineteen metric validators" in a file no
+  count check can reach; it now names the generated reference and tells the assistant reading it
+  to answer capability questions from there.
+- **`site.yml`'s guards cover every served page**, not `index.html` alone — each page judged on
+  its own findings, so a pasted embed on one does not annotate the next — and the `noversion`
+  guard masks dotted quads before looking for a version, because `reference.html` publishes
+  `serve --addr`'s default of `127.0.0.1:8787` and an IPv4 literal contains a three-component
+  prefix. Masking what is structurally not a version is the same move the guard already made for
+  SVG geometry attributes.
+- **854 bytes of stylesheet for the deleted roadmap section** left `site/index.html` with it.
+
 ## [0.17.0] - 2026-08-11
 
 ### Added
@@ -654,7 +732,7 @@ Discussion.
   for a source that does not record it, and until now a plugin had no way to tell that from a
   measurement — so every out-of-tree metric was structurally exposed to the bug ADR 0011 fixed
   in-tree. This is an added field within version 1, not a reshape: a released plugin that
-  ignores it keeps working unchanged. [`docs/extending.md`](docs/extending.md#answers--which-zeros-are-measurements-and-which-are-silence)
+  ignores it keeps working unchanged. [`docs/extending.md`](docs/extending/metric-plugin.md#answers--which-zeros-are-measurements-and-which-are-silence)
   documents the rule and a worked example.
 - No schema change and no migration. `store.Sessions` narrows three of its columns to `turn`-grain
   rows, which moves per-turn session figures on any store holding Claude sub-agent aggregates; no
@@ -664,7 +742,7 @@ Discussion.
 
 ### Added
 - **The unread-field audit, source by source** (`B105`) — a table per source in
-  [docs/extending.md](docs/extending.md#what-each-sources-log-carries-and-what-assaio-reads)
+  [docs/extending.md](docs/extending/source-fields.md)
   putting every field a tool writes into exactly one of two states: **extracted** (a catalog
   signal is computed from it and a golden covers it) or **skipped, with the reason written
   down**. A field the vendor does not document is skipped with that stated, never guessed at
@@ -764,7 +842,7 @@ Discussion.
   <1%` — and a metric declaring it covers none of the window reads `insufficient`, which is a
   different fact from a thin answer. Exec metric plugins declare it with the same key, and one
   that omits it keeps claiming the whole window, exactly as before
-  ([docs/extending.md](docs/extending.md#write-a-metric-plugin-any-language)).
+  ([docs/extending.md](docs/extending/metric-plugin.md)).
 - **`survival` reports what merges hold.** `git log --numstat` prints no diff for a merge, so
   a conflict resolution is a hole in git's own reporting rather than a change of size zero.
   The report now names it: `merges: 1 commit(s) holding 50 line(s) in HEAD, counted in neither
