@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "Pins the tool that deploys site/ (docs/site.md). Nothing here builds the page.",
+  "devDependencies": {
+    "wrangler": "4.120.0"
+  }
+}

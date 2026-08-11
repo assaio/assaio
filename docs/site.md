@@ -111,6 +111,15 @@ on every push to `main`. It publishes `site/` as a Worker whose only content is 
 — `[assets]` with no script is a complete Worker when there is nothing to compute. There is no
 build command; the deploy is an upload.
 
+**`package.json` pins the deploy tool, and that is all it does.** Nothing here builds the page;
+the pin exists because `npx wrangler deploy` resolves `latest` at build time, which made the
+deploy a hostage of whatever npm published in the preceding minutes. It failed exactly that way
+once: `wrangler@4.121.0` went up at 19:25:24Z, the build ran 88 seconds later, and its brand-new
+`miniflare` dependency was not resolvable yet — `ETARGET`, three deploys skipped, the site
+serving a previous commit while every other check was green. A version resolved at build time is
+an unpinned input like any other, and this one belongs in a diff for the same reason the domains
+in `wrangler.toml` do.
+
 Both custom domains are declared in `wrangler.toml`, so the deploy creates the DNS records and
 issues the certificates itself. That is what the file is for: which domains serve this page is
 a fact about the project, and keeping it in the repository is what stops it from becoming a
