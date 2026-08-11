@@ -21,6 +21,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-08-11
+
 ### Added
 - **A cost figure now says how much of itself is missing (`B139`).** Every `$` assaio prints is
   a token count times a vendored price table, and the `*` that disclosed a model the table does
@@ -1439,7 +1441,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/assaio/assaio/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/assaio/assaio/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/assaio/assaio/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/assaio/assaio/compare/v0.12.0...v0.13.0
