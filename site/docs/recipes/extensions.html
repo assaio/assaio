@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Extensions, written out in full — assaio</title>
-<meta name="description" content="The guides describe the contract; this page is the part people actually want first ">
+<meta name="description" content="The guides describe the contract; this page is the part people actually want first">
 <link rel="canonical" href="https://assaio.dev/docs/recipes/extensions">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://assaio.dev/docs/recipes/extensions">
 <meta property="og:title" content="Extensions, written out in full — assaio">
-<meta property="og:description" content="The guides describe the contract; this page is the part people actually want first ">
+<meta property="og:description" content="The guides describe the contract; this page is the part people actually want first">
 <meta property="og:image" content="https://assaio.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -128,12 +128,14 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
 <p><em>Part of <a href="https://assaio.dev/docs">Extending assaio</a>. The contracts these implement: <a href="https://assaio.dev/docs/metric-validator">in-tree validator</a> · <a href="https://assaio.dev/docs/metric-plugin">metric plugin</a>.</em></p>
 <p>The guides describe the contract; this page is the part people actually want first — complete
 extensions, short enough to read in one go, each showing one thing worth copying.</p>
-<p><strong>What is checked, stated plainly.</strong> The Python plugins below are <em>executed</em> by
-<code>TestRecipeMetricPlugins</code> against a fixture window and asserted on. The Go validators are
-<em>shape-checked</em> — parsed, and their method set held to the <code>Validator</code> interface — because a Go
-file in a document cannot be compiled without a package around it. Shape-checking catches a
-renamed method and a changed signature; it does not catch a wrong number, which is what the
-honesty rules and a reviewer are for.</p>
+<p><strong>What is checked, stated plainly.</strong> The Python plugins are <em>executed</em> by
+<code>TestRecipeMetricPlugins</code> against a fixture window and asserted on — including the one below that
+gates on <code>answers</code>, whose fixture is built so that deleting the gate changes the published figure
+from 30.0 to 50.0 and fails the test. The Go validators are <em>shape-checked</em> by
+<code>TestRecipeValidatorsMatchTheInterface</code>: parsed, and their method set held to the <code>Validator</code>
+interface, because a Go file in a document cannot be compiled without a package around it.
+Shape-checking catches a renamed method and a changed signature; it does not catch a wrong
+number, which is what the honesty rules and a reviewer are for.</p>
 <h2 id="a-validator-as-small-as-one-gets">A validator, as small as one gets</h2>
 <p>Everything a metric needs: read the prepared <code>Input</code>, return one <code>Result</code>, register from
 <code>init()</code>. Nothing else is wired — it appears in <code>analyze</code>, in <code>analyze --format json</code> and in the

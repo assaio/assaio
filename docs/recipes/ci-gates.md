@@ -47,9 +47,16 @@ Block on a rule plugin instead when the thing you want stopped is a property of 
 
 ## As a GitHub Actions job
 
-`check` reads a store, so the job needs one. The honest options are a store synced from a
-[team server](../extending/team-server.md), or a store the job builds from artifacts you already collect —
-not the runner's own logs, which contain no agent sessions.
+**`check` reads a store, and a CI runner has none.** This is the part every "put it in CI" recipe
+gets wrong, including an earlier draft of this one: a runner's own filesystem holds no agent
+sessions, so a gate that just installs the binary and runs `check` reads an empty window and
+passes at any spend, forever. There is no command that pulls a window either — `sync` is
+push-only.
+
+So the store has to arrive from somewhere, and the job has to say where. Two honest shapes: run
+the gate **on the machine that has the store** (the [team server](../extending/team-server.md)
+host, via `--db`), or carry the store into the job as an artifact something else published. The
+recipe below does the second, because it is the one that fits an Actions workflow.
 
 ```yaml #actions-job
 name: ai-budget
@@ -64,16 +71,19 @@ jobs:
   budget:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - name: Install assaio
-        run: |
-          curl -fsSL https://github.com/assaio/assaio/releases/latest/download/assaio-agent_Linux_x86_64.tar.gz \
-            | tar -xz -C /usr/local/bin assaio-agent
-      - name: Fetch the team window
         env:
-          ASSAIO_SYNC_SERVER: ${{ secrets.ASSAIO_SERVER }}
-          ASSAIO_SYNC_TOKEN: ${{ secrets.ASSAIO_TOKEN }}
-        run: assaio-agent check --since 7d --max-tokens 50000000
+          # Pin it. `latest/download` cannot be used here: the asset name carries the version,
+          # so the URL has to name it too. Set the repository variable to a real release.
+          VERSION: ${{ vars.ASSAIO_VERSION }}
+        run: |
+          curl -fsSL "https://github.com/assaio/assaio/releases/download/$VERSION/assaio_${VERSION#v}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin assaio-agent
+      - name: Restore the store this gate reads
+        uses: actions/download-artifact@v4
+        with: {name: assaio-store, path: store}
+      - name: Gate
+        run: assaio-agent check --db store/assaio.db --since 7d --max-tokens 50000000
 ```
 
 Note the schedule rather than a `pull_request` trigger. A per-PR budget gate reads as a

@@ -26,7 +26,7 @@ lint:
 # `make test` fails when either differs from what this build would print, so a registry that
 # grows and a published surface that does not is a red check rather than a stale page.
 docs:
-	go test ./internal/docs/ -run 'TestCommittedReference' -update
+	go test ./internal/docs/ -run 'TestCommitted' -update
 fmt:
 	golangci-lint fmt
 tidy:

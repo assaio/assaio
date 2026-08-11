@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gating CI on what a window cost — assaio</title>
-<meta name="description" content="check is the only command that exits non-zero on purpose. It fails on a token or">
+<meta name="description" content="check is the only command that exits non-zero on purpose. It fails on a token or API-equivalent $ budget, and it fails when a configured rule plugin raises an error alert">
 <link rel="canonical" href="https://assaio.dev/docs/recipes/ci-gates">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://assaio.dev/docs/recipes/ci-gates">
 <meta property="og:title" content="Gating CI on what a window cost — assaio">
-<meta property="og:description" content="check is the only command that exits non-zero on purpose. It fails on a token or">
+<meta property="og:description" content="check is the only command that exits non-zero on purpose. It fails on a token or API-equivalent $ budget, and it fails when a configured rule plugin raises an error alert">
 <meta property="og:image" content="https://assaio.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -157,9 +157,15 @@ exit 0
 <p>Blocking a push on a <em>team</em> budget punishes whoever pushes last, which is why the recipe warns.
 Block on a rule plugin instead when the thing you want stopped is a property of the change.</p>
 <h2 id="as-a-github-actions-job">As a GitHub Actions job</h2>
-<p><code>check</code> reads a store, so the job needs one. The honest options are a store synced from a
-<a href="https://assaio.dev/docs/team-server">team server</a>, or a store the job builds from artifacts you already collect —
-not the runner's own logs, which contain no agent sessions.</p>
+<p><strong><code>check</code> reads a store, and a CI runner has none.</strong> This is the part every &quot;put it in CI&quot; recipe
+gets wrong, including an earlier draft of this one: a runner's own filesystem holds no agent
+sessions, so a gate that just installs the binary and runs <code>check</code> reads an empty window and
+passes at any spend, forever. There is no command that pulls a window either — <code>sync</code> is
+push-only.</p>
+<p>So the store has to arrive from somewhere, and the job has to say where. Two honest shapes: run
+the gate <strong>on the machine that has the store</strong> (the <a href="https://assaio.dev/docs/team-server">team server</a>
+host, via <code>--db</code>), or carry the store into the job as an artifact something else published. The
+recipe below does the second, because it is the one that fits an Actions workflow.</p>
 <pre><code class="language-yaml">name: ai-budget
 on:
   schedule: [{cron: '0 7 * * 1'}]     # Monday morning, not per-PR: a budget is a window, not a diff
@@ -172,16 +178,19 @@ jobs:
   budget:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - name: Install assaio
-        run: |
-          curl -fsSL https://github.com/assaio/assaio/releases/latest/download/assaio-agent_Linux_x86_64.tar.gz \
-            | tar -xz -C /usr/local/bin assaio-agent
-      - name: Fetch the team window
         env:
-          ASSAIO_SYNC_SERVER: ${{ secrets.ASSAIO_SERVER }}
-          ASSAIO_SYNC_TOKEN: ${{ secrets.ASSAIO_TOKEN }}
-        run: assaio-agent check --since 7d --max-tokens 50000000
+          # Pin it. `latest/download` cannot be used here: the asset name carries the version,
+          # so the URL has to name it too. Set the repository variable to a real release.
+          VERSION: ${{ vars.ASSAIO_VERSION }}
+        run: |
+          curl -fsSL &quot;https://github.com/assaio/assaio/releases/download/$VERSION/assaio_${VERSION#v}_linux_amd64.tar.gz&quot; \
+            | tar -xz -C /usr/local/bin assaio-agent
+      - name: Restore the store this gate reads
+        uses: actions/download-artifact@v4
+        with: {name: assaio-store, path: store}
+      - name: Gate
+        run: assaio-agent check --db store/assaio.db --since 7d --max-tokens 50000000
 </code></pre>
 <p>Note the schedule rather than a <code>pull_request</code> trigger. A per-PR budget gate reads as a
 per-person one within a week, and this project refuses to build those.</p>

@@ -36,12 +36,50 @@ Discussion.
   to the protocol — the label rules through `TestRecipeLabelRules`, the plugins through
   `TestRecipeRulePlugins` and `TestRecipeMetricPlugins`. Where a recipe can only be shape-checked
   rather than run, the page says which.
-- **Three more ways for a document to be wrong, now checked.** A command line printing a flag the
-  binary does not have; a helper the guides recommend that no package declares; a link anywhere on
-  the site that does not resolve, fragment included. Each of the three found a real defect on the
-  day it was written.
+- **Four more ways for a document to be wrong, now checked.** A command line naming a command or
+  flag the binary does not have; a helper the guides recommend that no package declares; a link
+  anywhere on the site that does not resolve, fragment included; and a recipe whose page claims a
+  stronger check than the suite performs. Each found a real defect on the day it was written.
+- **How each recipe is checked is classified in code, and the pages print the counts.** Ten are
+  executed, eleven have their command lines checked, two are loaded by the configuration loader
+  and two are shape-checked — a claim that was "every recipe is executed by the test suite" until
+  it was counted. A recipe missing from the classification, or a count that drifts from it, fails
+  the build.
 
 ### Fixed
+- **A published CI recipe would have passed at any spend, forever.** Its "fetch the team window"
+  step set two environment variables and fetched nothing — and no command could have: `sync` is
+  push-only. A runner's store is empty, `check` finds no usage, and the gate exits 0. The recipe
+  now carries the store in as an artifact and says plainly that this is the part every
+  put-it-in-CI recipe gets wrong. The same block downloaded a release asset filename goreleaser
+  never produces, so the job would have died before reaching the gate.
+- **`make docs` could not regenerate eighteen of the twenty pages it is named as the fix for.**
+  Its `-run 'TestCommittedReference'` matched neither guide-page test, while the failing test,
+  `guidepage.go` and `docs/site.md` all told a contributor to run it.
+- **A recipe told a reader `statusline` exits non-zero when the store is stale.** It never exits
+  non-zero on any path; the paragraph under it said so, and the block above it contradicted that.
+  `doctor --strict` is the command with the exit code.
+- **The test behind the cookbook's flagship claim could not fail.** Its fixture gave the second
+  tool zero lines and zero edits, so deleting the `answers` gate the recipe exists to teach
+  changed nothing: 30.0 either way, and the "would give 15.0" in the prose was arithmetically
+  impossible. The fixture now uses Copilot CLI's real depth — changed lines, no edit count — so
+  the gated figure is 30.0 and the ungated one 50.0, and removing the gate from the document
+  fails the build.
+- **The Go examples were described as shape-checked, and nothing checked them.** They are now
+  parsed and their method set held to the `Validator` interface, which catches a renamed method
+  and a changed signature.
+- **The invocation check abandoned any line whose command it did not recognize**, so a renamed
+  command took its flags out of scope with it and the whole line passed. It now reports the
+  command too, reading code rather than prose so English following the binary's name is not
+  mistaken for an invocation.
+- **Fourteen pages shipped a meta description cut mid-sentence**, because it was taken from the
+  first hard-wrapped line rather than the first sentence, and one leaked raw link syntax.
+- **`docs export --format html` lost the reference's own navigation** when the page moved into
+  the documentation: with no guide set to show, the sidebar fell to a single entry and the
+  standalone export became a wall of tables. It lists its own sections again.
+- **`/reference` became a live 404 with no redirect**, and two of our own documents still linked
+  it. A static host cannot redirect, so the URL keeps a generated page that says where the
+  reference went.
 - **Four pages recommended `shareOrDash` for a divide-by-zero, and no package had such a
   function.** The helper is `humanize.PercentOrDash`. This is the drift the new helper check was
   written for, found by writing it.
@@ -71,7 +109,7 @@ Discussion.
   payload carries `assaio_docs` as its *schema* version and deliberately not the build's —
   `version.Version` is `"dev"` locally and a tag on a release build, and a stamped version would
   make the committed copy differ on every machine. `docs/reference.json` and the new
-  [`site/reference.html`](https://assaio.dev/reference.html) are generated and committed;
+  [`site/reference.html`](https://assaio.dev/docs/reference) are generated and committed;
   `make docs` rewrites them and `make test` fails when either differs from what the binary would
   write.
 - **The website declares which of its claims are checkable, and a test holds it to them.**

@@ -5,12 +5,14 @@
 The guides describe the contract; this page is the part people actually want first — complete
 extensions, short enough to read in one go, each showing one thing worth copying.
 
-**What is checked, stated plainly.** The Python plugins below are *executed* by
-`TestRecipeMetricPlugins` against a fixture window and asserted on. The Go validators are
-*shape-checked* — parsed, and their method set held to the `Validator` interface — because a Go
-file in a document cannot be compiled without a package around it. Shape-checking catches a
-renamed method and a changed signature; it does not catch a wrong number, which is what the
-honesty rules and a reviewer are for.
+**What is checked, stated plainly.** The Python plugins are *executed* by
+`TestRecipeMetricPlugins` against a fixture window and asserted on — including the one below that
+gates on `answers`, whose fixture is built so that deleting the gate changes the published figure
+from 30.0 to 50.0 and fails the test. The Go validators are *shape-checked* by
+`TestRecipeValidatorsMatchTheInterface`: parsed, and their method set held to the `Validator`
+interface, because a Go file in a document cannot be compiled without a package around it.
+Shape-checking catches a renamed method and a changed signature; it does not catch a wrong
+number, which is what the honesty rules and a reviewer are for.
 
 ## A validator, as small as one gets
 

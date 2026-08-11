@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Extending assaio — assaio</title>
-<meta name="description" content="Every axis a company needs to adapt assaio for its own use is a documented, working">
+<meta name="description" content="Every axis a company needs to adapt assaio for its own use is a documented, working extension point: your own metric and dashboard section (in-tree, one file">
 <link rel="canonical" href="https://assaio.dev/docs">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://assaio.dev/docs">
 <meta property="og:title" content="Extending assaio — assaio">
-<meta property="og:description" content="Every axis a company needs to adapt assaio for its own use is a documented, working">
+<meta property="og:description" content="Every axis a company needs to adapt assaio for its own use is a documented, working extension point: your own metric and dashboard section (in-tree, one file">
 <meta property="og:image" content="https://assaio.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -210,11 +210,42 @@ metric's <code>Bars</code> rank by project name and the report is anonymized.</p
 <a href="https://assaio.dev/docs/source-fields">what each source's log carries</a>, the field-by-field audit behind
 every depth row, and <a href="https://assaio.dev/docs/metric-validator-example">the worked example</a>.</p>
 <h2 id="recipes">Recipes</h2>
-<p>The guides describe the contracts; these are working examples to copy. Every recipe on these
-pages is <strong>executed by the test suite</strong> — the label rules are loaded and their derivations
-asserted, the plugins are run against a fixture window and their output held to the protocol —
-so a recipe that stopped working fails the build instead of a reader's afternoon. Where a recipe
-can only be shape-checked rather than run, the page says so.</p>
+<p>The guides describe the contracts; these are working examples to copy. <strong>Every recipe is held to
+still working, and not all of them equally</strong> — the classification is code, and a recipe missing
+from it fails the build:</p>
+<table>
+<thead>
+<tr>
+<th>how</th>
+<th>what it means</th>
+<th>how many</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>executed</td>
+<td>run, and the output asserted — the label rules through the rule engine, the plugins against a fixture window with their output held to the protocol</td>
+<td>10</td>
+</tr>
+<tr>
+<td>commands-checked</td>
+<td>every <code>assaio-agent</code> invocation in it names a real command and real flags; nothing runs the surrounding shell</td>
+<td>11</td>
+</tr>
+<tr>
+<td>loaded</td>
+<td>parsed by assaio's own configuration loader and validated</td>
+<td>2</td>
+</tr>
+<tr>
+<td>shape-checked</td>
+<td>parsed, and the method set held to the <code>Validator</code> interface: a renamed method fails, a wrong number does not</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>A shell recipe is the weak one, and it is weak in a specific way worth knowing: the flags are
+real, and whether the pipeline around them does what the prose says is a reviewer's judgement.</p>
 <ul>
 <li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a> — complete validators and metric
 plugins, including the one thing that separates a metric from a mistake: gating on what the

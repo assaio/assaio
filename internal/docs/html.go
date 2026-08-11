@@ -22,6 +22,11 @@ binary disagree. The same document is machine-readable through
 	writeConfig(&b, ref.Config)
 	writeWire(&b, ref.ValidatorInput, ref.MetricWire)
 
+	// Exported by `docs export --format html` on a machine with no repository: without the
+	// guide set the sidebar would be a single entry, so the page navigates itself instead.
+	if len(guides) == 0 {
+		guides = referenceSections
+	}
 	return renderPage(&pageSpec{
 		Title: "Reference",
 		Description: "Every signal, source, validator, command, flag, configuration key and " +
@@ -31,4 +36,14 @@ binary disagree. The same document is machine-readable through
 		Body:    b.String(),
 		Guides:  guides,
 	})
+}
+
+// referenceSections is the reference's own table of contents, used when the page stands alone.
+var referenceSections = []Guide{
+	{URL: "#signals", Title: "Signals", Group: GroupRef},
+	{URL: "#sources", Title: "Sources", Group: GroupRef},
+	{URL: "#validators", Title: "Validators", Group: GroupRef},
+	{URL: "#commands", Title: "Commands", Group: GroupRef},
+	{URL: "#config", Title: "Configuration", Group: GroupRef},
+	{URL: "#metric-plugin", Title: "Metric contract", Group: GroupRef},
 }

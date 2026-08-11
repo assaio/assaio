@@ -8,20 +8,23 @@ import (
 	"github.com/assaio/assaio/internal/docs"
 )
 
-// The window a published metric plugin is judged against. Two tools: one that records edits and
-// one that does not, so a recipe that ignores `answers` reports a silence as a zero and this
-// notices. Saturday is in there because the weekday recipe turns on it.
+// The window a published metric plugin is judged against, shaped so the answers gate changes the
+// answer. Copilot CLI records changed lines and no edit count -- its real depth row -- so a
+// recipe that ignores `answers` divides 500 lines by 10 edits and publishes 50.0, while one that
+// respects it divides 300 by 10 and publishes 30.0. A fixture where both give the same number
+// would let the gate be deleted with the test still green, which is what the first version of
+// this file did. Saturday is in there because the weekday recipe turns on it.
 const metricInput = `{
   "assaio_metric_input": 1,
   "answers": {
-    "claude-code": ["ai.tokens.total","ai.lines.added","ai.edits.count"],
-    "gemini-cli":  ["ai.tokens.total"]
+    "claude-code":  ["ai.tokens.total","ai.lines.added","ai.edits.count"],
+    "copilot-cli":  ["ai.tokens.total","ai.lines.added"]
   },
   "usage": [
     {"day":"2026-08-06","tool":"claude-code","model":"m","in":100,"out":50,"cacheRead":0,
      "cacheWrite":0,"linesAdded":300,"edits":10},
-    {"day":"2026-08-08","tool":"gemini-cli","model":"m","in":100,"out":50,"cacheRead":0,
-     "cacheWrite":0,"linesAdded":0,"edits":0}
+    {"day":"2026-08-08","tool":"copilot-cli","model":"m","in":100,"out":50,"cacheRead":0,
+     "cacheWrite":0,"linesAdded":200,"edits":0}
   ]
 }`
 
@@ -42,8 +45,8 @@ func TestRecipeMetricPlugins(t *testing.T) {
 		// 2026-08-06 is a Thursday and 2026-08-08 a Saturday, so half the tokens fall outside
 		// the working week -- far enough below the recipe's own threshold to flag.
 		{recipe: "plugin-weekday", wantRead: "watch", wantFig: "50.0%"},
-		// Only claude-code answers both signals: 300 lines over 10 edits. Counting the other
-		// tool's structural zeros would give 15.0 and call it a measurement.
+		// Only claude-code answers both signals: 300 lines over 10 edits. Counting Copilot's
+		// 200 lines, whose edits are a silence rather than a zero, would publish 50.0.
 		{recipe: "plugin-answers", wantRead: "good", wantFig: "30.0"},
 	}
 	for _, tt := range tests {
