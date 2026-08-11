@@ -81,6 +81,14 @@ func runClear(cmd *cobra.Command, req clearRequest) error {
 		return err
 	}
 	defer func() { _ = st.Close() }()
+	// Named before anything is deleted, because this command has no --db and cannot be
+	// pointed anywhere else: whoever believed they were clearing a copy has exactly one
+	// chance to see which file this is, and the deletion is not reversible.
+	if n, countErr := st.Count(cmd.Context()); countErr == nil {
+		cmd.Printf("clearing %s (%s records)\n", dbPath, humanize.Int(n))
+	} else {
+		cmd.Printf("clearing %s\n", dbPath)
+	}
 	// Labels first: their scope is read from the usage records the clear is about to
 	// remove, so asking afterwards would find nothing to scope by.
 	if err := clearLabels(cmd, st, req, before); err != nil {

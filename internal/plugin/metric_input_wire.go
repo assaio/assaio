@@ -5,13 +5,59 @@ package plugin
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/assaio/assaio/internal/analyze"
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
 )
 
 func (mi *metricInput) marshal() ([]byte, error) { return json.Marshal(mi) }
+
+func buildMetricInput(in *analyze.Input) metricInput {
+	return metricInput{
+		Version:    metricInputVersion,
+		Now:        in.Now,
+		RecentDays: int(in.Recent / (24 * time.Hour)),
+		Usage:      usageWire(in.Usage),
+		Sessions:   sessionWire(in.Sessions),
+		Delegation: metricDelegation{Sub: in.Delegation.Sub, Total: in.Delegation.Total},
+		ByModel:    modelWire(in.ByModel),
+		ByProject:  projectWire(in.ByProject),
+		Totals: metricTotals{
+			Tokens: in.Totals.Tokens, Input: in.Totals.Input, Output: in.Totals.Output,
+			CacheRead: in.Totals.CacheRead, CacheWrite: in.Totals.CacheWrite,
+			Lines: in.Totals.Lines, Cost: in.Totals.Cost, Priced: in.Totals.Priced,
+			CacheEfficiency: in.Totals.CacheEfficiency,
+		},
+		Prices:          pricesWire(in.Usage, in.Prices),
+		Answers:         answersWire(in.Usage, in.Sessions),
+		WindowStart:     in.WindowStart,
+		PlanMonthlyCost: in.PlanMonthlyCost,
+		Skills:          attributionWire(in.Skills),
+		Agents:          attributionWire(in.Agents),
+		TurnSizing:      turnSizingWire(in.TurnSizing),
+		CacheMisses:     cacheMissWire(in.CacheMisses),
+	}
+}
+
+// answersWire declares what every tool in this window can record. Only the tools actually
+// present are sent: a plugin needs the capability of the data it was handed, and shipping
+// the whole matrix would make the envelope a second publication of internal/parser.
+func answersWire(usage []store.UsageRow, sessions []store.SessionRow) map[string][]string {
+	out := make(map[string][]string)
+	for i := range usage {
+		out[usage[i].Tool] = nil
+	}
+	for i := range sessions {
+		out[sessions[i].Tool] = nil
+	}
+	for tool := range out {
+		out[tool] = parser.SignalsAnsweredBy(tool)
+	}
+	return out
+}
 
 func usageWire(rows []store.UsageRow) []metricUsageRow {
 	out := make([]metricUsageRow, 0, len(rows))
