@@ -120,7 +120,14 @@ func documents(repoRoot string) (map[string]string, error) {
 		case filepath.Ext(p) != ".md":
 			return nil
 		}
-		rel := filepath.ToSlash(strings.TrimPrefix(p, repoRoot+string(filepath.Separator)))
+		// filepath.Rel rather than trimming a prefix: repoRoot is written with slashes and
+		// WalkDir yields the platform's separator, so the two do not match on Windows and every
+		// document reads as absent.
+		rel, err := filepath.Rel(repoRoot, p)
+		if err != nil {
+			return err
+		}
+		rel = filepath.ToSlash(rel)
 		if _, excused := unpublished[rel]; excused {
 			return nil
 		}
