@@ -45,6 +45,11 @@ Discussion.
 - **Four pages recommended `shareOrDash` for a divide-by-zero, and no package had such a
   function.** The helper is `humanize.PercentOrDash`. This is the drift the new helper check was
   written for, found by writing it.
+- **A test tripped `SA5011` in CI and not locally**, on the same pinned linter version and the
+  same Go minor: staticcheck read the dereference after `t.Fatal` as a possible nil. An explicit
+  `return` satisfies both. The cause of the disagreement was not established, and the line worth
+  keeping is the one it proves — a green `make lint` on this machine is evidence about this
+  machine, not about the branch.
 - **A published document named releases as `v0.6.0`**, which the `noversion` guard reads as a
   version stamp — correctly, since it cannot tell one from the other. The sentence means the same
   with `v0.6`.

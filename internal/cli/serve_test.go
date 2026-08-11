@@ -17,6 +17,7 @@ func TestServeAddrDefaultsToLoopback(t *testing.T) {
 	f := newServeCmd().Flags().Lookup("addr")
 	if f == nil {
 		t.Fatal("--addr flag not found")
+		return // unreachable; staticcheck cannot see t.Fatal terminate through the interface
 	}
 	if f.DefValue != "127.0.0.1:8787" {
 		t.Fatalf("--addr default = %q, want loopback 127.0.0.1:8787", f.DefValue)
