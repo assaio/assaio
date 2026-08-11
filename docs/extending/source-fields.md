@@ -1,6 +1,6 @@
 # What each source's log carries, and what assaio reads
 
-*Part of [Extending assaio](../extending.md). The per-signal summary of this audit is the source-depth matrix in the [generated reference](https://assaio.dev/reference.html).*
+*Part of [Extending assaio](../extending.md). The per-signal summary of this audit is the source-depth matrix in the [generated reference](https://assaio.dev/docs/reference).*
 
 Every parser turns a rich log into one fixed record and drops the rest. This is the inventory
 of that drop, source by source: each field a source writes ends in exactly one of two states —

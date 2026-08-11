@@ -265,7 +265,7 @@ for something to hand a teammate, and `doctor` when a number looks wrong.
 | `config`   | Print the effective configuration and where it was loaded from. |
 | `plugins`  | `list` configured exec parser plugins; `verify <name>` runs one and reports protocol conformance without storing. |
 | `metrics`  | `list` configured exec **metric** plugins; `verify <name>` runs one on your real window and reports contract conformance plus the rendered result — nothing stored. |
-| `docs`     | `export` writes everything this binary can enumerate about itself — signals, sources with their depth, validators with their scope, the whole command tree with flags and defaults, every config key with its environment variable, and both halves of the metric contract — as JSON, or as a self-contained HTML page. The published [reference](https://assaio.dev/reference.html) is generated from it, and a test fails when the website or the docs and the binary disagree. |
+| `docs`     | `export` writes everything this binary can enumerate about itself — signals, sources with their depth, validators with their scope, the whole command tree with flags and defaults, every config key with its environment variable, and both halves of the metric contract — as JSON, or as a self-contained HTML page. The published [reference](https://assaio.dev/docs/reference) is generated from it, and a test fails when the website or the docs and the binary disagree. |
 | `version`  | Print the version (also `--version`). |
 
 </details>

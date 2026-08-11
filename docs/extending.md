@@ -11,7 +11,7 @@ what can be *listed* rather than explained — every signal, source, validator, 
 and protocol field — is generated from the binary's own registries:
 
 - **[`assaio-agent docs export`](#the-generated-reference)** — the machine-readable reference,
-  published as [assaio.dev/reference.html](https://assaio.dev/reference.html).
+  published as [assaio.dev/docs/reference](https://assaio.dev/docs/reference).
 
 **The headline mechanism, in one paragraph.** A metric is one Go file under
 `internal/analyze/` that reads the same `Input` bundle every built-in metric reads and returns
@@ -41,13 +41,33 @@ Two more pages exist for reading rather than writing:
 [what each source's log carries](extending/source-fields.md), the field-by-field audit behind
 every depth row, and [the worked example](extending/metric-validator-example.md).
 
+## Recipes
+
+The guides describe the contracts; these are working examples to copy. Every recipe on these
+pages is **executed by the test suite** — the label rules are loaded and their derivations
+asserted, the plugins are run against a fixture window and their output held to the protocol —
+so a recipe that stopped working fails the build instead of a reader's afternoon. Where a recipe
+can only be shape-checked rather than run, the page says so.
+
+- [Extensions, written out in full](recipes/extensions.md) — complete validators and metric
+  plugins, including the one thing that separates a metric from a mistake: gating on what the
+  window can actually answer.
+- [Label rules you can paste in](recipes/label-rules.md) — branch, skill, sub-agent and
+  entrypoint conventions for `mark --suggest`, which ships defaults for almost nothing on purpose.
+- [Rule plugins you can run today](recipes/rule-plugins.md) — three complete gates, starting with
+  the one that catches a verdict withheld for want of data.
+- [Gating CI on what a window cost](recipes/ci-gates.md) — `check` as a pre-push hook and a
+  scheduled job, and what each non-zero exit actually means.
+- [Running it without being asked](recipes/automation.md) — the weekly loop, delivering a digest,
+  and what not to automate.
+
 ## The generated reference
 
 `assaio-agent docs export --format json` prints everything about the binary that can be
 enumerated: the signal catalog, the source-depth matrix, the validators with their scope, the
 whole command tree with flags and defaults, every configuration key with its environment
 variable, and the metric-plugin protocol's fields. The same document renders as
-[assaio.dev/reference.html](https://assaio.dev/reference.html).
+[assaio.dev/docs/reference](https://assaio.dev/docs/reference).
 
 It exists because a hand-copied list is a list that falls behind: the website went three
 releases stale before anyone noticed, and a shipped command sat unpublished for a whole release
@@ -75,13 +95,14 @@ a community PR, or a private fork's own validator file. Concretely:
   for the thing you actually care about, say so in `HowToRead` or a `Caveat` — the word
   "directional" belongs in your rendered text, not just in this document.
 - **`—` for an undefined ratio, never a fabricated one.** Divide-by-zero is a dash, not a zero
-  or a 100% — use `shareOrDash`/`perActiveDay` (`internal/analyze/format.go`) or the same
+  or a 100% — use `humanize.PercentOrDash` (`internal/humanize/percent.go`) or `perActiveDay`
+  (`internal/analyze/format.go`), or the same
   pattern by hand. A metric that reports "0%" when it has no denominator to divide by is a lie
   dressed as a number. This holds even when an underlying aggregate's own zero-denominator
   default is `0` (e.g. `report.ChurnStat.ReworkRate`) — a `Figure` must still check the raw
   denominator itself rather than formatting that default directly (see
   `internal/analyze/rework.go`'s "rework" figure, which reads `ReworkLines`/`LinesAdded` via
-  `shareOrDash` instead of formatting `ReworkRate`).
+  `humanize.PercentOrDash` instead of formatting `ReworkRate`).
 - **A silence is not a zero.** Before reading a column, check that the source recording the row
   can produce it at all — `answers` on the wire, `parser.Answers` in-tree (ADR 0011). A source
   that never writes a cache-write counter leaves the field at zero, and a metric that reads that

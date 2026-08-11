@@ -20,7 +20,7 @@ Where everything lives, in one place.
 - [`reference.json`](reference.json) — generated: every signal, source, validator, command,
   flag, config key and protocol field this build has, from its own registries. `make docs`
   rewrites it and `make test` fails when it and the binary disagree, which is also what keeps
-  [assaio.dev/reference.html](https://assaio.dev/reference.html) from falling behind.
+  [assaio.dev/docs/reference](https://assaio.dev/docs/reference) from falling behind.
 - [`reconcile.md`](reconcile.md) — checking the `$` estimate against a vendor's own
   billing or usage export, offline: how columns bind, how to read the unexplained delta,
   and what no export can answer.

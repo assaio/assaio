@@ -79,7 +79,7 @@ Wiring your parser into `internal/ingest` and `doctor`'s scan is still a separat
 two tests bind the three together: the set ingest reads, the set doctor scans, and the set the
 matrix publishes must be identical. A parser that ships without its row is not merely
 undocumented — its records get rejected by the team server and its data cannot be deleted per
-source, which is exactly what happened to Copilot CLI between v0.6.0 and v0.8.0.
+source, which is exactly what happened to Copilot CLI between v0.6 and v0.8.
 
 ### Corrupt-line policy: skip and count
 

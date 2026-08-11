@@ -200,7 +200,13 @@ what it carries is a list, not a schedule. Items drop out of it, and a bug repor
   gated by capability and the excluded share is quantified beside it — and what remains is the
   ADR paragraph and its proof. `B116` is a v1.0 condition in its own right.
 
-What came off this list is in [CHANGELOG.md](CHANGELOG.md). Most recently: what assaio publishes
+What came off this list is in [CHANGELOG.md](CHANGELOG.md). Most recently: the documentation is
+published rather than left in a repository, and the recipes in it are executed rather than
+printed — label rules loaded and their derivations asserted, plugins run against a fixture window
+with their output held to the protocol, so a recipe that stopped working fails the build instead
+of a reader's afternoon. The reference moved inside the documentation for the reason the round
+started: a table of enumerations standing beside the guides teaches nobody anything. Before that:
+what assaio publishes
 about itself is generated from its own registers or checked against them, because the alternative
 had already failed twice — the website ran three releases behind the binary, and then `digest` and
 `mark --suggest` shipped and the page named neither for a whole release (`B161`). The enumerable
