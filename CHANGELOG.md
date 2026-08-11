@@ -21,6 +21,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-08-12
+
 ### Added
 - **The documentation is published, and the recipes in it are executed.**
   [assaio.dev/docs](https://assaio.dev/docs) carries every guide, rendered from the Markdown it
@@ -1693,7 +1695,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/assaio/assaio/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/assaio/assaio/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/assaio/assaio/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/assaio/assaio/compare/v0.15.0...v0.16.0
