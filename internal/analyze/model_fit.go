@@ -137,7 +137,7 @@ func modelBars(models []ModelStat) []Bar {
 	}
 	bars := make([]Bar, len(models))
 	for i, m := range models {
-		bars[i] = Bar{Label: groupLabel(m.Model), Value: strconv.FormatInt(m.Tokens, 10) + " tokens", Frac: fracOf(m.Tokens, maxTokens)}
+		bars[i] = Bar{Label: groupLabel(m.Model), Value: humanize.Count(m.Tokens) + " tokens", Frac: fracOf(m.Tokens, maxTokens)}
 	}
 	return bars
 }

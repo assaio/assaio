@@ -27,6 +27,13 @@ type MoverRow struct {
 	DeltaLines       int64
 	HasUnpricedNow   bool
 	HasUnpricedPrior bool
+	// The unpriced condition is kept per window, never pooled. Every marked figure here --
+	// "COST $ NOW" and the delta it feeds -- is anchored on one of the two, so a share over
+	// their sum would legend a column with an error bar computed from rows outside it: a
+	// recent window that is wholly unpriced beside a large priced prior one reads as a few
+	// percent missing, which is the understatement the marker exists to end.
+	UnpricedNow, TokensNow     int64
+	UnpricedPrior, TokensPrior int64
 }
 
 // hasUnpriced reports whether either window excluded some of the group's cost.
@@ -48,12 +55,16 @@ func Movers(recent, prior []EffRow) []MoverRow {
 		m.CostNow = costOrZero(recent[i].Cost)
 		m.LinesNow = recent[i].LinesAdded
 		m.HasUnpricedNow = recent[i].HasUnpriced
+		m.UnpricedNow += recent[i].UnpricedTokens
+		m.TokensNow += recent[i].TokensTotal
 	}
 	for i := range prior {
 		m := at(prior[i].Group)
 		m.CostPrior = costOrZero(prior[i].Cost)
 		m.LinesPrior = prior[i].LinesAdded
 		m.HasUnpricedPrior = prior[i].HasUnpriced
+		m.UnpricedPrior += prior[i].UnpricedTokens
+		m.TokensPrior += prior[i].TokensTotal
 	}
 	out := make([]MoverRow, 0, len(byGroup))
 	for _, m := range byGroup {
@@ -80,7 +91,7 @@ func RenderMovers(w io.Writer, movers []MoverRow, by string) error {
 	tw.SetOutputMirror(w)
 	tw.AppendHeader(prettytable.Row{strings.ToUpper(by), "Δ COST $", "COST $ NOW", "Δ AI LINES", "AI LINES NOW"})
 	tw.SetColumnConfigs(rightAlignFrom(1, 4))
-	anyUnpriced := false
+	var now, prior Unpriced
 	for i := range movers {
 		m := &movers[i]
 		label := m.Group
@@ -89,21 +100,34 @@ func RenderMovers(w io.Writer, movers []MoverRow, by string) error {
 		}
 		mark := ""
 		if m.hasUnpriced() {
-			mark, anyUnpriced = "*", true
+			mark = "*"
+			now.Rows++
 		}
+		now.Tokens, now.Total = now.Tokens+m.UnpricedNow, now.Total+m.TokensNow
+		prior.Tokens, prior.Total = prior.Tokens+m.UnpricedPrior, prior.Total+m.TokensPrior
 		tw.AppendRow(prettytable.Row{
 			label, signedFloat(m.DeltaCost) + mark, humanize.USDCell(m.CostNow) + mark,
 			signedInt(m.DeltaLines), m.LinesNow,
 		})
 	}
 	tw.Render()
-	if anyUnpriced {
-		if _, err := fmt.Fprintln(w, unpricedFootnote); err != nil {
+	if note := UnpricedDisclosure(worseWindow(&now, &prior)); note != "" {
+		if _, err := fmt.Fprintln(w, note); err != nil {
 			return err
 		}
 	}
 	_, err := fmt.Fprintln(w, CostEstimateDisclosure)
 	return err
+}
+
+// worseWindow picks the window whose cost is most blind, and names it. A comparison of two
+// windows has two error bars and one footnote; reporting the smaller would tell the reader
+// the marked figures are more complete than one of them is.
+func worseWindow(now, prior *Unpriced) (*Unpriced, string) {
+	if prior.Share() > now.Share() {
+		return prior, "the prior window's tokens"
+	}
+	return now, "the recent window's tokens"
 }
 
 func costOrZero(c *float64) float64 {

@@ -36,6 +36,11 @@ func RenderStatusSummary(w io.Writer, in *Insights) error {
 			return err
 		}
 	}
+	if note := UnpricedDisclosure(&in.Inventory.Unpriced, "the whole window's tokens"); note != "" {
+		if _, err := fmt.Fprintln(w, note); err != nil {
+			return err
+		}
+	}
 	if _, err := fmt.Fprintln(w, statusCaveat); err != nil {
 		return err
 	}
@@ -82,7 +87,9 @@ func writeHeadline(w io.Writer, in *Insights) error {
 }
 
 func writeHotSection(w io.Writer, in *Insights) error {
-	if _, err := fmt.Fprintln(w, "Hot — where spend concentrates"); err != nil {
+	// The window is named here because the footnote below quantifies the whole window, and a
+	// 7-day row under a 30-day share would read as that share's own error bar otherwise.
+	if _, err := fmt.Fprintln(w, "Hot — where spend concentrates (last 7 days)"); err != nil {
 		return err
 	}
 	if len(in.Hot) == 0 {

@@ -21,12 +21,17 @@ func (b budget) empty() bool { return b.MaxTokens <= 0 && b.MaxCost <= 0 }
 type checkTotals struct {
 	Tokens int64
 	Cost   float64
-	// HasUnpriced and UnpricedTokens are what the cost axis cannot see: usage on a model
+	// UnpricedRows and UnpricedTokens are what the cost axis cannot see: usage on a model
 	// the price table has no row for. Cost excludes it entirely, so the pair is what stops
-	// the gate reporting OK on a window it could not price.
-	HasUnpriced    bool
+	// the gate reporting OK on a window it could not price. They are two facts, not one: a
+	// row can be unpriced and carry no token at all.
+	UnpricedRows   int
 	UnpricedTokens int64
 }
+
+// HasUnpriced reports whether any row carried no known price, which is what the "*" marker
+// beside a cost means.
+func (t checkTotals) HasUnpriced() bool { return t.UnpricedRows > 0 }
 
 // sumCheckTotals adds every priced row's cost and every row's tokens into the window
 // totals; HasUnpriced carries the usual "cost excludes unpriced usage". Reasoning tokens
@@ -44,10 +49,16 @@ func sumCheckTotals(rows []report.Row) checkTotals {
 			t.UnpricedTokens += tokens
 		}
 		if r.HasUnpriced {
-			t.HasUnpriced = true
+			t.UnpricedRows++
 		}
 	}
 	return t
+}
+
+// unpriced is the window's unpriced condition in the shape every surface discloses it in,
+// so the gate's footnote is the same sentence report and the dashboard print.
+func (t checkTotals) unpriced() *report.Unpriced {
+	return &report.Unpriced{Tokens: t.UnpricedTokens, Total: t.Tokens, Rows: t.UnpricedRows}
 }
 
 // evaluateBudget returns one breach message per failed axis; empty means within budget.
@@ -99,12 +110,12 @@ func renderCheck(cmd *cobra.Command, since string, t checkTotals, b budget, p co
 	lw.printf("budget check · last %s\n", since)
 	lw.printf("  total tokens: %d\n", t.Tokens)
 	cost := fmt.Sprintf("$%.2f", t.Cost)
-	if t.HasUnpriced {
+	if t.HasUnpriced() {
 		cost += "*"
 	}
 	lw.printf("  total cost:   %s (API-equivalent estimate)\n", cost)
-	if t.HasUnpriced {
-		lw.println("  * includes unpriced usage excluded from cost")
+	if note := report.UnpricedDisclosure(t.unpriced(), "this window's tokens"); note != "" {
+		lw.printf("  %s\n", note)
 	}
 	if line, ok := effectiveBasisLine(p, t.Tokens); ok {
 		lw.printf("  %s\n", line)

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -17,16 +18,16 @@ import (
 // canaries the whole --strict promise rests on never ran. The failure travels back as a
 // string so the caller can weigh it beside the other strict failures instead of deciding
 // doctor's exit code halfway down the report.
-func doctorStore(cmd *cobra.Command, dbPath string) (warnings []drift.Warning, failure string) {
+func doctorStore(cmd *cobra.Command, dbPath string, since time.Time, window string, maxUnpricedShare float64) (warnings []drift.Warning, failures []string) {
 	st, err := store.Open(dbPath)
 	if err != nil {
-		return nil, doctorStoreFailure(cmd, "ERROR %v", err)
+		return nil, []string{doctorStoreFailure(cmd, "ERROR %v", err)}
 	}
 	defer func() { _ = st.Close() }()
 
 	n, err := st.Count(cmd.Context())
 	if err != nil {
-		return nil, doctorStoreFailure(cmd, "ERROR counting records: %v", err)
+		return nil, []string{doctorStoreFailure(cmd, "ERROR counting records: %v", err)}
 	}
 	cmd.Printf("store:        ok, %d record(s) at %s\n", n, dbPath)
 	if size, sizeErr := st.Size(cmd.Context()); sizeErr == nil {
@@ -38,15 +39,22 @@ func doctorStore(cmd *cobra.Command, dbPath string) (warnings []drift.Warning, f
 		cmd.Printf("archived:     %d pre-0.12 Claude Code row(s) kept aside by migration 0008; no report reads them.\n", rows)
 		cmd.Println("              Drop with: sqlite3 <db> 'DROP TABLE usage_record_pre_response_grain', then `assaio-agent compact`.")
 	}
-	cmd.Printf("inventory:    %s\n", doctorInventoryLabel(cmd, st, n))
+	contents, err := doctorStoreContents(cmd, st, n, since, window)
+	if err != nil {
+		return nil, []string{doctorStoreFailure(cmd, "ERROR reading stored usage: %v", err)}
+	}
+	cmd.Printf("inventory:    %s\n", contents.Inventory)
+	if failure := unpricedSection(cmd, &contents, maxUnpricedShare); failure != "" {
+		failures = append(failures, failure)
+	}
 	cmd.Printf("freshness:    %s\n", doctorFreshnessLabel(cmd, st))
 
 	warnings, err = driftWarnings(cmd.Context(), st)
 	if err != nil {
-		return nil, doctorStoreFailure(cmd, "ERROR reading ingest history: %v", err)
+		return nil, append(failures, doctorStoreFailure(cmd, "ERROR reading ingest history: %v", err))
 	}
 	cmd.Print(doctorDriftSection(warnings))
-	return warnings, ""
+	return warnings, failures
 }
 
 // doctorStoreFailure prints the store line and the drift line that go with a store nobody

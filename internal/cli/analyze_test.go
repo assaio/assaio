@@ -390,3 +390,34 @@ func TestAnalyzeJSONIncludesMetricPlugin(t *testing.T) {
 		t.Fatalf("json results missing plugin:demo: %s", out)
 	}
 }
+
+// "Worth a week's attention" is a claim about the whole window: it says the reads not listed
+// were considered and found fine, withheld or too thin. A named subset never considered them,
+// so printing the section there reports an all-clear over metrics that were never run.
+func TestAnalyzeSubsetPrintsNoWholeWindowOrdering(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	seedAnalyzeStore(t)
+
+	full := runAnalyzeCmd(t)
+	if !strings.Contains(full, "Worth a week's attention") {
+		t.Fatalf("a whole-window run must lead with the ordering: %s", full)
+	}
+	subset := runAnalyzeCmd(t, "adoption")
+	if strings.Contains(subset, "Worth a week's attention") {
+		t.Fatalf("a named subset must not claim a whole-window verdict: %s", subset)
+	}
+}
+
+func runAnalyzeCmd(t *testing.T, args ...string) string {
+	t.Helper()
+	root := NewRootCmd()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetErr(&out)
+	root.SetArgs(append([]string{"analyze"}, args...))
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	return out.String()
+}

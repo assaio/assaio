@@ -3,6 +3,7 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/report"
 )
 
@@ -55,7 +56,7 @@ func (adoptionValidator) Analyze(in Input) Result {
 	r.Read = readFor(strong, "Strong")
 	r.Purity = adoptionPurity(inv.Projects, changePct, trendOK)
 	r.Figures = []Figure{
-		{Label: "sessions", Value: strconv.Itoa(len(in.Sessions))},
+		{Label: "sessions", Value: humanize.Int(int64(len(in.Sessions)))},
 		{Label: "active days", Value: strconv.Itoa(inv.Days)},
 		{Label: "projects", Value: strconv.Itoa(inv.Projects)},
 		{Label: "sessions/active-day", Value: perActiveDay(int64(len(in.Sessions)), int64(inv.Days))},

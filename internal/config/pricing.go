@@ -25,7 +25,20 @@ type Pricing struct {
 	// MonthlySubscriptionCost is the flat monthly plan price in dollars, for comparison
 	// against API-equivalent spend. Zero (default) means unset.
 	MonthlySubscriptionCost float64 `koanf:"monthly_subscription_cost"`
+	// MaxUnpricedShare is the share of a store's tokens that may carry no known price
+	// before `doctor --strict` fails, 0..1. The default catches a newly adopted model on
+	// its second day in a 7-day window and its third in a 30-day one, measured against a
+	// real adoption curve; 0 disables the gate.
+	MaxUnpricedShare float64 `koanf:"max_unpriced_share"`
 }
+
+// DefaultMaxUnpricedShare is the ceiling `doctor --strict` applies when the config sets
+// none. It is the one number in this file chosen from data rather than taste: the model
+// that took over the maintainer's own store reached 12.0% of a 7-day window on its second
+// day and 10.0% of a 30-day window on its third, while the v0.13 drift that hid $15,452.42
+// of spend for five weeks sat at 45.5%. A ceiling above ten misses the second day; one at a
+// percent fires on a single afternoon's experiment with a model nobody has priced yet.
+const DefaultMaxUnpricedShare = 0.05
 
 // Validate checks the pricing mode and that configured rates are non-negative.
 func (p Pricing) Validate() error {
@@ -40,8 +53,16 @@ func (p Pricing) Validate() error {
 	if p.MonthlySubscriptionCost < 0 {
 		return fmt.Errorf("pricing.monthly_subscription_cost must be >= 0, got %g", p.MonthlySubscriptionCost)
 	}
+	if p.MaxUnpricedShare < 0 || p.MaxUnpricedShare > 1 {
+		return fmt.Errorf("pricing.max_unpriced_share must be between 0 and 1, got %g", p.MaxUnpricedShare)
+	}
 	return nil
 }
+
+// UnpricedCeiling is the share `doctor --strict` fails above, the configured one or the
+// default. A configured 0 is the user turning the gate off, not an unset field: koanf gives
+// the default before this is ever read, so zero here can only be deliberate.
+func (p Pricing) UnpricedCeiling() float64 { return p.MaxUnpricedShare }
 
 // IsSubscription reports whether the user opted into subscription-basis framing.
 func (p Pricing) IsSubscription() bool {

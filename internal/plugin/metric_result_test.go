@@ -215,3 +215,24 @@ func TestParseMetricResultRejectsUnknownField(t *testing.T) {
 		t.Fatal("an unknown field must be rejected, not ignored")
 	}
 }
+
+// Two fields on Result answer for the window, not for a metric: Confidence.Recorded decides
+// whether assaio prints the one insufficient reason that names a cure, and Lead decides which
+// findings a window promotes. Both became decodable the moment they were added to Result --
+// DisallowUnknownFields stopped rejecting them -- so a plugin could hand assaio a `backfill`
+// recommendation for a subject no source records, or a rank the ordering never produced.
+func TestParseMetricResultDropsWindowLevelClaims(t *testing.T) {
+	doc := `{"title":"T","read":{"key":"good","label":"OK"},"howToRead":"H","takeaway":"K",` +
+		`"confidence":{"samples":12,"samplesUnit":"sessions","signalCoverage":0,"subjectRecorded":true},` +
+		`"lead":{"rank":1,"reasons":["critical, act now"]}}`
+	got, violations, err := parseMetricResult([]byte(doc), "p")
+	if err != nil || len(violations) > 0 {
+		t.Fatalf("parse err=%v violations=%v, want the document accepted with those two fields dropped", err, violations)
+	}
+	if got.Confidence.Recorded != nil {
+		t.Fatalf("Confidence.Recorded = %v, want nil: a plugin cannot answer whether the window records its subject", *got.Confidence.Recorded)
+	}
+	if got.Lead != nil {
+		t.Fatalf("Lead = %+v, want nil: a metric cannot see the others, so it cannot rank itself among them", got.Lead)
+	}
+}

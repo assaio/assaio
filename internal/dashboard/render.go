@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/i18n"
@@ -24,6 +25,7 @@ var templateFuncs = template.FuncMap{
 	"subpathName":    subpathName,
 	"barsApplicable": func(r analyze.Result) bool { return r.Bars != nil },
 	"confidence":     analyze.ConfidenceSummary,
+	"join":           strings.Join,
 	"locale":         func() i18n.Dashboard { return i18n.For("").Dashboard },
 }
 

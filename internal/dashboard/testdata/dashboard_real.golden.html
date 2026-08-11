@@ -194,24 +194,38 @@ button{font:inherit;}
 .cell__read--good{color:var(--verdigris);}
 .cell__read--watch{color:var(--oxide);}
 .cell__read--neutral{color:var(--muted);}
-.cell__foot{
-  margin-top:auto;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
+ 
+.lead{
+  box-shadow:0 0 0 1px var(--seam);
+  background:var(--surface);
+  padding:18px;
+  margin-bottom:24px;
 }
-.cell__ratio{
+.lead__list{list-style:none;counter-reset:lead;}
+.lead__item{
+  counter-increment:lead;
   display:flex;
+  flex-wrap:wrap;
   align-items:baseline;
-  justify-content:space-between;
-  gap:8px;
-  font-size:11px;
-  color:var(--muted);
+  gap:4px 10px;
+  padding:8px 0;
+  border-bottom:1px solid var(--hairline);
 }
-.cell__ratio-key{font:600 9px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;}
+.lead__item:last-child{border-bottom:0;}
+.lead__item::before{
+  content:counter(lead);
+  font:600 10px/1 var(--font-mono);
+  color:var(--muted);
+  min-width:14px;
+}
+.lead__title{font-weight:600;}
+.lead__why{font-size:11px;color:var(--muted);}
+.lead__rule,.lead__none{font-size:11px;color:var(--muted);margin-top:10px;}
+.lead__none{margin-top:0;}
 
  
 .gauge{
+  margin-top:auto;
   position:relative;
   height:6px;
   border-radius:3px;
@@ -354,7 +368,6 @@ button{font:inherit;}
 .faceplate--compact .cell{padding:14px 14px 12px;gap:7px;}
 .faceplate--compact .cell__label{font-size:9px;}
 .faceplate--compact .cell__read{font-size:15px;}
-.faceplate--compact .cell__ratio{display:none;}
 .faceplate--compact .gauge{height:5px;}
 
 .table-scroll{overflow-x:auto;margin-top:4px;}
@@ -491,13 +504,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--good">STRONG</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:70.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.70</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:70.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -506,13 +513,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--watch">
@@ -521,13 +522,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--watch">WATCH</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
 </div>
 
 <div class="cell cell--watch">
@@ -536,13 +531,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--watch">WATCH</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:10.6%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.11</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:10.6%"></span></div>
 </div>
 
 <div class="cell cell--watch">
@@ -551,13 +540,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--watch">WATCH</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--good">
@@ -566,13 +549,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--good">SOLID</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">1.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -581,13 +558,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -596,13 +567,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -611,13 +576,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
 </div>
 
 <div class="cell cell--watch">
@@ -626,13 +585,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--watch">WATCH</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:1.2%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.01</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:1.2%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -641,13 +594,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
 </div>
 
 <div class="cell cell--good">
@@ -656,13 +603,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--good">LEAN</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">1.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
 </div>
 
 <div class="cell cell--good">
@@ -671,13 +612,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--good">LOW</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:98.6%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.99</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:98.6%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -686,13 +621,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -701,13 +630,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">1.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -716,13 +639,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -731,13 +648,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">SET PLAN</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
 </div>
 
 <div class="cell cell--good">
@@ -746,13 +657,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--good">RAMPING</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">1.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -761,15 +666,33 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
 </div>
 
+  </section>
+
+  <div class="panel-label">
+    <span><strong>Worth a week&#39;s attention</strong></span>
+    <span>of 19 reads</span>
+  </div>
+
+  <section class="lead">
+    
+    <ol class="lead__list">
+      
+      <li class="lead__item">
+        <span class="lead__title">Cache Hygiene</span>
+        <span class="lead__why">flagged for a closer look · high confidence · 3 active days · covers the whole window</span>
+      </li>
+      
+      <li class="lead__item">
+        <span class="lead__title">Model Fit</span>
+        <span class="lead__why">flagged for a closer look · high confidence · 3 active days · covers the whole window</span>
+      </li>
+      
+    </ol>
+    <p class="lead__rule">Order is these reasons, not a score; findings whose reasons match are ordered by name. Every read is below.</p>
+    
   </section>
 
   <div class="panel-label">
@@ -826,7 +749,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <div class="stat">
         <span class="stat__value">&#43;40724%</span>
         <span class="stat__label">week-over-week AI lines</span>
-        <span class="stat__note">20412 recent vs 50 prior</span>
+        <span class="stat__note">20,412 recent vs 50 prior</span>
       </div>
       
     </div>
@@ -1044,7 +967,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       </div>
       
       <div class="stat">
-        <span class="stat__value">35000 tokens</span>
+        <span class="stat__value">35.0K tokens</span>
         <span class="stat__label">peak context</span>
         
       </div>
@@ -1157,8 +1080,8 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     <p class="entry__caveat">Prov.: 0% of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified — run `backfill` to restate them. A source that names no tool calls records none, so it neither raises nor lowers this — `assaio-agent signals coverage` says which do.</p>
-    <p class="entry__conf entry__conf--insufficient">Confidence — insufficient — nothing in this window can answer it</p>
-    <p class="entry__takeaway">No tool in this window records what its tool calls were for.</p>
+    <p class="entry__conf entry__conf--insufficient">Confidence — insufficient — a source here records it, but your stored rows predate that capture -- `backfill` re-reads them</p>
+    <p class="entry__takeaway">Tool calls ran here but none carry a purpose: they were read by a build that did not capture it — `backfill` re-reads them.</p>
   </div>
 </article>
 
@@ -1198,8 +1121,8 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     
     
     <p class="entry__caveat">Prov.: 0% of tool calls record whether they failed, and only for sessions ingested by a build that captures it — run `backfill` after upgrading. A source that marks only some outcomes is excluded from these rates rather than counted as successes; `assaio-agent signals coverage` says which does what.</p>
-    <p class="entry__conf entry__conf--insufficient">Confidence — insufficient — nothing in this window can answer it</p>
-    <p class="entry__takeaway">No tool call in this window records whether it failed, so no failure rate can be read from it.</p>
+    <p class="entry__conf entry__conf--insufficient">Confidence — insufficient — a source here records it, but your stored rows predate that capture -- `backfill` re-reads them</p>
+    <p class="entry__takeaway">Tool calls ran here from a source that records failures, but none carry a failure state: they were read by a build that did not capture it — `backfill` re-reads them.</p>
   </div>
 </article>
 
@@ -1280,13 +1203,13 @@ table.subpath tbody tr:hover td{background:var(--bg);}
         <li>
           <span class="projectbars__name">claude-opus-4-5</span>
           <span class="projectbars__bar"><span style="width:100.0%"></span></span>
-          <span class="projectbars__value tnum">300000 tokens</span>
+          <span class="projectbars__value tnum">300.0K tokens</span>
         </li>
         
         <li>
           <span class="projectbars__name">claude-sonnet-4-5</span>
           <span class="projectbars__bar"><span style="width:1.2%"></span></span>
-          <span class="projectbars__value tnum">3500 tokens</span>
+          <span class="projectbars__value tnum">3.5K tokens</span>
         </li>
         
       </ul>
@@ -1609,7 +1532,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <div class="entry__stats">
       
       <div class="stat">
-        <span class="stat__value stat__value--accent">20462</span>
+        <span class="stat__value stat__value--accent">20,462</span>
         <span class="stat__label">AI lines total</span>
         
       </div>
@@ -1623,7 +1546,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <div class="stat">
         <span class="stat__value">&#43;40724%</span>
         <span class="stat__label">week-over-week AI lines</span>
-        <span class="stat__note">20412 recent vs 50 prior</span>
+        <span class="stat__note">20,412 recent vs 50 prior</span>
       </div>
       
     </div>
@@ -1636,13 +1559,13 @@ table.subpath tbody tr:hover td{background:var(--bg);}
         <li>
           <span class="projectbars__name">api</span>
           <span class="projectbars__bar"><span style="width:100.0%"></span></span>
-          <span class="projectbars__value tnum">18496 lines</span>
+          <span class="projectbars__value tnum">18,496 lines</span>
         </li>
         
         <li>
           <span class="projectbars__name">web</span>
           <span class="projectbars__bar"><span style="width:10.6%"></span></span>
-          <span class="projectbars__value tnum">1966 lines</span>
+          <span class="projectbars__value tnum">1,966 lines</span>
         </li>
         
       </ul>
@@ -1716,13 +1639,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--watch">WATCH</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:35.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.35</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:35.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -1731,13 +1648,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--watch">
@@ -1746,13 +1657,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--watch">WATCH</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -1761,13 +1666,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--watch">
@@ -1776,13 +1675,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--watch">WATCH</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--good">
@@ -1791,13 +1684,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--good">SOLID</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">1.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -1806,13 +1693,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -1821,13 +1702,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -1836,13 +1711,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
 </div>
 
 <div class="cell cell--good">
@@ -1851,13 +1720,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--good">HEALTHY</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">1.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -1866,13 +1729,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
 </div>
 
 <div class="cell cell--good">
@@ -1881,13 +1738,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--good">LOW</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">1.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -1896,13 +1747,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -1911,13 +1756,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">1.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:100.0%"></span></div>
 </div>
 
 <div class="cell cell--watch">
@@ -1926,13 +1765,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--watch">WATCH</span>
     
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.50</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -1941,13 +1774,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
-    <span class="cell__ratio">
-      <span class="cell__ratio-key">index</span>
-      <span class="tnum">0.00</span>
-    </span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
 </div>
 
     </div>

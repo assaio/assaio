@@ -5,6 +5,16 @@ import (
 	"strings"
 )
 
+// Int renders a whole count with comma-grouped thousands, e.g. 12345 -> "12,345". It is
+// the exact path Thousands cannot offer: an int64 above 2^53 survives it unrounded.
+func Int(n int64) string {
+	s := strconv.FormatInt(n, 10)
+	if neg := strings.HasPrefix(s, "-"); neg {
+		return "-" + groupDigits(s[1:])
+	}
+	return groupDigits(s)
+}
+
 // Thousands renders f at prec decimal places with comma-grouped thousands, e.g.
 // (107640.1, 2) -> "107,640.10". Grouping is what makes a six-figure count readable at a
 // glance; the decimals are the caller's call.

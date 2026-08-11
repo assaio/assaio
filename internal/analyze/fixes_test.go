@@ -40,8 +40,8 @@ func TestThroughputBarsSortedByLinesDescending(t *testing.T) {
 	if got.Bars[1].Label != "costly-low-lines" {
 		t.Fatalf("Bars[1] = %+v, want the lower-lines project (costly-low-lines) second", got.Bars[1])
 	}
-	if !strings.Contains(got.Bars[0].Value, "18496") {
-		t.Fatalf("Bars[0].Value = %q, want it to show 18496 lines", got.Bars[0].Value)
+	if !strings.Contains(got.Bars[0].Value, "18,496") {
+		t.Fatalf("Bars[0].Value = %q, want it to show 18,496 lines", got.Bars[0].Value)
 	}
 	if got.Bars[0].Frac != 1 {
 		t.Fatalf("Bars[0].Frac = %v, want 1 (the max)", got.Bars[0].Frac)

@@ -40,6 +40,11 @@ type Row struct {
 	// HasUnpriced reports whether this row aggregates any usage with an unknown model
 	// price, meaning Cost excludes that usage.
 	HasUnpriced bool `json:"has_unpriced"`
+	// UnpricedTokens is how much of In+Out+CacheRead+CacheWrite carried no known price.
+	// HasUnpriced says a cost is incomplete; this says by how much, which is the difference
+	// between a rounding error and a headline that is half the real figure. It rides on the
+	// row so an aggregate can total it without a second pricing pass.
+	UnpricedTokens int64 `json:"unpriced_tokens"`
 	// Task, Outcome and Difficulty are the session annotations this group belongs to, and
 	// are populated only when the caller grouped by one of them (store.UsageByLabel).
 	Task       string `json:"task,omitempty"`
@@ -74,6 +79,7 @@ func Build(rows []store.UsageRow, t pricing.Table) []Row {
 			r.Priced = true
 		} else {
 			r.HasUnpriced = true
+			r.UnpricedTokens = r.In + r.Out + r.CacheRead + r.CacheWrite
 		}
 		r.CacheEff = cacheEff(r.In, r.CacheRead)
 		out = append(out, r)

@@ -342,7 +342,7 @@ section for free" claim.
 | `Describe` | One-line summary. | `analyze --list`'s third column only — **not** printed by `RenderResultText`. | Not rendered. |
 | `Read.Key` | `"good"`, `"watch"`, or `"neutral"` (no data). | Drives no CLI styling (plain text). | Drives the dashboard's color via CSS classes `cell__read--{key}` / `entry__read--{key}` (verdigris/oxide/muted) — an unrecognized key renders unstyled, so stick to these three. |
 | `Read.Label` | Short upper-cased word, e.g. `"WATCH"`, `"STRONG"`, `"—"`. | Printed in `[brackets]` on the header line. | Printed as the faceplate/ledger read text. |
-| `Purity` | `0..1`, how "well-used" this dimension reads. | **Not rendered.** | The faceplate gauge's fill width and the small `0.XX` ratio underneath — clamp to `[0,1]` yourself (`clamp01`) or the CSS width silently over/underflows. |
+| `Purity` | `0..1`, how "well-used" this dimension reads. It is your own quantity, not an index shared with other validators, so it is never rendered as a bare number anybody could compare across cells. | **Not rendered.** | The faceplate gauge's fill width, unlabelled — clamp to `[0,1]` yourself (`clamp01`) or the CSS width silently over/underflows. |
 | `HowToRead` | One-sentence explainer of what the metric means and what to do about it. Must be non-empty on **every** code path, including the no-data one. | The `"  ? …"` line under the header. | The ledger entry's muted "How to read — …" line. |
 | `Figures` | The headline numbers: `{Label, Value, Note}`. | One `"  label: value (note)"` line each. | One stat tile per figure in `.entry__stats`; **the first figure gets an accent color** — order your most important number first. Not shown in the faceplate. |
 | `Bars` | Optional ranked list: `{Label, Value, Frac 0..1}`. Three states matter: `nil` → no Bars section anywhere; non-nil empty → an honest "none in this window" line; non-nil non-empty → a ranked bar list. | ASCII bar `label: value  [####----]` (20 chars wide, scaled by `Frac`). | `.projectbars` list, bar width from `Frac`. Scale `Frac` against that list's own max (`fracOf`), not a global scale. |
@@ -430,10 +430,7 @@ entry:
     <span class="cell__read cell__read--watch">WATCH</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="cell__foot">
-    <div class="gauge"><span class="gauge__fill" style="--fill:19.6%"></span></div>
-    <span class="cell__ratio tnum">0.20</span>
-  </div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:19.6%"></span></div>
 </div>
 
 <article class="entry">
@@ -484,6 +481,11 @@ constraints](#honesty-constraints-for-every-extension).
   `readFor(ok, favorableLabel)` / `noDataRead` for `Read`, `shareOrDash`/`perActiveDay`
   for `—`-safe ratios, `clamp01` for `Purity`, `fracOf` for `Bar.Frac`, `groupLabel` for
   an empty dimension value.
+- Render a number through `internal/humanize` so it reads the same here as in the report
+  table beside it: `humanize.Count` for tokens (`33.4B`), `humanize.Int` for a count of
+  things that can pass a thousand (`329,612` calls, lines, sessions, turns). A count that
+  is small by construction — active days, projects, task classes, a threshold in a note —
+  stays bare; grouping it is noise.
 - Reach for `in.ByModel`/`in.ByProject`/`in.Totals` before `in.Usage` — see [Read these
   first](#read-these-first-bymodel-byproject-totals) above. If your metric ends up
   grouping `Usage` by model or project itself, that is usually a sign the prepared views
@@ -1036,15 +1038,20 @@ different fact from a thin answer. The share sets the label alongside the other 
 Confidence: low · 43 active days · signal coverage <1%
 ```
 
-**A verdict resting on nothing says which nothing it is** (v0.10). `insufficient` has three
+**A verdict resting on nothing says which nothing it is** (v0.10). `insufficient` has four
 causes and they are different facts about different things, so the summary line names the one
 that applies:
 
 | Line | What you declared |
 |---|---|
+| `insufficient — a source here records it, but your stored rows predate that capture` | `signalCoverage: 0` on a subject whose own denominator exists and whose capture a source in the window does have — the one cause with a cure (`backfill`) |
 | `insufficient — nothing in this window can answer it` | `signalCoverage: 0` — the window may be full of usage, none of which reaches your question |
 | `insufficient — 0 sessions` | `samples: 0` with a unit — you counted none of your own observations |
 | `insufficient — no stated basis` | no `samples` at all — the honest reading of a plugin that did not say what it rests on |
+
+The first row is not available to an exec metric plugin: it rests on the validator declaring
+which capture a zero would be missing, which the plugin protocol has no field for. A plugin
+covering none of the window reads as the second row.
 
 Declaring `samples: 0` with a unit is therefore better than omitting the field: "zero
 sessions" is a measurement, "no stated basis" is an absence of one.

@@ -40,11 +40,15 @@ func (exploreValidator) Analyze(in Input) Result {
 	m := buildToolMix(in.Usage)
 	r.restsOn(int(m.Classified), "classified tool calls")
 	r.covering(m.Coverage())
+	// AllCalls only accumulates for sources answering SignalToolCallsCount, and every such
+	// source classifies the calls it counts -- so calls existing here means the purpose split
+	// could have been captured, which is what makes `backfill` the honest cure.
+	r.missingCaptureWhen(m.AllCalls > 0)
 	if m.Classified == 0 {
 		r.Read = noDataRead
 		r.Purity = 0.5
 		r.Bars = []Bar{}
-		r.Takeaway = "No tool in this window records what its tool calls were for."
+		r.Takeaway = exploreUnclassifiedTakeaway(m.AllCalls > 0)
 		r.Caveats = append(r.Caveats, exploreCoverageCaveat(m))
 		return r
 	}
@@ -55,7 +59,7 @@ func (exploreValidator) Analyze(in Input) Result {
 	r.Read = exploreRead(sufficient, balanced)
 	r.Purity = explorePurity(m, sufficient)
 	r.Figures = []Figure{
-		{Label: "classified calls", Value: strconv.FormatInt(m.Classified, 10)},
+		{Label: "classified calls", Value: humanize.Int(m.Classified)},
 		{Label: "produce share", Value: humanize.PercentAt(m.ProduceShare(), 0), Note: "writes, of classified calls"},
 		{Label: "explore share", Value: humanize.PercentAt(m.ExploreShare(), 0), Note: "reads + searches"},
 		{Label: "reads per write", Value: exploreRatio(m.Reads+m.Searches, m.Writes)},
@@ -125,7 +129,7 @@ func toolMixBars(m toolMix) []Bar {
 	for _, b := range buckets {
 		bars = append(bars, Bar{
 			Label: b.label,
-			Value: strconv.FormatInt(b.n, 10) + " calls · " + humanize.PercentAt(shareOf(b.n, m.Classified), 0),
+			Value: humanize.Int(b.n) + " calls · " + humanize.PercentAt(shareOf(b.n, m.Classified), 0),
 			Frac:  fracOf(b.n, maxN),
 		})
 	}
@@ -138,6 +142,16 @@ func toolMixBars(m toolMix) []Bar {
 // does is usage ingested before the purpose split was captured.
 func exploreCoverageCaveat(m toolMix) string {
 	return "Prov.: " + humanize.Percent(m.Coverage()) + " of tool calls record what they were for. Sessions ingested before this build captured it read as unclassified -- run `backfill` to restate them. A source that names no tool calls records none, so it neither raises nor lowers this -- `assaio-agent signals coverage` says which do."
+}
+
+// exploreUnclassifiedTakeaway separates the two ways nothing is classified: calls that ran
+// before this build could name them, which `backfill` repairs, and a window whose sources
+// name no call at all, which nothing repairs.
+func exploreUnclassifiedTakeaway(callsRan bool) string {
+	if callsRan {
+		return "Tool calls ran here but none carry a purpose: they were read by a build that did not capture it -- `backfill` re-reads them."
+	}
+	return "No tool in this window records what its tool calls were for."
 }
 
 func exploreTakeaway(sufficient, balanced bool) string {

@@ -25,9 +25,13 @@ func newDoctorCmd() *cobra.Command {
 the store's health and freshness, and whether any format-drift canary fired.
 
 --strict turns the diagnosis into a gate, exiting non-zero when a canary fired, when a
-configured source finds no inputs at all, or when the store itself cannot be read -- so a
-cron or CI job alerts on vendor format drift instead of a human eventually noticing the
-numbers shrank.`,
+configured source finds no inputs at all, when the store itself cannot be read, or when too
+much of the reported window carries no model price for cost to mean anything -- so a cron or
+CI job alerts on vendor format drift and on a price table that has fallen behind, instead of a
+human eventually noticing the numbers shrank. The price ceiling is pricing.max_unpriced_share
+(default 5% of the window's tokens; 0 turns that half of the gate off), read over the same
+window 'since' gives a report, because a share of a whole backfilled history could never
+reach it.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			home, err := paths.Home()
@@ -53,7 +57,13 @@ numbers shrank.`,
 			if err := ensureParent(dbPath); err != nil {
 				return err
 			}
-			warnings, storeFailure := doctorStore(cmd, dbPath)
+			// The price gate reads the same window a report does by default, because that is
+			// the window its ceiling was calibrated against.
+			since, err := parseSinceAt(cfg.Since, time.Now())
+			if err != nil {
+				return err
+			}
+			warnings, storeFailures := doctorStore(cmd, dbPath, since, cfg.Since, cfg.Pricing.UnpricedCeiling())
 
 			models, snapshotDate := pricing.Info()
 			cmd.Printf("pricing:      %d models, snapshot %s (refresh ships with releases)\n", models, snapshotDate)
@@ -70,10 +80,7 @@ numbers shrank.`,
 			cmd.Println("    while it was still being written; the next backfill restates them upward, never downward,")
 			cmd.Println("    so a count that first came out too high stays.")
 			cmd.Println("  - All on-disk log formats are internal and may change between tool versions.")
-			failures := strictFailures(warnings, scans)
-			if storeFailure != "" {
-				failures = append(failures, storeFailure)
-			}
+			failures := append(strictFailures(warnings, scans), storeFailures...)
 			if strict && len(failures) > 0 {
 				return fmt.Errorf("strict check failed: %s", strings.Join(failures, "; "))
 			}
@@ -134,12 +141,56 @@ func doctorFreshnessLabel(cmd *cobra.Command, st *store.Store) string {
 	return strings.Join(parts, " · ")
 }
 
-// doctorInventoryLabel renders the doctor summary line for distinct projects, models,
-// and tools seen across all stored records; pricing/store errors degrade to zero
-// counts rather than failing doctor's diagnostic output.
-func doctorInventoryLabel(cmd *cobra.Command, st *store.Store, n int64) string {
-	rows, _ := st.Usage(cmd.Context(), time.Time{})
-	table, _ := pricing.Load()
+// storeContents is what doctor reads out of the usage rows: the inventory line, which
+// describes the whole store, and the price coverage, which describes a window.
+type storeContents struct {
+	Inventory string
+	Unpriced  report.Unpriced
+	Models    []string
+	Window    string
+}
+
+// doctorStoreContents answers both questions doctor asks of the stored rows from one read,
+// since the store can hold hundreds of thousands of them.
+//
+// The two questions have different scopes on purpose. What is in the store is a fact about
+// all of it. What the price table cannot cost is a fact about a *window*: the ceiling
+// --strict gates on was calibrated against how fast a newly adopted model takes over a 7- or
+// 30-day window, and applying it to a store holding years of history buries that same model
+// under a denominator it can never move. A gate that cannot fire in the case it was built for
+// is not a gate.
+//
+// An unreadable store is returned as an error rather than degraded to zero counts: the price
+// line would otherwise report a clean bill of health for rows nobody read.
+func doctorStoreContents(cmd *cobra.Command, st *store.Store, n int64, since time.Time, window string) (storeContents, error) {
+	rows, err := st.Usage(cmd.Context(), time.Time{})
+	if err != nil {
+		return storeContents{}, err
+	}
+	table, err := pricing.Load()
+	if err != nil {
+		return storeContents{}, err
+	}
 	inv := report.BuildInventory(rows, table)
-	return fmt.Sprintf("%d projects · %d models · %d tools across %d record(s)", inv.Projects, inv.Models, inv.Tools, n)
+	windowed := rowsSince(rows, since)
+	return storeContents{
+		Inventory: fmt.Sprintf("%d projects · %d models · %d tools across %d record(s)",
+			inv.Projects, inv.Models, inv.Tools, n),
+		Unpriced: report.BuildInventory(windowed, table).Unpriced,
+		Models:   report.UnpricedModels(windowed, table),
+		Window:   window,
+	}, nil
+}
+
+// rowsSince keeps the rows on or after since. Days are the store's own UTC day strings, so
+// the comparison is the same one every windowed query makes.
+func rowsSince(rows []store.UsageRow, since time.Time) []store.UsageRow {
+	day := since.UTC().Format(time.DateOnly)
+	out := make([]store.UsageRow, 0, len(rows))
+	for i := range rows {
+		if rows[i].Day >= day {
+			out = append(out, rows[i])
+		}
+	}
+	return out
 }

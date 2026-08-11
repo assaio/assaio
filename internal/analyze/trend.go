@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -65,7 +66,7 @@ func trendFigure(recent, prior int64, changePct float64, ok bool) Figure {
 	return Figure{
 		Label: weekOverWeekLabel,
 		Value: trendLabel(changePct, ok),
-		Note:  strconv.FormatInt(recent, 10) + " recent vs " + strconv.FormatInt(prior, 10) + " prior",
+		Note:  humanize.Int(recent) + " recent vs " + humanize.Int(prior) + " prior",
 	}
 }
 

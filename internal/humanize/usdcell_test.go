@@ -47,3 +47,24 @@ func TestThousands(t *testing.T) {
 		}
 	}
 }
+
+func TestInt(t *testing.T) {
+	tests := []struct {
+		in   int64
+		want string
+	}{
+		{0, "0"},
+		{7, "7"},
+		{999, "999"},
+		{1000, "1,000"},
+		{12345, "12,345"},
+		{12345678, "12,345,678"},
+		{-12345, "-12,345"},
+		{9007199254740993, "9,007,199,254,740,993"},
+	}
+	for _, tt := range tests {
+		if got := Int(tt.in); got != tt.want {
+			t.Errorf("Int(%d) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}

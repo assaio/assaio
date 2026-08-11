@@ -111,8 +111,10 @@ func TestFrictionNeverPassesOnUnrecordedFailures(t *testing.T) {
 			t.Fatalf("error rate = %q, want a dash over calls whose failure state was never recorded", f.Value)
 		}
 	}
-	if !strings.Contains(got.Takeaway, "records whether it failed") {
-		t.Fatalf("Takeaway = %q, want the no-failure-capture explanation", got.Takeaway)
+	// The row made 100 calls, so the missing failure state is history this build can restate
+	// -- naming the source as the thing that records none of it would blame it for the wrong fact.
+	if !strings.Contains(got.Takeaway, "backfill") {
+		t.Fatalf("Takeaway = %q, want the stale-capture explanation", got.Takeaway)
 	}
 }
 
@@ -164,5 +166,26 @@ func TestFrictionEmptyInputSafe(t *testing.T) {
 	got := mustGet(t, frictionName).Analyze(Input{})
 	if got.Read != noDataRead || got.Takeaway != "No usage in this window." {
 		t.Fatalf("empty Input = %+v, want the no-data read and takeaway", got)
+	}
+}
+
+// The `backfill` cure is the one insufficient reason that recommends an action, so it must
+// never reach a window a backfill cannot change. Codex records tool calls and deliberately
+// records no failure for them: its calls are not history missing a field, they are work no
+// re-read will ever cover. Asking the depth matrix whether *some* tool in the window records
+// failures answered about the wrong source and sent this window after a pointless re-import.
+func TestFrictionNeverBlamesStaleHistoryForASourceThatRecordsNoFailure(t *testing.T) {
+	rows := []store.UsageRow{
+		{Day: "2026-07-10", Tool: "codex", Model: "claude-sonnet-4-5", In: 1000, ToolCalls: 360, ToolReads: 200, ToolWrites: 160},
+		{Day: "2026-07-10", Tool: "claude-code", Model: "claude-sonnet-4-5", In: 500}, // chat turns, no tool call
+	}
+	in := BuildInput(rows, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
+	got := Evaluate(mustGet(t, frictionName), &in)
+
+	if summary := ConfidenceSummary(&got.Confidence); strings.Contains(summary, "backfill") {
+		t.Fatalf("confidence = %q, want no backfill cure for calls from a source that records no failure", summary)
+	}
+	if strings.Contains(got.Takeaway, "backfill") {
+		t.Fatalf("Takeaway = %q, want no backfill cure a re-read could not act on", got.Takeaway)
 	}
 }

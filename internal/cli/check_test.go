@@ -50,8 +50,8 @@ func TestSumCheckTotals(t *testing.T) {
 	if got.Cost != 1.25 {
 		t.Fatalf("Cost = %v, want 1.25 (only priced rows)", got.Cost)
 	}
-	if !got.HasUnpriced {
-		t.Fatal("HasUnpriced = false, want true")
+	if !got.HasUnpriced() {
+		t.Fatal("HasUnpriced() = false, want true")
 	}
 }
 
@@ -144,7 +144,7 @@ func TestCheckExitsZeroWithinBudget(t *testing.T) {
 // maintainer's own store that is 45% of the tokens, because the newest model in use has no
 // row in the vendored price table -- so the gate would pass a budget exceeded ~2x.
 func TestCheckCostGateFailsOnUnpricedUsage(t *testing.T) {
-	totals := checkTotals{Tokens: 1000, Cost: 10, HasUnpriced: true, UnpricedTokens: 450}
+	totals := checkTotals{Tokens: 1000, Cost: 10, UnpricedRows: 1, UnpricedTokens: 450}
 	breaches := evaluateBudget(totals, budget{MaxCost: 100})
 	if len(breaches) != 1 {
 		t.Fatalf("breaches = %v, want one: a cost budget cannot be evaluated over unpriced usage", breaches)
@@ -165,7 +165,7 @@ func TestCheckCostGateStillPassesWhenEverythingIsPriced(t *testing.T) {
 // TestCheckTokenGateIgnoresPricing: tokens are physical, so an unpriced model says nothing
 // about a token budget.
 func TestCheckTokenGateIgnoresPricing(t *testing.T) {
-	totals := checkTotals{Tokens: 10, HasUnpriced: true, UnpricedTokens: 10}
+	totals := checkTotals{Tokens: 10, UnpricedRows: 1, UnpricedTokens: 10}
 	if b := evaluateBudget(totals, budget{MaxTokens: 100}); len(b) != 0 {
 		t.Fatalf("breaches = %v, want none: a token budget does not depend on a price", b)
 	}
@@ -175,7 +175,7 @@ func TestCheckTokenGateIgnoresPricing(t *testing.T) {
 // locally-generated "<synthetic>" turns are an unpriced row with no tokens, so gating on the
 // HasUnpriced flag failed every run on a window that was in fact fully priced.
 func TestCheckCostGateIgnoresAZeroTokenUnpricedModel(t *testing.T) {
-	totals := checkTotals{Tokens: 1000, Cost: 10, HasUnpriced: true, UnpricedTokens: 0}
+	totals := checkTotals{Tokens: 1000, Cost: 10, UnpricedRows: 1, UnpricedTokens: 0}
 	if b := evaluateBudget(totals, budget{MaxCost: 100}); len(b) != 0 {
 		t.Fatalf("breaches = %v, want none: an unpriced model with no tokens hides no spend", b)
 	}

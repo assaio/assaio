@@ -103,4 +103,5 @@ func accumulate(g, r *Row) {
 	if r.HasUnpriced {
 		g.HasUnpriced = true
 	}
+	g.UnpricedTokens += r.UnpricedTokens
 }

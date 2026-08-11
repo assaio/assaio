@@ -2,15 +2,17 @@ name: site
 
 # The page at https://assaio.dev/ is a single static file, published by Cloudflare Workers
 # Builds straight from this repository (docs/site.md). This workflow does not deploy it; what
-# is left here is the guard, and the guard is the reason the file exists at all -- the site
-# once ended up three releases behind the binary, and nothing noticed.
+# is left here are the guards on the two claims the page makes about itself.
 #
-# Because publishing is no longer downstream of this check, a red guard no longer holds a
-# stale page back: it reports the drift after the fact rather than preventing it. That trade
-# is recorded in docs/site.md; the check still fails the branch, which is what a reviewer and
-# a release see.
+# It used to guard a third: a version stamp in the footer, which had to equal the latest tag.
+# That check existed because the page once ran three releases behind the binary. It is gone
+# because the *stamp* is gone -- the page no longer names a version at all, so there is no
+# longer a number on it that can silently fall behind. A fact worth stating once is worth
+# stating in the one place it cannot rot, and for "which version is current" that place is the
+# releases page, which the site now links instead of copying. What is left for a release to
+# check by hand is in RELEASING.md, and none of it was ever mechanical.
 #
-# Deliberately not path-filtered. The guard has to run on every push and every tag, including
+# Deliberately not path-filtered. The guards have to run on every push and every tag, including
 # the ones that do not touch site/ -- a release cut without updating the page is precisely the
 # drift this exists to catch, and a path filter would skip it silently.
 on:
@@ -28,42 +30,104 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Guards the one claim the page makes about itself that can silently rot: which version it
-  # describes. The site documents what a user can install, so it must name the latest *tag* --
-  # or the release currently being prepared, because RELEASING.md requires the page and the
-  # changelog section to be updated before the tag exists, and a check that forbade that would
-  # make the release-prep commit unmergeable on a protected branch.
-  version:
+  # The page deliberately names no version, so it cannot advertise a stale one. This check is
+  # what keeps that true: a number reintroduced here is a number somebody has to remember at
+  # every tag, and the release that forgets it is the one nobody notices. Link the releases
+  # page instead. (Version-shaped strings inside prose -- "v1.0 has to mean" -- are not stamps;
+  # this looks for a bare vX.Y.Z, which is what a stamp is.)
+  noversion:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Site must name the latest released version
+      - name: The site names no version
         run: |
           set -euo pipefail
-          claimed=$(grep -oE 'Assay report · v[0-9]+\.[0-9]+\.[0-9]+' site/index.html \
-                    | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-          latest=$(git tag --list 'v*' --sort=-v:refname | head -1)
-          # The release being prepared, if any: the newest changelog section with no tag yet.
-          # consistency.yml is what keeps this to at most one.
-          pending=""
-          for v in $(grep -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | tr -d '#[] '); do
-            if ! git rev-parse "v$v" >/dev/null 2>&1; then
-              pending="v$v"
-              break
+          # grep exits 2 on a missing file and `if` reads that as "no match", so the guard would
+          # pass on a page it never opened. Every check below assumes the file was read.
+          test -f site/index.html || { echo "::error::site/index.html is missing"; exit 1; }
+          # Geometry attributes are stripped first: optimized path data writes implicit separators
+          # (`d="M12.5.5…"`, which SVGO emits by default), and a dotted triple there is coordinates,
+          # not a version. sed keeps line count, so grep -n still reports the real line.
+          # Every text file under site/ is served, so every one of them can carry a stamp that
+          # rots. The rule was written for the page and inherited by llms.txt the day it landed;
+          # naming only index.html here would move the chore rather than remove it.
+          fail=0
+          while IFS= read -r page; do
+            if sed -E 's/ (d|points|viewBox|transform)="[^"]*"//g' "$page" \
+               | grep -nE '\bv?[0-9]+\.[0-9]+\.[0-9]+\b'; then
+              echo "::error file=$page::This served file names a version. They deliberately do not:"
+              echo "::error file=$page::a stamp here has to be updated at every tag, and the release that forgets is the one nobody catches."
+              echo "::error file=$page::Link https://github.com/assaio/assaio/releases instead of copying the number."
+              fail=1
+            fi
+          done < <(find site -type f \( -name '*.html' -o -name '*.txt' -o -name '*.md' \) | sort)
+          exit $fail
+
+  # The page's closing line promises it loads nothing -- no fonts, no analytics, no third-party
+  # requests -- and that is a claim about the artifact, not a preference. It takes one pasted
+  # embed to make it false, and a marketing badge is exactly the shape that arrives as one, so
+  # the promise gets a check rather than a reviewer's memory. Inline the asset, or change the
+  # sentence: both are fine, silently breaking it is not.
+  selfcontained:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The site fetches nothing at render time
+        run: |
+          set -euo pipefail
+          test -f site/index.html || { echo "::error::site/index.html is missing"; exit 1; }
+          fail=0
+          # Every attribute a browser fetches without being asked, in each quoting form it can
+          # take. Checking only src="..." would miss srcset=, a single-quoted src, and an
+          # unquoted one -- three ways a pasted embed arrives.
+          if grep -nEo '(src|srcset|poster|data)=("[^"]*"|'"'"'[^'"'"']*'"'"'|[^ >]+)' site/index.html \
+             | grep -vE '=["'"'"']?data:'; then
+            echo "::error file=site/index.html::A fetched attribute points somewhere other than a data: URI."
+            fail=1
+          fi
+          # A <link> fetches on nearly every rel -- icon, manifest, preload, stylesheet. Listing
+          # the ones that fetch means forgetting one, so this allows only the two that do not.
+          if grep -nE '<link[^>]*>' site/index.html \
+             | grep -vE 'rel="(canonical|alternate)"' | grep -v 'href="data:'; then
+            echo "::error file=site/index.html::A <link> fetches a subresource."
+            fail=1
+          fi
+          if grep -nE '@import|url\(["'"'"']?(https?:)?//' site/index.html; then
+            echo "::error file=site/index.html::A stylesheet rule pulls a remote resource."
+            fail=1
+          fi
+          if [ "$fail" -ne 0 ]; then
+            echo "::error file=site/index.html::The colophon promises this page loads nothing. Inline the asset, or change the promise."
+          fi
+          exit $fail
+
+  # A link to assaio.dev rendered as a bare grey line on LinkedIn and every other reader for as
+  # long as the page shipped without an og:image -- the tags were all there except the one that
+  # makes a card exist. It is not covered by `selfcontained`: a crawler fetches og:image out of
+  # band, the page itself never does, so the "loads nothing" promise is untouched. What it needs
+  # instead is proof the referenced file is actually served, because a card pointing at a 404 is
+  # the same grey line with more markup.
+  sharecard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The page carries a share card, and the card exists
+        run: |
+          set -euo pipefail
+          fail=0
+          for tag in 'og:image' 'og:image:width' 'og:image:height' 'og:image:alt' 'twitter:image'; do
+            if ! grep -q "\"$tag\"" site/index.html; then
+              echo "::error file=site/index.html::$tag is missing -- a shared link renders without a card."
+              fail=1
             fi
           done
-          echo "site claims:  ${claimed:-<none>}"
-          echo "latest tag:   ${latest:-<none>}"
-          echo "being cut:    ${pending:-<none>}"
-          if [ -z "$claimed" ]; then
-            echo "::error::site/index.html carries no 'Assay report · vX.Y.Z' version stamp"
-            exit 1
-          fi
-          if [ -n "$latest" ] && [ "$claimed" != "$latest" ] && [ "$claimed" != "$pending" ]; then
-            echo "::error::site/index.html describes $claimed but the latest release is $latest."
-            echo "::error::The site documents what a user can install. Update it, or cut the release first."
-            echo "::error::(A version being prepared is allowed once CHANGELOG.md carries its section.)"
-            exit 1
-          fi
+          # Every image the tags name has to be a file this repository actually serves.
+          while read -r url; do
+            path="site/${url#https://assaio.dev/}"
+            if [ ! -f "$path" ]; then
+              echo "::error file=site/index.html::$url is referenced but $path is not in the repository."
+              fail=1
+            fi
+          done < <(grep -oE 'content="https://assaio\.dev/[^"]+\.(png|jpg|jpeg|webp)"' site/index.html \
+                   | sed -E 's/content="([^"]*)"/\1/' | sort -u)
+          exit $fail

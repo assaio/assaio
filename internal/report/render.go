@@ -31,22 +31,19 @@ func RenderTable(w io.Writer, rows []Row, by string) error {
 	tw.SetColumnConfigs(rightAlignFrom(len(dimCols), 6))
 
 	var total float64
-	var anyUnpriced bool
 	for i := range rows {
 		r := &rows[i]
 		cost, priced := formatCost(r)
 		total += priced
-		if r.HasUnpriced {
-			anyUnpriced = true
-		}
 		tw.AppendRow(tableRow(r, grouped, by, cost))
 	}
 
 	tw.AppendFooter(append(append(prettytable.Row{}, dimFooter...),
 		"", "", "", "", "TOTAL", humanize.USDCell(total)))
 	tw.Render()
-	if anyUnpriced {
-		if _, err := fmt.Fprintln(w, unpricedFootnote); err != nil {
+	unpriced := BuildUnpriced(rows)
+	if note := UnpricedDisclosure(&unpriced, "the tokens in this table"); note != "" {
+		if _, err := fmt.Fprintln(w, note); err != nil {
 			return err
 		}
 	}
@@ -133,13 +130,13 @@ func tableRow(r *Row, grouped bool, by, cost string) prettytable.Row {
 		}
 		return prettytable.Row{
 			label + granularityMark(r.Granularity),
-			formatCommas(r.In), formatCommas(r.Out), formatCommas(r.CacheRead), formatCommas(r.CacheWrite),
+			humanize.Int(r.In), humanize.Int(r.Out), humanize.Int(r.CacheRead), humanize.Int(r.CacheWrite),
 			cacheEffStr, cost,
 		}
 	}
 	return prettytable.Row{
 		r.Day, r.Tool + granularityMark(r.Granularity), r.Model,
-		formatCommas(r.In), formatCommas(r.Out), formatCommas(r.CacheRead), formatCommas(r.CacheWrite),
+		humanize.Int(r.In), humanize.Int(r.Out), humanize.Int(r.CacheRead), humanize.Int(r.CacheWrite),
 		cacheEffStr, cost,
 	}
 }

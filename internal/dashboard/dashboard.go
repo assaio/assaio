@@ -27,10 +27,14 @@ type Data struct {
 	// Team is the per-member adoption breakdown, present only when the queried usage
 	// carries a non-empty Member (a central team-server store); nil for a purely local
 	// store, so the report never renders an empty "Team" section.
-	Team      *Team
-	Inventory Inventory
-	CostBasis string
-	Caveats   []string
+	Team *Team
+	// WorthAttention is the few findings that lead the page, each carrying the reasons that
+	// ordered it. Empty is a real answer, not a missing one: a window whose reads are all
+	// fine, withheld or thin promotes nothing.
+	WorthAttention []analyze.Ranked
+	Inventory      Inventory
+	CostBasis      string
+	Caveats        []string
 }
 
 // Inventory is the masthead/panel-label header counts for the queried window.
@@ -66,9 +70,12 @@ func Build(in analyze.Input, window string, anonymize bool, subpaths []store.Sub
 		Verdicts:   verdicts,
 		Drill:      drill,
 		Team:       team,
-		Inventory:  Inventory{Projects: inv.Projects, Sessions: len(in.Sessions), ActiveDays: inv.Days},
-		CostBasis:  costBasis(inv, window),
-		Caveats:    caveats(anonymize, inv.HasUnpriced),
+		// Ranked after anonymization, so a promoted finding's reasons quote the same
+		// pseudonymized verdict the ledger below shows.
+		WorthAttention: analyze.Rank(verdicts),
+		Inventory:      Inventory{Projects: inv.Projects, Sessions: len(in.Sessions), ActiveDays: inv.Days},
+		CostBasis:      costBasis(&inv, window),
+		Caveats:        caveats(anonymize, &inv.Unpriced),
 	}
 }
 
@@ -118,13 +125,13 @@ func anonymizeVerdicts(verdicts []analyze.Result) {
 // caveats returns the colophon's honesty notes: the locale's directional/coverage/quality
 // lines plus the shared cost-estimate disclosure, adding the pseudonymization note only
 // when anonymize is true.
-func caveats(anonymize, hasUnpriced bool) []string {
-	// report.CostEstimateDisclosure is sourced from internal/report so the cost-basis
-	// wording is identical here and on the CLI cost tables -- one canonical string.
+func caveats(anonymize bool, unpriced *report.Unpriced) []string {
+	// report.CostEstimateDisclosure and UnpricedDisclosure are sourced from internal/report
+	// so the cost-basis wording is identical here and on the CLI cost tables.
 	l := i18n.For("").Dashboard
 	out := []string{l.DirectionalCaveat, l.LineCoverageCaveat, l.QualityCaveat, report.CostEstimateDisclosure}
-	if hasUnpriced {
-		out = append(out, l.UnpricedCaveat)
+	if note := report.UnpricedDisclosure(unpriced, "this window's tokens"); note != "" {
+		out = append(out, note)
 	}
 	if anonymize {
 		out = append(out, l.AnonymizedCaveat)

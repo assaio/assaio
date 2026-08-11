@@ -1,8 +1,6 @@
 package analyze
 
 import (
-	"strconv"
-
 	"github.com/assaio/assaio/internal/humanize"
 
 	"github.com/assaio/assaio/internal/parser"
@@ -42,6 +40,7 @@ func (frictionValidator) Analyze(in Input) Result {
 	f := buildFriction(in.Usage)
 	r.restsOn(int(f.Observed), "tool calls")
 	r.covering(f.Coverage())
+	r.missingCaptureWhen(f.FailureCapable > 0)
 	sufficient := f.Observed >= frictionMinCalls && f.Coherent()
 	lowErrors := f.ErrorRate() <= frictionWatchCeiling
 	smooth := sufficient && lowErrors
@@ -49,12 +48,12 @@ func (frictionValidator) Analyze(in Input) Result {
 	r.Read = frictionRead(sufficient, smooth)
 	r.Purity = frictionPurity(f, sufficient)
 	r.Figures = []Figure{
-		{Label: "calls with failure capture", Value: strconv.FormatInt(f.Observed, 10), Note: "of " + strconv.FormatInt(f.Calls, 10) + " tool calls"},
+		{Label: "calls with failure capture", Value: humanize.Int(f.Observed), Note: "of " + humanize.Int(f.Calls) + " tool calls"},
 		frictionRateFigure("error rate", f.Errors, f),
 		// Rejections have their own denominator: a source that never records a refusal is
 		// excluded rather than counted as a call nobody stopped, and history ingested before
 		// failure capture existed still contributes here, since the two are captured apart.
-		{Label: "rejection rate", Value: humanize.PercentOrDash(f.Rejected, f.Refusable, 1), Note: strconv.FormatInt(f.Rejected, 10) + " declined by a human, of calls that record one"},
+		{Label: "rejection rate", Value: humanize.PercentOrDash(f.Rejected, f.Refusable, 1), Note: humanize.Int(f.Rejected) + " declined by a human, of calls that record one"},
 	}
 	r.Takeaway = frictionTakeaway(sufficient, smooth, f)
 	r.Caveats = append(r.Caveats, frictionCoverageCaveat(f))
@@ -67,6 +66,11 @@ func (frictionValidator) Analyze(in Input) Result {
 // construction and report the resulting zero as a finding.
 type friction struct {
 	Calls, Observed, Errors, Refusable, Rejected int64
+	// FailureCapable is the calls made by a source that records whether a call failed. It is
+	// the only denominator a missing failure state can be missing *from*: Codex records tool
+	// calls and deliberately records no failure for them, so its calls sitting in Calls say
+	// nothing about whether anything was left uncaptured.
+	FailureCapable int64
 }
 
 // buildFriction sums the window's tool-call outcomes across the sources that count a tool
@@ -87,7 +91,11 @@ func buildFriction(rows []store.UsageRow) friction {
 			f.Refusable += rows[i].ToolCalls
 			f.Rejected += rows[i].Rejected
 		}
-		if !failureCapableTool(rows[i].Tool) || classifiedCalls(&rows[i]) == 0 {
+		if !failureCapableTool(rows[i].Tool) {
+			continue
+		}
+		f.FailureCapable += rows[i].ToolCalls
+		if classifiedCalls(&rows[i]) == 0 {
 			continue
 		}
 		f.Observed += rows[i].ToolCalls
@@ -145,7 +153,7 @@ func frictionRateFigure(label string, n int64, f friction) Figure {
 	if f.Coherent() {
 		value = humanize.PercentOrDash(n, f.Observed, 1)
 	}
-	return Figure{Label: label, Value: value, Note: strconv.FormatInt(n, 10) + " failed"}
+	return Figure{Label: label, Value: value, Note: humanize.Int(n) + " failed"}
 }
 
 // frictionCoverageCaveat states how much of the window could report a failure at all, so a
@@ -156,6 +164,8 @@ func frictionCoverageCaveat(f friction) string {
 
 func frictionTakeaway(sufficient, smooth bool, f friction) string {
 	switch {
+	case f.Observed == 0 && f.FailureCapable > 0:
+		return "Tool calls ran here from a source that records failures, but none carry a failure state: they were read by a build that did not capture it -- `backfill` re-reads them."
 	case f.Observed == 0:
 		return "No tool call in this window records whether it failed, so no failure rate can be read from it."
 	case !f.Coherent():

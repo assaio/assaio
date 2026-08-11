@@ -11,16 +11,19 @@ import (
 // would take for the whole cost.
 func TestRenderMoversMarksUnpricedGroups(t *testing.T) {
 	c := func(f float64) *float64 { return &f }
-	recent := []EffRow{{Group: "web", Cost: c(10), LinesAdded: 100, HasUnpriced: true}}
-	prior := []EffRow{{Group: "web", Cost: c(3), LinesAdded: 40}}
+	recent := []EffRow{{Group: "web", Cost: c(10), LinesAdded: 100, HasUnpriced: true, TokensTotal: 400, UnpricedTokens: 100}}
+	prior := []EffRow{{Group: "web", Cost: c(3), LinesAdded: 40, TokensTotal: 100}}
 
 	var buf bytes.Buffer
 	if err := RenderMovers(&buf, Movers(recent, prior), "project"); err != nil {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "*") || !strings.Contains(out, "unpriced usage excluded") {
-		t.Fatalf("unpriced mover must be marked with * and a footnote, got:\n%s", out)
+	// The share is the recent window's, named, because that is the window the marked columns
+	// are drawn from: 100 of its 400 tokens carry no price. Pooling in the prior window's 100
+	// priced tokens would report 20% and understate the blindness of the figures it legends.
+	if !strings.Contains(out, "*") || !strings.Contains(out, "cost excludes 25.0% of the recent window's tokens") {
+		t.Fatalf("unpriced mover must be marked with * and a quantified footnote, got:\n%s", out)
 	}
 }
 

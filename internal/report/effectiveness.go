@@ -32,6 +32,9 @@ type EffRow struct {
 	// HasUnpriced reports whether this group excludes some usage's cost because its
 	// model has no known price.
 	HasUnpriced bool `json:"has_unpriced"`
+	// UnpricedTokens is how much of TokensTotal carried no known price -- by how much the
+	// cost above is short, which HasUnpriced alone never said.
+	UnpricedTokens int64 `json:"unpriced_tokens"`
 	// CostPer100Lines is Cost per 100 AI lines; nil when LinesAdded is zero or Cost is
 	// unknown -- never a divide-by-zero substitute for a legitimate zero-line group.
 	CostPer100Lines *float64 `json:"cost_per_100_lines"`
@@ -95,6 +98,7 @@ func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table) {
 	cost, ok := t.CostTokens(u.Model, pricing.Tokens{In: u.In, Out: u.Out, CacheWrite: u.CacheWrite, CacheRead: u.CacheRead, CacheWrite1h: u.CacheWrite1h})
 	if !ok {
 		g.HasUnpriced = true
+		g.UnpricedTokens += RowTokens(u)
 		return
 	}
 	if g.Cost == nil {

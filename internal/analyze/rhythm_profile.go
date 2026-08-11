@@ -2,8 +2,8 @@ package analyze
 
 import (
 	"sort"
-	"strconv"
 
+	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -107,7 +107,7 @@ func rhythmBands(bands map[string]int) []Bar {
 		n := bands[name]
 		out = append(out, Bar{
 			Label: name,
-			Value: strconv.Itoa(n) + " sessions",
+			Value: humanize.Int(int64(n)) + " sessions",
 			Frac:  fracOf(int64(n), int64(maxCount)),
 		})
 	}

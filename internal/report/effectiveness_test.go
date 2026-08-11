@@ -212,8 +212,10 @@ func TestRenderEffectivenessTableUnpricedFootnote(t *testing.T) {
 	if err := RenderEffectivenessTable(&buf, eff, "project"); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(buf.String(), "unpriced usage excluded from cost") {
-		t.Fatalf("table missing unpriced footnote: %s", buf.String())
+	// The share is the point: the whole of this window is on a model with no price, and the
+	// footnote has to say so rather than repeat a marker that reads the same at 0.1%.
+	if !strings.Contains(buf.String(), "cost excludes 100.0% of the tokens in this table") {
+		t.Fatalf("table missing the quantified unpriced footnote: %s", buf.String())
 	}
 }
 

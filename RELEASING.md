@@ -68,12 +68,13 @@ each of these describes the version being cut — a page or a table that lags th
 how an honesty-first product starts making false claims about itself:
 
 - `site/index.html` — the page served at <https://assaio.dev/>. The supported-tool list, the
-  command list, validator counts, and any "on the roadmap" wording about something that has
-  since shipped. **Update it before tagging**, not after: the site describes what a user can
-  install, and CI fails once the tag exists while the page still names the previous version.
-  The version guard accepts a page naming the release being prepared as long as `CHANGELOG.md`
-  already carries that section — so the page bump and the prepared section must reach `main` in
-  the same push, though not necessarily in the same commit.
+  command list, validator counts, the **roadmap section** (an item that shipped leaves the "next
+  release" panel), and any "on the roadmap" wording about something that has since shipped.
+  **Update it before tagging**, not after. The page deliberately names no version — that stamp
+  was removed precisely because it was a chore attached to every tag, and CI now fails if a
+  version reappears on it (see [docs/site.md](docs/site.md)) — so nothing here is enforced
+  mechanically any more. It is a read-through, and it is on this list because it was once
+  skipped.
   It deploys itself from `main` (see [docs/site.md](docs/site.md)), so a merge publishes it
   immediately — there is no separate step that would prompt a review.
 - `FEATURES.md` — a row per user-facing capability, with the release it arrived in.
@@ -81,6 +82,16 @@ how an honesty-first product starts making false claims about itself:
   from the backlog, and any scope deliberately moved recorded on the item that inherited it.
 - `docs/` — including an ADR whenever the release makes a commitment a future contributor
   could unknowingly undo.
+- `internal/pricing/litellm.json` — re-download LiteLLM's
+  `model_prices_and_context_window.json` and bump `SnapshotDate` in
+  `internal/pricing/snapshot.go`. **This is the release's job, not a background chore**: every
+  `$` assaio prints is a token count times this table, and a table that has fallen behind is
+  indistinguishable from a complete one from the inside — five weeks of drift once left 45.5%
+  of the maintainer's tokens unpriced and a window's estimate $15,452.42 short. Two guards
+  catch the cases they can — `TestEveryCalibratedModelHasAPrice` fails when a trace in this
+  repo names a model the table cannot cost, and `doctor --strict` fails on a reader's own
+  store above `pricing.max_unpriced_share` — but neither sees a model the vendor shipped that
+  nobody here has run yet. That gap is why this line is on the list.
 
 This list exists because it was skipped: `site/index.html` still advertised v0.2 while
 v0.5.0 was being tagged, listing an already-shipped connector as a roadmap item.
@@ -117,11 +128,17 @@ build-provenance attestations.
    user-facing highlights; put any breaking change under a **Breaking** heading first.
 3. Verify provenance of one artifact:
    `gh attestation verify <artifact> -o assaio`.
-4. Load <https://assaio.dev/> and confirm it names the version just published. The site
-   redeploys on every push to `main`, so this checks the deploy went through, not the copy —
-   the copy was checked before tagging. Do not skip it: publishing is not gated on the
-   version guard (see [docs/site.md](docs/site.md#what-that-costs-stated-plainly)), so this
-   load is what actually catches a page that went live naming the wrong release.
+4. Confirm the deploy actually ran. The page names no version, so there is no stamp to eyeball —
+   and a release that changed nothing on the page would leave nothing to eyeball anyway. Compare
+   the bytes instead, which works either way:
+
+   ```sh
+   diff <(curl -fsSL https://assaio.dev/) site/index.html && echo "live page matches this commit"
+   ```
+
+   The site redeploys on every push to `main`, and publishing is not gated on any check (see
+   [docs/site.md](docs/site.md#what-that-costs-stated-plainly)), so this is the only thing
+   standing between a failed upload and a page nobody looks at again for weeks.
 
 ## Rules
 
