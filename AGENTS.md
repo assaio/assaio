@@ -124,6 +124,8 @@ internal/attribution/    the conformance corpus defining an honest session→com
 internal/cli/            command wiring and flag handling; one file per command
 internal/config/         defaults + YAML file + ASSAIO_-prefixed env vars
 internal/dashboard/      builds + renders the offline Assay HTML dashboard
+internal/docs/           the projection of every live register into one reference, and the
+                         check that fails the build when a published surface disagrees with it
 internal/drift/          format-drift canaries judging each source against its own history
 internal/event/          the canonical observation contract of the evidence graph (ADR 0007)
 internal/humanize/       shared count/money formatters every surface renders through

@@ -8,10 +8,19 @@ Where everything lives, in one place.
   tools and accuracy caveats.
 - [`FEATURES.md`](../FEATURES.md) — the maintained inventory of what exists today,
   with the release each capability arrived in.
-- [`extending.md`](extending.md) — the contract for every extension surface: in-tree
-  parsers and validators, exec parser plugins (any language), exec metric plugins and
-  exec rule plugins (any language), custom log paths, the team server, and direct SQL on
-  the store.
+- [`extending.md`](extending.md) — the map of every extension surface and the honesty rules
+  that bind all of them, with one page per surface under [`extending/`](extending): the
+  [in-tree metric validator](extending/metric-validator.md) and its
+  [worked example](extending/metric-validator-example.md),
+  [exec parser plugins and custom log paths](extending/parser-plugin.md),
+  [exec metric plugins](extending/metric-plugin.md), [exec rule plugins](extending/rule-plugin.md),
+  [the team server](extending/team-server.md), [direct SQL on the store](extending/query-your-data.md),
+  [adding an in-tree parser](extending/data-source.md), and
+  [what each source's log carries](extending/source-fields.md).
+- [`reference.json`](reference.json) — generated: every signal, source, validator, command,
+  flag, config key and protocol field this build has, from its own registries. `make docs`
+  rewrites it and `make test` fails when it and the binary disagree, which is also what keeps
+  [assaio.dev/reference.html](https://assaio.dev/reference.html) from falling behind.
 - [`reconcile.md`](reconcile.md) — checking the `$` estimate against a vendor's own
   billing or usage export, offline: how columns bind, how to read the unexplained delta,
   and what no export can answer.

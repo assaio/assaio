@@ -65,7 +65,7 @@ exactly what an honesty-first tool must not do silently.
    drift signature. Such issues get the **`format-drift`** label. Ask for: the tool's
    version, `assaio-agent doctor` output, and a few **redacted** sample lines — the
    same rules as the [connector intake
-   flow](extending.md#the-intake-path-open-a-connector-issue-first): never a real
+   flow](extending/data-source.md#the-intake-path-open-a-connector-issue-first): never a real
    transcript, prompts, or code.
 3. **Maintainer canary (manual).** When a covered tool ships a major release,
    generate one fresh throwaway session with it and run `backfill` + `doctor` against

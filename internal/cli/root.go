@@ -37,7 +37,7 @@ are never read. The optional team server (serve/sync) is self-hosted and opt-in.
 		newInitCmd(), newDashboardCmd(), newBackfillCmd(), newDoctorCmd(), newStatusCmd(), newClearCmd(), newCompactCmd(),
 		newConfigCmd(), newPluginsCmd(), newMetricsCmd(), newServeCmd(), newSyncCmd(), newSurvivalCmd(),
 		newStatuslineCmd(), newExplainCmd(), newMarkCmd(), newSignalsCmd(), newReconcileCmd(),
-		newDigestCmd())
+		newDigestCmd(), newDocsCmd())
 	return root
 }
 

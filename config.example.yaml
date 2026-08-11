@@ -39,14 +39,14 @@ format: table
 
 # Out-of-tree exec parser plugins (opt-in only; never discovered from PATH).
 # Each plugin is an executable speaking the assaio plugin protocol —
-# see docs/extending.md#write-a-plugin-any-language.
+# see docs/extending/parser-plugin.md#write-a-plugin-any-language.
 # plugins:
 #   - name: mytool            # [a-z0-9-]+; records are stored as tool "plugin:mytool"
 #     command: /path/to/assaio-parser-mytool
 #     timeout: 60s            # optional, default 60s
 
 # Out-of-tree exec metric plugins: your own analyzers, in any language, without forking
-# assaio — see docs/extending.md#write-a-metric-plugin-any-language. Same entry shape as
+# assaio — see docs/extending/metric-plugin.md. Same entry shape as
 # plugins:. Run by `analyze` and `dashboard`; the team server never executes them. The
 # plugin receives usage METADATA (project names, models, member pseudonyms, token/line
 # counts — never prompts or code) as JSON on stdin, and its result appears as
@@ -57,7 +57,7 @@ format: table
 #     timeout: 30s            # optional, default 60s
 
 # Out-of-tree exec rule plugins: your own CI gate, in any language — see
-# docs/extending.md#write-a-rule-plugin-any-language. Same entry shape as plugins:. Only
+# docs/extending/rule-plugin.md. Same entry shape as plugins:. Only
 # `check` runs them: each reads this window's validator verdicts (exactly what
 # `analyze --format json` prints — no usage rows) and emits alerts with a severity of
 # info, warn, or error. An error alert makes `check` exit non-zero, and so does a rule
