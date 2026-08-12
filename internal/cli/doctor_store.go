@@ -33,6 +33,9 @@ func doctorStore(cmd *cobra.Command, dbPath string, since time.Time, window stri
 	if size, sizeErr := st.Size(cmd.Context()); sizeErr == nil {
 		cmd.Printf("size:         %s\n", storeSizeLine(size))
 	}
+	if h, stepErr := st.Steps(cmd.Context()); stepErr == nil && h.Steps > 0 {
+		cmd.Printf("timeline:     %s\n", stepHorizonLine(h))
+	}
 	// The 0.12 upgrade moves the pre-response-grain Claude rows aside rather than deleting
 	// them, so the space they hold has to be visible and droppable.
 	if rows, archErr := st.LegacyArchiveRows(cmd.Context()); archErr == nil && rows > 0 {

@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"time"
+
 	"github.com/spf13/cobra"
 
 	"github.com/assaio/assaio/internal/humanize"
@@ -63,4 +65,16 @@ func storeSizeLine(size store.Size) string {
 	}
 	return humanize.Bytes(size.Bytes) + " · " + humanize.Bytes(size.Reclaimable) +
 		" reclaimable — run 'assaio-agent compact'"
+}
+
+// stepHorizonLine states how much of the session-step timeline the store holds and how far
+// back it reaches. The timeline is the largest thing assaio writes per unit of usage -- on the
+// maintainer's store it and its indexes are roughly twice the usage table -- so its size and
+// its horizon are reported rather than left for a reader to discover from a growing file.
+func stepHorizonLine(h store.StepHorizon) string {
+	line := humanize.Count(h.Steps) + " step(s)"
+	if h.Oldest.IsZero() || h.Newest.IsZero() {
+		return line
+	}
+	return line + " · " + h.Oldest.Format(time.DateOnly) + " → " + h.Newest.Format(time.DateOnly)
 }

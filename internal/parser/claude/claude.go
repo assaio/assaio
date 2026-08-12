@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"path/filepath"
-	"time"
 
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/usage"
@@ -38,71 +36,6 @@ func (u *tokenUsage) cacheWrite1h() int64 {
 	return parser.Subset(u.Creation.Ephemeral1h, parser.NonNeg(u.CacheWrite))
 }
 
-type line struct {
-	Type           string          `json:"type"`
-	UUID           string          `json:"uuid"`
-	Timestamp      time.Time       `json:"timestamp"`
-	SessionID      string          `json:"sessionId"`
-	Cwd            string          `json:"cwd"`
-	GitBranch      string          `json:"gitBranch"`
-	Entrypoint     string          `json:"entrypoint"`
-	ToolUseResult  json.RawMessage `json:"toolUseResult"`
-	ToolDenialKind string          `json:"toolDenialKind"`
-	// IsSidechain marks a line written inside a sub-agent's own transcript.
-	IsSidechain bool `json:"isSidechain"`
-	// AttributionSkill and AttributionAgent are the skill and sub-agent-type labels Claude
-	// Code stamps on a turn; category labels only, never prompt or file content.
-	AttributionSkill string `json:"attributionSkill"`
-	AttributionAgent string `json:"attributionAgent"`
-	// IsCompactSummary and Subtype mark a context-compaction event: the transcript's
-	// context overflowed and was auto-summarized. Either discriminates it.
-	IsCompactSummary bool   `json:"isCompactSummary"`
-	Subtype          string `json:"subtype"`
-	Message          struct {
-		Model string `json:"model"`
-		// Content is a plain string on ordinary user messages and an array of blocks
-		// on assistant turns; kept raw so a user line's string form never fails the
-		// line's outer unmarshal.
-		// ID is the API response's own id. Several JSONL lines carry the same one when a
-		// response has several content blocks, and each repeats that response's usage.
-		ID      string          `json:"id"`
-		Content json.RawMessage `json:"content"`
-		Usage   tokenUsage      `json:"usage"`
-		// Diagnostics carries the vendor's own reason a prompt could not be served from
-		// cache -- a closed vocabulary, never prompt or file content.
-		Diagnostics struct {
-			CacheMissReason struct {
-				Type string `json:"type"`
-			} `json:"cache_miss_reason"`
-		} `json:"diagnostics"`
-	} `json:"message"`
-}
-
-// carryForward tracks cwd, gitBranch, and entrypoint across all line types in a
-// transcript, so each emitted record can be stamped with their latest seen value.
-type carryForward struct {
-	cwd, gitBranch, entrypoint string
-}
-
-func (c *carryForward) observe(l *line) {
-	if l.Cwd != "" {
-		c.cwd = l.Cwd
-	}
-	if l.GitBranch != "" {
-		c.gitBranch = l.GitBranch
-	}
-	if l.Entrypoint != "" {
-		c.entrypoint = l.Entrypoint
-	}
-}
-
-func (c *carryForward) project() string {
-	if c.cwd == "" {
-		return ""
-	}
-	return filepath.Base(c.cwd)
-}
-
 // parseState is one Parse call's accumulator. It is scoped to a single Parse, per
 // AGENTS.md's "parsers stay hermetic": nothing in it outlives the call, and the file paths
 // rework keys on live only for its duration.
@@ -122,6 +55,11 @@ type parseState struct {
 	last    int
 	rework  reworkTracker
 	skipped int
+	steps   *stepRecorder
+	// sessionID and timeline are taken from whichever line first names them, and stamped onto
+	// every step at the end; a transcript's opening lines can precede both.
+	sessionID string
+	timeline  string
 }
 
 func newParseState() *parseState {
@@ -130,6 +68,7 @@ func newParseState() *parseState {
 		byMessage: make(map[string]int),
 		last:      -1,
 		rework:    make(reworkTracker),
+		steps:     newStepRecorder(),
 	}
 }
 
@@ -148,6 +87,22 @@ func newParseState() *parseState {
 // neither a message.id nor a uuid (DedupeKey must never be empty); a scanner-level error
 // still aborts the parse.
 func Parse(r io.Reader) ([]usage.Record, int, error) {
+	recs, _, skipped, err := ParseAll(r)
+	return recs, skipped, err
+}
+
+// ParseSteps reads the same transcript for its step sequence alone.
+func ParseSteps(r io.Reader) ([]usage.Step, int, error) {
+	_, steps, skipped, err := ParseAll(r)
+	return steps, skipped, err
+}
+
+// ParseAll reads a transcript once and returns both readings of it: the usage records and the
+// step sequence behind them. One pass rather than two, because two passes meant two orders of
+// checks over the same line and the readings drifted apart in exactly the ways a shared line
+// struct could not prevent -- a denial attributed differently, a token total folded by
+// different arithmetic. Parse and ParseSteps are wrappers so no caller had to change.
+func ParseAll(r io.Reader) ([]usage.Record, []usage.Step, int, error) {
 	sc := parser.NewScanner(r)
 	var cf carryForward
 	st := newParseState()
@@ -163,12 +118,24 @@ func Parse(r io.Reader) ([]usage.Record, int, error) {
 			continue
 		}
 		cf.observe(&l)
+		st.observeIdentity(&l)
 		st.applyLine(&l, &cf)
 	}
 	if err := sc.Err(); err != nil {
-		return st.out, st.skipped, fmt.Errorf("scan claude transcript: %w", err)
+		return st.out, st.steps.stamp(st.sessionID, st.timeline), st.skipped,
+			fmt.Errorf("scan claude transcript: %w", err)
 	}
-	return st.out, st.skipped, nil
+	return st.out, st.steps.stamp(st.sessionID, st.timeline), st.skipped, nil
+}
+
+// observeIdentity records which session, and which sequence within it, this file belongs to.
+func (st *parseState) observeIdentity(l *line) {
+	if l.SessionID != "" {
+		st.sessionID = l.SessionID
+	}
+	if l.AgentID != "" {
+		st.timeline = l.AgentID
+	}
 }
 
 // applyLine folds one already-unmarshaled line into the state, unless the transcript has
@@ -177,18 +144,28 @@ func (st *parseState) applyLine(l *line, cf *carryForward) {
 	if st.seen(l.UUID) {
 		return
 	}
+	blocks := decodeBlocks(l.Message.Content)
 	if st.markDenial(l.ToolDenialKind) {
+		st.steps.denial(blocks)
 		return
 	}
-	act := countBlocks(l.Message.Content)
+	act := countBlocks(blocks)
 	st.markToolErrors(act.errors)
+	wasCompacting := st.inCompaction
 	if st.markCompaction(l.IsCompactSummary, l.Subtype) {
+		// st.last < 0 is the case the record path drops: a compaction before any assistant turn
+		// has nothing to attribute to. The step has to drop it too, or the two readings count
+		// different numbers of the same event.
+		if !wasCompacting && st.last >= 0 {
+			st.steps.compaction(l)
+		}
 		return
 	}
-	if st.applyToolResult(l, cf) {
+	st.steps.resolveResults(blocks)
+	if st.applyToolResult(l, cf, blocks) {
 		return
 	}
-	st.appendAssistant(l, cf, &act)
+	st.appendAssistant(l, cf, &act, blocks)
 }
 
 // markToolErrors attributes failed tool results, which a later user line carries, to the

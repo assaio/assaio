@@ -92,10 +92,34 @@ report can say where the spend went. They are names people choose, though, so a 
 report treats them exactly like project names: `--anonymize` (the default for the team
 server and the published dashboard) replaces them with stable pseudonyms.
 
-That is the complete list. Apart from those two labels, the fields are **numeric counts
+That is the complete list of what a usage record holds; the step timeline below adds its own,
+and nothing else is stored. Apart from those two labels, the fields are **numeric counts
 only** — how much AI produced, how efficiently, and with how much friction. No field
 carries prompt text, model output, or code content: a diff line contributes a `+1` or a
 `-1` and nothing else.
+
+### The step timeline
+
+Beside those per-turn records, `assaio` stores a session's **sequence**: one row per step,
+holding only what kind of step it was (from a closed list: assistant turn, read, search,
+command, edit, other, compaction), its position in the sequence, the model, its token cost,
+and how it ended (from a closed list: ok, error, denied, truncated, or nothing when the log did
+not say).
+
+One field there deserves its own paragraph, because it is the only one that stands for a file:
+
+- **target** — an **integer** assigned in first-seen order within a single sequence, and
+  nothing else. Not comparable across sequences: `3` in a session's main transcript and `3` in
+  one of its sub-agents are unrelated. It exists so a sequence can show that the same thing was touched nine times.
+  It is deliberately **not** a hash of the path: a hash is reversible by anyone holding the
+  repository, because file paths carry almost no entropy. The path is read in memory while
+  parsing one transcript, used to decide which integer to reuse, and discarded — the same
+  discipline the rework counts already follow. `3` is not recoverable to a file name by
+  anyone, including you.
+
+How much of this history is kept is capped by `trace.horizon_days` (30 by default; `0` keeps
+everything). `assaio-agent clear` erases the timeline under exactly the same scope as the
+records it erases.
 
 ## What you add yourself
 

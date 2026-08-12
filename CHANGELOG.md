@@ -21,6 +21,42 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+- **A session is stored as a sequence, not only as a total.** Reading a Claude Code transcript
+  now also yields its step timeline — what the agent did, in what order, at what token cost and
+  how each step ended — as content-free rows: no prompt, no code, no file name, no path. The
+  thing a step acted on is an integer assigned in first-seen order within one sequence, so "the
+  same target nine times" stays answerable and "which file" stays unanswerable. Nothing reports
+  off it yet; the detectors that read it are the next piece of work, and until they land this
+  is a substrate rather than a feature.
+- `trace.horizon_days` (default 30) bounds how much of that timeline the store keeps, applied
+  on every ingest. The bound is not housekeeping: on the maintainer's store the timeline and
+  its indexes measure 101.9 MB against the usage table's 58.3 MB, roughly 1.7x the table they
+  describe. Thirty days is also all that can be rebuilt — Claude Code deletes transcripts at 30
+  by default. Set it to `0` to keep every step and accept the growth.
+- `doctor` reports the timeline's size and the window it covers, beside the store's own size.
+- `backfill` prints `steps-pruned=` when a run drops stored steps for being past the horizon,
+  so assaio deleting your history is never silent.
+
+### Changed
+- `clear` now erases the step timeline under the same scope as the records it erases.
+- A step older than the horizon is never inserted, rather than inserted and pruned moments
+  later — the round trip grew the SQLite file permanently and made `backfill` print a count for
+  rows that no longer existed when it returned.
+- Steps refused at the store's vocabulary boundary are counted as skipped instead of dropped in
+  silence.
+
+### Compatibility
+- **The store gains a table** (migration `0012`). Nothing existing is rewritten and no reader
+  changes, so an older binary keeps working against an upgraded store — it simply ignores the
+  new table and never prunes it.
+- **Expect the store to grow by roughly 1.7x the usage table** on first backfill after
+  upgrading, bounded by `trace.horizon_days`. `assaio-agent compact` reclaims the space if you
+  then set the horizon lower or to a shorter window.
+- **Widening `trace.horizon_days` later does not bring pruned steps back on its own.** Ingest
+  skips transcripts it has already read, so recovering them takes `backfill --full`, and only
+  while the tool still has the files on disk.
+
 ## [0.19.0] - 2026-08-12
 
 ### Added
