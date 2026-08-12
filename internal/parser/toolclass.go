@@ -1,5 +1,7 @@
 package parser
 
+import "github.com/assaio/assaio/internal/usage"
+
 // toolClass is what a tool call was for.
 type toolClass int
 
@@ -77,4 +79,22 @@ func (c *ToolCounts) Add(name string) {
 // Total is every bucket summed; it must equal the record's ToolCalls.
 func (c *ToolCounts) Total() int64 {
 	return c.Reads + c.Searches + c.Commands + c.Writes + c.Other
+}
+
+// StepKind maps a tool name to the step vocabulary usage.Step records. It reads the same
+// allowlist ToolCounts does, so a turn's counts and its steps can never become two opinions
+// about one tool name.
+func StepKind(name string) string {
+	switch toolClasses[name] {
+	case classRead:
+		return usage.StepRead
+	case classSearch:
+		return usage.StepSearch
+	case classCommand:
+		return usage.StepCommand
+	case classWrite:
+		return usage.StepEdit
+	default:
+		return usage.StepOther
+	}
 }

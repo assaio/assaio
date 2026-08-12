@@ -12,6 +12,10 @@ type contentBlock struct {
 	Type    string `json:"type"`
 	Name    string `json:"name"`
 	IsError bool   `json:"is_error"`
+	// ID names a tool_use block; ToolUseID is how the tool_result answering it quotes that
+	// name. The pair is what lets a step's outcome land on the call it belongs to.
+	ID        string `json:"id"`
+	ToolUseID string `json:"tool_use_id"`
 }
 
 // editToolNames are the assistant tool_use block names that edit files.
@@ -29,15 +33,20 @@ type blockActivity struct {
 	byPurpose     parser.ToolCounts
 }
 
-// countBlocks walks one message's content blocks. raw is a plain string on most user
+// decodeBlocks reads one message's content array. raw is a plain string on most user
 // messages, which carries no blocks: the mismatched unmarshal is ignored and reported as
-// zero rather than propagated.
-func countBlocks(raw json.RawMessage) blockActivity {
+// none rather than propagated.
+func decodeBlocks(raw json.RawMessage) []contentBlock {
 	var blocks []contentBlock
-	var a blockActivity
 	if err := json.Unmarshal(raw, &blocks); err != nil {
-		return a
+		return nil
 	}
+	return blocks
+}
+
+// countBlocks walks one message's already-decoded content blocks.
+func countBlocks(blocks []contentBlock) blockActivity {
+	var a blockActivity
 	for _, b := range blocks {
 		switch b.Type {
 		case "tool_use":

@@ -10,7 +10,7 @@ import (
 	"github.com/assaio/assaio/internal/usage"
 )
 
-func parseFile(path string, parse func(io.Reader) ([]usage.Record, int, error)) ([]usage.Record, int, error) {
+func parseRecords(path string, parse func(io.Reader) ([]usage.Record, int, error)) ([]usage.Record, int, error) {
 	//nolint:gosec // paths come from local-home discovery globs
 	f, err := os.Open(path)
 	if err != nil {
@@ -61,4 +61,16 @@ func dated(recs []usage.Record) (kept []usage.Record, dropped int) {
 		kept = append(kept, recs[i])
 	}
 	return kept, dropped
+}
+
+// parseFile reads one input for both of its readings at once -- the usage records and the step
+// sequence -- from a single open and a single scan.
+func parseFile(path string, parse func(io.Reader) ([]usage.Record, []usage.Step, int, error)) ([]usage.Record, []usage.Step, int, error) {
+	//nolint:gosec // paths come from local-home discovery globs
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("open %s: %w", path, err)
+	}
+	defer func() { _ = f.Close() }()
+	return parse(f)
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"math"
 )
 
 // MaxVocabularyToken caps a vendor category label. Real ones are a couple of words; the cap
@@ -28,6 +29,22 @@ func NonNeg(n int64) int64 {
 		return 0
 	}
 	return n
+}
+
+// SumNonNeg adds already-clamped counts, saturating at MaxInt64 instead of wrapping. Summing
+// what a record keeps as separate columns is what makes this necessary: four fields a log can
+// each state as MaxInt64 overflow into a negative total, which a fuzzer found within a second
+// of the step timeline first summing them.
+func SumNonNeg(ns ...int64) int64 {
+	var total int64
+	for _, n := range ns {
+		n = NonNeg(n)
+		if total > math.MaxInt64-n {
+			return math.MaxInt64
+		}
+		total += n
+	}
+	return total
 }
 
 // VocabularyToken keeps a vendor's category label only when it has the shape of one --

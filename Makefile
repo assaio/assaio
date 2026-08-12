@@ -10,14 +10,15 @@ test:
 # Runs each parser's fuzzer sequentially for FUZZTIME (default 20s).
 # Longer runs: make fuzz FUZZTIME=5m
 fuzz:
-	go test ./internal/parser/claude/ -fuzz FuzzParse -fuzztime $(FUZZTIME)
-	go test ./internal/parser/codex/ -fuzz FuzzParse -fuzztime $(FUZZTIME)
-	go test ./internal/parser/gemini/ -fuzz FuzzParse -fuzztime $(FUZZTIME)
-	go test ./internal/parser/copilot/ -fuzz FuzzParse -fuzztime $(FUZZTIME)
-	go test ./internal/parser/cline/ -fuzz FuzzParseTask -fuzztime $(FUZZTIME)
-	go test ./internal/reconcile/ -fuzz FuzzReadCSV -fuzztime $(FUZZTIME)
-	go test ./internal/plugin/ -fuzz FuzzMetricResult -fuzztime $(FUZZTIME)
-	go test ./internal/plugin/ -fuzz FuzzRuleAlerts -fuzztime $(FUZZTIME)
+	go test ./internal/parser/claude/ -fuzz '^FuzzParse$$' -fuzztime $(FUZZTIME)
+	go test ./internal/parser/claude/ -fuzz '^FuzzParseSteps$$' -fuzztime $(FUZZTIME)
+	go test ./internal/parser/codex/ -fuzz '^FuzzParse$$' -fuzztime $(FUZZTIME)
+	go test ./internal/parser/gemini/ -fuzz '^FuzzParse$$' -fuzztime $(FUZZTIME)
+	go test ./internal/parser/copilot/ -fuzz '^FuzzParse$$' -fuzztime $(FUZZTIME)
+	go test ./internal/parser/cline/ -fuzz '^FuzzParseTask$$' -fuzztime $(FUZZTIME)
+	go test ./internal/reconcile/ -fuzz '^FuzzReadCSV$$' -fuzztime $(FUZZTIME)
+	go test ./internal/plugin/ -fuzz '^FuzzMetricResult$$' -fuzztime $(FUZZTIME)
+	go test ./internal/plugin/ -fuzz '^FuzzRuleAlerts$$' -fuzztime $(FUZZTIME)
 lint:
 	gofmt -l .
 	go vet ./...

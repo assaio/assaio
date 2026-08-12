@@ -192,9 +192,20 @@ The table is the intended sequence; this is the current position in it. Delibera
 version number, for the reason given above the table — the next tag is simply the next minor, and
 what it carries is a list, not a schedule. Items drop out of it, and a bug report can add one.
 
+- `B147` — the session as a sequence rather than a total, which is the current work. The
+  engine half is built and gated: a content-free step timeline read from Claude transcripts,
+  stored under a horizon, proven on 5,707 real transcripts where the record reading and the
+  step reading agree on all 212,319 tool calls with no file disagreeing. What is *not* built is
+  the half that makes it worth storing — the detectors. Until they land the store carries a
+  table nothing reads, which is not a shippable state.
+- `B156` — moved out of the research pool because the maintainer's machine demonstrated it:
+  rebuilding a store the v0.17 `clear` incident emptied recovered 175,217 of 513,617 rows, and
+  the missing 66% is unrecoverable because the source deleted the transcripts at its 30-day
+  default. Every trend renders over a history that begins where a retention setting decided.
 - `B149` — an assay that can be posted in public, with redaction as the feature rather than a
-  flag. The rule is now settled — tools and models named, projects only as a count and a sorted
-  distribution — which is what it was waiting for; the renderer follows next.
+  flag. The rule is settled — tools and models named, projects only as a count and a sorted
+  distribution — and the renderer waits deliberately: today it would publish a token chart any
+  vendor can generate, and after `B147` it can publish a behaviour finding no vendor can.
 - `B116` and `B118` — whether a parser fix can reach the rows it invalidates, and whether a
   cross-source rate may keep its denominator. `B118`'s question is answered — the denominator is
   gated by capability and the excluded share is quantified beside it — and what remains is the

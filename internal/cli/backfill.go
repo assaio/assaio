@@ -50,6 +50,7 @@ func runBackfill(cmd *cobra.Command, opts ingest.Options) error {
 	if err != nil {
 		return err
 	}
+	opts.TraceHorizonDays = cfg.Trace.HorizonDays
 	results, err := ingest.Run(cmd.Context(), home, st, cfg.Sources, cfg.Plugins, opts)
 	if err != nil {
 		return err
@@ -70,6 +71,12 @@ func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
 			cmd.Printf("  unchanged=%d", r.Unchanged)
 		}
 		cmd.Printf("  records=%d  inserted=%d", r.Records, r.Inserted)
+		if r.Steps != 0 {
+			cmd.Printf("  steps=%d", r.Steps)
+		}
+		if r.PrunedSteps != 0 {
+			cmd.Printf("  steps-pruned=%d", r.PrunedSteps)
+		}
 		if r.Skipped != 0 {
 			cmd.Printf("  skipped=%d", r.Skipped)
 		}

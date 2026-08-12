@@ -110,8 +110,27 @@ on, since a link to a merged pull request is only as good as the session it link
   no code, no file contents; a path is a category, never a name. The refusal that has to
   hold: a detector fires on a *pattern*, and a pattern is not a fault — a hard bug
   legitimately looks like thrashing, so every detector ships with what it cannot distinguish.
-  Store cost is the open question: a step row per turn is a different size class from today's
-  daily aggregate and needs its bound and cleanup settled before it lands.
+  **Store cost is settled, and this item's own guess about it was right.** Measured on the
+  maintainer's store after a full rebuild under the horizon: 1.88 stored step rows per usage
+  record (335,527 against 178,016) — but a row multiplier is not a size measurement, and in
+  bytes the table and its indexes are **101.9 MB against `usage_record`'s 58.3 MB**, roughly
+  1.7x the table they describe. Hence a horizon
+  (`trace.horizon_days`, default 30) pruned on every ingest rather than by a tidy-up command;
+  30 days is also all that is recoverable, since Claude deletes transcripts at 30 by default
+  (`B156`).
+  **Two things this item did not anticipate, both found by measuring before designing.** A
+  session-grained denominator is a trap: 86% of sessions on the audited machine are SDK calls
+  contributing 5% of rows, so "89% of sessions end without an edit" would be true, precise and
+  worthless — every detector declares its scope from `entrypoint`/`sidechain` and renders the
+  excluded share beside its figure. And a sub-agent needs its own timeline: 103 sessions hold
+  39% of all rows, and blending them would make a sub-agent's thrashing read as a person's.
+  **Landed so far** (not yet released, no detector reads it): the step contract, the Claude
+  reading, migration `0012`, the horizon and its prune. What remains is the analysers, the
+  Codex reading, the capability row, and the plugin boundary. Two things the readings do **not**
+  do yet, stated because the ADR would otherwise imply they do: nothing reads
+  `toolUseResult.interrupted`, `userModified` or Codex's `turn_aborted` (`B111`, `B113` — all
+  measured at or near zero on the audited corpus), and the outcome vocabulary deliberately has
+  no member they could fill.
 - [ ] **B107 · Codex cache-write tokens are never read** — S · solo —
   `payload.info.total_token_usage.cache_write_input_tokens` is reported on every Codex
   `token_count` and `usage.Record` gets no value for it. **Measure before claiming a
@@ -141,21 +160,32 @@ on, since a link to a merged pull request is only as good as the session it link
   this small is invisible to every drift canary, since each needs a 20-file sample floor. A
   source that has always had a handful of files needs a canary that can fire on "discovered
   files, parsed zero records", which none of the four does.
-- [ ] **B111 · the human correction, recorded rather than proxied** — S · solo —
-  `toolUseResult.userModified` marks an edit the person changed after the AI wrote it, on a
-  meaningful share of Claude edit results. `rework` today infers correction from add-then-remove
-  churn within a transcript and says it is a proxy; this is the thing itself. Ships as its own
-  signal beside `ai.rework.lines`, never folded into it — they mean different things.
+- [ ] **B111 · the human correction, recorded rather than proxied** — S · solo — **the claim
+  this item was written on is false, measured 2026-08-12 and corrected here rather than
+  discovered after shipping.** `toolUseResult.userModified` was described as marking an edit the
+  person changed after the AI wrote it "on a meaningful share of Claude edit results". The
+  *field* is on a meaningful share — 2,691 of 13,038 tool results in a 400-transcript sample —
+  and its *value* is `false` on every one: `"userModified":true` appears in **0 of 5,706
+  transcripts, ~5 GB**. A signal built on it would be structurally zero and nobody would notice.
+  The field is now read into the step timeline's outcome so a different plan, model or user
+  reveals it (the `B107` template: a zero nobody looked at and a zero the vendor reported are
+  different facts), and it stays out of the signal catalog until one does. `rework` remains the
+  proxy it says it is.
 - [ ] **B112 · attribution beyond skill and sub-agent, and the build that wrote the line** — M ·
   solo — Claude stamps `attributionPlugin` and `attributionMcpServer`/`attributionMcpTool` on a
   large share of turns, which would widen `skill-economics` from two dimensions to four and give
   MCP servers a cost of their own. Alongside it, `version` on every line is the harness-version
   cohort input `B96` assumes needs a server — it is already on disk, offline, per turn.
-- [ ] **B113 · how a turn ended** — S/M · both — three fields for one signal: Claude's
-  `message.stop_reason` (`max_tokens` marks a truncated answer), `toolUseResult.interrupted` (a
-  command the human cut short), and Codex's `turn_aborted` with `reason: interrupted`. Together
-  they distinguish a turn that finished from one that was stopped, which every efficiency figure
-  currently averages together. Codex's `changes.<path>.{type,move_path}` belongs here too: an
+- [ ] **B113 · how a turn ended** — S/M · both — **measured 2026-08-12; the "stopped" half is
+  near-empty and the item is downgraded accordingly.** Across the whole corpus:
+  `"interrupted":true` in **0 of 5,706** transcripts, `"stop_reason":"max_tokens"` in **5 of
+  5,706**, Codex `turn_aborted` **5 occurrences in 76 files** (all `reason: interrupted`). A
+  signal promising to "distinguish a turn that finished from one that was stopped" would ship a
+  permanently empty bucket. What does fire is `toolDenialKind` (automode-blocked, user-rejected,
+  automode-unavailable, permission-rule) and `stop_reason` as a continuation-versus-finish
+  discriminator (tool_use 18,330 against end_turn 512). All of it is read into the step
+  timeline's outcome vocabulary; none of it claims a signal yet. Codex's
+  `changes.<path>.{type,move_path}` is untouched by this measurement and still belongs here: an
   add, an update and a rename are one undifferentiated edit today.
 - [ ] **B114 · Codex states its own limits** — M · both — `payload.info.model_context_window` is
   the model's context limit on every `token_count`, which is what `B16` proposes to vendor a
@@ -487,6 +517,14 @@ had been growing from one maintainer's dogfooding, and that is a sample of one.
   coverage model measures what it *read*; nothing measures what expired or was never recorded,
   so "offline-first sees everything" is wrong on a fresh install. A `doctor` check that reads
   the retention settings, and a history-horizon line on every window that renders a trend.
+  **Demonstrated on the maintainer's own machine, 2026-08-12, and promoted out of the research
+  pool because of it.** The v0.17 `clear` incident emptied a 513,617-row store; a full backfill
+  recovered **175,217**. The other **338,400 rows (66%) are gone permanently** — the transcripts
+  behind them had already been deleted by the 30-day default, and the rebuilt store carries
+  exactly 31 days. Every trend assaio renders over that store silently begins where the
+  retention setting decided, not where the install did. This is also the constraint that sets
+  `B147`'s step horizon: keeping steps longer than the source keeps transcripts buys history no
+  re-read could ever rebuild.
 - [ ] **B157 · Cline's second root** — S · both — the standalone Cline CLI stores tasks under
   `~/.cline/tasks/<id>/`, overridable by `--data-dir` / `CLINE_DATA_DIR`
   ([docs.cline.bot/cli/cli-reference](https://docs.cline.bot/cli/cli-reference), retrieved
@@ -531,6 +569,45 @@ had been growing from one maintainer's dogfooding, and that is a sample of one.
   found is not the one the invocation implies. Raised by a real incident: a tooling run set a
   variable that does not exist, expected `clear --all --yes` to apply to a copy, and emptied a
   513,617-row store. `--yes` skipping the prompt is the other half of why it was silent.
+
+## Pool — from the 2026-08-12 needs research
+
+A second sweep, sourced the same way as the pool above: public evidence, each claim carrying
+the URL it was read from. Where it contradicted an item already here, the correction went onto
+that item (`B60`) rather than becoming a new one.
+
+- [ ] **B164 · the autonomy validator** — M · both — Anthropic published a vocabulary for how
+  autonomously an agent ran — turn duration, auto-approve and interrupt rate, agent-initiated
+  stops — and states that the API has "no reliable way to link independent requests into
+  coherent agent sessions"
+  ([anthropic.com](https://www.anthropic.com/research/measuring-agent-autonomy)). Local
+  transcripts do link them, which is the whole argument. Every input is either stored or one
+  field away: `toolDenialKind`'s `automode-blocked`/`automode-unavailable` is the auto-approve
+  half, already parsed. Depends on `B147`'s timeline; it is the first analyser that should read
+  it, because the definition is citable rather than invented here.
+- [ ] **B165 · OpenCode and Kilo Code: one parser, two tools** — M · both — OpenCode keeps a
+  relational store at `~/.local/share/opencode/opencode.db` whose `session` table carries
+  `cost`, a five-way token split and `directory`, with per-message cost/tokens beside it
+  (verified against
+  [session/sql.ts @v1.18.16](https://raw.githubusercontent.com/sst/opencode/v1.18.16/packages/core/src/session/sql.ts)).
+  Kilo Code v7 rebased onto the same schema at `~/.local/share/kilo/kilo.db` (see `B60`). One
+  reading covers the largest unparsed population found. Ships with the double-count guard both
+  need: the pre-v7 Kilo era coexists on disk and v7's importer can restate it.
+- [ ] **B166 · Goose: the cleanest per-request ledger in the field** — M · both —
+  `~/.local/share/goose/sessions/sessions.db` holds a literal `usage_ledger`: one row per
+  request with model, a cache read/write split, `cost`, **a `cost_source` provenance column**
+  and an **`is_compaction` flag**, with `sessions.working_dir` giving the project. The
+  provenance column is the notable part — it is the only surveyed source that states where its
+  own cost figure came from, which is exactly what assaio's honesty rules ask every fact to
+  carry. Its `is_compaction` also feeds `B164`. Note `B154`'s Goose entry is stale: Goose left
+  session JSONL at v1.10.0 and the legacy files linger unmanaged, so discovery must not read
+  both eras as separate sessions.
+- [ ] **B167 · Aider is an approximate source, not an exact one** — S · solo — correction to
+  `B14`, whose premise is wrong: there is no default `~/.aider/analytics.jsonl`, exact values
+  need the opt-in `--analytics-log`, and the default chat history **rounds anything ≥10k tokens
+  to whole thousands**. Aider can therefore only ever be an approximate-confidence source, and
+  its depth row has to say so before a parser exists rather than after. Last upstream push
+  2026-05-22.
 
 ## Pool — CLI & DX
 
@@ -621,6 +698,13 @@ a tool used by one organization is usually better served by an out-of-tree
   lineage, token shape not yet source-verified). Parameterize the existing Cline parser over
   publisher roots **and a per-fork tool name** — so Roo/Kilo attribute distinctly, not as
   `cline` — instead of writing new parsers. Still needs a verified sample per fork.
+  **Half of this item is out of date, checked 2026-08-12 against pinned upstream source.** Kilo
+  Code v7 is no longer a Cline fork: it rebased onto OpenCode and moved to
+  `~/.local/share/kilo/kilo.db` with a byte-identical OpenCode schema, so Kilo belongs beside
+  OpenCode as *one parser for two tools*, not here. Both eras coexist on disk and v7 ships an
+  importer, which is a **double-count hazard** whichever parser claims it. Roo is still a Cline
+  fork and is the cheap half — five `globalStorage` roots plus a `customStoragePath` override —
+  and Roo-Code is archived (last push 2026-05-15), so it is a frozen, low-risk target.
 - [ ] **B61 · Qwen Code (Gemini family)** — M — a Gemini CLI fork, but **not** the same
   on-disk shape: chats live at `~/.qwen/projects/<hash>/chats/<id>.jsonl` (not
   `tmp/*/chats`), and tokens are in a raw-API `usageMetadata` object, not Gemini's

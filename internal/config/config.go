@@ -50,6 +50,8 @@ type Config struct {
 	// Labels configures the suggested-label derivation read by `mark --suggest`. See the
 	// Labels type.
 	Labels Labels `koanf:"labels"`
+	// Trace bounds the stored step timeline. See the Trace type.
+	Trace Trace `koanf:"trace"`
 }
 
 // Sources overrides the filesystem roots assaio discovers each tool's session logs
@@ -108,6 +110,7 @@ func Defaults() Config {
 		Since: "30d", Format: "table",
 		Privacy: Privacy{Anonymize: true},
 		Pricing: Pricing{MaxUnpricedShare: DefaultMaxUnpricedShare},
+		Trace:   Trace{HorizonDays: DefaultTraceHorizonDays},
 	}
 }
 
@@ -146,6 +149,10 @@ func (c Config) Validate() error {
 	}
 	if !sincePattern.MatchString(c.Since) {
 		return fmt.Errorf("invalid since %q (want e.g. 7d)", c.Since)
+	}
+	if c.Trace.HorizonDays < 0 {
+		return fmt.Errorf("invalid trace.horizon_days %d (want a positive number of days, or 0 to keep every step)",
+			c.Trace.HorizonDays)
 	}
 	for _, p := range c.Plugins {
 		if err := p.Validate(); err != nil {

@@ -12,7 +12,7 @@ import (
 // the tool_use block that just arrived. For the 8-in-48,440 response whose blocks are not
 // adjacent that rewinds the cursor to the earlier record, which is the same rule rather than
 // an exception to it.
-func (st *parseState) appendAssistant(l *line, cf *carryForward, act *blockActivity) {
+func (st *parseState) appendAssistant(l *line, cf *carryForward, act *blockActivity, blocks []contentBlock) {
 	if l.Type != "assistant" || l.Message.Model == "" {
 		return
 	}
@@ -27,11 +27,24 @@ func (st *parseState) appendAssistant(l *line, cf *carryForward, act *blockActiv
 	if at, ok := st.byMessage[key]; ok {
 		mergeResponse(&st.out[at], l, act)
 		st.last = at
+		st.recordStep(l, key, blocks)
 		return
 	}
 	st.out = append(st.out, recordFromLine(l, cf, act, key))
 	st.last = len(st.out) - 1
 	st.byMessage[key] = st.last
+	st.recordStep(l, key, blocks)
+}
+
+// recordStep mirrors this response into the step sequence. The token total is read back off
+// the record rather than recomputed, so the two readings cannot fold a multi-line response by
+// different arithmetic.
+func (st *parseState) recordStep(l *line, key string, blocks []contentBlock) {
+	r := &st.out[st.last]
+	st.steps.assistant(l, key, parser.SumNonNeg(
+		r.InputTokens, r.OutputTokens, r.CacheReadTokens, r.CacheWriteTokens,
+	))
+	st.steps.toolCalls(l, key, blocks)
 }
 
 // mergeResponse folds another content block of an already-recorded API response into it.

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/assaio/assaio/internal/config"
-	"github.com/assaio/assaio/internal/parser/claude"
 	"github.com/assaio/assaio/internal/parser/cline"
 	"github.com/assaio/assaio/internal/store"
 	"github.com/assaio/assaio/internal/usage"
@@ -26,6 +25,17 @@ type Result struct {
 	Tool                                                 string
 	Files, Unchanged, Records, Inserted, Skipped, Failed int
 	ZeroToken                                            int
+	// Steps is how many new step rows this source contributed: the session as a sequence
+	// rather than a total. 0 for a source that emits no timeline, which the depth matrix
+	// declares rather than leaving as a bare zero.
+	Steps int
+	// PrunedSteps is how many stored steps this run dropped for being past the horizon. A
+	// deletion nobody counts is the silent loss the whole skip-and-count policy exists against,
+	// and this one is assaio deleting the user's history on its own initiative.
+	PrunedSteps int64
+	// horizon is the oldest step this run keeps; steps older are never inserted. Unexported:
+	// it is an input to the pass, not part of what the pass reports.
+	horizon time.Time
 }
 
 type source struct {
@@ -59,7 +69,12 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 	if err != nil {
 		return nil, err
 	}
-	claudeResult, err := ingestClaude(ctx, st, sk, claudeMain, claudeSub, cache)
+	horizon := traceHorizon(opts, time.Now())
+	pruned, err := pruneTrace(ctx, st, horizon)
+	if err != nil {
+		return nil, err
+	}
+	claudeResult, err := ingestClaude(ctx, st, sk, claudeMain, claudeSub, cache, horizon)
 	if err != nil {
 		return results, err
 	}
@@ -106,6 +121,9 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 		return results, err
 	}
 	results = append(results, pluginResults...)
+	if pruned > 0 {
+		results[0].PrunedSteps = pruned
+	}
 
 	return results, nil
 }
@@ -114,14 +132,17 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 // and inserts it. Only a clean parse is recorded, so a file that fails keeps being retried
 // and keeps being counted in Failed rather than disappearing from it on the next run.
 func ingestInput(ctx context.Context, st *store.Store, sk *skipper, cache projectCache, res *Result,
-	in input, parse func() ([]usage.Record, int, error),
+	in input, parse func() (parsed, error),
 ) error {
 	if sk.skip(in) {
 		res.Unchanged++
 		return nil
 	}
-	recs, skipped, err := parse()
-	if insErr := ingestParsed(ctx, st, cache, res, recs, skipped, err); insErr != nil {
+	p, err := parse()
+	if insErr := ingestParsed(ctx, st, cache, res, p.Records, p.Skipped, err); insErr != nil {
+		return insErr
+	}
+	if insErr := ingestSteps(ctx, st, res, p.Steps); insErr != nil {
 		return insErr
 	}
 	if err == nil {
@@ -130,39 +151,14 @@ func ingestInput(ctx context.Context, st *store.Store, sk *skipper, cache projec
 	return nil
 }
 
-// ingestClaude parses and inserts every Claude transcript, both top-level and sub-agent.
-// A sub-agent's own file is the authoritative record of its per-turn usage; the parent
-// transcript's completed-sub-agent aggregate is only a last-turn summary (and is missing
-// entirely for background/async Tasks), so any parent aggregate whose sub-agent has a file
-// is suppressed to avoid double-counting. cache memoizes project resolution across files.
-func ingestClaude(ctx context.Context, st *store.Store, sk *skipper, mainFiles, subFiles []string, cache projectCache) (Result, error) {
-	covered := claude.CoveredAgents(subFiles)
-	if err := dropSupersededAggregates(ctx, st, covered); err != nil {
-		return Result{Tool: claudeTool}, err
-	}
-	res := Result{Tool: claudeTool, Files: len(mainFiles) + len(subFiles)}
-	files := make([]string, 0, len(mainFiles)+len(subFiles))
-	files = append(files, subFiles...)
-	files = append(files, mainFiles...)
-	for _, path := range files {
-		err := ingestInput(ctx, st, sk, cache, &res, fileInput(path, res.Tool), func() ([]usage.Record, int, error) {
-			recs, skipped, err := parseFile(path, claude.Parse)
-			return claude.SuppressCovered(recs, covered), skipped, err
-		})
-		if err != nil {
-			return res, err
-		}
-	}
-	return res, nil
-}
-
 // ingestSource parses and inserts every file for one tool source, counting failed
 // files without aborting the rest. cache memoizes project resolution across files.
 func ingestSource(ctx context.Context, st *store.Store, sk *skipper, s source, cache projectCache) (Result, error) {
 	res := Result{Tool: s.tool, Files: len(s.files)}
 	for _, path := range s.files {
-		err := ingestInput(ctx, st, sk, cache, &res, fileInput(path, s.tool), func() ([]usage.Record, int, error) {
-			return parseFile(path, s.parse)
+		err := ingestInput(ctx, st, sk, cache, &res, fileInput(path, s.tool), func() (parsed, error) {
+			recs, skipped, err := parseRecords(path, s.parse)
+			return parsed{Records: recs, Skipped: skipped}, err
 		})
 		if err != nil {
 			return res, err
@@ -176,8 +172,9 @@ func ingestSource(ctx context.Context, st *store.Store, sk *skipper, s source, c
 func ingestClineDirs(ctx context.Context, st *store.Store, sk *skipper, dirs []string, cache projectCache) (Result, error) {
 	res := Result{Tool: "cline", Files: len(dirs)}
 	for _, dir := range dirs {
-		err := ingestInput(ctx, st, sk, cache, &res, dirInput(dir, res.Tool), func() ([]usage.Record, int, error) {
-			return cline.ParseDir(dir)
+		err := ingestInput(ctx, st, sk, cache, &res, dirInput(dir, res.Tool), func() (parsed, error) {
+			recs, skipped, err := cline.ParseDir(dir)
+			return parsed{Records: recs, Skipped: skipped}, err
 		})
 		if err != nil {
 			return res, err

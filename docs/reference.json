@@ -1519,6 +1519,12 @@
       "env": "ASSAIO_SYNC_TOKEN",
       "type": "string",
       "default": ""
+    },
+    {
+      "key": "trace.horizon_days",
+      "env": "ASSAIO_TRACE_HORIZON_DAYS",
+      "type": "int",
+      "default": "30"
     }
   ],
   "validatorInput": [

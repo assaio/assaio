@@ -18,7 +18,12 @@ import (
 const devVersion = "dev"
 
 // Options tunes one ingest run. Full re-parses every input regardless of stored state.
-type Options struct{ Full bool }
+type Options struct {
+	Full bool
+	// TraceHorizonDays bounds how far back the step timeline is kept; steps older than it are
+	// pruned at the end of a run. 0 means the configured default (config.DefaultTraceHorizonDays).
+	TraceHorizonDays int
+}
 
 // input is one discovered file or Cline task directory, carrying the signature that
 // decides whether it still needs parsing. statErr is kept rather than raised: an input

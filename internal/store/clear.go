@@ -44,6 +44,9 @@ func (s *Store) Clear(ctx context.Context, before time.Time, tool string) (int64
 	if err != nil {
 		return 0, err
 	}
+	if err := clearSteps(ctx, tx, before, tool); err != nil {
+		return 0, err
+	}
 	if !hasBefore {
 		if err := forgetIngested(ctx, tx, tool); err != nil {
 			return 0, err
@@ -57,6 +60,28 @@ func (s *Store) Clear(ctx context.Context, before time.Time, tool string) (int64
 		return 0, err
 	}
 	return n, tx.Commit()
+}
+
+// clearSteps erases the step timeline under the same scope as the records. Without it a
+// `clear` left every step behind -- session, timestamp, ordinal, kind, outcome, model and
+// tokens for the whole history -- and the next backfill's INSERT OR IGNORE found them already
+// present and printed steps=0, confirming to the person who asked to forget their history that
+// there was nothing there.
+func clearSteps(ctx context.Context, tx *sql.Tx, before time.Time, tool string) error {
+	var err error
+	switch {
+	case !before.IsZero() && tool != "":
+		_, err = tx.ExecContext(ctx, `DELETE FROM session_step WHERE ts < ? AND tool = ?`,
+			before.UTC().Format(time.RFC3339), tool)
+	case !before.IsZero():
+		_, err = tx.ExecContext(ctx, `DELETE FROM session_step WHERE ts < ?`,
+			before.UTC().Format(time.RFC3339))
+	case tool != "":
+		_, err = tx.ExecContext(ctx, `DELETE FROM session_step WHERE tool = ?`, tool)
+	default:
+		_, err = tx.ExecContext(ctx, `DELETE FROM session_step`)
+	}
+	return err
 }
 
 // forgetIngested drops the per-input watermarks of tool (or of every tool when empty), so
