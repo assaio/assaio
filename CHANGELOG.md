@@ -21,6 +21,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-08-12
+
 ### Added
 - **A session is stored as a sequence, not only as a total.** Reading a Claude Code transcript
   now also yields its step timeline — what the agent did, in what order, at what token cost and
@@ -1731,7 +1733,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/assaio/assaio/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/assaio/assaio/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/assaio/assaio/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/assaio/assaio/compare/v0.16.0...v0.17.0
