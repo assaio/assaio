@@ -28,7 +28,7 @@ func TestRecipeValidatorsMatchTheInterface(t *testing.T) {
 		"Analyze":  "(in Input) Result",
 	}
 
-	for _, name := range []string{"weekday-split", "answers-gated"} {
+	for _, name := range []string{"weekday-split", "answers-gated", "read-repeats"} {
 		t.Run(name, func(t *testing.T) {
 			block, err := recipes.Get(name)
 			if err != nil {

@@ -18,7 +18,7 @@ import (
 // canaries the whole --strict promise rests on never ran. The failure travels back as a
 // string so the caller can weigh it beside the other strict failures instead of deciding
 // doctor's exit code halfway down the report.
-func doctorStore(cmd *cobra.Command, dbPath string, since time.Time, window string, maxUnpricedShare float64) (warnings []drift.Warning, failures []string) {
+func doctorStore(cmd *cobra.Command, home, dbPath string, since time.Time, window string, maxUnpricedShare float64) (warnings []drift.Warning, failures []string) {
 	st, err := store.Open(dbPath)
 	if err != nil {
 		return nil, []string{doctorStoreFailure(cmd, "ERROR %v", err)}
@@ -35,6 +35,9 @@ func doctorStore(cmd *cobra.Command, dbPath string, since time.Time, window stri
 	}
 	if h, stepErr := st.Steps(cmd.Context()); stepErr == nil && h.Steps > 0 {
 		cmd.Printf("timeline:     %s\n", stepHorizonLine(h))
+	}
+	if oldest, histErr := st.HistoryStart(cmd.Context(), "claude-code"); histErr == nil {
+		cmd.Printf("retention:    %s\n", retentionLine(home, oldest, time.Now()))
 	}
 	// The 0.12 upgrade moves the pre-response-grain Claude rows aside rather than deleting
 	// them, so the space they hold has to be visible and droppable.

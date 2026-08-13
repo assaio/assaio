@@ -53,7 +53,12 @@ func fixtureInput() analyze.Input {
 			Turns: 4, OutputTokens: 2000, PeakContextTokens: 20000, Edits: 3, ActiveMinutes: 14,
 		},
 	}
-	return analyze.BuildInput(usage, sessions, fixturePrices(), fixtureNow, 7*24*time.Hour, analyze.Delegation{Sub: 25, Total: 1000})
+	in := analyze.BuildInput(usage, sessions, fixturePrices(), fixtureNow, 7*24*time.Hour, analyze.Delegation{Sub: 25, Total: 1000})
+	// The served dashboard reads this from the store, so the fixture carries it too: without it
+	// every trending panel in the golden disclaims its own trend as unverified, which is what the
+	// real page did until the server learned to fill the field.
+	in.HistoryStart = fixtureNow.AddDate(0, 0, -60)
+	return in
 }
 
 // fixtureSubpaths is api's (the fixture's top project) subpath breakdown, summing to its

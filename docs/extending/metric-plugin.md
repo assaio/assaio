@@ -71,7 +71,12 @@ parser protocol's `assaio_plugin`):
   "skills":     [{"name":"brainstorming","tokens":0,"lines":0,"records":0,"sessions":0}],
   "agents":     [{"name":"reviewer","tokens":0,"lines":0,"records":0,"sessions":0}],
   "turnSizing": [{"model":"claude-opus-5","turns":0,"smallTurns":0}],
-  "cacheMisses":[{"tool":"claude-code","reason":"ttl_expired","turns":0}]
+  "cacheMisses":[{"tool":"claude-code","reason":"ttl_expired","turns":0}],
+  "trace": [{"tool":"claude-code","sessionId":"…","member":"","timeline":"","entrypoint":"cli",
+             "project":"…","scope":"interactive",
+             "steps":[{"ordinal":1,"at":"2026-08-12T09:00:00Z","kind":"edit","outcome":"ok",
+                       "model":"claude-opus-5","tokens":0,"targetRef":1}]}],
+  "historyStart": "2026-07-13T08:11:04Z"
 }
 ```
 
@@ -212,6 +217,8 @@ with its reason.
 | `skills`, `agents` | per-skill and per-sub-agent totals. A row carrying no attribution is absent rather than bucketed under `""`, and both lists are empty when no tool in the window records attribution at all. That emptiness is a coverage fact to state, not a zero to publish |
 | `turnSizing` | per-model turn counts at the raw per-turn grain the daily `usage` rows aggregate away. `smallTurns` is a **subset** of `turns`, not a separate population |
 | `cacheMisses` | turns that stated a cache-miss reason, per tool. A turn that hit cache states nothing and is absent, as is every turn from a source that reports no reason — so this is never a denominator |
+| `trace` | the window's step sequences: what each session did, in what order (ADR 0012). One entry per sequence — a session's main loop, or one sub-agent inside it — carrying the `scope` the core classified it as (`interactive`, `sub-agent`, `programmatic`, `unstated`). **Read one scope, not the set:** 89% of the sequences on the audited store are one-shot SDK calls holding 5.7% of its steps, so a rate spanning two scopes describes neither, and the share you excluded belongs beside your figure. `outcome` is `""` when the source said nothing, which is never `ok`; `targetRef` stands for the file a step named and is comparable **only inside its own sequence**, never across sequences and never a path. This is by far the largest thing on the wire — 339,000 steps encode to about 44 MB — and it is sent whether or not you read it, because the protocol has no way for you to say (`B168`) |
+| `historyStart` | the earliest observation the store holds, **ignoring the window**. Compare it against the span your figure leans on: a trend against "the prior week" means nothing if the store's history began inside that week, and several tools delete their own transcripts (Claude Code after 30 days by default), which makes that the ordinary case rather than the odd one. The zero time means the core could not answer |
 
 `skills`, `agents` and `cacheMisses` are all shaped the same way: **present means recorded,
 absent means not recorded, and neither means zero.** Before publishing a figure over any of

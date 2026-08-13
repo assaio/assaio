@@ -58,8 +58,8 @@ func TestInsertStepsIsIdempotent(t *testing.T) {
 }
 
 // A longer prefix of the same append-only transcript completes a step: the outcome the
-// answering line had not been written yet, the target the edit result names later, the token
-// total that only reaches its true value on a response's last line.
+// answering line had not been written yet, and the token total that only reaches its true value
+// on a response's last line. Both are monotone in the prefix read, so neither may go backwards.
 func TestReReadCompletesAStepWithoutDegradingIt(t *testing.T) {
 	ctx := context.Background()
 	s := stepStore(t)
@@ -67,13 +67,15 @@ func TestReReadCompletesAStepWithoutDegradingIt(t *testing.T) {
 
 	partial := step("a", 1, usage.StepEdit, at)
 	partial.Tokens = 100
+	// The target is the same in both reads: it is settled on the line that creates the step, so
+	// a longer prefix never completes it. What a re-read may do to it is the next test.
+	partial.TargetRef = 7
 	if _, _, err := s.InsertSteps(ctx, []usage.Step{partial}); err != nil {
 		t.Fatalf("InsertSteps: %v", err)
 	}
 
 	complete := partial
 	complete.Outcome = usage.OutcomeOK
-	complete.TargetRef = 7
 	complete.Tokens = 250
 	if _, _, err := s.InsertSteps(ctx, []usage.Step{complete}); err != nil {
 		t.Fatalf("restate: %v", err)
@@ -100,6 +102,37 @@ func TestReReadCompletesAStepWithoutDegradingIt(t *testing.T) {
 	}
 	if outcome != usage.OutcomeOK || target != 7 || tokens != 250 {
 		t.Errorf("a shorter re-read degraded the row to (%q,%d,%d)", outcome, target, tokens)
+	}
+}
+
+// Position is a claim the current parse owns, not a value a later parse can only raise. Widening
+// which calls register a target renumbers first-seen order, and keeping the higher of the two
+// would leave one sequence holding a mix of two parsers' numbering: a 7 beside a 3 that stands
+// for the same file, with nothing downstream able to tell they disagree.
+func TestReReadRenumbersPositionRatherThanKeepingTheHigher(t *testing.T) {
+	ctx := context.Background()
+	s := stepStore(t)
+	at := time.Now().UTC()
+
+	before := step("a", 9, usage.StepEdit, at)
+	before.TargetRef = 7
+	if _, _, err := s.InsertSteps(ctx, []usage.Step{before}); err != nil {
+		t.Fatalf("InsertSteps: %v", err)
+	}
+	after := before
+	after.Ordinal = 4
+	after.TargetRef = 3
+	if _, _, err := s.InsertSteps(ctx, []usage.Step{after}); err != nil {
+		t.Fatalf("re-read: %v", err)
+	}
+	var ordinal, target int64
+	row := s.db.QueryRowContext(ctx,
+		`SELECT ordinal, target_ref FROM session_step WHERE dedupe_key = 'a'`)
+	if err := row.Scan(&ordinal, &target); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if ordinal != 4 || target != 3 {
+		t.Errorf("re-read row = (ordinal %d, target %d), want (4, 3)", ordinal, target)
 	}
 }
 

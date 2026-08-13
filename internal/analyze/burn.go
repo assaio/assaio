@@ -15,20 +15,7 @@ const (
 	// burnMinDays is the day floor below which a baseline is meaningless: a handful of
 	// days has no typical day to stand out from.
 	burnMinDays = 7
-	// burnZThreshold is the modified z-score above which a day counts as a spike. 3.5 is
-	// the conventional cutoff for the median/MAD form, which -- unlike a mean and standard
-	// deviation -- is not itself dragged upward by the very outlier being tested for.
-	burnZThreshold = 3.5
-	// burnMADToSigma scales the median absolute deviation onto the standard-deviation
-	// scale for normally distributed data, so burnZThreshold keeps its conventional
-	// meaning.
-	burnMADToSigma = 1 / 0.6745
-	// burnMeanADToSigma scales a mean absolute deviation the same way. It is the fallback
-	// for a zero median absolute deviation, which happens whenever more than half the days
-	// share one value -- precisely the flat baseline a single spike stands out from, where
-	// the median form would otherwise report no spike at all.
-	burnMeanADToSigma = 1.253314
-	burnTopN          = 5
+	burnTopN    = 5
 )
 
 func init() { Register(burnValidator{}) }

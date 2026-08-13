@@ -21,6 +21,13 @@ type Totals struct {
 	Rejected     int64 `json:"rejected"`
 	ToolErrors   int64 `json:"tool_errors"`
 	Compactions  int64 `json:"compactions"`
+	// The sequence figures (ADR 0012). Steps is how many observations the trace's own order
+	// holds; StepOutcomes how many of them state how they ended, which is a different count from
+	// how many succeeded; StepTargets how many name a file. A source with no step reading
+	// adjudicates all three as absent, which is the claim its depth row makes.
+	Steps        int64 `json:"steps"`
+	StepOutcomes int64 `json:"step_outcomes"`
+	StepTargets  int64 `json:"step_targets"`
 	Skipped      int   `json:"skipped"`
 }
 
@@ -51,6 +58,9 @@ func figures(t *Totals) []struct {
 		{"rejected", t.Rejected},
 		{"tool_errors", t.ToolErrors},
 		{"compactions", t.Compactions},
+		{"steps", t.Steps},
+		{"step_outcomes", t.StepOutcomes},
+		{"step_targets", t.StepTargets},
 		{"skipped", int64(t.Skipped)},
 	}
 }
@@ -86,8 +96,17 @@ func Diff(got, want *Totals) []Mismatch {
 
 // Sum adds records up the way every surface does, so a trace's expected totals are compared
 // against the same arithmetic a report performs.
-func Sum(recs []usage.Record, skipped int) Totals {
+func Sum(recs []usage.Record, steps []usage.Step, skipped int) Totals {
 	t := Totals{Records: len(recs), Skipped: skipped}
+	for i := range steps {
+		t.Steps++
+		if steps[i].Outcome != "" {
+			t.StepOutcomes++
+		}
+		if steps[i].TargetRef != 0 {
+			t.StepTargets++
+		}
+	}
 	sessions := make(map[string]struct{}, len(recs))
 	for i := range recs {
 		r := &recs[i]

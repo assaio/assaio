@@ -117,6 +117,13 @@ One field there deserves its own paragraph, because it is the only one that stan
   discipline the rework counts already follow. `3` is not recoverable to a file name by
   anyone, including you.
 
+  Since v0.21.0 the integer is read from the **call's own arguments** rather than from its
+  result, which widens *which* steps carry one -- a read, and an edit that failed, now do -- and
+  changes nothing about what is stored: still an integer, still per sequence, still no path. A
+  path named relatively is resolved against the session's working directory before the integer is
+  chosen, so one file cannot hold two of them; a relative path with no working directory to
+  resolve it against is left unnumbered rather than guessed at.
+
 How much of this history is kept is capped by `trace.horizon_days` (30 by default; `0` keeps
 everything). `assaio-agent clear` erases the timeline under exactly the same scope as the
 records it erases.

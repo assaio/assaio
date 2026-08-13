@@ -214,6 +214,53 @@
       ]
     },
     {
+      "id": "ai.step.outcome",
+      "title": "Step outcome",
+      "unit": "count",
+      "status": "observed",
+      "grains": [
+        "step",
+        "session",
+        "window"
+      ],
+      "zeroMeans": "no step in the window states how it ended, or this source marks no step outcomes -- the two are told apart by whether any sequence is stored at all",
+      "describe": "How one step ended, from a closed vocabulary of ok, error, denied and truncated. An unstated outcome is its own value and is never read as ok.",
+      "sources": [
+        "claude-code"
+      ]
+    },
+    {
+      "id": "ai.step.target",
+      "title": "Step target",
+      "unit": "count",
+      "status": "observed",
+      "grains": [
+        "step",
+        "session"
+      ],
+      "zeroMeans": "no step in the window named a file, or the call naming it could not be read -- absent, not a session that touched nothing",
+      "describe": "The integer standing for the file a step acted on, assigned in first-seen order within one sequence. Comparable only inside that sequence, and never a path or a digest of one: \"the same file nine times\" stays answerable while \"which file\" stays unanswerable.",
+      "sources": [
+        "claude-code"
+      ]
+    },
+    {
+      "id": "ai.steps.count",
+      "title": "Sequence steps",
+      "unit": "count",
+      "status": "observed",
+      "grains": [
+        "step",
+        "session",
+        "window"
+      ],
+      "zeroMeans": "this source records no ordered sequence -- absent, not a session that did nothing",
+      "describe": "Observations in a session's own order: model turns and tool calls, each with its position. Content-free -- no prompt, no code, no file name.",
+      "sources": [
+        "claude-code"
+      ]
+    },
+    {
       "id": "ai.tokens.cache_read",
       "title": "Cache-read tokens",
       "unit": "tokens",
@@ -427,6 +474,9 @@
         "ai.session.active_minutes",
         "ai.sessions.count",
         "ai.skill.tokens",
+        "ai.step.outcome",
+        "ai.step.target",
+        "ai.steps.count",
         "ai.tokens.cache_read",
         "ai.tokens.cache_write",
         "ai.tokens.cache_write_1h",
@@ -463,6 +513,7 @@
         "ai.turns.count"
       ],
       "gaps": [
+        "no ordered step sequence is read from its logs yet, so the behaviour detectors have nothing to read for it",
         "no cache-write counter, so a written cache is invisible where a read one is not",
         "no skill or sub-agent labels, so its turns are absent from the attribution split",
         "tool-use denials are not recorded, and call failures only for file edits"
@@ -486,6 +537,7 @@
         "ai.turns.count"
       ],
       "gaps": [
+        "no ordered step sequence, so the behaviour detectors exclude it",
         "no line, edit or tool-call signals, so it contributes cost but no output figures",
         "no cache-write counter, so a written cache is invisible where a read one is not",
         "tool-use tokens are folded into output, and ~/.gemini may be shared with other tools"
@@ -510,6 +562,7 @@
         "ai.tokens.total"
       ],
       "gaps": [
+        "no ordered step sequence: a whole-session total has no order to record",
         "totals exist only when a session ends, so one record covers a whole session and per-turn figures exclude it",
         "code changes are counted once per session with no per-model split, so they are credited whole to the model that made the most requests"
       ]
@@ -532,6 +585,7 @@
         "ai.turns.count"
       ],
       "gaps": [
+        "no ordered step sequence, so the behaviour detectors exclude it",
         "no line, edit or tool-call signals, so it contributes cost but no output figures",
         "its own per-request cost is recorded but recomputed from tokens for cross-tool consistency"
       ]
@@ -575,6 +629,12 @@
       "scope": "project"
     },
     {
+      "name": "edit-loops",
+      "title": "Repeat Edits",
+      "describe": "How often a file goes back for another pass after a command ran, and which sessions stand far outside this window's own rate.",
+      "scope": "project"
+    },
+    {
       "name": "explore-produce",
       "title": "Explore vs Produce",
       "describe": "What the tool calls were for: reading and searching the codebase versus writing code in it.",
@@ -608,6 +668,12 @@
       "name": "reasoning-share",
       "title": "Reasoning Share",
       "describe": "How much generated output is extended-thinking (reasoning) tokens, among tools that report it -- flagging deep reasoning spent on shallow tasks.",
+      "scope": "project"
+    },
+    {
+      "name": "recovery",
+      "title": "Failure Recovery",
+      "describe": "What a failed call, a refusal or a lost context costs next: the turns that follow one, against what a turn costs anywhere in the window.",
       "scope": "project"
     },
     {
@@ -1589,6 +1655,14 @@
       "type": "[]store.CacheMissRow"
     },
     {
+      "name": "Trace",
+      "type": "trace.Set"
+    },
+    {
+      "name": "HistoryStart",
+      "type": "time.Time"
+    },
+    {
       "name": "Ingested",
       "type": "time.Time"
     },
@@ -1732,6 +1806,10 @@
       {
         "path": "delegation.total",
         "type": "number"
+      },
+      {
+        "path": "historyStart",
+        "type": "timestamp"
       },
       {
         "path": "now",
@@ -1889,6 +1967,70 @@
       {
         "path": "totals.tokens",
         "type": "number"
+      },
+      {
+        "path": "trace",
+        "type": "array of object"
+      },
+      {
+        "path": "trace[].entrypoint",
+        "type": "string"
+      },
+      {
+        "path": "trace[].member",
+        "type": "string"
+      },
+      {
+        "path": "trace[].project",
+        "type": "string"
+      },
+      {
+        "path": "trace[].scope",
+        "type": "string"
+      },
+      {
+        "path": "trace[].sessionId",
+        "type": "string"
+      },
+      {
+        "path": "trace[].steps",
+        "type": "array of object"
+      },
+      {
+        "path": "trace[].steps[].at",
+        "type": "timestamp"
+      },
+      {
+        "path": "trace[].steps[].kind",
+        "type": "string"
+      },
+      {
+        "path": "trace[].steps[].model",
+        "type": "string"
+      },
+      {
+        "path": "trace[].steps[].ordinal",
+        "type": "number"
+      },
+      {
+        "path": "trace[].steps[].outcome",
+        "type": "string"
+      },
+      {
+        "path": "trace[].steps[].targetRef",
+        "type": "number"
+      },
+      {
+        "path": "trace[].steps[].tokens",
+        "type": "number"
+      },
+      {
+        "path": "trace[].timeline",
+        "type": "string"
+      },
+      {
+        "path": "trace[].tool",
+        "type": "string"
       },
       {
         "path": "turnSizing",

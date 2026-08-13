@@ -27,6 +27,9 @@ const (
 	SignalRejectedCount      = "ai.rejected.count"
 	SignalCompactionsCount   = "ai.compactions.count"
 	SignalReworkLines        = "ai.rework.lines"
+	SignalStepsCount         = "ai.steps.count"
+	SignalStepOutcome        = "ai.step.outcome"
+	SignalStepTarget         = "ai.step.target"
 	SignalSkillTokens        = "ai.skill.tokens"
 	SignalAgentTokens        = "ai.agent.tokens"
 )

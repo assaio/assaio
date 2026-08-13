@@ -34,6 +34,10 @@ func (adoptionValidator) Name() string     { return adoptionName }
 func (adoptionValidator) Title() string    { return adoptionTitle }
 func (adoptionValidator) Describe() string { return adoptionDescribe }
 
+// Trending: both figures below compare the recent span against the one before it, so the history
+// behind that earlier span is part of the claim (analyze.Trending).
+func (adoptionValidator) Trending() {}
+
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (adoptionValidator) Analyze(in Input) Result {
 	r := Result{Name: adoptionName, Title: adoptionTitle, Describe: adoptionDescribe, HowToRead: adoptionHowToRead}

@@ -105,6 +105,24 @@ var catalog = []Signal{
 		Describe:  "Times a session's context overflowed and was auto-summarized, counted from the tool's own boundary marker.",
 	},
 	{
+		ID: "ai.steps.count", Title: "Sequence steps", Unit: "count",
+		Status: Observed, Grains: []string{GrainStep, GrainSession, GrainWindow},
+		ZeroMeans: "this source records no ordered sequence -- absent, not a session that did nothing",
+		Describe:  "Observations in a session's own order: model turns and tool calls, each with its position. Content-free -- no prompt, no code, no file name.",
+	},
+	{
+		ID: "ai.step.outcome", Title: "Step outcome", Unit: "count",
+		Status: Observed, Grains: []string{GrainStep, GrainSession, GrainWindow},
+		ZeroMeans: "no step in the window states how it ended, or this source marks no step outcomes -- the two are told apart by whether any sequence is stored at all",
+		Describe:  "How one step ended, from a closed vocabulary of ok, error, denied and truncated. An unstated outcome is its own value and is never read as ok.",
+	},
+	{
+		ID: "ai.step.target", Title: "Step target", Unit: "count",
+		Status: Observed, Grains: []string{GrainStep, GrainSession},
+		ZeroMeans: "no step in the window named a file, or the call naming it could not be read -- absent, not a session that touched nothing",
+		Describe:  "The integer standing for the file a step acted on, assigned in first-seen order within one sequence. Comparable only inside that sequence, and never a path or a digest of one: \"the same file nine times\" stays answerable while \"which file\" stays unanswerable.",
+	},
+	{
 		ID: "ai.rework.lines", Title: "Rework lines", Unit: "lines",
 		Status: Derived, Grains: perTurn,
 		ZeroMeans: "no added line was undone later in the same transcript, or the source records no edits",

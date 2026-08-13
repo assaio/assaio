@@ -19,7 +19,7 @@ func TestInvariantsHoldOnEveryTrace(t *testing.T) {
 	}
 	for _, a := range answers {
 		t.Run(a.Source+"/"+a.Trace, func(t *testing.T) {
-			recs, skipped := parseTrace(t, a.Source, a.Trace)
+			recs, _, skipped := parseTrace(t, a.Source, a.Trace)
 			for _, v := range calibration.Invariants(recs, skipped) {
 				t.Error(v)
 			}
@@ -54,7 +54,7 @@ func TestInvariantsHoldOnTheRealCorpus(t *testing.T) {
 		if path == "" {
 			continue
 		}
-		recs, skipped, err := parsers[source](path)
+		recs, _, skipped, err := parsers[source](path)
 		if err != nil {
 			continue
 		}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
+	"github.com/assaio/assaio/internal/trace"
 )
 
 // Delegation is the real sub-agent token-delegation share: Sub is tokens on records
@@ -70,6 +71,20 @@ type Input struct {
 	// drill and in tests that don't set it, where cache-hygiene reports no stated cause
 	// rather than inventing one.
 	CacheMisses []store.CacheMissRow
+	// Trace is the window's stored step sequences (internal/trace): what each session did, in
+	// what order. A validator reading it asks for the one scope it declares rather than the
+	// whole set, so its rate never spans an interactive session and a one-shot SDK call. Empty
+	// in tests that don't set it and on every source with no step reading, where a detector reports
+	// that no sequence was stored rather than inventing a zero. The drill narrows it to its own
+	// project's sessions rather than leaving it empty (internal/dashboard.buildDrill), so a
+	// project panel's detectors answer for that project.
+	Trace trace.Set
+	// HistoryStart is the earliest observation the store holds, ignoring this window's --since. It
+	// is what makes a trend's own horizon knowable: a comparison against an earlier span is
+	// meaningless when the store's history began inside it, which after a source deletes its
+	// transcripts is the ordinary case rather than the odd one (B156, Trending). Zero means the
+	// caller could not answer.
+	HistoryStart time.Time
 	// Ingested is when the newest data in the store was read and ParsedBy is the build that
 	// read it; both travel onto every Result's Confidence. Zero and "" mean unknown, which
 	// is what a caller that cannot answer should leave them as rather than guessing.

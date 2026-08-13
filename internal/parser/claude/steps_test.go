@@ -194,28 +194,58 @@ func TestOutcomeLandsOnTheCallItAnswers(t *testing.T) {
 
 // The store must never receive a path. A target is an integer assigned in first-seen order,
 // so repetition stays visible and identity stays unrecoverable.
+//
+// Every call here names its file in its own input, which is the whole point of reading it there:
+// the read and the failed edit carry a target that the edit *result* could never have given
+// them, and the relative path resolves onto the file already numbered 1 rather than opening a
+// second identity for it.
 func TestTargetsAreIntegersAssignedInFirstSeenOrder(t *testing.T) {
-	const transcript = `{"uuid":"a","sessionId":"s","type":"assistant","message":{"id":"m1","model":"claude-opus-5","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","id":"t1","name":"Edit"},{"type":"tool_use","id":"t2","name":"Edit"},{"type":"tool_use","id":"t3","name":"Edit"}]}}
+	const transcript = `{"uuid":"a","sessionId":"s","cwd":"/repo","type":"assistant","message":{"id":"m1","model":"claude-opus-5","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","id":"t1","name":"Edit","input":{"file_path":"/repo/one.go","old_string":"x","new_string":"y"}},{"type":"tool_use","id":"t2","name":"Read","input":{"file_path":"/repo/two.go"}},{"type":"tool_use","id":"t3","name":"Edit","input":{"file_path":"/repo/one.go"}},{"type":"tool_use","id":"t4","name":"Edit","input":{"file_path":"one.go"}}]}}
 {"uuid":"b","sessionId":"s","type":"user","toolUseResult":{"filePath":"/repo/one.go","structuredPatch":[]},"message":{"content":[{"type":"tool_result","tool_use_id":"t1"}]}}
-{"uuid":"c","sessionId":"s","type":"user","toolUseResult":{"filePath":"/repo/two.go","structuredPatch":[]},"message":{"content":[{"type":"tool_result","tool_use_id":"t2"}]}}
-{"uuid":"d","sessionId":"s","type":"user","toolUseResult":{"filePath":"/repo/one.go","structuredPatch":[]},"message":{"content":[{"type":"tool_result","tool_use_id":"t3"}]}}`
+{"uuid":"c","sessionId":"s","type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t2"}]}}
+{"uuid":"d","sessionId":"s","type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t3","is_error":true}]}}`
 	steps, _, err := ParseSteps(strings.NewReader(transcript))
 	if err != nil {
 		t.Fatalf("ParseSteps: %v", err)
 	}
-	var refs []int64
+	type got struct {
+		kind, outcome string
+		ref           int64
+	}
+	var calls []got
 	for _, s := range steps {
-		if s.Kind == usage.StepEdit {
-			refs = append(refs, s.TargetRef)
+		if s.Kind != usage.StepAssistant {
+			calls = append(calls, got{s.Kind, s.Outcome, s.TargetRef})
 		}
 	}
-	want := []int64{1, 2, 1}
-	if len(refs) != len(want) {
-		t.Fatalf("edit steps = %d, want %d", len(refs), len(want))
+	want := []got{
+		{usage.StepEdit, usage.OutcomeOK, 1},
+		{usage.StepRead, usage.OutcomeOK, 2},
+		{usage.StepEdit, usage.OutcomeError, 1},
+		{usage.StepEdit, "", 1},
+	}
+	if len(calls) != len(want) {
+		t.Fatalf("tool-call steps = %d, want %d", len(calls), len(want))
 	}
 	for i := range want {
-		if refs[i] != want[i] {
-			t.Fatalf("target refs = %v, want %v (the third edit revisits the first file)", refs, want)
+		if calls[i] != want[i] {
+			t.Fatalf("call %d = %+v, want %+v (all of: %+v)", i+1, calls[i], want[i], calls)
+		}
+	}
+}
+
+// A path this parse cannot resolve has no honest identity, so it gets none: a target ref is
+// only ever comparable within one timeline, and numbering an unresolvable relative path would
+// let two different files share one integer.
+func TestARelativeTargetWithNoCwdIsLeftUnnumbered(t *testing.T) {
+	const transcript = `{"uuid":"a","sessionId":"s","type":"assistant","message":{"id":"m1","model":"claude-opus-5","usage":{"input_tokens":1,"output_tokens":1},"content":[{"type":"tool_use","id":"t1","name":"Read","input":{"file_path":"one.go"}}]}}`
+	steps, _, err := ParseSteps(strings.NewReader(transcript))
+	if err != nil {
+		t.Fatalf("ParseSteps: %v", err)
+	}
+	for _, s := range steps {
+		if s.Kind == usage.StepRead && s.TargetRef != 0 {
+			t.Errorf("target ref = %d, want 0: no cwd could resolve %q", s.TargetRef, "one.go")
 		}
 	}
 }
@@ -288,5 +318,46 @@ func TestDenialLandsOnTheCallTheLineNames(t *testing.T) {
 	}
 	if ok != usage.OutcomeOK {
 		t.Errorf("the answered call's outcome = %q, want %q", ok, usage.OutcomeOK)
+	}
+}
+
+// A transcript's paths come from wherever the agent ran; assaio reads them wherever the store is.
+// Answering "is this rooted" with the host's rule made a POSIX path read on Windows relative, so
+// one file took two integers -- and a store synced from a mixed team holds both spellings at once.
+// This is the case CI caught on Windows that every local run passed.
+func TestATargetKeyDoesNotDependOnTheHostPlatform(t *testing.T) {
+	tests := []struct {
+		name        string
+		target, cwd string
+		want        string
+	}{
+		{name: "posix absolute", target: "/w/app/one.go", cwd: "/w/app", want: "/w/app/one.go"},
+		{name: "posix relative resolves", target: "one.go", cwd: "/w/app", want: "/w/app/one.go"},
+		{name: "windows drive is rooted", target: `C:\w\app\one.go`, cwd: `C:\w\app`, want: "C:/w/app/one.go"},
+		{name: "windows relative resolves", target: `sub\one.go`, cwd: `C:\w\app`, want: "C:/w/app/sub/one.go"},
+		{name: "unc share is rooted", target: `\\host\share\one.go`, cwd: "/w/app", want: "//host/share/one.go"},
+		{name: "the two spellings of one file agree", target: `C:\w\app\one.go`, cwd: "", want: "C:/w/app/one.go"},
+		{name: "dot segments are folded", target: "../app/one.go", cwd: "/w/lib", want: "/w/app/one.go"},
+		{name: "relative with no cwd has no identity", target: "one.go", cwd: "", want: ""},
+		{name: "relative with a relative cwd has no identity", target: "one.go", cwd: "app", want: ""},
+		{name: "no path at all", target: "", cwd: "/w/app", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := targetKey(tt.target, tt.cwd); got != tt.want {
+				t.Errorf("targetKey(%q, %q) = %q, want %q", tt.target, tt.cwd, got, tt.want)
+			}
+		})
+	}
+}
+
+// The identity that matters: one file named two ways inside one sequence is one target, whichever
+// platform the reader is on.
+func TestOneFileNamedTwoWaysKeepsOneTarget(t *testing.T) {
+	if a, b := targetKey("/w/app/one.go", "/w/app"), targetKey("one.go", "/w/app"); a != b {
+		t.Errorf("absolute %q and relative %q disagree about the same file", a, b)
+	}
+	if a, b := targetKey(`C:\w\one.go`, `C:\w`), targetKey("one.go", `C:\w`); a != b {
+		t.Errorf("windows absolute %q and relative %q disagree about the same file", a, b)
 	}
 }

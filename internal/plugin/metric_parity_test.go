@@ -9,6 +9,8 @@ import (
 	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
+	"github.com/assaio/assaio/internal/trace"
+	"github.com/assaio/assaio/internal/usage"
 )
 
 // notOnTheWire lists the analyze.Input fields a metric plugin deliberately does not
@@ -69,8 +71,16 @@ func fullInput() analyze.Input {
 		Agents:          []store.AttributionRow{{Name: "a", Tokens: 7}},
 		TurnSizing:      []store.ModelTurns{{Model: "m", Turns: 8}},
 		CacheMisses:     []store.CacheMissRow{{Tool: "claude-code", Reason: "r", Turns: 9}},
-		Ingested:        time.Date(2026, 8, 9, 1, 0, 0, 0, time.UTC),
-		ParsedBy:        "v0.17.0",
+		Trace: trace.New([]store.Timeline{{
+			Tool: "claude-code", SessionID: "s", Entrypoint: "cli", Project: "p",
+			Steps: []store.TimelineStep{{
+				Ordinal: 1, Timestamp: time.Date(2026, 8, 2, 0, 0, 0, 0, time.UTC),
+				Kind: usage.StepEdit, Outcome: usage.OutcomeOK, Model: "m", Tokens: 10, TargetRef: 1,
+			}},
+		}}),
+		HistoryStart: time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
+		Ingested:     time.Date(2026, 8, 9, 1, 0, 0, 0, time.UTC),
+		ParsedBy:     "v0.17.0",
 	}
 }
 
@@ -150,7 +160,7 @@ func TestWindowAggregatesMarshalAsListsWhenEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	for _, key := range []string{`"skills":[]`, `"agents":[]`, `"turnSizing":[]`, `"cacheMisses":[]`} {
+	for _, key := range []string{`"skills":[]`, `"agents":[]`, `"turnSizing":[]`, `"cacheMisses":[]`, `"trace":[]`} {
 		if !strings.Contains(string(out), key) {
 			t.Errorf("empty envelope missing %s, got %s", key, out)
 		}

@@ -5,10 +5,17 @@
   "origin": "8 consecutive lines of a real Claude Code transcript, centred on a context overflow. Redacted by field allowlist: the compaction markers and the token counts are the tool's own.",
   "method": "Counted from the raw JSONL by a second implementation written against the log's shape, never calling internal/parser.",
   "calibrates": [
-    "ai.tokens.total", "ai.tokens.input", "ai.tokens.output",
-    "ai.tokens.cache_read", "ai.tokens.cache_write",
-    "ai.cost.estimated", "ai.sessions.count", "ai.turns.count", "ai.session.active_minutes",
-    "ai.tool_calls.count", "ai.compactions.count"
+    "ai.tokens.total",
+    "ai.tokens.input",
+    "ai.tokens.output",
+    "ai.tokens.cache_read",
+    "ai.tokens.cache_write",
+    "ai.cost.estimated",
+    "ai.sessions.count",
+    "ai.turns.count",
+    "ai.session.active_minutes",
+    "ai.tool_calls.count",
+    "ai.compactions.count"
   ],
   "totals": {
     "records": 2,
@@ -27,6 +34,9 @@
     "rejected": 0,
     "tool_errors": 0,
     "compactions": 1,
+    "steps": 5,
+    "step_outcomes": 0,
+    "step_targets": 0,
     "skipped": 0
   },
   "derivations": {
@@ -46,6 +56,9 @@
     "rejected": "no denial in this window.",
     "tool_errors": "no failed tool result in this window.",
     "compactions": "one. The overflow is written as two adjacent lines -- a system line with subtype 'compact_boundary' and the user-side line flagged isCompactSummary -- and they are one event: the boundary says the context was cut, the summary carries what replaced it. Counting per marker reports two, which is what assaio did until v0.14; on the maintainer's corpus that turned 19 real compactions into 38.",
-    "skipped": "every line is valid JSON; the compaction lines are recognised shapes rather than evidence that failed to read."
+    "skipped": "every line is valid JSON; the compaction lines are recognised shapes rather than evidence that failed to read.",
+    "steps": "5: one step per distinct assistant response (2), one per tool_use block (2), and one for the overflow itself -- the two adjacent markers are one event, exactly as the compaction count above treats them.",
+    "step_outcomes": "0. This capture predates the sequence reading: no tool_use carries an id to answer, and no assistant line states a stop_reason.",
+    "step_targets": "0. No tool_use block in this capture carries an input, so no call names a file."
   }
 }

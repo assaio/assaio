@@ -110,5 +110,7 @@ func totalsOf(t *testing.T, parse func(io.Reader) ([]usage.Record, int, error), 
 	if err != nil {
 		t.Fatal(err)
 	}
-	return calibration.Sum(recs, skipped)
+	// The metamorphic laws are about records; a sequence read of the same bytes is checked by the
+	// adjudicated traces, not by permuting them.
+	return calibration.Sum(recs, nil, skipped)
 }

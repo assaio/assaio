@@ -5,9 +5,16 @@
   "origin": "A real GitHub Copilot CLI session's events.jsonl, reduced to the two events the parser reads. Redacted by field allowlist: every token and line count is the tool's own, the session id and cwd are stand-ins, and the modified-file paths were dropped rather than renamed.",
   "method": "Counted by reading the session.shutdown payload, which is where Copilot CLI publishes its own totals. No call into internal/parser.",
   "calibrates": [
-    "ai.tokens.total", "ai.tokens.input", "ai.tokens.output",
-    "ai.tokens.cache_read", "ai.tokens.cache_write", "ai.tokens.reasoning",
-    "ai.cost.estimated", "ai.sessions.count", "ai.lines.added", "ai.lines.removed"
+    "ai.tokens.total",
+    "ai.tokens.input",
+    "ai.tokens.output",
+    "ai.tokens.cache_read",
+    "ai.tokens.cache_write",
+    "ai.tokens.reasoning",
+    "ai.cost.estimated",
+    "ai.sessions.count",
+    "ai.lines.added",
+    "ai.lines.removed"
   ],
   "totals": {
     "records": 1,
@@ -26,6 +33,9 @@
     "rejected": 0,
     "tool_errors": 0,
     "compactions": 0,
+    "steps": 0,
+    "step_outcomes": 0,
+    "step_targets": 0,
     "skipped": 0
   },
   "derivations": {
@@ -45,6 +55,9 @@
     "rejected": "not recorded by this source.",
     "tool_errors": "not recorded by this source.",
     "compactions": "not recorded by this source.",
-    "skipped": "both lines are valid JSON and both are shapes the parser knows."
+    "skipped": "both lines are valid JSON and both are shapes the parser knows.",
+    "steps": "0. Copilot CLI totals a whole session on shutdown; a total has no order, so there is no sequence to read.",
+    "step_outcomes": "0. Copilot CLI totals a whole session on shutdown; a total has no order, so there is no sequence to read.",
+    "step_targets": "0. Copilot CLI totals a whole session on shutdown; a total has no order, so there is no sequence to read."
   }
 }

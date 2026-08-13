@@ -49,6 +49,23 @@ type metricInput struct {
 	// CacheMisses is the window's stated cache-miss reasons per tool. A turn that hit cache
 	// states no reason and is absent, as is every turn from a source that reports none.
 	CacheMisses []metricCacheMissRow `json:"cacheMisses"`
+	// Trace is the window's step sequences: what each session did, in what order (ADR 0012).
+	// Every scope is sent, each sequence carrying the one it belongs to, because a detector's
+	// scope is its denominator and both sides have to agree on it rather than each deriving one.
+	//
+	// This is the largest thing on the wire by an order of magnitude -- 339,000 steps encode to
+	// 44MB -- and it is sent unconditionally because the alternative is a plugin that cannot
+	// write the detectors the core just gained. A plugin declaring what it needs is the way out
+	// and needs a protocol version to carry it (`B168`).
+	//
+	// Empty on a store with no step history, and for every source with no step reading: absent,
+	// not a session that did nothing.
+	Trace []metricTimeline `json:"trace"`
+	// HistoryStart is the earliest observation the store holds, ignoring this window. It is what
+	// makes a trend's own horizon knowable: a comparison against an earlier span means nothing when
+	// the store's history began inside it, and a source that deletes its transcripts makes that the
+	// ordinary case. The zero time means the core could not answer.
+	HistoryStart time.Time `json:"historyStart"`
 }
 
 type metricUsageRow struct {

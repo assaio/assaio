@@ -39,6 +39,9 @@
     "rejected": 1,
     "tool_errors": 0,
     "compactions": 0,
+    "steps": 15,
+    "step_outcomes": 0,
+    "step_targets": 0,
     "skipped": 0
   },
   "derivations": {
@@ -58,6 +61,9 @@
     "rejected": "one line carries toolDenialKind. Its content block is also flagged is_error, and that is deliberately not also counted as a tool error: a human refusing a call is not the tool failing, and counting both would double one event into two friction signals.",
     "tool_errors": "no failed tool result in the window other than the denial above.",
     "compactions": "no line marks a context overflow.",
-    "skipped": "every line is valid JSON and every assistant line carries a message.id."
+    "skipped": "every line is valid JSON and every assistant line carries a message.id.",
+    "steps": "15: one step per distinct assistant response (7) plus one per tool_use block (8).",
+    "step_outcomes": "0. This capture predates the sequence reading and carries no tool_use ids, so neither the failed result nor the declined call can be matched to the call it belongs to -- the record-level tool_errors and rejected figures above are counted from the line, which needs no id. sequence.jsonl pins the step-level form.",
+    "step_targets": "0. No tool_use block carries an input. The two filePath values in this trace sit on edit *results*, which the target reading deliberately ignores: a failed edit has no result to carry one."
   }
 }

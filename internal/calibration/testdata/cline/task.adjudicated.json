@@ -5,9 +5,15 @@
   "origin": "A constructed task directory in Cline's captured shape -- ui_messages.json beside task_metadata.json -- not a redacted real task: Cline is not installed on the maintainer's machine, so there is nothing real to redact. The trace is a directory rather than a file because that is how this source stores a session.",
   "method": "Counted by reading the two api_req_started payloads and the model sidecar. No call into internal/parser.",
   "calibrates": [
-    "ai.tokens.total", "ai.tokens.input", "ai.tokens.output",
-    "ai.tokens.cache_read", "ai.tokens.cache_write",
-    "ai.cost.estimated", "ai.sessions.count", "ai.turns.count", "ai.session.active_minutes"
+    "ai.tokens.total",
+    "ai.tokens.input",
+    "ai.tokens.output",
+    "ai.tokens.cache_read",
+    "ai.tokens.cache_write",
+    "ai.cost.estimated",
+    "ai.sessions.count",
+    "ai.turns.count",
+    "ai.session.active_minutes"
   ],
   "totals": {
     "records": 2,
@@ -26,6 +32,9 @@
     "rejected": 0,
     "tool_errors": 0,
     "compactions": 0,
+    "steps": 0,
+    "step_outcomes": 0,
+    "step_targets": 0,
     "skipped": 0
   },
   "derivations": {
@@ -45,6 +54,9 @@
     "rejected": "not recorded by this source.",
     "tool_errors": "not recorded by this source.",
     "compactions": "not recorded by this source.",
-    "skipped": "both payloads parse; the conversation messages carry no accounting and are not evidence that failed to read."
+    "skipped": "both payloads parse; the conversation messages carry no accounting and are not evidence that failed to read.",
+    "steps": "0. Cline's task files carry no ordered tool activity to read a sequence from, which is what its depth row claims.",
+    "step_outcomes": "0. Cline's task files carry no ordered tool activity to read a sequence from, which is what its depth row claims.",
+    "step_targets": "0. Cline's task files carry no ordered tool activity to read a sequence from, which is what its depth row claims."
   }
 }

@@ -21,6 +21,80 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+
+- **The step timeline has readers.** `analyze` gains two detectors over the sequence stored in
+  v0.20.0, each one file, each declaring the population it answers for and what its pattern
+  cannot be told apart from:
+  - **`edit-loops`** — how often a session returns to a file it has already edited with a command
+    run in between. The definition is not invented here: it is the one
+    [CodeBurn publishes](https://github.com/getagentseal/codeburn), adopted so the figure means
+    the same thing in both tools. The finding is not the rate but the session standing far outside
+    the window's own, found against its median and spread the way `burn-anomaly` finds a spend
+    day — there is no published threshold for a healthy repeat rate, and inventing one would ship
+    one machine's habits as everyone's line. Measured on the maintainer's store: 25.0% of edits in
+    a person's own sessions (5,167 of 20,683) against 15.5% inside sub-agents (1,312 of 8,462),
+    which is why the two never share a figure.
+  - **`recovery`** — what a failed call, a refusal or a lost context costs next, as a multiple of
+    what a turn costs anywhere else in the window, beside the sessions that stopped on a failure
+    and the share of work run on a summarized context.
+- **Detectors declare their scope in the interface, not in prose.** A validator reading sequences
+  implements `analyze.TraceReader` and names one of `interactive`, `sub-agent`, `programmatic` or
+  `unstated` (`internal/trace`). One place computes the denominator and the excluded share, and
+  every detector renders the same sentence for it: 89% of the main-loop sequences on the audited
+  store are SDK calls holding 5.7% of its steps, so a rate spanning two scopes describes neither.
+- **The sequence crosses the metric-plugin boundary**, with the scope precomputed per sequence, so
+  a plugin can write the detectors the core just gained (`trace`, `historyStart` on the wire; a
+  worked detector in [the cookbook](docs/recipes/extensions.md)). The input document grows with
+  step history — 339,000 steps encode to about 44 MB — and is sent whether or not a plugin reads
+  it, because the protocol has no way for one to say (`B168`).
+- **A history horizon on every trend, and retention in `doctor`** (`B156`). A validator whose
+  figures compare one span against an earlier one implements `analyze.Trending` and gets the line
+  stamped onto it: where the store's own history starts, and whether it covers the earlier span at
+  all. `doctor` reads Claude Code's `cleanupPeriodDays` from the managed and user settings chain
+  and states it beside the store's own claude-code span, and the served team dashboard carries the
+  same horizon line — on the maintainer's machine, 44 days
+  stored against 30 the source still keeps, which means 14 of those days exist **only** in the
+  store and a `clear` ends them permanently.
+- **Three signals for the sequence** (`ai.steps.count`, `ai.step.outcome`, `ai.step.target`) and a
+  `step` grain in the catalog, with the capability row that carries them — pinned by a new
+  adjudicated trace, since a depth row nothing calibrates is a promise nothing checks.
+
+### Changed
+
+- **A step's target is read from the call's own arguments instead of its result**, which widens
+  which steps carry one: measured over 5,741 real transcripts, reads went from 0 to 34,980 of
+  37,373 (93.6%) and edits from 94.4% to 100% — including all 344 that failed and all 8 that were
+  declined, none of which could carry a target before, because a call that does not complete has
+  no result to name a file. A relative path is resolved against the session's working directory so
+  one file cannot hold two integers, by a rule that does not depend on the platform assaio runs on:
+  a transcript's paths come from wherever the *agent* ran, and a store synced from a mixed team
+  holds both spellings in one table. Run `backfill` to apply it to already-stored sessions.
+- `store.HistoryStart` and the retention line take a tool, because each source keeps its logs for
+  its own length of time and comparing one tool's retention against every tool's span answers
+  about a set nobody measured.
+- The "far from typical" rule — median, median-absolute-deviation, modified z-score — is shared by
+  every metric that asks the question instead of restated per metric.
+
+### Fixed
+
+- **A re-read no longer keeps the higher of two parsers' target numbers.** `target_ref` was
+  restated with `MAX()`, which is harmless while numbering never changes and wrong the moment it
+  does: widening which calls register a target renumbers first-seen order, and one sequence would
+  have held a `7` beside a `3` standing for the same file with nothing able to detect it. It now
+  follows the current parse, exactly as `ordinal` already did for the same reason.
+
+### Compatibility
+
+- `analyze` reads the stored sequences, which costs about 2.5s on a 339,000-step store. The read
+  is skipped entirely when no registered validator wants it, and `trace.horizon_days` bounds how
+  much there is to read.
+- The two detectors report nothing until a `backfill` has stored sequences, and only Claude Code
+  records them; every other source's depth row says so rather than reporting a zero.
+- The served dashboard (`serve`) deliberately does not read sequences: `GET /` is unauthenticated
+  and rebuilds per request, and a store filled by `sync` holds none anyway, since the team-server
+  contract carries usage records and not sequences. Its detectors say so (`B171`).
+
 ## [0.20.0] - 2026-08-12
 
 ### Added

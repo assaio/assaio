@@ -44,6 +44,8 @@ type Input struct {
 	Skills          []store.AttributionRow
 	Agents          []store.AttributionRow
 	TurnSizing      []store.ModelTurns
+	Trace           trace.Set
+	HistoryStart    time.Time
 }
 ```
 
@@ -67,6 +69,8 @@ server](team-server.md)) the served endpoint.
 | `PlanMonthlyCost` | `float64` | The user's configured flat monthly plan price (`pricing.monthly_subscription_cost`); `0` means unset — prompt to configure it rather than comparing against nothing. |
 | `Skills` / `Agents` | `[]store.AttributionRow` | The window's per-skill and per-sub-agent totals (`Name`, `Tokens`, `Lines`, `Records`, `Sessions`), each sorted by `Tokens` descending. `Name` is a category label the tool assigned — never a prompt or any content. Empty when no tool in the window reports attribution (only Claude Code does today), so a metric over them must state its own coverage. |
 | `TurnSizing` | `[]store.ModelTurns` | Per-model raw turn counts (`Turns`, `SmallTurns`) for metrics that need the per-turn grain the daily `Usage` aggregate hides. Empty in the drill and in tests that do not set it. |
+| `Trace` | `trace.Set` | The window's step sequences (ADR 0012). Never read the whole set: call `Trace.Scope(...)` with the one population your metric declares, and render the `View.Caveat()` it hands back. Declaring the scope is not politeness — 89% of the sequences on the audited store are one-shot SDK calls holding 5.7% of its steps — and a validator that reads sequences declares it structurally by implementing `analyze.TraceReader`. Empty on a store with no step history and for every source with no step reading. |
+| `HistoryStart` | `time.Time` | The earliest observation the store holds, ignoring the window, so a figure comparing one span against an earlier one can say whether the earlier one existed. A validator that renders such a comparison implements `analyze.Trending`, and the horizon line is stamped onto its Result automatically. Zero means unknown. |
 | `CacheMisses` | `[]store.CacheMissRow` | The window's stated cache-miss reasons per tool (`Tool`, `Reason`, `Turns`), from the vendor's own closed vocabulary — a category, never content. A turn that hit cache states no reason and is absent, as is every turn from a source that reports none, so the absence of a row is not evidence the cache was hit. |
 | `WindowStart` | `time.Time` | The `--since` boundary usage was queried with. The zero time means the caller scoped no window, and a rate then spans the usage itself rather than the window. Divide a projection by real days from here, because a day inside the window carrying no usage is still a day a flat plan was paid for. |
 | `Ingested` / `ParsedBy` | `time.Time` / `string` | When the newest data in the store was read, and the build that read it. `analyze.Stamp` copies both onto every `Result.Confidence`, so a validator does not set them — the zero time and `""` mean unknown, which is what a caller that cannot answer leaves them as rather than guessing. `digest` reads `ParsedBy` to declare when two runs are not comparable because the parser changed between them. |

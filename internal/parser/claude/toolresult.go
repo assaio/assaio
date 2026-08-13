@@ -89,7 +89,10 @@ const (
 // own additional usage record (deduped by agentId, since sub-agent usage never overlaps
 // its parent turn); an edit result attributes its added/removed/rework line counts to the
 // last assistant record. It reports whether the line matched either shape.
-func (st *parseState) applyToolResult(l *line, cf *carryForward, blocks []contentBlock) bool {
+//
+// A step's target is deliberately not read here: this path sees only edits that succeeded,
+// and the call's own input names the file whether the call worked or not (contentBlock.targetPath).
+func (st *parseState) applyToolResult(l *line, cf *carryForward) bool {
 	t, action := classifyToolResult(l.ToolUseResult)
 	switch action {
 	case actionSubAgent:
@@ -100,7 +103,6 @@ func (st *parseState) applyToolResult(l *line, cf *carryForward, blocks []conten
 	case actionEdit:
 		added, removed := t.lineCounts()
 		st.rework.attribute(st.out, st.last, t.FilePath, added, removed)
-		st.steps.target(blocks, t.FilePath)
 		return true
 	default:
 		return false
