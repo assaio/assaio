@@ -10,17 +10,17 @@ import (
 // parseTrace runs the source's own parser over a trace file. This is the only place in the
 // package where internal/parser is called: everything it is compared against was counted
 // somewhere else.
-func parseTrace(t *testing.T, source, path string) ([]usage.Record, int) {
+func parseTrace(t *testing.T, source, path string) ([]usage.Record, []usage.Step, int) {
 	t.Helper()
 	parse, ok := parsers[source]
 	if !ok {
 		t.Fatalf("no parser registered for source %q", source)
 	}
-	recs, skipped, err := parse(path)
+	recs, steps, skipped, err := parse(path)
 	if err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}
-	return recs, skipped
+	return recs, steps, skipped
 }
 
 // TestAdjudicatedTotals is the check a golden file cannot be: the expected answer was
@@ -36,8 +36,8 @@ func TestAdjudicatedTotals(t *testing.T) {
 	}
 	for _, a := range answers {
 		t.Run(a.Source+"/"+a.Trace, func(t *testing.T) {
-			recs, skipped := parseTrace(t, a.Source, a.Trace)
-			got := calibration.Sum(recs, skipped)
+			recs, steps, skipped := parseTrace(t, a.Source, a.Trace)
+			got := calibration.Sum(recs, steps, skipped)
 			for _, m := range calibration.Diff(&got, &a.Totals) {
 				t.Errorf("%s: parser %d, adjudicated %d\n    how it was adjudicated: %s",
 					m.Figure, m.Got, m.Want, a.Derivations[m.Figure])

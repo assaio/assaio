@@ -28,13 +28,14 @@ func tokensPerDay(rows []store.UsageRow) []dayBurn {
 }
 
 // medianTokens is the middle day's burn, the baseline every spike is measured against.
-func medianTokens(days []dayBurn) int64 {
-	values := make([]float64, len(days))
+func medianTokens(days []dayBurn) int64 { return int64(medianOf(burnValues(days))) }
+
+func burnValues(days []dayBurn) []float64 {
+	out := make([]float64, len(days))
 	for i := range days {
-		values[i] = float64(days[i].Tokens)
+		out[i] = float64(days[i].Tokens)
 	}
-	sort.Float64s(values)
-	return int64(percentileAt(values, 0.5))
+	return out
 }
 
 // burnSpikes returns the days burning far above the median, by modified z-score. Only the
@@ -54,7 +55,7 @@ func burnSpikes(days []dayBurn, median int64) []dayBurn {
 	}
 	var spikes []dayBurn
 	for i := range days {
-		if float64(days[i].Tokens-median)/sigma > burnZThreshold {
+		if float64(days[i].Tokens-median)/sigma > zThreshold {
 			spikes = append(spikes, days[i])
 		}
 	}
@@ -62,36 +63,8 @@ func burnSpikes(days []dayBurn, median int64) []dayBurn {
 	return spikes
 }
 
-// burnDispersion estimates the window's spread on the standard-deviation scale, preferring
-// the median absolute deviation because one runaway day cannot inflate it enough to hide
-// itself. It falls back to the mean absolute deviation when that median is zero -- which
-// happens whenever more than half the days share one value -- and reports ok=false only
-// when every day burned exactly the same, where no day can be an outlier.
+// burnDispersion is the window's spread on the standard-deviation scale, from the shared rule
+// every "far from typical" question in this package is answered with (dispersion.go).
 func burnDispersion(days []dayBurn, median int64) (sigma float64, ok bool) {
-	deviations := absoluteDeviations(days, median)
-	sort.Float64s(deviations)
-	if mad := percentileAt(deviations, 0.5); mad > 0 {
-		return mad * burnMADToSigma, true
-	}
-	var sum float64
-	for _, d := range deviations {
-		sum += d
-	}
-	if sum == 0 {
-		return 0, false
-	}
-	return sum / float64(len(deviations)) * burnMeanADToSigma, true
-}
-
-// absoluteDeviations is each day's distance from the median burn.
-func absoluteDeviations(days []dayBurn, median int64) []float64 {
-	out := make([]float64, len(days))
-	for i := range days {
-		d := float64(days[i].Tokens - median)
-		if d < 0 {
-			d = -d
-		}
-		out[i] = d
-	}
-	return out
+	return dispersion(burnValues(days), float64(median))
 }

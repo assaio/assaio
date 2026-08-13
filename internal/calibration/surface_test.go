@@ -117,7 +117,7 @@ func everyTraceRecords(t *testing.T) []usage.Record {
 	}
 	var out []usage.Record
 	for i := range answers {
-		recs, _ := parseTrace(t, answers[i].Source, answers[i].Trace)
+		recs, _, _ := parseTrace(t, answers[i].Source, answers[i].Trace)
 		out = append(out, recs...)
 	}
 	if len(out) == 0 {

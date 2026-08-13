@@ -43,6 +43,7 @@ var recipeCoverage = map[string]string{
 	// docs/recipes/extensions.md
 	"weekday-split":  ShapeChecked,
 	"answers-gated":  ShapeChecked,
+	"read-repeats":   ShapeChecked,
 	"plugin-weekday": Executed,
 	"plugin-answers": Executed,
 	"metric-config":  Loaded,

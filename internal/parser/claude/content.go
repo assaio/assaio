@@ -16,6 +16,36 @@ type contentBlock struct {
 	// name. The pair is what lets a step's outcome land on the call it belongs to.
 	ID        string `json:"id"`
 	ToolUseID string `json:"tool_use_id"`
+	// Input is a call's own arguments, kept raw for the reason toolResult.Content is: tools
+	// disagree on the field's type, and one non-object input would fail the whole content
+	// array's unmarshal and take every block on the line with it.
+	Input json.RawMessage `json:"input"`
+}
+
+// toolTarget is the narrow view of a call's input: the file it names, and nothing else. Two
+// fields are the whole struct deliberately -- an edit's input carries the code being written,
+// and a struct that does not name a field never holds it (PRIVACY.md).
+type toolTarget struct {
+	FilePath     string `json:"file_path"`
+	NotebookPath string `json:"notebook_path"`
+}
+
+// targetPath is the file this call names, "" when it names none. Read from the call's own
+// input rather than from its result, which is where the edit path used to come from: a result
+// path exists only for an edit that succeeded, so 344 failed edits and every one of 36,846
+// reads carried no target at all on the maintainer's store.
+func (b *contentBlock) targetPath() string {
+	if len(b.Input) == 0 {
+		return ""
+	}
+	var t toolTarget
+	if err := json.Unmarshal(b.Input, &t); err != nil {
+		return ""
+	}
+	if t.FilePath != "" {
+		return t.FilePath
+	}
+	return t.NotebookPath
 }
 
 // editToolNames are the assistant tool_use block names that edit files.

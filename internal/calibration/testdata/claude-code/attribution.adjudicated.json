@@ -37,6 +37,9 @@
     "rejected": 0,
     "tool_errors": 1,
     "compactions": 0,
+    "steps": 8,
+    "step_outcomes": 0,
+    "step_targets": 0,
     "skipped": 0
   },
   "derivations": {
@@ -57,6 +60,9 @@
     "tool_errors": "one tool_result block flagged is_error, on a line carrying no denial -- so it is the tool failing rather than a human refusing, and it belongs to the turn that made the call rather than to the line reporting it.",
     "compactions": "no compaction boundary in this transcript.",
     "skipped": "every line is valid JSON and every assistant line carries a message.id.",
-    "attribution": "every assistant line carries attributionSkill 'deep-research' and attributionAgent 'workflow-subagent', so all 4 records' tokens are attributable to both dimensions -- which is what ai.skill.tokens and ai.agent.tokens are summed from. One turn also carries diagnostics.cache_miss_reason 'tools_changed', the vendor's own reason its prompt could not be served from cache."
+    "attribution": "every assistant line carries attributionSkill 'deep-research' and attributionAgent 'workflow-subagent', so all 4 records' tokens are attributable to both dimensions -- which is what ai.skill.tokens and ai.agent.tokens are summed from. One turn also carries diagnostics.cache_miss_reason 'tools_changed', the vendor's own reason its prompt could not be served from cache.",
+    "steps": "8: one step per distinct assistant response (4) plus one per tool_use block (4).",
+    "step_outcomes": "0. This capture predates the sequence reading, and its allowlist copied only what the parser read at the time: no tool_use carries an id, so no tool_result can be matched to the call it answers, and every assistant stop_reason is absent. The later sequence.jsonl trace is the one that pins an outcome.",
+    "step_targets": "0. Same reason: no tool_use block carries an input, so no call in this trace names a file. The edit result's own filePath is deliberately not read for a target -- see sequence.jsonl."
   }
 }

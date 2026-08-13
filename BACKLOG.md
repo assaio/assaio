@@ -116,17 +116,24 @@ on, since a link to a merged pull request is only as good as the session it link
   bytes the table and its indexes are **101.9 MB against `usage_record`'s 58.3 MB**, roughly
   1.7x the table they describe. Hence a horizon
   (`trace.horizon_days`, default 30) pruned on every ingest rather than by a tidy-up command;
-  30 days is also all that is recoverable, since Claude deletes transcripts at 30 by default
-  (`B156`).
+  30 days is also all that is recoverable, since Claude deletes transcripts at 30 by default --
+  the history horizon and `doctor`'s retention line that state so shipped in v0.21.
   **Two things this item did not anticipate, both found by measuring before designing.** A
   session-grained denominator is a trap: 86% of sessions on the audited machine are SDK calls
   contributing 5% of rows, so "89% of sessions end without an edit" would be true, precise and
   worthless — every detector declares its scope from `entrypoint`/`sidechain` and renders the
   excluded share beside its figure. And a sub-agent needs its own timeline: 103 sessions hold
   39% of all rows, and blending them would make a sub-agent's thrashing read as a person's.
-  **Landed so far** (not yet released, no detector reads it): the step contract, the Claude
-  reading, migration `0012`, the horizon and its prune. What remains is the analysers, the
-  Codex reading, the capability row, and the plugin boundary. Two things the readings do **not**
+  **Landed** in v0.20.0: the step contract, the Claude reading, migration `0012`, the horizon and
+  its prune. **Landed** in the release after it: the two detectors (`edit-loops`, `recovery`), the
+  scope vocabulary and its shared denominator, the capability row and its three signals, the plugin
+  boundary, and the widened target that made a read and a failed edit nameable at all. What remains
+  is **the Codex reading** — a second deep source, whose row multiplier has to be measured on its
+  own 76 files rather than assumed from Claude's 1.88 — and the two detectors this substrate can now
+  carry but does not yet: the same file read N times (`docs/recipes/extensions.md` publishes it as a
+  worked example rather than a built-in) and a large edit with nothing run after it, which needs a
+  command *class* the store does not hold. A step carries no command identity, so "a command ran" is
+  all any detector sees; making "was it a test" answerable is a closed vocabulary and its own ADR. Two things the readings do **not**
   do yet, stated because the ADR would otherwise imply they do: nothing reads
   `toolUseResult.interrupted`, `userModified` or Codex's `turn_aborted` (`B111`, `B113` — all
   measured at or near zero on the audited corpus), and the outcome vocabulary deliberately has
@@ -509,22 +516,6 @@ was under the v1.0 heading while its own text said it is not a v1.0 condition.
 Sourced from public evidence rather than from this machine, which is the point: the roadmap
 had been growing from one maintainer's dogfooding, and that is a sample of one.
 
-- [ ] **B156 · the history that was deleted, and the history never written** — S/M · both —
-  Claude Code deletes transcripts after **30 days by default** (`cleanupPeriodDays`), and
-  several settings stop them being written at all; Anthropic added its own warnings for this in
-  2.1.217 (2026-07-21, [changelog](https://code.claude.com/docs/en/changelog); see
-  [claude-code#64999](https://github.com/anthropics/claude-code/issues/64999)). assaio's
-  coverage model measures what it *read*; nothing measures what expired or was never recorded,
-  so "offline-first sees everything" is wrong on a fresh install. A `doctor` check that reads
-  the retention settings, and a history-horizon line on every window that renders a trend.
-  **Demonstrated on the maintainer's own machine, 2026-08-12, and promoted out of the research
-  pool because of it.** The v0.17 `clear` incident emptied a 513,617-row store; a full backfill
-  recovered **175,217**. The other **338,400 rows (66%) are gone permanently** — the transcripts
-  behind them had already been deleted by the 30-day default, and the rebuilt store carries
-  exactly 31 days. Every trend assaio renders over that store silently begins where the
-  retention setting decided, not where the install did. This is also the constraint that sets
-  `B147`'s step horizon: keeping steps longer than the source keeps transcripts buys history no
-  re-read could ever rebuild.
 - [ ] **B157 · Cline's second root** — S · both — the standalone Cline CLI stores tasks under
   `~/.cline/tasks/<id>/`, overridable by `--data-dir` / `CLINE_DATA_DIR`
   ([docs.cline.bot/cli/cli-reference](https://docs.cline.bot/cli/cli-reference), retrieved
@@ -585,6 +576,52 @@ that item (`B60`) rather than becoming a new one.
   field away: `toolDenialKind`'s `automode-blocked`/`automode-unavailable` is the auto-approve
   half, already parsed. Depends on `B147`'s timeline; it is the first analyser that should read
   it, because the definition is citable rather than invented here.
+- [ ] **B172 · a project name is read with the host's path rules** — S · solo — `carryForward.project`
+  takes `filepath.Base(cwd)`, where `cwd` comes from the transcript and `filepath` answers for the
+  platform assaio runs on. A Windows transcript read on Linux therefore yields the whole
+  `C:\\w\\app` string as the project name rather than `app`, and every per-project figure splits
+  along the platform that read the log. Found while fixing the same host-dependence in the step
+  target reading, which CI caught on Windows (`targetKey` is the shape the fix should take here).
+  Pre-existing, not introduced by that change, and it needs a `backfill` to restate the names it
+  already stored.
+- [ ] **B171 · the served dashboard cannot show the detectors** — S/M · both — `serve` renders
+  `GET /` unauthenticated and rebuilds it on every request with no cache, so it deliberately does
+  not read the step sequences: `store.Timelines` is a full scan of the step table plus a GROUP BY
+  over the window's records, about 2.5s on a 339,000-step store, and it costs that before it can
+  know whether a step exists. On the store this surface is built for the answer is always none --
+  `sync` carries usage records and not sequences (ADR 0012) -- so today the detectors correctly
+  report that and say why. Making them work on a self-hosted store that also ingests locally needs
+  the thing this handler lacks and the CLI does not need: a built snapshot with a lifetime, which is
+  the same machinery a cached dashboard would want anyway.
+- [ ] **B170 · a call that runs nothing is classified as a command** — S · solo — `parser.StepKind`
+  maps `BashOutput` and `KillShell` onto the same `command` kind as `Bash`, because the tool-purpose
+  classification predates the sequence reading and only had to answer "was this a shell tool".
+  `edit-loops` adopts CodeBurn's definition, which turns on *a shell command having run* between two
+  edits of one file, so polling a background shell's buffered output counts as one and inflates the
+  repeat rate for anyone running a dev server or a long test in the background. Measured: zero
+  `BashOutput`/`KillShell` calls across ~1,500 recent transcripts on the maintainer's machine
+  against 35,215 `Bash` calls, which is exactly why the cross-check against SQL could not catch it —
+  both readings key on the same stored `kind`. Fixing it properly means splitting the kind, which
+  moves `tool_commands` on every usage record and needs a backfill plus a re-derivation of the
+  calibration corpus; the detector states the limitation in the meantime.
+- [ ] **B169 · the cleanup orphans a sub-agent transcript** — S · solo — measured on the
+  maintainer's machine 2026-08-12: of 5,774 Claude Code transcripts, 286 are older than the 30-day
+  `cleanupPeriodDays` boundary and **every one of them is a sub-agent file** under
+  `<session>/subagents/`, with no session transcript older than the boundary at all. So the cleanup
+  walks sessions and leaves their sub-agents behind. Consequences to check rather than assume: a
+  sub-agent sequence whose parent's own rows were never ingested carries whichever entrypoint its
+  own lines state, and `trace.Scope` classifies it as a sub-agent regardless, so nothing is
+  misfiled today. What is unmeasured is whether an orphan is *discovered* at all once the parent
+  directory holds no session file, and whether the 45-day floor observed here is the cleanup's real
+  behaviour or an artifact of when it last ran.
+- [ ] **B168 · a metric plugin that can say what it needs** — S/M · both — the step sequence
+  reaches a metric plugin because the alternative was an extension surface that could not write the
+  detectors the core just gained (`B155`). The cost is that it is sent unconditionally: 339,000
+  steps encode to about 44MB, paid by a plugin that only reads `byModel`. The handshake cannot
+  carry the answer, because the core writes stdin before reading the plugin's first line, so this
+  needs either a declaration in config (opt-in per plugin, with the failure mode that a plugin
+  reading an empty trace reports "no sequences" over a full store) or a protocol version where the
+  core asks first. Raised by the measurement, not by a complaint: no plugin exists yet that pays it.
 - [ ] **B165 · OpenCode and Kilo Code: one parser, two tools** — M · both — OpenCode keeps a
   relational store at `~/.local/share/opencode/opencode.db` whose `session` table carries
   `cost`, a five-way token split and `directory`, with per-message cost/tokens beside it

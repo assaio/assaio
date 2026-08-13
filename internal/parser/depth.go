@@ -69,6 +69,12 @@ var (
 	// that writes no boundary line reports none, and a rate computed over it would read that
 	// silence as a session whose context never overflowed.
 	compactionSignals = []string{SignalCompactionsCount}
+	// sequenceSignals are the ordered reading: what a session did, in what order, and how each
+	// step ended (ADR 0012). Declared per source because reading a sequence is a second reading of
+	// the same log rather than a by-product of the first -- a source can report every token and
+	// every edit and still say nothing about their order, which is what every source but Claude
+	// Code does today.
+	sequenceSignals = []string{SignalStepsCount, SignalStepOutcome, SignalStepTarget}
 )
 
 func answers(groups ...[]string) []string {
@@ -84,7 +90,7 @@ var depths = []Depth{
 		Tool: "claude-code", Tier: Deep,
 		Tokens: true, Activity: true, Attribution: true,
 		Answers: answers(costSignals, cacheWriteSignals, perTurnSignals, lineSignals,
-			editSignals, compactionSignals, cacheDetailSignals,
+			editSignals, compactionSignals, cacheDetailSignals, sequenceSignals,
 			[]string{SignalToolErrorsCount, SignalRejectedCount, SignalSkillTokens, SignalAgentTokens}),
 	},
 	{
@@ -95,6 +101,7 @@ var depths = []Depth{
 		// friction validator excludes it rather than treating silence as success.
 		Answers: answers(costSignals, reasoningSignals, perTurnSignals, lineSignals, editSignals, compactionSignals),
 		Gaps: []string{
+			"no ordered step sequence is read from its logs yet, so the behaviour detectors have nothing to read for it",
 			"no cache-write counter, so a written cache is invisible where a read one is not",
 			"no skill or sub-agent labels, so its turns are absent from the attribution split",
 			"tool-use denials are not recorded, and call failures only for file edits",
@@ -105,6 +112,7 @@ var depths = []Depth{
 		Tokens: true, Activity: false, Attribution: false,
 		Answers: answers(costSignals, reasoningSignals, perTurnSignals),
 		Gaps: []string{
+			"no ordered step sequence, so the behaviour detectors exclude it",
 			"no line, edit or tool-call signals, so it contributes cost but no output figures",
 			"no cache-write counter, so a written cache is invisible where a read one is not",
 			"tool-use tokens are folded into output, and ~/.gemini may be shared with other tools",
@@ -117,6 +125,7 @@ var depths = []Depth{
 		// count, so every per-turn signal is absent rather than zero.
 		Answers: answers(costSignals, cacheWriteSignals, reasoningSignals, lineSignals),
 		Gaps: []string{
+			"no ordered step sequence: a whole-session total has no order to record",
 			"totals exist only when a session ends, so one record covers a whole session and per-turn figures exclude it",
 			"code changes are counted once per session with no per-model split, so they are credited whole to the model that made the most requests",
 		},
@@ -126,6 +135,7 @@ var depths = []Depth{
 		Tokens: true, Activity: false, Attribution: false,
 		Answers: answers(costSignals, cacheWriteSignals, perTurnSignals),
 		Gaps: []string{
+			"no ordered step sequence, so the behaviour detectors exclude it",
 			"no line, edit or tool-call signals, so it contributes cost but no output figures",
 			"its own per-request cost is recorded but recomputed from tokens for cross-tool consistency",
 		},

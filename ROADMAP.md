@@ -192,16 +192,14 @@ The table is the intended sequence; this is the current position in it. Delibera
 version number, for the reason given above the table — the next tag is simply the next minor, and
 what it carries is a list, not a schedule. Items drop out of it, and a bug report can add one.
 
-- `B147` — the session as a sequence rather than a total, which is the current work. The
-  engine half is built and gated: a content-free step timeline read from Claude transcripts,
-  stored under a horizon, proven on 5,707 real transcripts where the record reading and the
-  step reading agree on all 212,319 tool calls with no file disagreeing. What is *not* built is
-  the half that makes it worth storing — the detectors. Until they land the store carries a
-  table nothing reads, which is not a shippable state.
-- `B156` — moved out of the research pool because the maintainer's machine demonstrated it:
-  rebuilding a store the v0.17 `clear` incident emptied recovered 175,217 of 513,617 rows, and
-  the missing 66% is unrecoverable because the source deleted the transcripts at its 30-day
-  default. Every trend renders over a history that begins where a retention setting decided.
+- `B147` — the session as a sequence rather than a total. The substrate landed in v0.20: a
+  content-free step timeline read from Claude transcripts, stored under a horizon, proven on 5,707
+  real transcripts where the record reading and the step reading agree on all 212,319 tool calls
+  with no file disagreeing. The half that makes it worth storing landed in v0.21 — two detectors
+  reading the order rather than the total, each declaring the population it answers for and what
+  its pattern cannot be told apart from. What remains of the item is the **Codex reading**: a
+  second deep source, whose row multiplier has to be measured on its own files rather than assumed
+  from Claude's.
 - `B149` — an assay that can be posted in public, with redaction as the feature rather than a
   flag. The rule is settled — tools and models named, projects only as a count and a sorted
   distribution — and the renderer waits deliberately: today it would publish a token chart any

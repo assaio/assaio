@@ -78,6 +78,9 @@ type Confidence struct {
 func Evaluate(v Validator, in *Input) Result {
 	r := v.Analyze(*in)
 	Stamp(&r, in)
+	if _, trending := v.(Trending); trending {
+		stampHorizon(&r, in)
+	}
 	return r
 }
 

@@ -164,6 +164,8 @@ metric is yours alone.</p>
 	Skills          []store.AttributionRow
 	Agents          []store.AttributionRow
 	TurnSizing      []store.ModelTurns
+	Trace           trace.Set
+	HistoryStart    time.Time
 }
 </code></pre>
 <p><code>Input</code> is a read-only bundle; use only the fields your metric needs. <code>Analyze</code> must stay
@@ -239,6 +241,16 @@ server</a>) the served endpoint.</p>
 <td><code>TurnSizing</code></td>
 <td><code>[]store.ModelTurns</code></td>
 <td>Per-model raw turn counts (<code>Turns</code>, <code>SmallTurns</code>) for metrics that need the per-turn grain the daily <code>Usage</code> aggregate hides. Empty in the drill and in tests that do not set it.</td>
+</tr>
+<tr>
+<td><code>Trace</code></td>
+<td><code>trace.Set</code></td>
+<td>The window's step sequences (ADR 0012). Never read the whole set: call <code>Trace.Scope(...)</code> with the one population your metric declares, and render the <code>View.Caveat()</code> it hands back. Declaring the scope is not politeness — 89% of the sequences on the audited store are one-shot SDK calls holding 5.7% of its steps — and a validator that reads sequences declares it structurally by implementing <code>analyze.TraceReader</code>. Empty on a store with no step history and for every source with no step reading.</td>
+</tr>
+<tr>
+<td><code>HistoryStart</code></td>
+<td><code>time.Time</code></td>
+<td>The earliest observation the store holds, ignoring the window, so a figure comparing one span against an earlier one can say whether the earlier one existed. A validator that renders such a comparison implements <code>analyze.Trending</code>, and the horizon line is stamped onto its Result automatically. Zero means unknown.</td>
 </tr>
 <tr>
 <td><code>CacheMisses</code></td>

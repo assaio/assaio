@@ -334,6 +334,82 @@ print(json.dumps(result))
 </code></pre>
 <p><code>metrics verify</code> runs the plugin on your real window and prints both the contract violations and
 the rendered result, storing nothing.</p>
+<h2 id="a-detector-reading-the-sequence-not-the-total">A detector: reading the sequence, not the total</h2>
+<p>The step timeline (ADR 0012) is the one input that is not an aggregate: it holds what a session
+did, in what order. A detector reads a <em>scope</em> of it — never the whole set — because the
+populations are not comparable: 89% of the sequences on the audited store are one-shot SDK calls
+holding 5.7% of its steps, so a rate spanning two scopes describes neither. Declaring the scope is
+what <code>TraceReader</code> is for, and the caveat naming what the pattern cannot be told apart from is not
+optional decoration: a hard bug and a loop look identical on a timeline.</p>
+<p>This one counts a file read again inside the same sequence — the cheapest form of &quot;it looked at the
+same thing twice&quot;.</p>
+<pre><code class="language-go">package analyze
+
+import (
+	&quot;github.com/assaio/assaio/internal/humanize&quot;
+	&quot;github.com/assaio/assaio/internal/trace&quot;
+	&quot;github.com/assaio/assaio/internal/usage&quot;
+)
+
+func init() { Register(reReadsValidator{}) }
+
+type reReadsValidator struct{}
+
+func (reReadsValidator) Name() string  { return &quot;re-reads&quot; }
+func (reReadsValidator) Title() string { return &quot;Re-reads&quot; }
+func (reReadsValidator) Describe() string {
+	return &quot;How often a session reads a file it has already read in the same sequence.&quot;
+}
+
+// TraceScope is the population this answers for. Implementing it is what makes the validator a
+// detector: the core reads it to skip the sequence query when nothing wants it, and a scope
+// outside internal/trace's vocabulary yields an empty view rather than a silently wider one.
+func (reReadsValidator) TraceScope() string { return trace.Interactive }
+
+func (v reReadsValidator) Analyze(in Input) Result {
+	r := Result{Name: &quot;re-reads&quot;, Title: &quot;Re-reads&quot;, Describe: v.Describe(),
+		HowToRead: &quot;Re-reading a file is normal -- context is lost, a file changes. A session doing it far more than the rest is worth opening.&quot;}
+	view := in.Trace.Scope(v.TraceScope())
+	if view.Empty() {
+		r.noData(&quot;sessions&quot;, &quot;No sequence in this window is a session someone ran from a terminal.&quot;)
+		return r
+	}
+
+	var reads, repeats int64
+	for i := range view.Sequences {
+		seen := map[int64]bool{}
+		for _, step := range view.Sequences[i].Steps {
+			if step.Kind != usage.StepRead || step.TargetRef == 0 {
+				continue
+			}
+			reads++
+			if seen[step.TargetRef] {
+				repeats++
+			}
+			seen[step.TargetRef] = true
+		}
+	}
+
+	r.restsOn(len(view.Sequences), &quot;sessions&quot;)
+	r.covering(1 - view.ExcludedStepShare())
+	r.Figures = []Figure{{
+		Label: &quot;re-read rate&quot;,
+		Value: humanize.PercentOrDash(repeats, reads, 1),
+		Note:  humanize.Int(repeats) + &quot; of &quot; + humanize.Int(reads) + &quot; reads had seen the file already&quot;,
+	}}
+	r.Takeaway = &quot;Directional: a re-read is how an agent recovers context, not a fault.&quot;
+	// Both sentences are the contract. The first states the population and what asking for it left
+	// out; the second states what this pattern cannot be told apart from.
+	r.Caveats = append(r.Caveats, view.Caveat(),
+		&quot;Cannot distinguish: a file legitimately re-read after it changed from one re-read because &quot;+
+			&quot;the agent lost track of it, and a read whose call named no file is absent from the &quot;+
+			&quot;denominator rather than counted as a first read.&quot;)
+	return r
+}
+</code></pre>
+<p>A target is comparable <strong>only inside its own sequence</strong>: it is an integer assigned in first-seen
+order, never a path and never a digest of one, so &quot;the same file nine times&quot; stays answerable while
+&quot;which file&quot; stays permanently unanswerable.</p>
 <h2 id="where-to-go-next">Where to go next</h2>
 <ul>
 <li>The full <code>Input</code> and <code>Result</code> field tables: <a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a>.</li>

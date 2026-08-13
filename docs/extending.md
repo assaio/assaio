@@ -52,7 +52,7 @@ from it fails the build:
 | executed | run, and the output asserted — the label rules through the rule engine, the plugins against a fixture window with their output held to the protocol | 10 |
 | commands-checked | every `assaio-agent` invocation in it names a real command and real flags; nothing runs the surrounding shell | 11 |
 | loaded | parsed by assaio's own configuration loader and validated | 2 |
-| shape-checked | parsed, and the method set held to the `Validator` interface: a renamed method fails, a wrong number does not | 2 |
+| shape-checked | parsed, and the method set held to the `Validator` interface: a renamed method fails, a wrong number does not | 3 |
 
 A shell recipe is the weak one, and it is weak in a specific way worth knowing: the flags are
 real, and whether the pipeline around them does what the prose says is a reviewer's judgement.

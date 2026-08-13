@@ -186,7 +186,12 @@ parser protocol's <code>assaio_plugin</code>):</p>
   &quot;skills&quot;:     [{&quot;name&quot;:&quot;brainstorming&quot;,&quot;tokens&quot;:0,&quot;lines&quot;:0,&quot;records&quot;:0,&quot;sessions&quot;:0}],
   &quot;agents&quot;:     [{&quot;name&quot;:&quot;reviewer&quot;,&quot;tokens&quot;:0,&quot;lines&quot;:0,&quot;records&quot;:0,&quot;sessions&quot;:0}],
   &quot;turnSizing&quot;: [{&quot;model&quot;:&quot;claude-opus-5&quot;,&quot;turns&quot;:0,&quot;smallTurns&quot;:0}],
-  &quot;cacheMisses&quot;:[{&quot;tool&quot;:&quot;claude-code&quot;,&quot;reason&quot;:&quot;ttl_expired&quot;,&quot;turns&quot;:0}]
+  &quot;cacheMisses&quot;:[{&quot;tool&quot;:&quot;claude-code&quot;,&quot;reason&quot;:&quot;ttl_expired&quot;,&quot;turns&quot;:0}],
+  &quot;trace&quot;: [{&quot;tool&quot;:&quot;claude-code&quot;,&quot;sessionId&quot;:&quot;…&quot;,&quot;member&quot;:&quot;&quot;,&quot;timeline&quot;:&quot;&quot;,&quot;entrypoint&quot;:&quot;cli&quot;,
+             &quot;project&quot;:&quot;…&quot;,&quot;scope&quot;:&quot;interactive&quot;,
+             &quot;steps&quot;:[{&quot;ordinal&quot;:1,&quot;at&quot;:&quot;2026-08-12T09:00:00Z&quot;,&quot;kind&quot;:&quot;edit&quot;,&quot;outcome&quot;:&quot;ok&quot;,
+                       &quot;model&quot;:&quot;claude-opus-5&quot;,&quot;tokens&quot;:0,&quot;targetRef&quot;:1}]}],
+  &quot;historyStart&quot;: &quot;2026-07-13T08:11:04Z&quot;
 }
 </code></pre>
 <h3 id="cachewrite1h--a-subset-never-a-total-since-v014"><code>cacheWrite1h</code> — a subset, never a total (since v0.14)</h3>
@@ -339,6 +344,14 @@ with its reason.</p>
 <tr>
 <td><code>cacheMisses</code></td>
 <td>turns that stated a cache-miss reason, per tool. A turn that hit cache states nothing and is absent, as is every turn from a source that reports no reason — so this is never a denominator</td>
+</tr>
+<tr>
+<td><code>trace</code></td>
+<td>the window's step sequences: what each session did, in what order (ADR 0012). One entry per sequence — a session's main loop, or one sub-agent inside it — carrying the <code>scope</code> the core classified it as (<code>interactive</code>, <code>sub-agent</code>, <code>programmatic</code>, <code>unstated</code>). <strong>Read one scope, not the set:</strong> 89% of the sequences on the audited store are one-shot SDK calls holding 5.7% of its steps, so a rate spanning two scopes describes neither, and the share you excluded belongs beside your figure. <code>outcome</code> is <code>&quot;&quot;</code> when the source said nothing, which is never <code>ok</code>; <code>targetRef</code> stands for the file a step named and is comparable <strong>only inside its own sequence</strong>, never across sequences and never a path. This is by far the largest thing on the wire — 339,000 steps encode to about 44 MB — and it is sent whether or not you read it, because the protocol has no way for you to say (<code>B168</code>)</td>
+</tr>
+<tr>
+<td><code>historyStart</code></td>
+<td>the earliest observation the store holds, <strong>ignoring the window</strong>. Compare it against the span your figure leans on: a trend against &quot;the prior week&quot; means nothing if the store's history began inside that week, and several tools delete their own transcripts (Claude Code after 30 days by default), which makes that the ordinary case rather than the odd one. The zero time means the core could not answer</td>
 </tr>
 </tbody>
 </table>

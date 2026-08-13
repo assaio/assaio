@@ -14,19 +14,21 @@ const insertStepSQL = `
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 // restateStepSQL corrects a step already stored from a re-read of the file it came from. The
-// outcome, target and token total are the ones a longer prefix of the same transcript can
-// complete, and each is monotone in the prefix read, so a re-read restates upward and never
-// degrades a row -- the same argument InsertLocal makes for the activity counts.
+// outcome and token total are the ones a longer prefix of the same transcript can complete, and
+// each is monotone in the prefix read, so a re-read restates upward and never degrades a row --
+// the same argument InsertLocal makes for the activity counts.
 //
-// ordinal is assigned rather than kept, for the reason granularity is assigned in
-// restateActivitySQL: it is a claim about where the step sits, and the current parse is the
-// authority on that. A parser change that reads one more step out of a transcript shifts every
-// later position, and keeping the stored value would leave one sequence holding a mix of two
-// parsers' numbering -- an ordering nothing downstream could detect as wrong.
+// ordinal and target_ref are assigned rather than kept, for the reason granularity is assigned
+// in restateActivitySQL: each is a claim the current parse is the authority on, not a value a
+// later parse can only improve. A parser change that reads one more step out of a transcript
+// shifts every later position; widening which calls register a target renumbers first-seen
+// order the same way. Keeping the stored value would leave one sequence holding a mix of two
+// parsers' numbering -- a 7 beside a 3 that means the same file, which nothing downstream could
+// detect as wrong.
 const restateStepSQL = `
         UPDATE session_step SET
             outcome = CASE WHEN outcome = '' THEN ? ELSE outcome END,
-            target_ref = MAX(target_ref, ?),
+            target_ref = ?,
             tokens = MAX(tokens, ?),
             ordinal = ?
         WHERE tool = ? AND timeline = ? AND dedupe_key = ?`

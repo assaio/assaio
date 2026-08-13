@@ -39,6 +39,8 @@ func buildMetricInput(in *analyze.Input) metricInput {
 		Agents:          attributionWire(in.Agents),
 		TurnSizing:      turnSizingWire(in.TurnSizing),
 		CacheMisses:     cacheMissWire(in.CacheMisses),
+		Trace:           traceWire(&in.Trace),
+		HistoryStart:    in.HistoryStart,
 	}
 }
 

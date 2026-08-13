@@ -65,6 +65,20 @@ func BuildDashboard(ctx context.Context, st *store.Store) (dashboard.Data, error
 	in.Skills, in.Agents = skills, agents
 	in.CacheMisses = misses
 	in.Ingested, in.ParsedBy, _ = st.Provenance(ctx)
+	// Both are read here for the same reason the CLI reads them: a trending panel that cannot see
+	// how far back the store goes disclaims its own figure, and a detector with no sequences says
+	// so rather than reporting a zero. A synced store holds no sequences by construction (ADR
+	// 0012), which is a fact for the panel to state, not a reason to leave the field unset.
+	if oldest, histErr := st.HistoryStart(ctx, ""); histErr == nil {
+		in.HistoryStart = oldest
+	}
+	// The sequences are deliberately NOT read here, for the reason the metric plugins are not: this
+	// handler is unauthenticated and rebuilds on every request with no cache, and Timelines is a
+	// full scan of the step table plus a GROUP BY over the window's records -- about 2.5s on a
+	// 339,000-step store, run before it can know whether any step exists. A store filled by `sync`
+	// holds none at all, since the team-server contract carries usage records and not sequences
+	// (ADR 0012), so the read would cost that on every request to return nothing. The detectors
+	// therefore report no sequences here and say why, which is true of this surface (`B171`).
 	const anonymize = true
 	// Exec metric plugins are deliberately nil here: GET / is unauthenticated and
 	// rebuilds per request, and spawning config-declared subprocesses per request would

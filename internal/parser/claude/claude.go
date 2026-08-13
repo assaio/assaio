@@ -162,7 +162,7 @@ func (st *parseState) applyLine(l *line, cf *carryForward) {
 		return
 	}
 	st.steps.resolveResults(blocks)
-	if st.applyToolResult(l, cf, blocks) {
+	if st.applyToolResult(l, cf) {
 		return
 	}
 	st.appendAssistant(l, cf, &act, blocks)

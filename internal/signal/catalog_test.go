@@ -11,7 +11,7 @@ import (
 // nothing. Every declared signal must answer every question the catalog exists to answer.
 func TestEverySignalIsFullyDeclared(t *testing.T) {
 	statuses := map[string]bool{Observed: true, Estimated: true, Derived: true}
-	grains := map[string]bool{GrainTurn: true, GrainSession: true, GrainDay: true, GrainWindow: true}
+	grains := map[string]bool{GrainStep: true, GrainTurn: true, GrainSession: true, GrainDay: true, GrainWindow: true}
 
 	seen := map[string]bool{}
 	for _, s := range Catalog() {

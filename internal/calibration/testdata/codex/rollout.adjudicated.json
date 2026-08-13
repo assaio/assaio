@@ -37,6 +37,9 @@
     "rejected": 0,
     "tool_errors": 0,
     "compactions": 0,
+    "steps": 0,
+    "step_outcomes": 0,
+    "step_targets": 0,
     "skipped": 0
   },
   "derivations": {
@@ -56,6 +59,9 @@
     "rejected": "Codex does not record tool-use denials -- a documented gap, not a zero.",
     "tool_errors": "Codex marks failures only for file edits, which its depth row deliberately excludes.",
     "compactions": "no compaction boundary in this window.",
-    "skipped": "every line is valid JSON and every payload is a shape the parser knows."
+    "skipped": "every line is valid JSON and every payload is a shape the parser knows.",
+    "steps": "0. No sequence is read from Codex rollout logs yet, which is what its depth row claims: absent, not a session that did nothing.",
+    "step_outcomes": "0. No sequence is read from Codex rollout logs yet, which is what its depth row claims: absent, not a session that did nothing.",
+    "step_targets": "0. No sequence is read from Codex rollout logs yet, which is what its depth row claims: absent, not a session that did nothing."
   }
 }

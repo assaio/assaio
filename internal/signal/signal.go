@@ -19,6 +19,10 @@ const (
 // mistake this field exists to prevent -- per-turn efficiency over session-total records
 // says nothing.
 const (
+	// GrainStep is one observation inside a session's sequence -- a model turn or a single tool
+	// call. Finer than GrainTurn: a turn holds the calls it made, and a figure about tool calls
+	// read at turn grain cannot say what order they came in (ADR 0012).
+	GrainStep    = "step"
 	GrainTurn    = "turn"
 	GrainSession = "session"
 	GrainDay     = "day"

@@ -1,7 +1,9 @@
 package claude
 
 import (
+	gopath "path"
 	"strconv"
+	"strings"
 
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/usage"
@@ -65,8 +67,8 @@ func (s *stepRecorder) assistant(l *line, key string, tokens int64) {
 
 // toolCalls records one step per tool_use block, in the order the response emitted them. The
 // key is the call's own id, which is what a tool result quotes and is unique across the
-// transcript.
-func (s *stepRecorder) toolCalls(l *line, key string, blocks []contentBlock) {
+// transcript. cwd is the session's working directory, which resolves a target named relatively.
+func (s *stepRecorder) toolCalls(l *line, key, cwd string, blocks []contentBlock) {
 	for _, b := range blocks {
 		if b.Type != "tool_use" {
 			continue
@@ -81,6 +83,7 @@ func (s *stepRecorder) toolCalls(l *line, key string, blocks []contentBlock) {
 			Timestamp: l.Timestamp,
 			Kind:      parser.StepKind(b.Name),
 			Model:     l.Message.Model,
+			TargetRef: s.ref(b.targetPath(), cwd),
 		})
 		if b.ID != "" {
 			s.byToolUse[b.ID] = len(s.steps) - 1
@@ -139,28 +142,62 @@ func (s *stepRecorder) compaction(l *line) {
 	})
 }
 
-// target attaches the integer standing for path to the call whose result carried it, assigning
-// a new one in first-seen order. The path itself goes no further than this map.
-func (s *stepRecorder) target(blocks []contentBlock, path string) {
-	if path == "" {
-		return
+// ref is the integer standing for path, assigned in first-seen order within one parse, and 0 for a
+// call that names no file. A relative path is resolved against the session's cwd: the same file
+// named both ways would otherwise hold two refs and split the repeat count a detector reads -- 29
+// of 3,516 read calls in a 400-transcript sample name one relatively. A relative path with no cwd
+// to resolve it against has no honest identity and gets none.
+func (s *stepRecorder) ref(path, cwd string) int64 {
+	key := targetKey(path, cwd)
+	if key == "" {
+		return 0
 	}
-	for _, b := range blocks {
-		if b.Type != "tool_result" || b.ToolUseID == "" {
-			continue
-		}
-		i, ok := s.byToolUse[b.ToolUseID]
-		if !ok {
-			continue
-		}
-		ref, seen := s.targets[path]
-		if !seen {
-			ref = int64(len(s.targets)) + 1
-			s.targets[path] = ref
-		}
-		s.steps[i].TargetRef = ref
-		return
+	if ref, seen := s.targets[key]; seen {
+		return ref
 	}
+	ref := int64(len(s.targets)) + 1
+	s.targets[key] = ref
+	return ref
+}
+
+// targetKey folds a call's path and the session's cwd into the one string this parse uses as an
+// identity, "" when it cannot.
+//
+// Deliberately not path/filepath: those answer "is this rooted" for the platform *assaio* runs on,
+// while a transcript's paths come from wherever the *agent* ran. A POSIX path read on Windows was
+// taken for relative and joined onto the cwd, so one file took two integers -- and a store synced
+// from a mixed team holds both spellings in one table, where the host's opinion is meaningless.
+// Nothing here ever reaches the filesystem: the result is a map key and is discarded with the
+// parse, so it must be deterministic rather than canonical.
+func targetKey(target, cwd string) string {
+	target = strings.ReplaceAll(target, "\\", "/")
+	if target == "" {
+		return ""
+	}
+	if !rooted(target) {
+		cwd = strings.ReplaceAll(cwd, "\\", "/")
+		if !rooted(cwd) {
+			return ""
+		}
+		target = cwd + "/" + target
+	}
+	// Clean folds a leading "//" to one slash, which would let a UNC share and a POSIX path of the
+	// same name share an integer and read as one file revisited. Cheaper to keep the prefix than to
+	// reason about how unlikely that is.
+	if strings.HasPrefix(target, "//") {
+		return "//" + strings.TrimPrefix(gopath.Clean(target), "/")
+	}
+	return gopath.Clean(target)
+}
+
+// rooted reports whether a slash-normalised path is absolute in either platform's spelling: a POSIX
+// root, a UNC share (which starts with one too), or a drive letter.
+func rooted(p string) bool {
+	if strings.HasPrefix(p, "/") {
+		return true
+	}
+	return len(p) >= 3 && p[1] == ':' && p[2] == '/' &&
+		(p[0] >= 'A' && p[0] <= 'Z' || p[0] >= 'a' && p[0] <= 'z')
 }
 
 func (s *stepRecorder) append(st *usage.Step) {

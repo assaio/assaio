@@ -29,6 +29,10 @@ func (throughputValidator) Name() string     { return throughputName }
 func (throughputValidator) Title() string    { return throughputTitle }
 func (throughputValidator) Describe() string { return throughputDescribe }
 
+// Trending: both figures below compare the recent span against the one before it, so the history
+// behind that earlier span is part of the claim (analyze.Trending).
+func (throughputValidator) Trending() {}
+
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (throughputValidator) Analyze(in Input) Result {
 	r := Result{Name: throughputName, Title: throughputTitle, Describe: throughputDescribe, HowToRead: throughputHowToRead}

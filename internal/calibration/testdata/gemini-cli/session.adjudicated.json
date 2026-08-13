@@ -32,6 +32,9 @@
     "rejected": 0,
     "tool_errors": 0,
     "compactions": 0,
+    "steps": 0,
+    "step_outcomes": 0,
+    "step_targets": 0,
     "skipped": 0
   },
   "derivations": {
@@ -51,6 +54,9 @@
     "rejected": "not recorded by this source.",
     "tool_errors": "not recorded by this source.",
     "compactions": "not recorded by this source.",
-    "skipped": "all three lines are valid JSON in the expected shape."
+    "skipped": "all three lines are valid JSON in the expected shape.",
+    "steps": "0. Gemini CLI's chat log carries no ordered tool activity to read a sequence from, which is what its depth row claims.",
+    "step_outcomes": "0. Gemini CLI's chat log carries no ordered tool activity to read a sequence from, which is what its depth row claims.",
+    "step_targets": "0. Gemini CLI's chat log carries no ordered tool activity to read a sequence from, which is what its depth row claims."
   }
 }

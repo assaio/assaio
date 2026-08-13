@@ -33,7 +33,7 @@ func TestEveryCalibratedModelHasAPrice(t *testing.T) {
 		if !ok {
 			continue // TestEverySourceIsCalibrated owns that absence
 		}
-		records, _, parseErr := parse(a.Trace)
+		records, _, _, parseErr := parse(a.Trace)
 		if parseErr != nil {
 			t.Fatalf("%s/%s: %v", a.Source, a.Trace, parseErr)
 		}

@@ -238,6 +238,88 @@ assaio-agent metrics verify weekday-split --since 30d
 `metrics verify` runs the plugin on your real window and prints both the contract violations and
 the rendered result, storing nothing.
 
+## A detector: reading the sequence, not the total
+
+The step timeline (ADR 0012) is the one input that is not an aggregate: it holds what a session
+did, in what order. A detector reads a *scope* of it — never the whole set — because the
+populations are not comparable: 89% of the sequences on the audited store are one-shot SDK calls
+holding 5.7% of its steps, so a rate spanning two scopes describes neither. Declaring the scope is
+what `TraceReader` is for, and the caveat naming what the pattern cannot be told apart from is not
+optional decoration: a hard bug and a loop look identical on a timeline.
+
+This one counts a file read again inside the same sequence — the cheapest form of "it looked at the
+same thing twice".
+
+```go #read-repeats
+package analyze
+
+import (
+	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/trace"
+	"github.com/assaio/assaio/internal/usage"
+)
+
+func init() { Register(reReadsValidator{}) }
+
+type reReadsValidator struct{}
+
+func (reReadsValidator) Name() string  { return "re-reads" }
+func (reReadsValidator) Title() string { return "Re-reads" }
+func (reReadsValidator) Describe() string {
+	return "How often a session reads a file it has already read in the same sequence."
+}
+
+// TraceScope is the population this answers for. Implementing it is what makes the validator a
+// detector: the core reads it to skip the sequence query when nothing wants it, and a scope
+// outside internal/trace's vocabulary yields an empty view rather than a silently wider one.
+func (reReadsValidator) TraceScope() string { return trace.Interactive }
+
+func (v reReadsValidator) Analyze(in Input) Result {
+	r := Result{Name: "re-reads", Title: "Re-reads", Describe: v.Describe(),
+		HowToRead: "Re-reading a file is normal -- context is lost, a file changes. A session doing it far more than the rest is worth opening."}
+	view := in.Trace.Scope(v.TraceScope())
+	if view.Empty() {
+		r.noData("sessions", "No sequence in this window is a session someone ran from a terminal.")
+		return r
+	}
+
+	var reads, repeats int64
+	for i := range view.Sequences {
+		seen := map[int64]bool{}
+		for _, step := range view.Sequences[i].Steps {
+			if step.Kind != usage.StepRead || step.TargetRef == 0 {
+				continue
+			}
+			reads++
+			if seen[step.TargetRef] {
+				repeats++
+			}
+			seen[step.TargetRef] = true
+		}
+	}
+
+	r.restsOn(len(view.Sequences), "sessions")
+	r.covering(1 - view.ExcludedStepShare())
+	r.Figures = []Figure{{
+		Label: "re-read rate",
+		Value: humanize.PercentOrDash(repeats, reads, 1),
+		Note:  humanize.Int(repeats) + " of " + humanize.Int(reads) + " reads had seen the file already",
+	}}
+	r.Takeaway = "Directional: a re-read is how an agent recovers context, not a fault."
+	// Both sentences are the contract. The first states the population and what asking for it left
+	// out; the second states what this pattern cannot be told apart from.
+	r.Caveats = append(r.Caveats, view.Caveat(),
+		"Cannot distinguish: a file legitimately re-read after it changed from one re-read because "+
+			"the agent lost track of it, and a read whose call named no file is absent from the "+
+			"denominator rather than counted as a first read.")
+	return r
+}
+```
+
+A target is comparable **only inside its own sequence**: it is an integer assigned in first-seen
+order, never a path and never a digest of one, so "the same file nine times" stays answerable while
+"which file" stays permanently unanswerable.
+
 ## Where to go next
 
 - The full `Input` and `Result` field tables: [Adding a metric validator](../extending/metric-validator.md).

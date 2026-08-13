@@ -1,11 +1,13 @@
 package analyze
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/assaio/assaio/internal/store"
+	"github.com/assaio/assaio/internal/trace"
 )
 
 // stub is a validator that returns a fixed Result, so a test exercises the envelope rather
@@ -288,7 +290,7 @@ func TestEvaluateCarriesProvenanceFromTheInput(t *testing.T) {
 // half: coverage is uniform across the window, but sample size is not, and only the
 // validator knows whether its verdict rested on 40 sessions or 2 projects.
 func TestEveryValidatorSaysWhatItCounted(t *testing.T) {
-	in := everySignalInput()
+	in := everySignalInput(t)
 	for _, v := range Validators() {
 		if strings.HasSuffix(v.Name(), "-test-fake") {
 			continue
@@ -322,7 +324,7 @@ func TestValidatorsOnAnEmptyWindowReadInsufficient(t *testing.T) {
 // fixture deliberately does not, so the four metrics built on those signals would report
 // "counted nothing" there -- an honest answer to that window, and a useless one for
 // checking that each validator declares its own subject.
-func everySignalInput() Input {
+func everySignalInput(t *testing.T) Input {
 	in := favorableInput()
 	for i := range in.Usage {
 		u := &in.Usage[i]
@@ -333,13 +335,30 @@ func everySignalInput() Input {
 	in.Skills = []store.AttributionRow{{Name: "code-review", Tokens: 1200, Lines: 40, Records: 6, Sessions: 2}}
 	in.Agents = []store.AttributionRow{{Name: "general-purpose", Tokens: 800, Lines: 20, Records: 4, Sessions: 1}}
 	built := BuildInput(in.Usage, in.Sessions, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
-	return withSignals(&built, in.TurnSizing, in.Skills, in.Agents)
+	out := withSignals(&built, in.TurnSizing, in.Skills, in.Agents)
+	out.Trace = favorableTrace(t)
+	return out
 }
 
 // withSignals copies the fields BuildInput does not assemble, which the CLI sets after it.
 func withSignals(in *Input, turns []store.ModelTurns, skills, agents []store.AttributionRow) Input {
 	in.TurnSizing, in.Skills, in.Agents = turns, skills, agents
 	return *in
+}
+
+// favorableTrace is a window of interactive sequences thick enough for a detector to read a
+// spread from: seven ordinary ones that return to a file now and then, and one that returns to
+// the same file after every command it runs.
+func favorableTrace(t *testing.T) trace.Set {
+	t.Helper()
+	const ordinary = "a e1 c a e1 c a e2 a e3 c a e4 a e5 a e6 c a e7 a e8 a e9"
+	const looping = "a e1 c a e1 c a e1 c a e1 c a e1 c a e1 c a e1 c a e1 c a e1 c a e1 c a e1"
+	sequences := make([]store.Timeline, 0, 8)
+	for i := range 7 {
+		sequences = append(sequences, sequence(t, "ordinary-"+strconv.Itoa(i), "assaio", ordinary))
+	}
+	sequences = append(sequences, sequence(t, "looping", "other", looping))
+	return traceOf(sequences...)
 }
 
 // A verdict can rest on nothing in four unrelated ways, and one sentence for all four read
