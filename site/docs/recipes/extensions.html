@@ -148,6 +148,8 @@ type weekdayValidator struct{}
 
 func (weekdayValidator) Name() string  { return &quot;weekday-split&quot; }
 func (weekdayValidator) Title() string { return &quot;Weekday Split&quot; }
+func (weekdayValidator) Layer() layer.Layer { return layer.Activity } // a token share is what happened
+
 func (weekdayValidator) Describe() string {
 	return &quot;Share of AI tokens spent Monday to Friday -- an out-of-hours proxy, not a verdict.&quot;
 }
@@ -205,6 +207,7 @@ type editSizeValidator struct{}
 func (editSizeValidator) Name() string     { return &quot;edit-size&quot; }
 func (editSizeValidator) Title() string    { return &quot;Edit Size&quot; }
 func (editSizeValidator) Describe() string { return &quot;AI lines per edit, over the sources that count edits.&quot; }
+func (editSizeValidator) Layer() layer.Layer { return layer.Output } // a line count is what was produced
 
 func (editSizeValidator) Analyze(in Input) Result {
 	// Only rows whose tool records both signals. Everything else is a silence, not a zero.
@@ -255,6 +258,7 @@ for row in inp.get(&quot;usage&quot;, []):
 
 result = {
     &quot;title&quot;: &quot;Weekday Split&quot;,
+    &quot;layer&quot;: &quot;activity&quot;,
     &quot;describe&quot;: &quot;Share of AI tokens spent Monday to Friday.&quot;,
     &quot;howToRead&quot;: &quot;A falling weekday share can mean crunch or flexible hours; read it beside how the team says it is working.&quot;,
     &quot;caveats&quot;: [&quot;Directional: a proxy for when work happened, not for how much.&quot;],
@@ -272,7 +276,7 @@ else:
                      else &quot;A meaningful share of usage falls outside the working week.&quot;),
     }
 
-print(json.dumps({&quot;assaio_metric&quot;: 1, &quot;name&quot;: &quot;weekday-split&quot;}))
+print(json.dumps({&quot;assaio_metric&quot;: 2, &quot;name&quot;: &quot;weekday-split&quot;}))
 print(json.dumps(result))
 </code></pre>
 <p><code>name</code> is stamped by the core as <code>plugin:&lt;name&gt;</code> on arrival, so a plugin cannot shadow a
@@ -306,6 +310,7 @@ for row in inp.get(&quot;usage&quot;, []):
 covered = (counted / total) if total else 0
 result = {
     &quot;title&quot;: &quot;Edit Size&quot;,
+    &quot;layer&quot;: &quot;output&quot;,
     &quot;describe&quot;: &quot;AI lines per edit, over the sources that count edits.&quot;,
     &quot;howToRead&quot;: &quot;A sharp change in either direction is the signal; the level itself is a house style.&quot;,
     &quot;caveats&quot;: [f&quot;Covers {covered:.0%} of the window's tokens: the rest comes from sources that record no edit count.&quot;],
@@ -320,7 +325,7 @@ else:
         &quot;takeaway&quot;: &quot;Edit size is measurable in this window.&quot;,
     }
 
-print(json.dumps({&quot;assaio_metric&quot;: 1, &quot;name&quot;: &quot;edit-size&quot;}))
+print(json.dumps({&quot;assaio_metric&quot;: 2, &quot;name&quot;: &quot;edit-size&quot;}))
 print(json.dumps(result))
 </code></pre>
 <p>Both plugins are wired the same way:</p>
@@ -357,6 +362,8 @@ type reReadsValidator struct{}
 
 func (reReadsValidator) Name() string  { return &quot;re-reads&quot; }
 func (reReadsValidator) Title() string { return &quot;Re-reads&quot; }
+func (reReadsValidator) Layer() layer.Layer { return layer.Activity } // repeated reads are what happened
+
 func (reReadsValidator) Describe() string {
 	return &quot;How often a session reads a file it has already read in the same sequence.&quot;
 }

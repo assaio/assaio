@@ -91,17 +91,78 @@ func TestReReadCompletesAStepWithoutDegradingIt(t *testing.T) {
 		t.Errorf("restated row = (%q,%d,%d), want (ok,7,250)", outcome, target, tokens)
 	}
 
-	// A shorter re-read must not undo any of it.
+	// Every column here follows the current parse, outcome included: ingest re-reads whole
+	// files, so a later read of an append-only transcript is a superset, and the alternative --
+	// keeping the stored answer -- is what stops a corrected rule reaching a stored row. See
+	// TestRestateLowersAStepTotalFromACorrectedRule.
 	if _, _, err := s.InsertSteps(ctx, []usage.Step{partial}); err != nil {
-		t.Fatalf("shorter re-read: %v", err)
+		t.Fatalf("re-read: %v", err)
 	}
 	row = s.db.QueryRowContext(ctx,
-		`SELECT outcome, target_ref, tokens FROM session_step WHERE dedupe_key = 'a'`)
-	if err := row.Scan(&outcome, &target, &tokens); err != nil {
+		`SELECT outcome, target_ref FROM session_step WHERE dedupe_key = 'a'`)
+	if err := row.Scan(&outcome, &target); err != nil {
 		t.Fatalf("scan: %v", err)
 	}
-	if outcome != usage.OutcomeOK || target != 7 || tokens != 250 {
-		t.Errorf("a shorter re-read degraded the row to (%q,%d,%d)", outcome, target, tokens)
+	if outcome != "" || target != 7 {
+		t.Errorf("re-read row = (%q,%d), want the current parse's own answer", outcome, target)
+	}
+}
+
+// TestRestateLowersAStepOutcomeFromACorrectedRule is the same B116 argument one column over.
+// `outcome` is not a vendor field: stopOutcome maps a stop reason and resolveResults attributes
+// a result to a call, and steps.go records that the attribution rule has already been wrong once
+// -- 42 of 497 real denials landed on the wrong call. A fill-only CASE kept the wrong answer.
+func TestRestateLowersAStepOutcomeFromACorrectedRule(t *testing.T) {
+	ctx := context.Background()
+	s := stepStore(t)
+
+	wrong := step("a", 1, usage.StepEdit, time.Now().UTC())
+	wrong.Outcome = usage.OutcomeOK
+	if _, _, err := s.InsertSteps(ctx, []usage.Step{wrong}); err != nil {
+		t.Fatalf("InsertSteps: %v", err)
+	}
+	corrected := wrong
+	corrected.Outcome = usage.OutcomeDenied
+	if _, _, err := s.InsertSteps(ctx, []usage.Step{corrected}); err != nil {
+		t.Fatalf("restate: %v", err)
+	}
+	var outcome string
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT outcome FROM session_step WHERE dedupe_key = 'a'`).Scan(&outcome); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if outcome != usage.OutcomeDenied {
+		t.Errorf("outcome = %q, want %q: a corrected attribution could not reach the stored row", outcome, usage.OutcomeDenied)
+	}
+}
+
+// TestRestateLowersAStepTotalFromACorrectedRule is B116 in the newest table: `tokens` is not a
+// vendor figure but assaio's own sum of four chosen fields, so a build that corrects which
+// fields it sums has to be able to reach every stored row. Under MAX -- shipped in v0.20 -- an
+// inflated 1,000,000 survived both a `--full` re-read and a restate offering 10, permanently
+// under `trace.horizon_days: 0`, where nothing ages the row out.
+func TestRestateLowersAStepTotalFromACorrectedRule(t *testing.T) {
+	ctx := context.Background()
+	s := stepStore(t)
+	at := time.Now().UTC()
+
+	inflated := step("a", 1, usage.StepAssistant, at)
+	inflated.Tokens = 1_000_000
+	if _, _, err := s.InsertSteps(ctx, []usage.Step{inflated}); err != nil {
+		t.Fatalf("InsertSteps: %v", err)
+	}
+	corrected := inflated
+	corrected.Tokens = 10
+	if _, _, err := s.InsertSteps(ctx, []usage.Step{corrected}); err != nil {
+		t.Fatalf("restate: %v", err)
+	}
+	var tokens int64
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT tokens FROM session_step WHERE dedupe_key = 'a'`).Scan(&tokens); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if tokens != 10 {
+		t.Errorf("tokens = %d, want 10: a corrected rule could not reach the stored row", tokens)
 	}
 }
 

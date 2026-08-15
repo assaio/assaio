@@ -1,9 +1,6 @@
 package report
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/assaio/assaio/internal/label"
 )
 
@@ -16,8 +13,8 @@ func Aggregate(rows []Row, by string) ([]Row, error) {
 	if by == "day" {
 		return rows, nil
 	}
-	if !isValidDim(by) {
-		return nil, fmt.Errorf("unknown dimension %q (want one of %s)", by, strings.Join(validDims, ", "))
+	if err := DimError(by); err != nil {
+		return nil, err
 	}
 
 	out := groupBy(
@@ -32,15 +29,6 @@ func Aggregate(rows []Row, by string) ([]Row, error) {
 	return out, nil
 }
 
-func isValidDim(by string) bool {
-	for _, d := range validDims {
-		if d == by {
-			return true
-		}
-	}
-	return false
-}
-
 // newGroup starts an empty group row, stamping the dimension field that key identifies.
 func newGroup(by, key string) *Row {
 	g := &Row{}
@@ -53,8 +41,6 @@ func newGroup(by, key string) *Row {
 		g.Model = key
 	case "entrypoint":
 		g.Entrypoint = key
-	case "member":
-		g.Member = key
 	case label.Task:
 		g.Task = key
 	case label.Outcome:

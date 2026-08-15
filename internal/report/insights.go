@@ -3,6 +3,7 @@ package report
 import (
 	"time"
 
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -46,6 +47,17 @@ type Inventory struct {
 	Unpriced    Unpriced
 	// TotalLinesAdded is AI-added code lines across all queried usage.
 	TotalLinesAdded int64
+	// TotalTokens is every queried row's billable tokens.
+	TotalTokens int64
+	// LineCapableRows is how many queried rows come from a source that records a changed line
+	// at all, and LineCapableTokens their tokens. Zero rows means the window could not answer
+	// the question, which is a different fact from a window in which the AI added nothing
+	// (ADR 0011): Gemini CLI and Cline answer no line signal, so their users read "0 AI lines"
+	// every day forever. The tokens say how far the answer reaches when only some sources
+	// record it -- which is also what makes $/100 lines a ratio between two populations, the
+	// whole window's cost over one subset's lines.
+	LineCapableRows   int
+	LineCapableTokens int64
 }
 
 // Insights is a pure, dependency-free snapshot of usage patterns computed from stored
@@ -132,7 +144,12 @@ func BuildInventory(rows []store.UsageRow, t pricing.Table) Inventory {
 		inv.TotalLinesAdded += r.LinesAdded
 
 		tokens := RowTokens(r)
+		inv.TotalTokens += tokens
 		inv.Unpriced.Total += tokens
+		if parser.HasLineOutput(r.Tool) {
+			inv.LineCapableRows++
+			inv.LineCapableTokens += tokens
+		}
 		if c, ok := t.CostTokens(r.Model, pricing.Tokens{In: r.In, Out: r.Out, CacheWrite: r.CacheWrite, CacheRead: r.CacheRead, CacheWrite1h: r.CacheWrite1h}); ok {
 			cost += c
 			hasCost = true

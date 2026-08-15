@@ -15,13 +15,13 @@ import (
 )
 
 func TestParseSince(t *testing.T) {
-	now := time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC)
+	now := time.Date(2026, 7, 11, 18, 0, 0, 0, time.UTC)
 	got, err := parseSinceAt("7d", now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !got.Equal(now.AddDate(0, 0, -7)) {
-		t.Fatalf("parseSince = %v", got)
+	if want := now.AddDate(0, 0, -7); !got.Equal(want) {
+		t.Fatalf("parseSince = %v, want %v", got, want)
 	}
 	if _, err := parseSinceAt("bogus", now); err == nil {
 		t.Fatal("expected error on bogus window")

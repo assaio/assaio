@@ -3,6 +3,8 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 )
 
@@ -24,9 +26,10 @@ func init() { Register(burnValidator{}) }
 // smoke alarm, robust to a window where most days differ wildly.
 type burnValidator struct{}
 
-func (burnValidator) Name() string     { return burnName }
-func (burnValidator) Title() string    { return burnTitle }
-func (burnValidator) Describe() string { return burnDescribe }
+func (burnValidator) Name() string       { return burnName }
+func (burnValidator) Title() string      { return burnTitle }
+func (burnValidator) Describe() string   { return burnDescribe }
+func (burnValidator) Layer() layer.Layer { return layer.Activity } // a day's token burn against the window's typical day
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (burnValidator) Analyze(in Input) Result {

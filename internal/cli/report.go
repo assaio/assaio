@@ -23,7 +23,7 @@ func newReportCmd() *cobra.Command {
 	}
 	c.Flags().StringVar(&since, "since", "30d", "time window, e.g. 7d")
 	c.Flags().StringVar(&format, "format", "table", "output format: table|json|csv")
-	c.Flags().StringVar(&by, "by", "day", "group by: day|project|tool|model|entrypoint|member|task|outcome|difficulty")
+	c.Flags().StringVar(&by, "by", "day", "group by: day|project|tool|model|entrypoint|task|outcome|difficulty")
 	c.Flags().Bool("compare", false, "show period-over-period top movers vs the previous equal window (renders a movers table, not --format)")
 	addDBFlag(c)
 	return c

@@ -39,25 +39,35 @@ exactly what an honesty-first tool must not do silently.
 
 ## Detection — three channels
 
-1. **Local canaries, automatic.** After every `backfill`, each source is judged against
-   its own recent history:
+1. **Local canaries, automatic.** After every `backfill`, four of the five judge a source
+   against its own recent history, and one judges a condition:
 
    | Canary | Fires when | Abstains below |
    |---|---|---|
    | `discovery` | no files found where there used to be some, or fewer than half the recent median | a median of 20 files, for the partial-drop half |
    | `yield` | records per file read collapse to under a quarter of the historical median | 20 files read this pass |
-   | `skipped` | at least a tenth of the lines read fail to unmarshal | 50 skipped lines |
+   | `skipped` | skips average one or more per file read | 50 skipped inputs |
    | `zero-token` | at least a quarter of parsed records carry no tokens at all | 50 records |
+   | `barren` | files are found and no run on record has read a usage record out of them | nothing — the condition is absolute |
 
    The design rules behind those numbers matter more than the numbers: the baseline is a
    **median** of recent runs, so one odd pass cannot move it; every comparison is a
    **ratio**, so an incremental pass that read four files stays comparable to a full one
-   that read six thousand; and every canary has a **sample floor** below which it says
-   nothing, because a share computed from a handful of records is not evidence. A source
-   with no files — an exec plugin — is judged only by the two canaries that need none.
+   that read six thousand; and every canary that computes a share has a **sample floor**
+   below which it says nothing, because a share computed from a handful of records is not
+   evidence. A source with no files — an exec plugin — is judged only by `zero-token`, the
+   one canary that needs none.
 
-   A breach prints `warning: possible format drift in <tool>` and appears in `doctor`'s
-   drift section; `doctor --strict` turns it into an exit code for cron or CI. While a
+   `barren` is the exception to all of it, and deliberately so: a comparison cannot see a
+   source that never worked, because its baseline is zero and there is no drop to detect.
+   That was measured, not assumed — setting all four sample floors to `1` and re-running
+   the real corpus fired nothing on either build. It reads the whole history rather than
+   one run, because an ordinary incremental pass whose single changed input yields nothing
+   is not a barren source.
+
+   A breach prints `warning: possible format drift in <tool>` — or, for `barren`, `warning:
+   nothing read from a detected source`, because a condition is not a diagnosis — and appears
+   in `doctor`'s drift section; `doctor --strict` turns it into an exit code for cron or CI. While a
    source's discovery canary is lit, its per-input ingest state is frozen rather than
    pruned: "the files are gone" and "we stopped finding them" are indistinguishable, and
    the state is the evidence.

@@ -123,41 +123,47 @@ func TestBuildEffectivenessUnknownDim(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for unknown dimension")
 	}
-	for _, dim := range []string{"day", "project", "tool", "model", "entrypoint", "member"} {
+	for _, dim := range []string{"day", "project", "tool", "model", "entrypoint"} {
 		if !strings.Contains(err.Error(), dim) {
 			t.Fatalf("error %q must list valid dim %q", err.Error(), dim)
 		}
 	}
 }
 
-// TestBuildEffectivenessByMemberRendersLocalPlaceholder guards the team-view dimension on
-// the effectiveness view: grouping by member must separate real members from the local ""
-// group, and the table must render "" as "(local)", not the generic "(unknown)".
-func TestBuildEffectivenessByMemberRendersLocalPlaceholder(t *testing.T) {
+// TestEffectivenessRefusesToRankNamedIndividuals is the Refusals line in BACKLOG.md held on
+// the surface that broke it: `effectiveness --by member` printed MEMBER | AI LINES | EDITS |
+// REJ | COST $ | $/100 LINES, a per-person output-and-spend ranking, under a caveat that
+// called itself "a diagnostic per project". json and csv carried the same rows with no caveat
+// at all. The dashboard removed the same figure in v0.14 (B141); this is that decision
+// reaching the other two surfaces.
+func TestEffectivenessRefusesToRankNamedIndividuals(t *testing.T) {
 	rows := []store.UsageRow{
 		{Day: "d", Tool: "claude-code", Model: "claude-opus-4-5", Member: "alice", In: 100, LinesAdded: 10},
-		{Day: "d", Tool: "claude-code", Model: "claude-opus-4-5", Member: "", In: 50, LinesAdded: 5},
 	}
-	eff, err := BuildEffectiveness(rows, table(), "member")
+	_, err := BuildEffectiveness(rows, table(), "member")
+	if err == nil {
+		t.Fatal("effectiveness --by member must be refused, not rendered")
+	}
+	if !strings.Contains(err.Error(), "does not rank named individuals") {
+		t.Fatalf("the refusal must say why, got %q", err.Error())
+	}
+}
+
+// TestEffectivenessCaveatNamesTheDimensionItIsGroupedBy: the caveat scoped efficiency to
+// "per project" whatever the table was grouped by, which is a claim about rows that carry no
+// project at all.
+func TestEffectivenessCaveatNamesTheDimensionItIsGroupedBy(t *testing.T) {
+	rows := []store.UsageRow{{Day: "d", Tool: "claude-code", Model: "claude-opus-4-5", In: 100, LinesAdded: 10}}
+	eff, err := BuildEffectiveness(rows, table(), "model")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(eff) != 2 {
-		t.Fatalf("len(eff) = %d want 2 (alice, local): %+v", len(eff), eff)
-	}
 	var buf bytes.Buffer
-	if err := RenderEffectivenessTable(&buf, eff, "member"); err != nil {
+	if err := RenderEffectivenessTable(&buf, eff, "model"); err != nil {
 		t.Fatal(err)
 	}
-	out := buf.String()
-	if !strings.Contains(out, "alice") {
-		t.Fatalf("table missing member name %q: %s", "alice", out)
-	}
-	if !strings.Contains(out, "(local)") {
-		t.Fatalf("table missing (local) placeholder for the empty member: %s", out)
-	}
-	if strings.Contains(out, "(unknown)") {
-		t.Fatalf("member dimension must never fall back to the generic (unknown) placeholder: %s", out)
+	if !strings.Contains(buf.String(), "a diagnostic per model") {
+		t.Fatalf("caveat must name the grouping dimension: %s", buf.String())
 	}
 }
 

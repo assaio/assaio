@@ -4,6 +4,8 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/parser"
 )
@@ -27,9 +29,10 @@ func init() { Register(turnEffValidator{}) }
 // result lands in one or two turns, the median turns it takes, and output produced per turn.
 type turnEffValidator struct{}
 
-func (turnEffValidator) Name() string     { return turnEffName }
-func (turnEffValidator) Title() string    { return turnEffTitle }
-func (turnEffValidator) Describe() string { return turnEffDescribe }
+func (turnEffValidator) Name() string       { return turnEffName }
+func (turnEffValidator) Title() string      { return turnEffTitle }
+func (turnEffValidator) Describe() string   { return turnEffDescribe }
+func (turnEffValidator) Layer() layer.Layer { return layer.Activity } // the one-shot rate and turns per session
 
 //nolint:gocritic // Input is required by the Validator interface; analyzed once per run, not a hot path.
 func (turnEffValidator) Analyze(in Input) Result {

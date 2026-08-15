@@ -29,6 +29,8 @@ type weekdayValidator struct{}
 
 func (weekdayValidator) Name() string  { return "weekday-split" }
 func (weekdayValidator) Title() string { return "Weekday Split" }
+func (weekdayValidator) Layer() layer.Layer { return layer.Activity } // a token share is what happened
+
 func (weekdayValidator) Describe() string {
 	return "Share of AI tokens spent Monday to Friday -- an out-of-hours proxy, not a verdict."
 }
@@ -91,6 +93,7 @@ type editSizeValidator struct{}
 func (editSizeValidator) Name() string     { return "edit-size" }
 func (editSizeValidator) Title() string    { return "Edit Size" }
 func (editSizeValidator) Describe() string { return "AI lines per edit, over the sources that count edits." }
+func (editSizeValidator) Layer() layer.Layer { return layer.Output } // a line count is what was produced
 
 func (editSizeValidator) Analyze(in Input) Result {
 	// Only rows whose tool records both signals. Everything else is a silence, not a zero.
@@ -146,6 +149,7 @@ for row in inp.get("usage", []):
 
 result = {
     "title": "Weekday Split",
+    "layer": "activity",
     "describe": "Share of AI tokens spent Monday to Friday.",
     "howToRead": "A falling weekday share can mean crunch or flexible hours; read it beside how the team says it is working.",
     "caveats": ["Directional: a proxy for when work happened, not for how much."],
@@ -163,7 +167,7 @@ else:
                      else "A meaningful share of usage falls outside the working week."),
     }
 
-print(json.dumps({"assaio_metric": 1, "name": "weekday-split"}))
+print(json.dumps({"assaio_metric": 2, "name": "weekday-split"}))
 print(json.dumps(result))
 ```
 
@@ -202,6 +206,7 @@ for row in inp.get("usage", []):
 covered = (counted / total) if total else 0
 result = {
     "title": "Edit Size",
+    "layer": "output",
     "describe": "AI lines per edit, over the sources that count edits.",
     "howToRead": "A sharp change in either direction is the signal; the level itself is a house style.",
     "caveats": [f"Covers {covered:.0%} of the window's tokens: the rest comes from sources that record no edit count."],
@@ -216,7 +221,7 @@ else:
         "takeaway": "Edit size is measurable in this window.",
     }
 
-print(json.dumps({"assaio_metric": 1, "name": "edit-size"}))
+print(json.dumps({"assaio_metric": 2, "name": "edit-size"}))
 print(json.dumps(result))
 ```
 
@@ -265,6 +270,8 @@ type reReadsValidator struct{}
 
 func (reReadsValidator) Name() string  { return "re-reads" }
 func (reReadsValidator) Title() string { return "Re-reads" }
+func (reReadsValidator) Layer() layer.Layer { return layer.Activity } // repeated reads are what happened
+
 func (reReadsValidator) Describe() string {
 	return "How often a session reads a file it has already read in the same sequence."
 }

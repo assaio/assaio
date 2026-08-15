@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/assaio/assaio/internal/analyze"
+	"github.com/assaio/assaio/internal/layer"
 	"github.com/assaio/assaio/internal/store"
 )
 
 func validMetricResult() analyze.Result {
 	return analyze.Result{
 		Title:     "Demo Metric",
+		Layer:     layer.Activity,
 		Read:      analyze.Read{Key: "watch", Label: "WATCH"},
 		Purity:    0.4,
 		HowToRead: "Directional demo signal.",
@@ -222,7 +224,7 @@ func TestParseMetricResultRejectsUnknownField(t *testing.T) {
 // DisallowUnknownFields stopped rejecting them -- so a plugin could hand assaio a `backfill`
 // recommendation for a subject no source records, or a rank the ordering never produced.
 func TestParseMetricResultDropsWindowLevelClaims(t *testing.T) {
-	doc := `{"title":"T","read":{"key":"good","label":"OK"},"howToRead":"H","takeaway":"K",` +
+	doc := `{"title":"T","layer":"activity","read":{"key":"good","label":"OK"},"howToRead":"H","takeaway":"K",` +
 		`"confidence":{"samples":12,"samplesUnit":"sessions","signalCoverage":0,"subjectRecorded":true},` +
 		`"lead":{"rank":1,"reasons":["critical, act now"]}}`
 	got, violations, err := parseMetricResult([]byte(doc), "p")

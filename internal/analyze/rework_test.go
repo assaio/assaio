@@ -36,9 +36,13 @@ func TestReworkUnconfirmedRejectionIsNotFabricatedFavorable(t *testing.T) {
 	if got.Read.Label == "LOW" {
 		t.Fatalf("Read = %+v, want NOT LOW: rejection was never measured (0 tool calls), so the pair can't be confirmed low", got.Read)
 	}
-	wantPurity := 1 - 0.10 // rework rate alone; the old formula averaged in a fabricated 0 -> 0.95.
-	if diff := got.Purity - wantPurity; diff < -1e-9 || diff > 1e-9 {
-		t.Fatalf("Purity = %v, want %v (rework rate alone, not diluted by a fabricated 0 rejection rate)", got.Purity, wantPurity)
+	// Nor WATCH: flagging a window because half of it could not be measured is the same
+	// fabrication in the other direction, and it read that way on every Codex window forever.
+	if got.Read.Label == "WATCH" {
+		t.Fatalf("Read = %+v, want the verdict withheld rather than flagged on an unmeasured half", got.Read)
+	}
+	if got.Purity != neutralPurity {
+		t.Fatalf("Purity = %v, want the neutral %v: a withheld verdict draws no gauge in either direction", got.Purity, neutralPurity)
 	}
 	joined := figureValues(got.Figures)
 	if !strings.Contains(joined, "rejection rate: — ") {
@@ -150,6 +154,52 @@ func TestReworkAndFrictionAgreeOnTheRejectionRate(t *testing.T) {
 }
 
 func hasCaveatContaining(caveats []string, want string) bool {
+	for _, c := range caveats {
+		if strings.Contains(c, want) {
+			return true
+		}
+	}
+	return false
+}
+
+// TestReworkWithholdsARateAboveItsWhole is B132's class at the other end: the parser's
+// per-transcript budget cannot stop a *window* from opening between an addition and its
+// removal, and ChurnStat's own doc has always said so. Nothing clamped or disclosed it at the
+// render, so `--since 1d` over a day that removed 400 of yesterday's lines printed
+// "rework: 8000%" -- a share of a whole this window never held.
+func TestReworkWithholdsARateAboveItsWhole(t *testing.T) {
+	usage := []store.UsageRow{
+		{
+			Day: "2026-07-10", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web",
+			In: 100, Out: 100, LinesAdded: 5, ReworkLines: 400, ToolCalls: 20,
+		},
+	}
+	in := BuildInput(usage, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
+	v, _ := Get(reworkName)
+	got := v.Analyze(in)
+
+	joined := figureValues(got.Figures)
+	if !strings.Contains(joined, "rework: — (") {
+		t.Fatalf("Figures = %q, want the rework rate withheld when removals outnumber the additions", joined)
+	}
+	if strings.Contains(joined, "8000%") {
+		t.Fatalf("Figures = %q, a share may never exceed its own whole", joined)
+	}
+	if !hasCaveatAbout(got.Caveats, "never counted as added") {
+		t.Fatalf("Caveats = %q, want the withheld rate to say why", got.Caveats)
+	}
+	// The churn half is unmeasurable, so the pair is withheld -- and a withheld verdict draws
+	// the neutral gauge. Folding the 80.0 ratio in instead would clamp it to 0 and paint
+	// friction nobody measured.
+	if got.Read != noDataRead {
+		t.Fatalf("Read = %+v, want the verdict withheld when the churn half has no share to state", got.Read)
+	}
+	if got.Purity != neutralPurity {
+		t.Fatalf("Purity = %v, want the neutral %v", got.Purity, neutralPurity)
+	}
+}
+
+func hasCaveatAbout(caveats []string, want string) bool {
 	for _, c := range caveats {
 		if strings.Contains(c, want) {
 			return true

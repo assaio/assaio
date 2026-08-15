@@ -3,6 +3,8 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 )
 
@@ -10,7 +12,7 @@ const (
 	subscriptionName      = "subscription-fit"
 	subscriptionTitle     = "Subscription Fit"
 	subscriptionDescribe  = "Whether a flat monthly plan (Claude Max/Pro, ChatGPT Plus/Pro) pays off vs API pay-as-you-go, from your configured plan cost."
-	subscriptionHowToRead = "This projects your window's API-equivalent cost onto a calendar month -- the window's span in real days, not only the days you worked -- and compares it against the flat plan price you configured. A high multiple means the plan is a bargain at your volume; below 1x means API pay-as-you-go might be cheaper. The API figure is an estimate at public prices, not your actual bill."
+	subscriptionHowToRead = "This projects your API-equivalent cost onto a calendar month -- across the days the projection rests on, not only the days you worked -- and compares it against the flat plan price you configured. A high multiple means the plan is a bargain at your volume; below 1x means API pay-as-you-go might be cheaper. The API figure is an estimate at public prices, not your actual bill."
 )
 
 // planUnsetRead is the neutral faceplate shown when usage exists but no plan cost is
@@ -25,9 +27,10 @@ func init() { Register(subscriptionValidator{}) }
 // API-equivalent $ is meaningless as a spend figure but very meaningful as plan value.
 type subscriptionValidator struct{}
 
-func (subscriptionValidator) Name() string     { return subscriptionName }
-func (subscriptionValidator) Title() string    { return subscriptionTitle }
-func (subscriptionValidator) Describe() string { return subscriptionDescribe }
+func (subscriptionValidator) Name() string       { return subscriptionName }
+func (subscriptionValidator) Title() string      { return subscriptionTitle }
+func (subscriptionValidator) Describe() string   { return subscriptionDescribe }
+func (subscriptionValidator) Layer() layer.Layer { return layer.Activity } // the plan price against the API-equivalent cost of the same activity
 
 // WindowScoped: the plan price covers the whole window, not one project's share of it.
 func (subscriptionValidator) WindowScoped() {}
@@ -69,11 +72,15 @@ func (subscriptionValidator) Analyze(in Input) Result {
 		{Label: "API-equivalent", Value: "~$" + humanize.USD(apiMonthly) + "/mo", Note: "projected estimate"},
 		{Label: "value multiple", Value: valueMultiple(multiple), Note: "API-equiv / plan"},
 		{Label: "vs API", Value: signedMoney(apiMonthly-in.PlanMonthlyCost) + "/mo", Note: savingsNote(payingOff)},
+		{
+			Label: "projected from", Value: humanize.Days(ProjectionSpan(&in)),
+			Note: "the span behind the monthly figures",
+		},
 	}
 	r.Takeaway = subscriptionTakeaway(payingOff, multiple)
 	r.Caveats = []string{
 		"The API-equivalent $ is an estimate at public pay-as-you-go prices, not your actual bill.",
-		"Projected onto 30 calendar days from this window's span -- the days inside it you did not work are still days the plan was paid for -- and it excludes any unpriced-model usage.",
+		"Projected onto 30 calendar days from the span this figure actually rests on (below) -- idle days inside it are still days the plan was paid for -- and it excludes any unpriced-model usage.",
 	}
 	return r
 }

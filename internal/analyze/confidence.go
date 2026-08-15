@@ -77,6 +77,7 @@ type Confidence struct {
 // what it alone knows -- how many observations it counted.
 func Evaluate(v Validator, in *Input) Result {
 	r := v.Analyze(*in)
+	r.Layer = v.Layer()
 	Stamp(&r, in)
 	if _, trending := v.(Trending); trending {
 		stampHorizon(&r, in)

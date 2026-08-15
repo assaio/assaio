@@ -13,11 +13,25 @@ import (
 	"github.com/assaio/assaio/internal/humanize"
 )
 
-// effCaveat states that efficiency is a diagnostic signal, never a performance metric.
-const effCaveat = "Efficiency is directional: task type (greenfield vs. debugging) drives lines-per-cost; this is a diagnostic per project, never a performance metric."
+// effCaveat states that efficiency is a diagnostic signal, never a performance metric. It
+// names the dimension the table is actually grouped by: printed as "per project" over a table
+// grouped by something else, the caveat scoped a claim to a dimension the rows never carried.
+func effCaveat(by string) string {
+	return "Efficiency is directional: task type (greenfield vs. debugging) drives lines-per-cost; this is a diagnostic per " +
+		by + ", never a performance metric."
+}
 
-// effCoverageNote discloses which tools' AI-line counts are real today.
-const effCoverageNote = "Not every source records changed lines; the ones that do not contribute cost but no line counts -- run `assaio-agent signals coverage` for what your own data supports."
+// effCoverageNote discloses how far the AI-line column reaches. Quantified rather than
+// qualitative: a note that reads the same whether the line-blind share is 0.1% or half the table
+// is the failure UnpricedDisclosure already fixed for the cost column.
+func effCoverageNote(lineCapableTokens, totalTokens int64) string {
+	if totalTokens == 0 || lineCapableTokens == totalTokens {
+		return "Every source in this table records changed lines."
+	}
+	return "AI lines and edits come only from the sources that record them (" +
+		humanize.Percent(float64(lineCapableTokens)/float64(totalTokens)) +
+		" of this table's tokens); a group showing — contributes cost and no line count. Run `assaio-agent signals coverage` for what your own data supports."
+}
 
 // RenderEffectivenessTable writes rows to w as a human-readable efficiency table
 // grouped by by, with a totals footer and the honesty caveats every effectiveness view
@@ -28,22 +42,25 @@ func RenderEffectivenessTable(w io.Writer, rows []EffRow, by string) error {
 	tw.AppendHeader(prettytable.Row{strings.ToUpper(by), "AI LINES", "EDITS", "REJ", "COST $", "$/100 LINES"})
 	tw.SetColumnConfigs(rightAlignFrom(1, 5))
 
-	var totalLines, totalEdits, totalRejected int64
+	var totalLines, totalEdits, totalRejected, lineCapableTokens int64
 	var totalCost float64
 	var unpriced Unpriced
 	for i := range rows {
 		r := &rows[i]
 		cost, priced := formatEffCost(r)
 		totalCost += priced
-		totalLines += r.LinesAdded
-		totalEdits += r.Edits
+		if r.LineCapable {
+			totalLines += r.LinesAdded
+			totalEdits += r.Edits
+			lineCapableTokens += r.TokensTotal
+		}
 		totalRejected += r.Rejected
 		unpriced.Tokens += r.UnpricedTokens
 		unpriced.Total += r.TokensTotal
 		if r.HasUnpriced {
 			unpriced.Rows++
 		}
-		tw.AppendRow(effTableRow(r, by, cost))
+		tw.AppendRow(effTableRow(r, cost))
 	}
 	tw.AppendFooter(prettytable.Row{
 		"TOTAL", humanize.Int(totalLines), humanize.Int(totalEdits), humanize.Int(totalRejected),
@@ -56,10 +73,10 @@ func RenderEffectivenessTable(w io.Writer, rows []EffRow, by string) error {
 			return err
 		}
 	}
-	if _, err := fmt.Fprintln(w, effCaveat); err != nil {
+	if _, err := fmt.Fprintln(w, effCaveat(by)); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintln(w, effCoverageNote); err != nil {
+	if _, err := fmt.Fprintln(w, effCoverageNote(lineCapableTokens, unpriced.Total)); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(w, CostEstimateDisclosure)
@@ -93,14 +110,16 @@ func formatCostPer100(r *EffRow) string {
 }
 
 // effTableRow builds one data row, substituting a placeholder for an empty group label.
-// by isn't otherwise available on EffRow (Group already holds the resolved value), so the
-// caller passes it through just for emptyDimLabel's per-dimension placeholder choice.
-func effTableRow(r *EffRow, by, cost string) prettytable.Row {
+func effTableRow(r *EffRow, cost string) prettytable.Row {
 	label := r.Group
 	if label == "" {
-		label = emptyDimLabel(by)
+		label = "(unknown)"
 	}
-	return prettytable.Row{label, humanize.Int(r.LinesAdded), humanize.Int(r.Edits), humanize.Int(r.Rejected), cost, formatCostPer100(r)}
+	lines, edits := humanize.Int(r.LinesAdded), humanize.Int(r.Edits)
+	if !r.LineCapable {
+		lines, edits = "—", "—"
+	}
+	return prettytable.Row{label, lines, edits, humanize.Int(r.Rejected), cost, formatCostPer100(r)}
 }
 
 // footerRatio recomputes $/100 lines from column totals rather than averaging each

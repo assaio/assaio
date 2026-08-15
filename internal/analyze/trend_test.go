@@ -11,9 +11,9 @@ var trendTestNow = time.Date(2026, 7, 14, 12, 0, 0, 0, time.UTC)
 
 func trendRows() []store.UsageRow {
 	return []store.UsageRow{
-		{Day: "2026-07-10", LinesAdded: 200}, // recent (within last 7d)
-		{Day: "2026-07-08", LinesAdded: 50},  // recent
-		{Day: "2026-07-01", LinesAdded: 100}, // prior (7-14d ago)
+		{Day: "2026-07-10", Tool: "claude-code", LinesAdded: 200}, // recent (within last 7d)
+		{Day: "2026-07-08", Tool: "claude-code", LinesAdded: 50},  // recent
+		{Day: "2026-07-01", Tool: "claude-code", LinesAdded: 100}, // prior (7-14d ago)
 	}
 }
 

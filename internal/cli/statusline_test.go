@@ -209,3 +209,24 @@ func TestStatuslineSubscriptionShowsTwoRawNumbers(t *testing.T) {
 		t.Errorf("statusline = %q, must not show the pay-as-you-go form on a subscription", got)
 	}
 }
+
+// TestStatuslineWithholdsLinesFromASourceThatNeverRecordsThem is ADR 0011 on the most-read
+// surface there is. Gemini CLI answers no line signal, so summing LinesAdded with no
+// capability gate printed "+0 lines" -- an AI that wrote nothing -- every day, forever.
+func TestStatuslineWithholdsLinesFromASourceThatNeverRecordsThem(t *testing.T) {
+	now := startOfLocalDay(time.Now())
+	seedLocalStore(t, []usage.Record{{
+		Tool: "gemini-cli", SessionID: "s1", Timestamp: now.UTC(),
+		Model: "gemini-2.5-pro", InputTokens: 1000, OutputTokens: 500, DedupeKey: "1",
+	}})
+	got := runStatuslineCmd(t)
+	if !strings.Contains(got, "tok") {
+		t.Fatalf("statusline = %q, want the token figure the source does answer", got)
+	}
+	if strings.Contains(got, "lines") {
+		t.Fatalf("statusline = %q, must not state a line figure no source in it records", got)
+	}
+	if strings.Contains(got, "+0") {
+		t.Fatalf("statusline = %q, a structural silence must never render as a zero", got)
+	}
+}

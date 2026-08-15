@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/layer"
 	"github.com/assaio/assaio/internal/trace"
 )
 
@@ -23,9 +24,10 @@ func init() { Register(editLoopsValidator{}) }
 // which sequences do it far more than the rest of the window.
 type editLoopsValidator struct{}
 
-func (editLoopsValidator) Name() string     { return editLoopsName }
-func (editLoopsValidator) Title() string    { return editLoopsTitle }
-func (editLoopsValidator) Describe() string { return editLoopsDescribe }
+func (editLoopsValidator) Name() string       { return editLoopsName }
+func (editLoopsValidator) Title() string      { return editLoopsTitle }
+func (editLoopsValidator) Describe() string   { return editLoopsDescribe }
+func (editLoopsValidator) Layer() layer.Layer { return layer.Activity } // how often an edit returns to a file
 
 // TraceScope declares the population: a person's own sessions. Sub-agent sequences are a
 // different animal and read differently -- 15.5% against 25.0% on the audited store -- and an

@@ -15,6 +15,7 @@ import (
 // The canaries, named for what stopped looking right.
 const (
 	Discovery = "discovery"
+	Barren    = "barren"
 	Yield     = "yield"
 	Skipped   = "skipped"
 	ZeroToken = "zero-token"
@@ -30,10 +31,13 @@ const (
 	discoveryBaselineMin = 20
 	yieldDropShare       = 0.25
 	yieldParsedMin       = 20
-	skippedMaxShare      = 0.1
-	skippedLinesMin      = 50
-	zeroTokenMaxShare    = 0.25
-	zeroTokenRecordsMin  = 50
+	// skippedPerFileMax is a rate in the unit the numerator is actually counted in. A healthy
+	// parse of the maintainer's 4.5 GB corpus skips nothing at all, so one unreadable input per
+	// file is already gross.
+	skippedPerFileMax   = 1.0
+	skippedLinesMin     = 50
+	zeroTokenMaxShare   = 0.25
+	zeroTokenRecordsMin = 50
 )
 
 // Warning is one fired canary: which source, which signal, and the numbers behind it.
@@ -50,6 +54,7 @@ var canaries = []struct {
 	check func(cur *store.SourceRun, prev []store.SourceRun) (string, bool)
 }{
 	{Discovery, discoveryCanary},
+	{Barren, barrenCanary},
 	{Yield, yieldCanary},
 	{Skipped, skippedCanary},
 	{ZeroToken, zeroTokenCanary},
@@ -95,6 +100,30 @@ func discoveryCanary(cur *store.SourceRun, prev []store.SourceRun) (string, bool
 	return "", false
 }
 
+// barrenCanary catches a source that is found and has never yielded a record. It is the only
+// canary judged on a condition rather than a rate, and deliberately carries no sample floor:
+// "these files exist and nothing has ever come out of them" is unambiguous at any size.
+//
+// It needs the history to say "never", not to compare against it. Every other canary here is a
+// comparison and none can see this case, because a source that has always yielded zero has a
+// baseline of zero and there is no drop to detect. The condition is the whole history rather
+// than this run alone for the opposite reason: Parsed counts the files a run attempted, so an
+// ordinary incremental pass whose one changed input yields nothing -- a transcript written
+// before its first response, a fresh task directory -- would otherwise report a healthy source
+// as barren and fail `doctor --strict` on it.
+func barrenCanary(cur *store.SourceRun, prev []store.SourceRun) (string, bool) {
+	if cur.Discovered == 0 || cur.Records > 0 {
+		return "", false
+	}
+	for i := range prev {
+		if prev[i].Records > 0 {
+			return "", false
+		}
+	}
+	return fmt.Sprintf("%d file(s) found, and no run on record has read a usage record out of them",
+		cur.Discovered), true
+}
+
 // yieldCanary catches a change that still parses as valid JSON but no longer matches the
 // usage shape: the files are found and read, and far less comes out of them than history
 // says should. A run that read nothing has no yield to judge.
@@ -119,18 +148,20 @@ func yieldCanary(cur *store.SourceRun, prev []store.SourceRun) (string, bool) {
 		got, cur.Parsed, base), true
 }
 
-// skippedCanary catches lines that stopped unmarshaling -- the loud half of format drift,
-// which every parser already counts but nothing ever judged.
+// skippedCanary catches input that stopped being readable -- the loud half of format drift.
+//
+// A rate per file, not a share of the records: Records counts emitted records, one per API
+// response and several lines each, while Skipped mixes unmarshal failures, undated records and
+// steps refused at the vocabulary boundary. Their sum is not a line count.
 func skippedCanary(cur *store.SourceRun, _ []store.SourceRun) (string, bool) {
-	total := cur.Records + cur.Skipped
-	if cur.Skipped < skippedLinesMin || total == 0 {
+	if cur.Skipped < skippedLinesMin || cur.Parsed == 0 {
 		return "", false
 	}
-	share := float64(cur.Skipped) / float64(total)
-	if share < skippedMaxShare {
+	perFile := float64(cur.Skipped) / float64(cur.Parsed)
+	if perFile < skippedPerFileMax {
 		return "", false
 	}
-	return fmt.Sprintf("%d of %d line(s) skipped (%.1f%%)", cur.Skipped, total, share*100), true
+	return fmt.Sprintf("%d skip(s) across %d file(s), %.1f per file", cur.Skipped, cur.Parsed, perFile), true
 }
 
 // zeroTokenCanary catches the quiet half: a renamed or moved token field still parses, so

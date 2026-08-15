@@ -13,11 +13,12 @@ import (
 var noDataRead = Read{Key: "neutral", Label: "—"}
 
 // noData ends a verdict whose window held none of what it needs: the neutral read, the
-// takeaway saying so, and a basis of zero stated in the metric's own unit. Stating the unit
-// is the part that matters -- a basis left unsaid means something else entirely (see
-// Confidence.insufficientReason).
+// neutral gauge, the takeaway saying so, and a basis of zero stated in the metric's own
+// unit. Stating the unit is the part that matters -- a basis left unsaid means something
+// else entirely (see Confidence.insufficientReason).
 func (r *Result) noData(unit, takeaway string) {
 	r.Read = noDataRead
+	r.Purity = neutralPurity
 	r.restsOn(0, unit)
 	r.Takeaway = takeaway
 }
@@ -40,7 +41,8 @@ func readFor(ok bool, favorableLabel string) Read {
 //
 //nolint:gocritic // Result is caller-constructed and rendered once per validator per CLI run; by-value matches Validator.Analyze's own return and keeps this the simple entry point it flows into directly.
 func RenderResultText(w io.Writer, r Result) error {
-	if _, err := fmt.Fprintf(w, "%s · %s  [%s]\n", strings.ToUpper(r.Name), r.Title, r.Read.Label); err != nil {
+	if _, err := fmt.Fprintf(w, "%s · %s  [%s]  (%s)\n",
+		strings.ToUpper(r.Name), r.Title, r.Read.Label, r.Layer); err != nil {
 		return err
 	}
 	if r.HowToRead != "" {

@@ -5,6 +5,7 @@
       "id": "ai.agent.tokens",
       "title": "Tokens per sub-agent",
       "unit": "tokens",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "window"
@@ -19,6 +20,7 @@
       "id": "ai.cache.miss_reason",
       "title": "Cache-miss reason",
       "unit": "count",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -36,6 +38,7 @@
       "id": "ai.compactions.count",
       "title": "Context compactions",
       "unit": "count",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -54,6 +57,7 @@
       "id": "ai.cost.estimated",
       "title": "Estimated cost",
       "unit": "usd",
+      "layer": "activity",
       "status": "estimated",
       "grains": [
         "turn",
@@ -75,6 +79,7 @@
       "id": "ai.edits.count",
       "title": "Edit operations",
       "unit": "count",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -93,6 +98,7 @@
       "id": "ai.lines.added",
       "title": "AI lines added",
       "unit": "lines",
+      "layer": "output",
       "status": "observed",
       "grains": [
         "turn",
@@ -112,6 +118,7 @@
       "id": "ai.lines.removed",
       "title": "AI lines removed",
       "unit": "lines",
+      "layer": "output",
       "status": "observed",
       "grains": [
         "turn",
@@ -131,6 +138,7 @@
       "id": "ai.rejected.count",
       "title": "Declined tool calls",
       "unit": "count",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -148,6 +156,7 @@
       "id": "ai.rework.lines",
       "title": "Rework lines",
       "unit": "lines",
+      "layer": "output",
       "status": "derived",
       "grains": [
         "turn",
@@ -166,6 +175,7 @@
       "id": "ai.session.active_minutes",
       "title": "Focused minutes",
       "unit": "minutes",
+      "layer": "activity",
       "status": "derived",
       "grains": [
         "session",
@@ -184,6 +194,7 @@
       "id": "ai.sessions.count",
       "title": "Sessions",
       "unit": "sessions",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "day",
@@ -203,6 +214,7 @@
       "id": "ai.skill.tokens",
       "title": "Tokens per skill",
       "unit": "tokens",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "window"
@@ -217,6 +229,7 @@
       "id": "ai.step.outcome",
       "title": "Step outcome",
       "unit": "count",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "step",
@@ -233,6 +246,7 @@
       "id": "ai.step.target",
       "title": "Step target",
       "unit": "count",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "step",
@@ -248,6 +262,7 @@
       "id": "ai.steps.count",
       "title": "Sequence steps",
       "unit": "count",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "step",
@@ -264,6 +279,7 @@
       "id": "ai.tokens.cache_read",
       "title": "Cache-read tokens",
       "unit": "tokens",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -285,6 +301,7 @@
       "id": "ai.tokens.cache_write",
       "title": "Cache-write tokens",
       "unit": "tokens",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -304,6 +321,7 @@
       "id": "ai.tokens.cache_write_1h",
       "title": "1-hour cache-write tokens",
       "unit": "tokens",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -321,6 +339,7 @@
       "id": "ai.tokens.input",
       "title": "Input tokens",
       "unit": "tokens",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -342,6 +361,7 @@
       "id": "ai.tokens.output",
       "title": "Output tokens",
       "unit": "tokens",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -363,6 +383,7 @@
       "id": "ai.tokens.reasoning",
       "title": "Reasoning tokens",
       "unit": "tokens",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -382,6 +403,7 @@
       "id": "ai.tokens.total",
       "title": "Total tokens",
       "unit": "tokens",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -403,6 +425,7 @@
       "id": "ai.tool_calls.count",
       "title": "Tool calls",
       "unit": "count",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -421,6 +444,7 @@
       "id": "ai.tool_errors.count",
       "title": "Failed tool calls",
       "unit": "count",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "turn",
@@ -438,6 +462,7 @@
       "id": "ai.turns.count",
       "title": "Turns",
       "unit": "count",
+      "layer": "activity",
       "status": "observed",
       "grains": [
         "session",
@@ -596,126 +621,147 @@
       "name": "adoption",
       "title": "Adoption \u0026 Usage Breadth",
       "describe": "Sessions, active days, and project/tool breadth: how broad AI usage is, and whether it's growing.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "burn-anomaly",
       "title": "Burn Anomaly",
       "describe": "Days whose token burn stands far outside this window's typical day.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "cache-hygiene",
       "title": "Cache Hygiene",
       "describe": "Prompt-cache reuse: how much billed input was served from cache vs re-sent, which lifetime the writes bought, and why a miss happened.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "concentration",
       "title": "Spend Concentration",
       "describe": "How token spend spreads across projects, and whether the heaviest spenders produced output to match.",
+      "layer": "output",
       "scope": "project"
     },
     {
       "name": "context",
       "title": "Context Health",
       "describe": "Conversation depth, peak context size, active time, and how often sessions hit compaction.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "coverage",
       "title": "Coverage \u0026 Confidence",
       "describe": "How much of this window is high-confidence data: the share of tokens from tools with full activity capture, and the share priced.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "edit-loops",
       "title": "Repeat Edits",
       "describe": "How often a file goes back for another pass after a command ran, and which sessions stand far outside this window's own rate.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "explore-produce",
       "title": "Explore vs Produce",
       "describe": "What the tool calls were for: reading and searching the codebase versus writing code in it.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "friction",
       "title": "Friction",
       "describe": "How often tool calls fail outright, beside how often a human declines one.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "intent",
       "title": "Task Intent Coverage",
       "describe": "How much of the window carries a task label, and whether that is enough to read any other metric per kind of work.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "model-fit",
       "title": "Model Fit",
       "describe": "Premium vs. cheaper model token share, lines-per-token contrast, and real sub-agent delegation share.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "model-right-sizing",
       "title": "Model Right-Sizing",
       "describe": "Turns on a premium model that produced very little output -- small tasks a cheaper, faster model might handle just as well.",
+      "layer": "activity",
       "scope": "window"
     },
     {
       "name": "reasoning-share",
       "title": "Reasoning Share",
       "describe": "How much generated output is extended-thinking (reasoning) tokens, among tools that report it -- flagging deep reasoning spent on shallow tasks.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "recovery",
       "title": "Failure Recovery",
       "describe": "What a failed call, a refusal or a lost context costs next: the turns that follow one, against what a turn costs anywhere in the window.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "rework",
       "title": "Rework \u0026 Rejection",
       "describe": "Within-session code churn and human tool-call rejections -- a directional friction proxy.",
+      "layer": "output",
       "scope": "project"
     },
     {
       "name": "rhythm",
       "title": "Work Rhythm",
       "describe": "When AI sessions run -- the off-hours and weekend share -- and how long the longest focused sessions last.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "session-taxonomy",
       "title": "Session Taxonomy",
       "describe": "What kind of work sessions are: conversational (no edits), light-edit, or heavy-edit, and how the mix splits.",
+      "layer": "activity",
       "scope": "project"
     },
     {
       "name": "skill-economics",
       "title": "Skill \u0026 Agent Economics",
       "describe": "Which skills and sub-agents the tokens went to, and how much code each produced.",
+      "layer": "activity",
       "scope": "window"
     },
     {
       "name": "subscription-fit",
       "title": "Subscription Fit",
       "describe": "Whether a flat monthly plan (Claude Max/Pro, ChatGPT Plus/Pro) pays off vs API pay-as-you-go, from your configured plan cost.",
+      "layer": "activity",
       "scope": "window"
     },
     {
       "name": "throughput",
       "title": "Throughput",
       "describe": "Total AI-added lines, lines per active day, top projects by lines, and the week-over-week trend.",
+      "layer": "output",
       "scope": "project"
     },
     {
       "name": "turn-efficiency",
       "title": "Turn Efficiency",
       "describe": "Getting more per prompt: one-shot rate, median turns per code-producing session, and output tokens per turn.",
+      "layer": "activity",
       "scope": "project"
     }
   ],
@@ -991,7 +1037,7 @@
           "name": "by",
           "type": "string",
           "default": "project",
-          "usage": "group by: project|tool|model|entrypoint|day|member|task|outcome|difficulty"
+          "usage": "group by: project|tool|model|entrypoint|day|task|outcome|difficulty"
         },
         {
           "name": "compare",
@@ -1194,7 +1240,7 @@
           "name": "by",
           "type": "string",
           "default": "day",
-          "usage": "group by: day|project|tool|model|entrypoint|member|task|outcome|difficulty"
+          "usage": "group by: day|project|tool|model|entrypoint|task|outcome|difficulty"
         },
         {
           "name": "compare",
@@ -2245,6 +2291,10 @@
       },
       {
         "path": "howToRead",
+        "type": "string"
+      },
+      {
+        "path": "layer",
         "type": "string"
       },
       {

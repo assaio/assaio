@@ -3,6 +3,8 @@ package analyze
 import (
 	"strings"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/parser"
 )
@@ -22,9 +24,10 @@ func init() { Register(reasoningValidator{}) }
 // how much of the window's output that covers, so a Claude-heavy window reads honestly.
 type reasoningValidator struct{}
 
-func (reasoningValidator) Name() string     { return reasoningName }
-func (reasoningValidator) Title() string    { return reasoningTitle }
-func (reasoningValidator) Describe() string { return reasoningDescribe }
+func (reasoningValidator) Name() string       { return reasoningName }
+func (reasoningValidator) Title() string      { return reasoningTitle }
+func (reasoningValidator) Describe() string   { return reasoningDescribe }
+func (reasoningValidator) Layer() layer.Layer { return layer.Activity } // the reasoning share of generated tokens
 
 //nolint:gocritic // Input is required by the Validator interface; analyzed once per run, not a hot path.
 func (reasoningValidator) Analyze(in Input) Result {

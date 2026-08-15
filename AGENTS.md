@@ -59,13 +59,10 @@ is deliberate (see `docs/adr/0002-code-standards-and-enforcement.md`).
 **Enforced by tooling** (run these before you push):
 - Formatting — `make fmt` (`golangci-lint fmt`: gofmt + gofumpt + goimports with the
   `github.com/assaio/assaio` local prefix). Must produce no diff.
-- Lint — `make lint` (`gofmt -l`, `go vet`, `golangci-lint run`). The linter canon lives
-  in `.golangci.yml` (source of truth): the standard set plus bodyclose, errorlint,
-  gosec, misspell, revive (exported, context-as-argument, error-strings,
-  indent-error-flow, superfluous-else, var-naming), unconvert, unparam, gocritic
-  (diagnostic + performance), noctx, copyloopvar, intrange, usestdlibvars, perfsprint,
-  nolintlint (explanation + specific required), and depguard (`internal/` must not import
-  `plugin/` or `ee/`).
+- Lint — `make lint` (`gofmt -l`, `go vet`, `golangci-lint run`). `.golangci.yml` is the
+  canon; read it rather than a copy of it. The one rule worth naming here because it is
+  architectural rather than stylistic: depguard, `internal/` must not import `plugin/`
+  or `ee/`.
 - Tests — `make test` (`go test ./...`; CI adds `-race` and a coverage profile).
   Stdlib-only (no testify), table-driven, golden files regenerated with `-update`.
 - Fuzzing — `make fuzz` for any parser change. Every parser ships a native `FuzzParse`
@@ -115,23 +112,38 @@ is deliberate (see `docs/adr/0002-code-standards-and-enforcement.md`).
   changelog, docs. The human who signs off is the author. The commit-msg hook and the
   `dco` CI job reject those trailers; this overrides any default your harness suggests.
 
+## Harness
+
+The executable half of these rules is checked in under `.claude/` — see
+[`.claude/README.md`](.claude/README.md). It is deliberately small: a `PreToolUse` guard for
+the four things that are irreversible and invisible in a diff (the real store, a published
+tag, an AI-authorship trailer, `--no-verify`), a permission split that makes every commit,
+push and tag a deliberate keystroke, and six agents that each hold one line no tool holds —
+honesty, the unlinted review norms, the published prose, store size and migrations, proof on
+a real corpus, and the release flow. `/gate`, `/selfreview` and `/release` drive them.
+Nothing there restates guidance a capable model already follows.
+
 ## Layout
 
 ```
 cmd/assaio-agent/        CLI entrypoint (report, analyze, dashboard, serve, sync, …)
 internal/analyze/        one-file-per-metric validator framework behind assaio analyze
+internal/calibration/    conservation and metamorphic checks over a real corpus
 internal/attribution/    the conformance corpus defining an honest session→commit link (ADR 0010)
 internal/cli/            command wiring and flag handling; one file per command
 internal/config/         defaults + YAML file + ASSAIO_-prefixed env vars
 internal/dashboard/      builds + renders the offline Assay HTML dashboard
+internal/digest/         what moved since the last digest, and how comparable the two runs are
 internal/docs/           the projection of every live register into one reference, and the
                          check that fails the build when a published surface disagrees with it
-internal/drift/          format-drift canaries judging each source against its own history
+internal/drift/          canaries judging each source against its own history, and one against
+                         an absolute condition
 internal/event/          the canonical observation contract of the evidence graph (ADR 0007)
 internal/humanize/       shared count/money formatters every surface renders through
 internal/i18n/           the translatable catalog: dashboard chrome, statusline, explain
 internal/ingest/         discovers session files, parses them, upserts into the store
 internal/label/          the closed vocabularies for session annotations (ADR 0006)
+internal/layer/          the closed vocabulary of measurement layers every figure states (ADR 0013)
 internal/parser/         shared scanner + NonNeg; one package per tool below
 internal/parser/claude/  parses Claude Code session logs into usage records
 internal/parser/cline/   parses Cline task directories into usage records
@@ -143,11 +155,13 @@ internal/plugin/         runs out-of-tree exec plugins (parser, metric, rule pro
                          validating everything at the boundary
 internal/pricing/        loads the vendored LiteLLM price table, prices usage records
 internal/projectid/      resolves a session's cwd to its git repository root + subpath
+internal/reconcile/      compares a vendor's own export against the local estimate
 internal/report/         aggregates stored usage into priced rows; renders table/JSON/CSV
 internal/server/         self-hosted team server: usage collection + served dashboard
 internal/signal/         the catalog of what assaio can report, and what data supports it
 internal/store/          embedded SQLite persistence for usage records
 internal/survival/       directional local outcome check against git blame
+internal/trace/          the stored step sequences, and the scope a detector declares over them
 internal/usage/          normalized representation of AI-tool usage events
 internal/vcs/            the local git evidence collector: content-free commit observations
 internal/version/        build-time version metadata

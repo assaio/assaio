@@ -6,9 +6,11 @@ import "github.com/assaio/assaio/internal/signal"
 // reference that lists what can be reported without saying what a zero means would publish the
 // exact confusion the catalog was built to prevent.
 type Signal struct {
-	ID        string   `json:"id"`
-	Title     string   `json:"title"`
-	Unit      string   `json:"unit"`
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Unit  string `json:"unit"`
+	// Layer is which of the four measurement layers this signal sits on (ADR 0013).
+	Layer     string   `json:"layer"`
 	Status    string   `json:"status"`
 	Grains    []string `json:"grains"`
 	ZeroMeans string   `json:"zeroMeans"`
@@ -21,11 +23,13 @@ type Signal struct {
 func signals() []Signal {
 	catalog := signal.Catalog()
 	out := make([]Signal, 0, len(catalog))
-	for _, s := range catalog {
+	for i := range catalog {
+		s := &catalog[i]
 		out = append(out, Signal{
 			ID:        s.ID,
 			Title:     s.Title,
 			Unit:      s.Unit,
+			Layer:     string(s.Layer),
 			Status:    s.Status,
 			Grains:    s.Grains,
 			ZeroMeans: s.ZeroMeans,

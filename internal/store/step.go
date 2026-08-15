@@ -13,23 +13,18 @@ const insertStepSQL = `
              tokens, target_ref)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-// restateStepSQL corrects a step already stored from a re-read of the file it came from. The
-// outcome and token total are the ones a longer prefix of the same transcript can complete, and
-// each is monotone in the prefix read, so a re-read restates upward and never degrades a row --
-// the same argument InsertLocal makes for the activity counts.
-//
-// ordinal and target_ref are assigned rather than kept, for the reason granularity is assigned
-// in restateActivitySQL: each is a claim the current parse is the authority on, not a value a
-// later parse can only improve. A parser change that reads one more step out of a transcript
-// shifts every later position; widening which calls register a target renumbers first-seen
-// order the same way. Keeping the stored value would leave one sequence holding a mix of two
-// parsers' numbering -- a 7 beside a 3 that means the same file, which nothing downstream could
-// detect as wrong.
+// restateStepSQL corrects a step already stored from a re-read of the file it came from. Every
+// column here is assigned, because every one of them is assaio's own claim rather than a figure
+// read off the log: the position a step holds, the file identity behind it, the sum of four
+// chosen token fields, and the mapping of a stop reason or an attributed result to an outcome.
+// A rule assaio wrote is a rule assaio can get wrong, and MAX or a fill-only CASE pins the old
+// answer on every stored row forever (B116). Ingest re-reads whole files, and each rule is
+// monotone in the prefix read, so a half-written session still restates upward.
 const restateStepSQL = `
         UPDATE session_step SET
-            outcome = CASE WHEN outcome = '' THEN ? ELSE outcome END,
+            outcome = ?,
             target_ref = ?,
-            tokens = MAX(tokens, ?),
+            tokens = ?,
             ordinal = ?
         WHERE tool = ? AND timeline = ? AND dedupe_key = ?`
 
@@ -94,9 +89,9 @@ func (s *Store) InsertSteps(ctx context.Context, steps []usage.Step) (inserted, 
 }
 
 // PruneSteps drops steps older than before and reports how many went. This is the bound the
-// table ships with: a step row is 2.21 times as frequent as a usage record, and without a
-// horizon the sequence would grow with install age while the reports over it only ever look
-// at a recent window.
+// table ships with: 102.0 MB of table and indexes against usage_record's 58.3 MB, and 2.19 steps
+// per record over the 30 days both cover. The ratio must be age-matched -- session_step is pruned
+// and usage_record is not, so their raw totals compare a bounded table against an unbounded one.
 //
 // Deleting does not shrink the file -- only Vacuum does. That is why this returns a count the
 // caller can report rather than pretending the space came back.

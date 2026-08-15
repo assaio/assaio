@@ -4,6 +4,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 
 	"github.com/assaio/assaio/internal/parser"
@@ -26,9 +28,10 @@ func init() { Register(coverageValidator{}) }
 // honesty leans on.
 type coverageValidator struct{}
 
-func (coverageValidator) Name() string     { return coverageName }
-func (coverageValidator) Title() string    { return coverageTitle }
-func (coverageValidator) Describe() string { return coverageDescribe }
+func (coverageValidator) Name() string       { return coverageName }
+func (coverageValidator) Title() string      { return coverageTitle }
+func (coverageValidator) Describe() string   { return coverageDescribe }
+func (coverageValidator) Layer() layer.Layer { return layer.Activity } // the share of tokens carrying full activity capture
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (coverageValidator) Analyze(in Input) Result {

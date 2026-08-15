@@ -73,7 +73,6 @@ func runDigest(cmd *cobra.Command, since string, weekly, dry bool) error {
 	if err != nil {
 		return err
 	}
-	in.PlanMonthlyCost = cfg.Pricing.MonthlySubscriptionCost
 
 	results := runValidatorResults(analyze.Validators(), &in)
 	// A metric plugin that failed leaves a hole in the verdict set, and a hole compared

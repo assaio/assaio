@@ -111,7 +111,7 @@ and leave the rest at its zero value.
 | `OutputTokens` | `int64` | Generated output tokens. | Fold tool-use tokens here only if the vendor bills them as output (Gemini); document the choice in a one-line comment and a `doctor` caveat. |
 | `CacheReadTokens` | `int64` | Tokens served from prompt cache. | Feeds the `Cache%` column and cache-read pricing. |
 | `CacheWriteTokens` | `int64` | Tokens written to prompt cache. | |
-| `ReasoningTokens` | `int64` | Reasoning/thinking tokens, when reported separately. | Recorded for transparency; whether they are billed separately is model-dependent. |
+| `ReasoningTokens` | `int64` | Reasoning/thinking tokens, when reported separately. | A **subset** of `OutputTokens`, never added to it — clamp with `parser.Subset`, and sum fields with `parser.SumNonNeg`, because plain `+` on int64 overflows into a negative that `NonNeg` then reads as zero. Recorded for transparency; whether they are billed separately is model-dependent. |
 | `DedupeKey` | `string` | Stable per-record identity within a `Tool`. | **Must be deterministic** — see below. |
 | `Cwd` | `string` | The session's full working-directory path, exactly as the log reports it. | **Never persisted.** `internal/ingest` reads it only to resolve `Project`/`Subpath` (`internal/projectid`) and then discards it. Leave `""` if the log has no cwd — never fabricate one. |
 | `Project` | `string` | The **basename of the git repository root** containing the session's working directory. | Set it as a **fallback only** — `filepath.Base(cwd)` — for when ingest cannot resolve a repository root (e.g. `Cwd` left `""`). Whenever `Cwd` is set, ingest overwrites this with the resolved repo-root basename, so a monorepo's subdirectories roll up to one project. |
@@ -227,7 +227,9 @@ directory, uses `FuzzParseTask`). It seeds `f.Add` with the package's `testdata/
 plus a few hand-written edge seeds (empty input, `{}`, a truncated JSON line, int64-max
 token values, invalid UTF-8), and asserts the parser's invariants on every returned
 record: `Parse` never panics (a non-nil error returns early, which is fine), `skipped >= 0`,
-no token field is negative, `Tool` equals the package constant, and `DedupeKey` is
+no token field is negative, a field the log states as a portion of another stays inside it
+(`ReasoningTokens <= OutputTokens`, `CacheWrite1hTokens <= CacheWriteTokens`), `Tool` equals
+the package constant, and `DedupeKey` is
 non-empty. `make fuzz` runs each fuzzer for `FUZZTIME` (default `20s`); a discovered
 crasher is committed as a corpus file under `testdata/fuzz/` so it becomes a permanent
 regression seed.

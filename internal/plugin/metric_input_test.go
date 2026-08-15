@@ -46,8 +46,8 @@ func TestBuildMetricInputShapesWire(t *testing.T) {
 	in := metricTestInput()
 	got := roundTrip(t, &in)
 
-	if v, ok := got["assaio_metric_input"].(float64); !ok || v != 1 {
-		t.Fatalf("assaio_metric_input = %v, want 1", got["assaio_metric_input"])
+	if v, ok := got["assaio_metric_input"].(float64); !ok || v != metricInputVersion {
+		t.Fatalf("assaio_metric_input = %v, want %d", got["assaio_metric_input"], metricInputVersion)
 	}
 	if now, _ := got["now"].(string); now != "2026-07-17T10:00:00Z" {
 		t.Fatalf("now = %v, want RFC3339 wall clock", got["now"])

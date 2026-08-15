@@ -521,7 +521,7 @@ section for free&quot; claim.</p>
 <tr>
 <td><code>Title</code></td>
 <td>Human label.</td>
-<td>Header line: <code>&quot;WEEKEND-USAGE · Weekend Usage  [WATCH]&quot;</code>.</td>
+<td>Header line: <code>&quot;WEEKEND-USAGE · Weekend Usage  [WATCH]  (activity)&quot;</code>.</td>
 <td>Faceplate cell label (<code>&quot;06 · Weekend Usage&quot;</code>) and the ledger entry's label.</td>
 </tr>
 <tr>
@@ -529,6 +529,12 @@ section for free&quot; claim.</p>
 <td>One-line summary.</td>
 <td><code>analyze --list</code>'s third column only — <strong>not</strong> printed by <code>RenderResultText</code>.</td>
 <td>Not rendered.</td>
+</tr>
+<tr>
+<td><code>Layer</code></td>
+<td>One of <code>activity</code>, <code>output</code>, <code>outcome</code>, <code>impact</code> — which of the four measurement layers the <strong>verdict</strong> rests on (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0013-measurement-layers.md">ADR 0013</a>). A figure inside the same <code>Result</code> may sit on another layer as context; the label answers what the verdict is a claim about. In-tree it is the <code>Layer()</code> method, and <code>Evaluate</code> stamps it onto the <code>Result</code>; over the plugin wire it is a required <code>layer</code> key and a result without it is rejected whole.</td>
+<td>Header line, after the read: <code>&quot;[WATCH]  (activity)&quot;</code>.</td>
+<td>The ledger entry's layer line, with the four-layer explanation as its tooltip.</td>
 </tr>
 <tr>
 <td><code>Read.Key</code></td>
@@ -591,6 +597,7 @@ section for free&quot; claim.</p>
 	Name() string         // kebab-case slug, e.g. &quot;model-fit&quot; -- the CLI arg and JSON key
 	Title() string        // human label for the report header
 	Describe() string     // one line, shown by `assaio analyze --list`
+	Layer() layer.Layer   // which of the four measurement layers the verdict rests on (ADR 0013)
 	Analyze(Input) Result // pure: reads only what it needs from Input, returns a Result
 }
 </code></pre>
@@ -615,7 +622,7 @@ adoption       Adoption &amp; Usage Breadth         Sessions, active days, and p
 weekend-usage  Weekend Usage                    Share of AI tokens run on Saturday/Sunday -- an out-of-hours usage signal.
 
 $ assaio-agent analyze weekend-usage
-WEEKEND-USAGE · Weekend Usage  [WATCH]
+WEEKEND-USAGE · Weekend Usage  [WATCH]  (activity)
   ? A rising weekend share can mean crunch time or just flexible hours -- read it next to team sentiment, not as a verdict on its own.
   weekend token share: 80.4%
   weekend AI lines: 240

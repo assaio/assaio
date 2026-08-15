@@ -21,6 +21,267 @@ Discussion.
 
 ## [Unreleased]
 
+Round two of the correctness lockdown: a whole-codebase review, then a four-reviewer pass over
+the fixes, which overturned three of them. What that second pass changed is recorded here rather
+than quietly corrected, because a fix written from a wrong cause is the failure this release
+exists to stop.
+
+### Breaking
+
+- **A metric-plugin result must declare its `layer`, and the protocol is now `2`.** The four
+  measurement layers — activity, output, outcome, impact — are a promise `ROADMAP.md` has carried
+  since the first commit ("a metric states which one it is") and nothing in the code said which.
+  Built-in validators are now forced to declare one by the `Validator` interface, which is a
+  compile error rather than a field one of them would forget; the exec metric protocol (ADR 0004)
+  gets the equivalent at its boundary, rejecting a result whose `layer` is missing or outside the
+  vocabulary exactly as it already rejects an unknown `read.key`. An extension surface weaker than
+  the core it extends is the failure `B155` named. Every earlier addition to the protocol was
+  additive, so the version stayed at `1` through v0.17 and v0.21; a newly *required* output field
+  has to be a version a plugin can branch on, or its only signal is a contract violation naming a
+  field it has never heard of. Emit `{"assaio_metric": 2, …}` and add `"layer": "activity"` (or
+  `output`) to your result document — see [ADR 0013](docs/adr/0013-measurement-layers.md) and the
+  [metric-plugin guide](docs/extending/metric-plugin.md).
+- **`report --by member` and `effectiveness --by member` are refused, not caveated.** Grouped by
+  member, `report` printed each person's tokens and spend and `effectiveness` printed their AI
+  lines, edits, rejections and cost-per-100-lines — under a caveat calling itself "a diagnostic
+  per project", a dimension the table was not grouped by, and with no caveat at all in `json` and
+  `csv`. That is the per-named-individual ranking `BACKLOG.md`'s Refusals rule out. The dashboard
+  removed the same figure in v0.14 (`B141`) and kept the reasoning; this is that decision reaching
+  the other two surfaces. The error says why, and is deliberately not phrased as an unknown
+  dimension: a refusal is a different answer from a typo. **What this does not do**, stated
+  because the first draft of this entry overclaimed it: `report --format csv|json` still carries a
+  `member` column on a central store, since the default `--by day` never reaches the grouping
+  check. Nothing is ranked, but the raw export is unchanged — see `B182`.
+
+### Fixed
+
+- **A "seven-day" window was divided by eight days, and reconciled against a whole vendor day it
+  only half covered.** `analyze.MonthlyRate` counted calendar day-buckets inclusive from a window
+  that opens at the current time of day, so a 168-hour window got a divisor of 8 — understating
+  `subscription-fit` by 12.5% at 7 days and 3.2% at the default 30 — while `reconcile` compared
+  that window's partial first day against the export's whole one and reported the difference as
+  `Unexplained`, the one number the command exists to produce. `B128` returning at two new call
+  sites. Both are fixed where they occur: the projection divides by the window's own length, and
+  the reconciliation's scope starts at the first date the window covers from midnight.
+  **A first attempt fixed it at the source instead, by making `--since Nd` mean N whole
+  day-buckets, and review found that costs more than it saves**: `sync --since 1d` on a daily cron
+  then covers `[today 00:00, now]`, so the hours between the previous run and midnight reach the
+  team server from no run at all; a `check --since 1d` pre-push hook near UTC midnight evaluates a
+  budget over minutes; and `0d` starts in the future. A window stays a duration, which is what a
+  recurring command needs, and the helpers that compare day-buckets keep aligning on their own —
+  which is what `compareWindow` and `recentCutoff` already did.
+- **A withheld verdict drew an empty gauge.** `Result.noData` set the neutral read and the neutral
+  takeaway and never touched `Purity`, which stayed `0.0` and rendered as a bar at zero — a bad
+  result, beside a verdict that was declining to give one. Every `noData` call site was affected;
+  a handful of others set the constant by hand, and one more path in `intent` set a computed `0`
+  and was found only by the test written for this. Guaranteed on every served team dashboard, which never loads sequences, so
+  `edit-loops` and `recovery` always took that path. `B136` closed this in v0.14 for one validator;
+  it is now closed for the registry, by a test that runs every validator over two empty-shaped
+  windows.
+- **`rework` flagged a window it could not measure, and could render above 100%.** Two defects in
+  one verdict. A window whose start cuts between an addition and its removal holds removals of
+  lines it never counted as added — `ChurnStat`'s own doc has always said so and nothing clamped
+  or disclosed it, so `--since 1d` over a day that removed 400 of yesterday's lines printed
+  `rework: 8000%`. And the pair's verdict read `WATCH` whenever either half was unmeasurable,
+  which for a Codex store — it records an undone line and never a declined call — meant "worth a
+  closer look" on every window forever, behind a full gauge, with the ordering promoting it. The
+  rate is now withheld with its reason on both surfaces that print it, and the verdict gives the
+  three answers its rates support: a measured rate above its ceiling is a finding and always
+  shows, everything measured and low is a clean bill, and anything else is withheld with the
+  caveat naming the silent half. A pair cannot be certified low from one of its halves, and it
+  cannot be flagged from a silence either.
+- **`humanize.USD` chose its unit before rounding, could never reach "M", and rendered a real cost
+  as `0.00`.** `USD(1,000,000)` rendered `1000.0K` and `USD(33,500,000)` rendered `33500.0K`, on
+  `subscription-fit` and the status line. `Count` and `Bytes` were moved onto `scaleTo` when
+  `B127` closed this in v0.13; `USD` was not, and had no such test. All four renderers now share
+  one rounding precision and one class test that walks every tier boundary of each, and `USD`
+  joins `USDCompact` in refusing to print a real amount below half a cent as nothing.
+- **Gemini CLI's output token total could overflow to zero, leaving reasoning above it.** Three
+  int64 fields summed with plain `+` where every other parser uses `parser.SumNonNeg`:
+  `{"output":MaxInt64,"thoughts":1}` stored `OutputTokens=0, ReasoningTokens=1`, violating
+  `usage.CheckCounts` — and the team server rejects a whole push on the first invalid record, so
+  one such row blocked a member's entire `sync`. **The checked-in fuzz seed already produced it**
+  and `make fuzz` passed, because the fuzzer asserted only non-negativity. `reasoning ⊆ output` is
+  now asserted in all five parser fuzzers — vacuously in Claude's, which reads no reasoning today,
+  which is exactly when a gap opens unnoticed — and clamped where two independent fields are read:
+  Copilot CLI and Codex had the same gap with no overflow. Gemini's cached tokens are clamped to
+  its input the way Codex already did, which stopped it storing more prompt tokens than the
+  vendor's own total.
+- **A billing export over 64 MiB was silently truncated and reconciled as complete.** The
+  `io.LimitReader(f, max+1)` overflow idiom was there and nothing ever compared against it:
+  `csv.Reader` saw the cut as a clean end of file, `Skipped` stayed 0, no limit was recorded, and
+  every row past the cut was reported as `Unexplained`. It is now an error naming the bound.
+- **The `skipped` drift canary divided lines by records and called the result a line share.**
+  `Records` counts emitted records — one per API response, several lines each — while `Skipped`
+  mixes unmarshal failures, undated records and steps refused at the vocabulary boundary. 2,000
+  lines yielding 500 records and 60 failures reported `60 of 560 line(s) skipped (10.7%)` against
+  a true 3%, clearing the 10% threshold on arithmetic alone. It is now a rate per file, in the
+  unit its numerator is counted in — this repo's own "a row count is not a size" rule, broken
+  inside the one component whose job is catching silent under-reporting.
+- **The dashboard's project panel claimed the store's history could not be read.** `buildDrill`
+  copied `WindowStart`, `Ingested`, `ParsedBy` and `Trace` onto the scoped input and not
+  `HistoryStart`, so `adoption` and `throughput` inside the panel carried "how far back this
+  store's history goes could not be read" — on the page whose top-level ledger had just printed
+  it. One line. The panel surfaces caveats only as a `Prov.` badge, so the wrong sentence never
+  reached the rendered page; the verdict carrying it did.
+- **The dashboard's subpath table showed one row per member, with no member column.** `Subpaths`
+  grouped by `(subpath, member)` while the panel it feeds has only a subpath column, so on a team
+  store one subpath appeared once per person, each row holding that person's lines, ordered by
+  lines descending — a reader takes the top row for the subpath's total, and it is an unlabelled
+  per-person output ranking under a heading that says repository. One row per subpath now.
+- **`metrics verify` ran a plugin with a plan price of zero.** Four of the five commands that
+  build an `analyze.Input` set `PlanMonthlyCost` at their own call site and `metrics verify` did
+  not, so a plugin gating on `planMonthlyCost` — the pattern `docs/recipes/extensions.md`
+  teaches — verified `VALID` against a zero and behaved differently under `analyze`. The shared
+  builder now owns it: a field every caller has to remember is a field one of them will forget.
+- **`edit-loops` project bars reordered between identical runs.** Sorted on rate alone over a
+  slice built from map iteration, and `2/10` and `3/15` both give `0.2` with a minimum of ten
+  edits, so ties are ordinary — and the top-five cut then changed between two runs over the same
+  data. The name settles them, as it already does in `copilot.dominantModel`,
+  `dashboard.TopProject` and `cache.missCauseFigure`.
+- **`subscription-fit` described a projection method its divisor does not use.** The caveat said
+  the figure spans the window, and the divisor starts at the first day the window carries usage —
+  so a 30-day window whose usage began five days ago projected from five days, six times what the
+  sentence promised, and drove the pay-off verdict a reader keeps or cancels a plan on. The
+  divisor is right and the sentence was wrong; it now names the span, and a `projected from`
+  figure prints it, because a reader cannot otherwise tell a 30-day projection from a 5-day one.
+- **`clear --labels` with no other scope deleted every label with nothing said first.** The
+  pre-flight line named the record count and the label count was printed only afterwards, while
+  unscoped `--labels` runs a bare `DELETE FROM session_label`. Labels are the one thing in the
+  store no re-import can rebuild, because a person typed them; the count is now stated before the
+  deletion, and says when the scope is "all of them".
+- **`backfill` could free 70 MB and never mention `compact`.** Tightening the trace horizon from
+  30 days to 7 on a copy of the maintainer's store moved 70.3 MB onto the freelist and left the
+  170.1 MB file exactly the same size. `clear` has always said so; `backfill` printed
+  `steps-pruned=` and stopped.
+
+### Changed
+
+- **Every figure states its measurement layer.** `analyze` prints it beside the verdict, the
+  dashboard ledger prints it under the read with the four-layer explanation as its tooltip,
+  `--format json` carries `layer`, the generated reference carries a Layer column for validators
+  and signals alike, and the signal catalog declares one per signal. What it makes visible
+  immediately: of twenty-one built-in validators, **eighteen are activity and three are output —
+  not one claims an outcome**, which is the honest state of a tool reading session logs.
+  `ai.step.outcome` is an **activity** signal — how one call ended inside a session, not whether
+  the code held — and has its own test by name, because an ID is not a layer. A test fails if a
+  built-in validator ever declares `outcome` or `impact`, so promoting one is a deliberate act
+  with an ADR behind it rather than a line changed in passing.
+  [ADR 0013](docs/adr/0013-measurement-layers.md).
+- **A structural silence no longer reads as an AI that produced nothing.** ADR 0011 was applied
+  throughout `internal/analyze` and to none of the surfaces that sum `LinesAdded` directly. Gemini
+  CLI and Cline answer no line signal, so their users read `0 AI lines` on `status`, `+0 lines` on
+  the status line every day forever, `AI lines total: 0` under `throughput`'s newly-added *output*
+  label, `0` in the digest mailed to an inbox, and `0 AI LINES` beside a real cost in
+  `effectiveness --by tool` — the last of which invites dropping the tool that "produces nothing".
+  All five are gated now: the figure is withheld where nothing records it, and where only some
+  sources do, the surface says what share of the window's tokens the figure reaches. `status` also
+  gained the `$`/100-lines denominator disclosure that `effectiveness` and the dashboard colophon
+  already carried and it did not — the ratio's two sides count different populations.
+- **A new `barren` drift canary: files found, and no run on record has read a usage record out of
+  them.** It is the only canary judged on a condition rather than a rate, and deliberately carries
+  no sample floor. Every other one is a comparison, and a comparison cannot see this: a source
+  that has *always* yielded zero has a baseline of zero. **An A/B with all four sample floors set
+  to 1 fired nothing on either build** — which is why `B110`'s stated cause was wrong and a fix
+  written from it would have shipped green and changed nothing. It reads the whole history rather
+  than one run, because `Parsed` counts the files a run *attempted*: an ordinary incremental pass
+  whose single changed input yields nothing is not a barren source, and the first cut of this
+  canary would have failed `doctor --strict` on one. On the maintainer's machine `gemini-cli`
+  matches two files, both parse, neither carries a `tokens` key, and five surfaces read as
+  "gemini-cli is being counted" while none said otherwise; `doctor --strict` now fails on it, and
+  the warning says "nothing read from a detected source" rather than naming format drift as the
+  cause, which the evidence cannot support.
+- **A step's stored token total and outcome can be corrected downward.** `session_step.tokens`
+  took `MAX(stored, offered)` and `outcome` took a fill-only `CASE`, which are the rules
+  `insert_local.go` reserves for a vendor's own figure. Neither is one: a step's total is assaio's
+  sum of four chosen fields with reasoning deliberately excluded, and its outcome is assaio's
+  mapping of a stop reason and its attribution of a result to a call — a rule whose own source
+  comment records having been wrong once, putting 42 of 497 real denials on a different call. Both
+  are assigned now, so a corrected rule reaches every stored row. This is `B116`'s second half,
+  reopened in v0.20 in a brand-new table because nothing looked. A test now reads the shipped SQL
+  and fails when any assaio-derived column is kept rather than assigned — in any of the four
+  spellings SQLite accepts, not just the one that shipped.
+- **Migration immutability is enforced, in name and content.** All twelve shipped migrations were
+  verified byte-identical to the tag that first shipped them, and `grep` found no test, no Make
+  target, no CI step and no hook checking it — they held because nobody had touched them. A digest
+  per file now fails on an edit, a rename or a removal. The rename half is the worse one and the
+  easier to reach for while tidying: the runner keys on the filename, so a rename re-executes a
+  body it has already applied, and for `0008` that body moves every `claude-code` row into an
+  archive table and deletes the originals. `IF NOT EXISTS` guards the DDL and nothing guards the
+  DML. `RELEASING.md` now says "immutable in name and content".
+- **`doctor` states the timeline's own horizon, and says plainly when there is none.**
+  `trace.horizon_days: 0` is honoured on purpose — coercing it to 30 would delete history someone
+  asked to keep — but nothing in `doctor`, `backfill` or config validation said what it costs: a
+  measured 3.40 MB/day with no prune and no upper bound. A negative value, which `Validate`
+  rejects while a lenient load carries on and prunes at the default, is now reported as what it
+  is rather than as no horizon. The remedy names the horizon and nothing else: `clear --older-than`
+  deletes usage records first and steps second, so suggesting it would trade one table's growth
+  for another table's permanent history — the history the retention line two rows below declares
+  unrecoverable. `trace.horizon_days` also joins `config.example.yaml`, where it was the one
+  top-level key missing from the file `README.md` calls "a documented starting point", and a test
+  now fails when any key is absent from it.
+- **The step table's size bound is age-matched.** `store.PruneSteps` carried a row multiplier and
+  no bytes, which is the reading ADR 0012 says "was wrong", so it now leads with 102.0 MB of table
+  and indexes against `usage_record`'s 58.3 MB. **The multiplier beside it was also corrected in
+  the opposite direction from the first attempt**: `session_step` is pruned to 30 days and
+  `usage_record` is not, so dividing their totals compares a bounded table against an unbounded
+  one and answers 1.88, where the figure over the 30 days both tables cover is **2.19**. The
+  un-age-matched comparison is the one this project's honesty rules forbid for bug density, and
+  it was about to be shipped as the correction. ADR 0012 carries the correction; migration
+  `0012`'s comment keeps the old figure, because a shipped migration is immutable.
+- **The digest names its output layer and withholds a line count nothing measured.** It ships an
+  AI-line trend into a mailbox, the one surface designed to be read out of context, and carried
+  comparability and cost caveats with nothing about lines being a measure of what was produced
+  rather than of whether it held.
+
+### Documentation
+
+- **`PRIVACY.md` names all five parsed sources and the two settings files v0.21 began reading.**
+  GitHub Copilot CLI has been a source since v0.6 and appeared nowhere in the document a reader
+  uses to decide whether this is safe on a work machine. `claude.ReadRetention` reads
+  `managed-settings.json` and `~/.claude/settings.json` for one key each, stores neither, and said
+  so nowhere. The bookkeeping-table list also named two of the three that exist, and Cline's roots
+  named one editor of the four that are scanned.
+- **`README.md`'s "Every command" includes `survival`**, shipped in v0.2, in `FEATURES.md` and on
+  the site; its validator count reads twenty-one rather than nineteen; the "what comes next" line
+  no longer promises two things documented as shipped further down the same file; the `backfill`
+  example carries the Copilot row and the step counts; and the roadmap tool list matches
+  `ROADMAP.md` rather than naming Cursor, whose own backlog entry records that local storage has
+  no token counts to parse.
+- **`site/index.html` no longer contradicts itself on the live page.** `# the nineteen directional
+  reads` sat 250 lines below a verified "Twenty-one", outside the claim span the test reads, and
+  the faceplate mock showed 19 cells under a heading saying twenty-one. Both fixed, plus two
+  `report --by` lists still offering the refused dimension, the drift section's claim that every
+  canary compares against a baseline, a "no per-person analytics outside an opt-in" caveat for a
+  refusal that now holds absolutely, and the order-of-work dimension v0.21 added.
+- **Every published in-tree validator example compiles against the interface again.** Adding
+  `Layer()` broke all four, and the gate that exists to catch exactly that — `recipes_go_test.go`
+  — was green, because it hand-copied the interface into a `want` map. It now reads the method set
+  out of `internal/analyze/analyze.go`, so the copy cannot drift from the source again.
+- **`docs/format-resilience.md`, `docs/automation.md` and `docs/extending/data-source.md` describe
+  what ships.** The drift guide listed four canaries and a threshold that no longer exists and
+  said every canary has a sample floor; the automation guide said token counts take the maximum,
+  which is now true of a vendor's figure and false of a derived one; and the parser guide's
+  mandatory fuzz invariants omitted the subset rule whose absence is the Gemini overflow above.
+- **`docs/extending/query-your-data.md` describes the store that exists.** It opened with "one
+  table holds your data" while `session_step` is the larger of the two, omitted eleven shipped
+  columns, said "two bookkeeping tables" where there are three, sent readers to the generated
+  reference for column documentation it does not contain, and said Copilot stores `0` lines when
+  it has populated them since v0.6.
+- **`docs/README.md` maps every ADR.** It listed 0001–0005 of thirteen, and `AGENTS.md` and
+  `llms.txt` both call it the place architecture decisions live. A test now fails when one is
+  missing. `AGENTS.md`'s own package map gained the five packages it had stopped listing.
+- `ROADMAP.md` records that the four-layer promise is now enforced rather than promised, and
+  marks `B147` for what actually landed; `FEATURES.md` gains rows for v0.21's `doctor` retention
+  line and `analyze.Trending`, for the metric-plugin Input fields added in v0.17 and v0.21, and
+  for this release's own capabilities; and `demo` no longer calls `analyze` "the five-dimension
+  litmus" five lines before saying "of 21 reads".
+- **The harness this repo is developed with is checked in** under `.claude/`, with its own
+  [README](.claude/README.md): a `PreToolUse` guard for the four things that are irreversible and
+  invisible in a diff, a permission split that makes every commit, push and tag a deliberate
+  keystroke, six reviewers that each hold one line no tool holds, and `/gate`, `/selfreview` and
+  `/release`. It is a convenience, never a substitute for the gate in `CONTRIBUTING.md`.
+
 ## [0.21.0] - 2026-08-13
 
 ### Added

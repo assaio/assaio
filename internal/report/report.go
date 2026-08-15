@@ -3,6 +3,10 @@
 package report
 
 import (
+	"fmt"
+	"slices"
+	"strings"
+
 	"github.com/assaio/assaio/internal/label"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
@@ -91,8 +95,30 @@ func Build(rows []store.UsageRow, t pricing.Table) []Row {
 // annotation axes only carry a value when the caller read usage through
 // store.UsageByLabel; see usageForDim in internal/cli.
 var validDims = []string{
-	"day", "project", "tool", "model", "entrypoint", "member",
+	"day", "project", "tool", "model", "entrypoint",
 	label.Task, label.Outcome, label.Difficulty,
+}
+
+// refusedDims are dimensions this tool will not group by, each with the reason. Grouping by
+// member is the per-named-individual ranking BACKLOG.md's Refusals rule out, on every format;
+// the dashboard removed the same figure in v0.14 (B141).
+var refusedDims = map[string]string{
+	"member": "assaio does not rank named individuals by output or spend, and a pseudonym is not " +
+		"anonymous to a colleague who knows the roster. For how far AI use has spread across a team, " +
+		"the dashboard's team panel shows per-member engagement and the team's own totals",
+}
+
+// DimError reports why by cannot be grouped on, or nil when it can. Refusals are separated
+// from typos because they are different answers: one is a dimension that does not exist, the
+// other is one that does and will not be printed.
+func DimError(by string) error {
+	if reason, refused := refusedDims[by]; refused {
+		return fmt.Errorf("--by %s is not available: %s", by, reason)
+	}
+	if !slices.Contains(validDims, by) {
+		return fmt.Errorf("unknown dimension %q (want one of %s)", by, strings.Join(validDims, ", "))
+	}
+	return nil
 }
 
 // dimValue returns r's value for one of validDims.
@@ -108,8 +134,6 @@ func dimValue(r *Row, by string) string {
 		return r.Model
 	case "entrypoint":
 		return r.Entrypoint
-	case "member":
-		return r.Member
 	case label.Task:
 		return orUnlabeled(r.Task)
 	case label.Outcome:
@@ -135,14 +159,4 @@ func orUnlabeled(v string) string {
 // caller to read usage through store.UsageByLabel rather than store.Usage.
 func IsLabelDim(by string) bool {
 	return by == label.Task || by == label.Outcome || by == label.Difficulty
-}
-
-// emptyDimLabel is the table placeholder for a grouped row whose --by dimension value is
-// "": "(local)" for member, since an empty member is the expected default for
-// never-synced local usage, not a missing value; "(unknown)" for every other dimension.
-func emptyDimLabel(by string) string {
-	if by == "member" {
-		return "(local)"
-	}
-	return "(unknown)"
 }

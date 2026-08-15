@@ -372,7 +372,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <li><b>api</b> yields 13 lines per 1M — a fraction of webapp. Debugging-heavy: tokens go to reading and reasoning, not new lines.</li>
         <li><b>planning</b> shows <b>—</b>: real tokens, zero lines. An architecture session, not waste — an honest blank, never a fabricated ratio.</li>
       </ul>
-      <p class="more">Cost is the honest denominator, not the pitch — every <code>$</code> is an estimate at public pay-as-you-go prices, not your bill. Group by <code>day · project · tool · model · entrypoint · member</code>; pipe <code>--format json|csv</code> into whatever you already use.</p>
+      <p class="more">Cost is the honest denominator, not the pitch — every <code>$</code> is an estimate at public pay-as-you-go prices, not your bill. Group by <code>day · project · tool · model · entrypoint · task · outcome · difficulty</code>; pipe <code>--format json|csv</code> into whatever you already use.</p>
     </div>
   </section>
 
@@ -406,6 +406,8 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="cell"><span class="cn">Work rhythm</span><span class="cv neutral">Mostly hours</span><div class="bar"><i data-p=".65"></i></div></div>
         <div class="cell"><span class="cn">Skill economics</span><span class="cv">Proportionate</span><div class="bar"><i data-p=".8"></i></div></div>
         <div class="cell"><span class="cn">Task intent</span><span class="cv neutral">Building</span><div class="bar"><i data-p=".45"></i></div></div>
+        <div class="cell"><span class="cn">Edit loops</span><span class="cv watch">Watch</span><div class="bar"><i data-p=".38"></i></div></div>
+        <div class="cell"><span class="cn">Recovery</span><span class="cv">Contained</span><div class="bar"><i data-p=".78"></i></div></div>
       </div>
       <p class="more">A reasoning share read off under 1% of your output says so instead of reporting <b>high</b>; a metric nothing in the window can answer reads <b>insufficient</b> rather than confident, and names <em>which</em> nothing it hit — a window that cannot answer, a genuine count of zero, or a plugin that never declared what it rests on. Write your own <b>metric plugin</b> in any language and it renders right beside the built-ins, carrying the same envelope.</p>
     </div>
@@ -430,6 +432,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
             <div><dt>Effect</dt><dd>AI lines added and removed, read from diff <code>+</code>/<code>-</code> markers and from the body of a file the tool created. The code text itself is never read or stored — only counts.</dd></div>
             <div><dt>Efficiency</dt><dd>Lines per token spent, cache reuse and what each write bought, premium-model fit, and cost per 100 lines as an estimate, never the headline.</dd></div>
             <div><dt>Friction</dt><dd>Churn that undoes the session's own work, tool calls that failed, and proposals a human declined.</dd></div>
+            <div><dt>Order of work</dt><dd>The sequence a session actually ran in, not just its totals: how often a file goes back for another pass after something ran, and what a failed call, a refusal or a lost context costs in the turns that follow. Steps are stored as kinds and positions — a file is an integer inside one sequence, never a path.</dd></div>
           </dl>
         </div>
         <div class="panel not">
@@ -451,7 +454,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="pr">
           <span class="pn">Principle 02</span>
           <h3>Every fact carries its provenance</h3>
-          <p>Nothing here is a bare number. Each source publishes what it can actually answer, signal by signal, so <code>signals coverage</code> tells you which of the <span data-claim="signals.count">twenty-five</span> figures <em>your</em> data can carry. Format drift is detected rather than absorbed: per-source canaries compare each import against a baseline of recent runs and warn when a vendor changes a log format under you.</p>
+          <p>Nothing here is a bare number. Each source publishes what it can actually answer, signal by signal, so <code>signals coverage</code> tells you which of the <span data-claim="signals.count">twenty-five</span> figures <em>your</em> data can carry. Format drift is detected rather than absorbed: per-source canaries compare each import against a baseline of recent runs — and one, deliberately without a baseline, fires when a source is found and has never yielded a record and warn when a vendor changes a log format under you.</p>
         </div>
         <div class="pr">
           <span class="pn">Principle 03</span>
@@ -526,7 +529,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="cmd"><b><span data-claim="command.init">init</span></b><span>A first run end to end: detects your tools, prints every directory it will read <em>before</em> reading it, imports, reports, and names what to run next. No config needed.</span></div>
         <div class="cmd"><b><span data-claim="command.demo">demo</span></b><span>Full reports on bundled sample data — the sixty-second first look, no logs needed.</span></div>
         <div class="cmd"><b><span data-claim="command.backfill">backfill</span></b><span>Import local session logs. Incremental: an input already read unchanged is skipped; <code>--full</code> forces a re-parse.</span></div>
-        <div class="cmd"><b><span data-claim="command.report">report</span></b><span>Token/cost report. <code>--by day|project|tool|model|entrypoint|member</code>, <code>--format table|json|csv</code>, <code>--compare</code>.</span></div>
+        <div class="cmd"><b><span data-claim="command.report">report</span></b><span>Token/cost report. <code>--by day|project|tool|model|entrypoint|task|outcome|difficulty</code>, <code>--format table|json|csv</code>, <code>--compare</code>.</span></div>
         <div class="cmd"><b><span data-claim="command.effectiveness">effectiveness</span></b><span>AI output against cost — lines, edits, rejections, $/100 lines — per project.</span></div>
         <div class="cmd"><b><span data-claim="command.reconcile">reconcile</span></b><span>Check the estimate against the vendor's own numbers. Point it at a billing or usage export you downloaded — no credential, no network — and it reports the scope mismatch first, names only the causes with evidence behind them, and prints the rest as <em>unexplained</em>. Neither side is adjusted to make them agree.</span></div>
         <div class="cmd"><b><span data-claim="command.analyze">analyze</span></b><span>Run the metric validators and any metric plugins; print each one's directional read. <code>--task|--outcome|--difficulty</code> recompute every one over just the sessions you labelled that way.</span></div>
@@ -590,7 +593,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="inst"><span class="il">Manual · mac · Linux · Windows</span><pre>tar xzf assaio_&lt;ver&gt;_&lt;os&gt;_&lt;arch&gt;.tar.gz   # from Releases
 install assaio-agent /usr/local/bin/</pre><p class="ip">amd64 &amp; arm64. Every artifact ships checksums and a build-provenance attestation — verify with <code>gh attestation verify</code>.</p></div>
         <div class="inst"><span class="il">First run</span><pre>assaio-agent init       # detect, disclose, import, report
-assaio-agent analyze    # the nineteen directional reads
+assaio-agent analyze    # the twenty-one directional reads
 assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer to look before importing anything? <code>assaio-agent demo</code> runs the full reports on bundled sample data.</p></div>
       </div>
     </div>
@@ -609,7 +612,7 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
         <li><b>No "estimated time saved."</b> The logs contain no counterfactual, so any such number is invented.</li>
         <li><b>No leaderboards.</b> Nothing is ranked per named individual — aggregate and pseudonymized by default, and the team panel shows engagement rather than output per person.</li>
         <li><b>No silent precision.</b> Directional signals say so; an unpriced model renders a blank, never a fake $0.</li>
-        <li><b>No per-person analytics</b> outside a deliberate, governed team-mode opt-in.</li>
+        <li><b>No per-person analytics.</b> <code>--by member</code> is refused in every format; the team panel shows engagement, and output and spend only as a team total.</li>
       </ul>
     </div>
   </section>

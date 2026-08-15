@@ -28,7 +28,9 @@ func TestMonthlyRateSpansTheWindow(t *testing.T) {
 		{Day: "2026-03-05"},
 		{Day: "2026-03-06"},
 	}
-	got := MonthlyRate(50, spanInput(workWeek, "2026-03-02", "2026-03-08"))
+	// The window is the seven days ending 03-08; the five active days sit inside it. Naming its
+	// start 03-02 made the fixture a six-day window calling itself seven.
+	got := MonthlyRate(50, spanInput(workWeek, "2026-03-01", "2026-03-08"))
 	if got < 214 || got > 215 {
 		t.Errorf("MonthlyRate = %.2f, want ~214.29 ($50 over a 7-day window x 30); the active-day reading gives 300", got)
 	}

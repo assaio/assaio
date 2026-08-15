@@ -239,8 +239,9 @@ section for free" claim.
 | Field | Meaning | CLI text | HTML dashboard |
 |-------|---------|----------|-----------------|
 | `Name` | Stable kebab-case slug, e.g. `"weekend-usage"`. | The `analyze <name>` argument; first column of `analyze --list`; upper-cased in the header line. | Not shown as text — used only to look the `Result` up (e.g. `findVerdict` in tests). |
-| `Title` | Human label. | Header line: `"WEEKEND-USAGE · Weekend Usage  [WATCH]"`. | Faceplate cell label (`"06 · Weekend Usage"`) and the ledger entry's label. |
+| `Title` | Human label. | Header line: `"WEEKEND-USAGE · Weekend Usage  [WATCH]  (activity)"`. | Faceplate cell label (`"06 · Weekend Usage"`) and the ledger entry's label. |
 | `Describe` | One-line summary. | `analyze --list`'s third column only — **not** printed by `RenderResultText`. | Not rendered. |
+| `Layer` | One of `activity`, `output`, `outcome`, `impact` — which of the four measurement layers the **verdict** rests on ([ADR 0013](../adr/0013-measurement-layers.md)). A figure inside the same `Result` may sit on another layer as context; the label answers what the verdict is a claim about. In-tree it is the `Layer()` method, and `Evaluate` stamps it onto the `Result`; over the plugin wire it is a required `layer` key and a result without it is rejected whole. | Header line, after the read: `"[WATCH]  (activity)"`. | The ledger entry's layer line, with the four-layer explanation as its tooltip. |
 | `Read.Key` | `"good"`, `"watch"`, or `"neutral"` (no data). | Drives no CLI styling (plain text). | Drives the dashboard's color via CSS classes `cell__read--{key}` / `entry__read--{key}` (verdigris/oxide/muted) — an unrecognized key renders unstyled, so stick to these three. |
 | `Read.Label` | Short upper-cased word, e.g. `"WATCH"`, `"STRONG"`, `"—"`. | Printed in `[brackets]` on the header line. | Printed as the faceplate/ledger read text. |
 | `Purity` | `0..1`, how "well-used" this dimension reads. It is your own quantity, not an index shared with other validators, so it is never rendered as a bare number anybody could compare across cells. | **Not rendered.** | The faceplate gauge's fill width, unlabelled — clamp to `[0,1]` yourself (`clamp01`) or the CSS width silently over/underflows. |
@@ -258,6 +259,7 @@ type Validator interface {
 	Name() string         // kebab-case slug, e.g. "model-fit" -- the CLI arg and JSON key
 	Title() string        // human label for the report header
 	Describe() string     // one line, shown by `assaio analyze --list`
+	Layer() layer.Layer   // which of the four measurement layers the verdict rests on (ADR 0013)
 	Analyze(Input) Result // pure: reads only what it needs from Input, returns a Result
 }
 ```
@@ -290,7 +292,7 @@ adoption       Adoption & Usage Breadth         Sessions, active days, and proje
 weekend-usage  Weekend Usage                    Share of AI tokens run on Saturday/Sunday -- an out-of-hours usage signal.
 
 $ assaio-agent analyze weekend-usage
-WEEKEND-USAGE · Weekend Usage  [WATCH]
+WEEKEND-USAGE · Weekend Usage  [WATCH]  (activity)
   ? A rising weekend share can mean crunch time or just flexible hours -- read it next to team sentiment, not as a verdict on its own.
   weekend token share: 80.4%
   weekend AI lines: 240

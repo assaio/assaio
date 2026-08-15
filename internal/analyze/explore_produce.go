@@ -3,6 +3,8 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 )
 
@@ -26,9 +28,10 @@ func init() { Register(exploreValidator{}) }
 // was looking around versus changing code.
 type exploreValidator struct{}
 
-func (exploreValidator) Name() string     { return exploreName }
-func (exploreValidator) Title() string    { return exploreTitle }
-func (exploreValidator) Describe() string { return exploreDescribe }
+func (exploreValidator) Name() string       { return exploreName }
+func (exploreValidator) Title() string      { return exploreTitle }
+func (exploreValidator) Describe() string   { return exploreDescribe }
+func (exploreValidator) Layer() layer.Layer { return layer.Activity } // what the tool calls were for
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (exploreValidator) Analyze(in Input) Result {
@@ -46,7 +49,7 @@ func (exploreValidator) Analyze(in Input) Result {
 	r.missingCaptureWhen(m.AllCalls > 0)
 	if m.Classified == 0 {
 		r.Read = noDataRead
-		r.Purity = 0.5
+		r.Purity = neutralPurity
 		r.Bars = []Bar{}
 		r.Takeaway = exploreUnclassifiedTakeaway(m.AllCalls > 0)
 		r.Caveats = append(r.Caveats, exploreCoverageCaveat(m))

@@ -9,7 +9,9 @@ type Validator struct {
 	Name     string `json:"name"`
 	Title    string `json:"title"`
 	Describe string `json:"describe"`
-	Scope    string `json:"scope"`
+	// Layer is which of the four measurement layers this metric's verdict rests on (ADR 0013).
+	Layer string `json:"layer"`
+	Scope string `json:"scope"`
 }
 
 // Scope values. Both are facts about where a read is honest, not preferences.
@@ -30,6 +32,7 @@ func validators() []Validator {
 			Name:     v.Name(),
 			Title:    v.Title(),
 			Describe: v.Describe(),
+			Layer:    string(v.Layer()),
 			Scope:    scope,
 		})
 	}

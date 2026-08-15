@@ -36,7 +36,7 @@ func (s *Scope) Aligned() bool { return s.ExportOnlyDays == 0 && s.WindowOnlyDay
 // local usage is a real zero on the estimate side, and dropping it would hide a day the
 // vendor billed for and assaio saw nothing on.
 func buildScope(exp *Export, estimateDays map[string]float64, start, end time.Time) Scope {
-	s := Scope{WindowFirst: day(start), WindowLast: day(end), overlap: map[string]bool{}}
+	s := Scope{WindowFirst: firstWholeDay(start), WindowLast: day(end), overlap: map[string]bool{}}
 	s.ExportFirst, s.ExportLast = exp.Span()
 
 	for _, r := range exp.Rows {
@@ -73,6 +73,18 @@ func buildScope(exp *Export, estimateDays map[string]float64, start, end time.Ti
 	}
 	s.OverlapDays = len(s.overlap)
 	return s
+}
+
+// firstWholeDay is the first date the window covers from midnight. A window queried as a
+// duration opens at the current time of day, so its oldest date holds only the hours after the
+// clock; admitting the export's whole day against that partial one reports a difference in
+// hours as a difference in money, in Unexplained.
+func firstWholeDay(start time.Time) string {
+	u := start.UTC()
+	if u.Equal(time.Date(u.Year(), u.Month(), u.Day(), 0, 0, 0, 0, time.UTC)) {
+		return day(u)
+	}
+	return day(u.AddDate(0, 0, 1))
 }
 
 func inWindow(d, first, last string) bool { return d >= first && d <= last }

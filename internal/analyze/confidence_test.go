@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/store"
 	"github.com/assaio/assaio/internal/trace"
 )
@@ -14,9 +16,10 @@ import (
 // than any real metric's logic.
 type stub struct{ samples int }
 
-func (stub) Name() string     { return "stub" }
-func (stub) Title() string    { return "Stub" }
-func (stub) Describe() string { return "test double" }
+func (stub) Name() string       { return "stub" }
+func (stub) Title() string      { return "Stub" }
+func (stub) Describe() string   { return "test double" }
+func (stub) Layer() layer.Layer { return layer.Activity }
 
 func (s stub) Analyze(Input) Result {
 	return Result{Name: "stub", Confidence: Confidence{Samples: s.samples, Unit: "sessions"}}
@@ -26,9 +29,10 @@ func (s stub) Analyze(Input) Result {
 // axis the framework cannot compute for a validator.
 type coveringStub struct{ share float64 }
 
-func (coveringStub) Name() string     { return "covering-stub" }
-func (coveringStub) Title() string    { return "Covering Stub" }
-func (coveringStub) Describe() string { return "test double" }
+func (coveringStub) Name() string       { return "covering-stub" }
+func (coveringStub) Title() string      { return "Covering Stub" }
+func (coveringStub) Describe() string   { return "test double" }
+func (coveringStub) Layer() layer.Layer { return layer.Activity }
 
 func (s coveringStub) Analyze(Input) Result {
 	r := Result{Name: "covering-stub"}

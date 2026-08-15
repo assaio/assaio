@@ -35,6 +35,17 @@ func UsageAnswering(rows []store.UsageRow, id string) []store.UsageRow {
 	return out
 }
 
+// AnySourceAnswers reports whether any row came from a source that can answer signal id. It is
+// the predicate a whole-window figure needs, where UsageAnswering gives the subset a rate needs.
+func AnySourceAnswers(rows []store.UsageRow, id string) bool {
+	for i := range rows {
+		if parser.Answers(rows[i].Tool, id) {
+			return true
+		}
+	}
+	return false
+}
+
 // RowTokens is a row's billable token total. Reasoning is a subset of output
 // (usage.Record) and is never re-added, which is the reason this lives in one place: a
 // second copy of the sum is a second answer to what a window cost.

@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 )
 
@@ -30,9 +32,10 @@ func init() { Register(skillValidator{}) }
 // types the window's spend concentrated in.
 type skillValidator struct{}
 
-func (skillValidator) Name() string     { return skillName }
-func (skillValidator) Title() string    { return skillTitle }
-func (skillValidator) Describe() string { return skillDescribe }
+func (skillValidator) Name() string       { return skillName }
+func (skillValidator) Title() string      { return skillTitle }
+func (skillValidator) Describe() string   { return skillDescribe }
+func (skillValidator) Layer() layer.Layer { return layer.Activity } // how the attributed tokens spread across skills
 
 // WindowScoped: store.Attribution pools skills and sub-agents across every project.
 func (skillValidator) WindowScoped() {}
@@ -45,7 +48,7 @@ func (skillValidator) Analyze(in Input) Result {
 		// a different statement from "the window was empty" and has to read as one.
 		r.covering(0)
 		r.noData("labeled skills and sub-agents", attributionEmptyTakeaway(len(in.Usage)))
-		r.Purity = 0.5
+		r.Purity = neutralPurity
 		r.Bars = []Bar{}
 		r.Caveats = append(r.Caveats, skillCoverageCaveat())
 		return r

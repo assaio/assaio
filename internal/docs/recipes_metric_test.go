@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/assaio/assaio/internal/docs"
+	"github.com/assaio/assaio/internal/plugin"
 )
 
 // The window a published metric plugin is judged against, shaped so the answers gate changes the
@@ -104,8 +105,10 @@ func runMetric(t *testing.T, script string) metricResult {
 	if err := dec.Decode(&handshake); err != nil {
 		t.Fatalf("no handshake line: %v", err)
 	}
-	if handshake.Version != 1 || handshake.Name == "" {
-		t.Fatalf("handshake = %+v, want version 1 and a name", handshake)
+	// The version the published recipe emits has to be the one the runtime accepts; a doc that
+	// teaches an old handshake teaches a plugin that is rejected before its result is read.
+	if handshake.Version != plugin.MetricProtocolVersion || handshake.Name == "" {
+		t.Fatalf("handshake = %+v, want version %d and a name", handshake, plugin.MetricProtocolVersion)
 	}
 	var out metricResult
 	if err := dec.Decode(&out); err != nil {

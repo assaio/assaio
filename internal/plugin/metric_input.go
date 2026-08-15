@@ -4,7 +4,15 @@ import "time"
 
 // metricInputVersion is the stdin envelope's protocol version, carried in the
 // assaio_metric_input key.
-const metricInputVersion = 1
+// v2 is the first change a plugin cannot absorb silently: a result must declare its `layer`
+// (ADR 0013). Every field added before it was additive, so the version stayed at 1 through
+// v0.17 and v0.21; a newly required output field has to be a version a plugin can branch on,
+// or its only signal is a contract violation naming a field it has never heard of.
+const metricInputVersion = 2
+
+// MetricProtocolVersion is metricInputVersion for the published-docs check, so a recipe and the
+// runtime cannot disagree about which handshake a plugin must emit.
+const MetricProtocolVersion = metricInputVersion
 
 // metricInput is the wire envelope a metric plugin reads on stdin: analyze.Input mapped
 // onto explicit wire types so a core refactor never silently changes the protocol -- the

@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 
 	"github.com/assaio/assaio/internal/parser"
@@ -26,9 +28,10 @@ func init() { Register(taxonomyValidator{}) }
 // light-edit, or heavy-edit -- a descriptive map of how AI is used, never a scorecard.
 type taxonomyValidator struct{}
 
-func (taxonomyValidator) Name() string     { return taxonomyName }
-func (taxonomyValidator) Title() string    { return taxonomyTitle }
-func (taxonomyValidator) Describe() string { return taxonomyDescribe }
+func (taxonomyValidator) Name() string       { return taxonomyName }
+func (taxonomyValidator) Title() string      { return taxonomyTitle }
+func (taxonomyValidator) Describe() string   { return taxonomyDescribe }
+func (taxonomyValidator) Layer() layer.Layer { return layer.Activity } // the edit volume a session carried
 
 //nolint:gocritic // Input is required by the Validator interface; analyzed once per run, not a hot path.
 func (taxonomyValidator) Analyze(in Input) Result {
@@ -45,7 +48,7 @@ func (taxonomyValidator) Analyze(in Input) Result {
 	r.covering(coverage)
 	if len(edited) == 0 {
 		r.Read = noDataRead
-		r.Purity = 0.5
+		r.Purity = neutralPurity
 		r.Bars = []Bar{}
 		r.Takeaway = "No source in this window records file edits, so the session mix cannot be read from it."
 		r.Caveats = []string{taxonomyCoverageCaveat(coverage)}

@@ -206,8 +206,10 @@ than to the larger of the two. That is still safe for a session read mid-write, 
 attribution rule is monotone in the prefix it read — a longer transcript never yields fewer
 edits or less rework for a turn already emitted, since later lines attach to later turns. What
 it adds is the other direction: when a <em>build</em> corrects a rule, the correction reaches rows
-already stored instead of being pinned at the old, higher figure forever. Token counts still
-take the maximum: those are the vendor's own numbers, not a rule assaio wrote.</p>
+already stored instead of being pinned at the old, higher figure forever. A vendor's own token
+counts on <code>usage_record</code> still take the maximum: those are the vendor's numbers, not a rule
+assaio wrote. A token figure assaio <em>derives</em> does not — <code>session_step.tokens</code> is its own sum of
+four chosen fields, so a build that corrects which fields it sums reaches rows already stored.</p>
 <pre><code class="language-json">&quot;Stop&quot;: [{ &quot;hooks&quot;: [{ &quot;type&quot;: &quot;command&quot;, &quot;command&quot;: &quot;assaio-agent backfill&quot; }] }]
 </code></pre>
 <p>What it costs, measured on a 4.5 GB / 5710-transcript history:</p>

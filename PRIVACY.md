@@ -11,10 +11,24 @@ The agent reads local session logs written by AI coding tools:
 - **Claude Code** — `~/.claude/projects/**/*.jsonl`
 - **OpenAI Codex CLI** — `~/.codex/sessions/**` and `~/.codex/archived_sessions/**`
 - **Gemini CLI** — `~/.gemini/tmp/<hash>/chats/session-*.jsonl`
-- **Cline** — the VS Code extension's global storage (`saoudrizwan.claude-dev`) and
-  `~/.cline/data/tasks`
+- **GitHub Copilot CLI** — `~/.copilot/session-state/*/events.jsonl` (honors `COPILOT_HOME`)
+- **Cline** — the extension's global storage (`saoudrizwan.claude-dev`) under VS Code, VS Code
+  Insiders, VSCodium and Cursor, and `~/.cline/data/tasks`
 
 It reads these files; it never modifies or deletes them.
+
+Two files that are **not** session logs are read as well, both for one number each and neither
+stored:
+
+- `/Library/Application Support/ClaudeCode/managed-settings.json` on macOS, or
+  `/etc/claude-code/managed-settings.json` on Linux — the machine-wide managed policy.
+- `~/.claude/settings.json` — your own Claude Code settings.
+
+`assaio-agent doctor` decodes exactly one key from the first of those that sets it,
+`cleanupPeriodDays`, to state how long Claude Code keeps its own transcripts — which is the
+real ceiling on how far back any report can ever reach. Nothing else in either file is decoded,
+and the value is printed, never stored. A project's own `.claude/settings.json` is deliberately
+not read: `doctor` answers for the machine, and one repository's setting is not the machine's.
 
 If you configure exec plugins (`plugins:` in `config.yaml`), each one is a program you
 chose that runs as a subprocess with your user privileges and reads whatever its own
@@ -186,8 +200,8 @@ Normalized usage is stored in a single embedded SQLite database:
 
 The location honors `XDG_DATA_HOME`. This file never leaves your machine.
 
-Beside the usage records, the same file holds two small bookkeeping tables. Neither holds
-usage, and both exist only so a repeat `backfill` stays cheap and honest:
+Beside the usage records, the same file holds three small bookkeeping tables. None holds
+usage, and each exists only so a repeat command stays cheap and honest:
 
 - `ingest_file` — one row per input already parsed: its **path on your disk**, size,
   modification time, and which build read it. This is the only place `assaio` stores a
@@ -197,13 +211,16 @@ usage, and both exist only so a repeat `backfill` stays cheap and honest:
   found, files read, records, skipped lines, records carrying no tokens) and a timestamp.
   It is what the format-drift canaries compare against, and only the newest runs per tool
   are kept.
+- `digest_snapshot` — one row per `digest` run, holding the verdicts and totals that run
+  reported plus the build that parsed them, so the next digest can say what *moved*. A few KB
+  each, never usage rows, and all but the newest few are deleted whenever one is written.
 
-Both can be deleted at any time; the only cost is one slow re-parse and a reset drift
-baseline.
+All three can be deleted at any time; the only cost is one slow re-parse, a reset drift
+baseline, and a digest with nothing to compare against.
 
-A third table, `session_label`, holds the labels described under "What you add yourself" —
+A fourth table, `session_label`, holds the labels described under "What you add yourself" —
 one row per session you marked, carrying only the three vocabulary values and a timestamp.
-Unlike the two above it is **not** a cache: nothing can rebuild it, so it is the one table
+Unlike the three above it is **not** a cache: nothing can rebuild it, so it is the one table
 `clear` never removes without being asked. Its size is bounded by how many sessions you
 marked by hand (~80 bytes each), not by how much you have ingested.
 

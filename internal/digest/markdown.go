@@ -44,8 +44,9 @@ func (d *Digest) totalsSection() string {
 	b.WriteString("| | previous | now | change |\n|---|---:|---:|---:|\n")
 	fmt.Fprintf(&b, "| tokens | %s | %s | %s |\n",
 		humanize.Count(p.Tokens), humanize.Count(d.Now.Tokens), relative(p.Tokens, d.Now.Tokens))
-	fmt.Fprintf(&b, "| AI-written lines | %s | %s | %s |\n",
-		humanize.Count(p.Lines), humanize.Count(d.Now.Lines), relative(p.Lines, d.Now.Lines))
+	fmt.Fprintf(&b, "| AI-written lines *(output)* | %s | %s | %s |\n",
+		digestLines(p.LinesCapable, p.Lines), digestLines(d.Now.LinesCapable, d.Now.Lines),
+		digestLineChange(&d.Now, p))
 	fmt.Fprintf(&b, "| sessions | %s | %s | %s |\n",
 		humanize.Int(int64(p.Sessions)), humanize.Int(int64(d.Now.Sessions)),
 		relative(int64(p.Sessions), int64(d.Now.Sessions)))
@@ -172,6 +173,11 @@ func (d *Digest) caveatSection() string {
 	}
 	b.WriteString("- Cost is an estimate at public pay-as-you-go API prices — not actual spend; " +
 		"a subscription bills a flat rate and differs.\n")
+	// This is the one surface designed to be read out of context, so the layer travels with the
+	// figure rather than being left to the reader's memory of what a line count is (ADR 0013).
+	b.WriteString("- AI-written lines is an **output** measure: what was produced, not whether it " +
+		"held. More lines is not better — lines reward greenfield and boilerplate and punish " +
+		"debugging. Nothing here says the code merged, survived or passed review.\n")
 	return b.String()
 }
 
@@ -204,4 +210,21 @@ func money(v *float64) string {
 		return "—"
 	}
 	return humanize.USDCompact(*v)
+}
+
+// digestLines renders a line total, or a dash when nothing in the window counts lines.
+func digestLines(capable bool, n int64) string {
+	if !capable {
+		return "—"
+	}
+	return humanize.Count(n)
+}
+
+// digestLineChange withholds the movement when either side could not measure lines: a change
+// between two figures, one of which is an absence, is not a change.
+func digestLineChange(now, previous *Snapshot) string {
+	if !now.LinesCapable || !previous.LinesCapable {
+		return "—"
+	}
+	return relative(previous.Lines, now.Lines)
 }

@@ -57,8 +57,8 @@ func TestMetricsVerifyReportsViolations(t *testing.T) {
 	seedAnalyzeStore(t)
 	invalidRead := `#!/bin/sh
 cat >/dev/null
-echo '{"assaio_metric":1,"name":"demo"}'
-echo '{"title":"T","read":{"key":"great","label":"GREAT"},"howToRead":"H","takeaway":"K"}'
+echo '{"assaio_metric":2,"name":"demo"}'
+echo '{"title":"T","layer":"activity","read":{"key":"great","label":"GREAT"},"howToRead":"H","takeaway":"K"}'
 `
 	writeMetricPluginConfig(t, configHome, invalidRead)
 

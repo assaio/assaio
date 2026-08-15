@@ -93,7 +93,7 @@ func runDemoReports(cmd *cobra.Command, st *store.Store, start time.Time, lw *li
 	}
 	lw.println("")
 
-	demoHeader(lw, "analyze -- the five-dimension litmus")
+	demoHeader(lw, "analyze -- the directional reads, led by what is worth a week")
 	in, err := buildAnalyzeInput(cmd, st, start)
 	if err != nil {
 		return err

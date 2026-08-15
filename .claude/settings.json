@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "attribution": { "commit": "", "pr": "" },
+  "permissions": {
+    "allow": [
+      "Bash(make build)",
+      "Bash(make docs)",
+      "Bash(make fmt)",
+      "Bash(make fuzz:*)",
+      "Bash(make lint)",
+      "Bash(make test)",
+      "Bash(make tidy)",
+      "Bash(make vuln)",
+      "Bash(go build:*)",
+      "Bash(go doc:*)",
+      "Bash(go list:*)",
+      "Bash(go test:*)",
+      "Bash(go vet:*)",
+      "Bash(gofmt:*)",
+      "Bash(gofumpt:*)",
+      "Bash(golangci-lint:*)",
+      "Bash(git blame:*)",
+      "Bash(git branch:*)",
+      "Bash(git describe:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git shortlog:*)",
+      "Bash(git show:*)",
+      "Bash(git status:*)",
+      "Bash(git tag --list:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh release list:*)",
+      "Bash(gh release view:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
+    ],
+    "ask": [
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh release:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git tag:*)",
+      "Bash(make release:*)",
+      "Bash(make release-minor:*)",
+      "Bash(make release-patch:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/guard.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

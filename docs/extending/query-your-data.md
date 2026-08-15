@@ -1,6 +1,8 @@
 # Query your own data
 
-*Part of [Extending assaio](../extending.md). Every column below is also described in the [generated reference](https://assaio.dev/docs/reference).*
+*Part of [Extending assaio](../extending.md). The column notes below are this page's own; the
+[generated reference](https://assaio.dev/docs/reference) covers commands, flags, config keys,
+signals and the metric contract, not the storage schema.*
 
 Everything `assaio` collects lives in one SQLite file:
 
@@ -14,8 +16,13 @@ file is the whole of your data.
 
 ## Schema
 
-One table holds your data, `usage_record`
-([`internal/store/migrations/0001_init.sql`](../../internal/store/migrations/0001_init.sql)):
+Two tables hold your data. `usage_record` is one row per API response
+([`internal/store/migrations/0001_init.sql`](../../internal/store/migrations/0001_init.sql));
+`session_step` is one row per step of a session's sequence and is described after it — measured
+on the maintainer's store it is the **larger of the two**, 102.0 MB of table and indexes against
+`usage_record`'s 58.3 MB, which is why it is the one table with a retention horizon.
+
+`usage_record`:
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -43,10 +50,23 @@ One table holds your data, `usage_record`
 | `compactions` | `INTEGER` | Context-compaction events attributed to the record, or `0`. |
 | `rework_lines` | `INTEGER` | AI-added lines later undone within the same transcript+file, or `0`. |
 | `member` | `TEXT` | `''` for purely local usage; non-empty only on a central store synced from a team member (see [The team server](team-server.md)). |
+| `tool_reads` | `INTEGER` | Tool calls that read a file, `0` for sources that do not name their calls. |
+| `tool_searches` | `INTEGER` | Tool calls that searched. |
+| `tool_commands` | `INTEGER` | Tool calls that ran a command. |
+| `tool_writes` | `INTEGER` | Tool calls that wrote a file. |
+| `tool_other` | `INTEGER` | Tool calls in none of the above. The five sum to `tool_calls`. |
+| `tool_errors` | `INTEGER` | Tool calls that failed outright. |
+| `sidechain` | `INTEGER` | `1` when the turn belongs to a sub-agent rather than the main transcript. |
+| `skill` | `TEXT` | The skill this turn was attributed to, `''` when none. |
+| `agent` | `TEXT` | The sub-agent this turn was attributed to, `''` when none. |
+| `cache_write_1h` | `INTEGER` | The portion of `cache_write_tokens` that bought a 1-hour lifetime. A subset, never added to it. |
+| `cache_miss_reason` | `TEXT` | The vendor's own stated reason a cache read missed, `''` when unstated. |
 
-The activity columns (`lines_added` … `rework_lines`) are populated by the Claude Code
-and Codex parsers today, except `rejected`, which is Claude-Code-only; Gemini and Cline
-store `0` throughout. They hold **counts only** — never the code content of the lines
+The activity columns (`lines_added` … `rework_lines`) are populated by the Claude Code and
+Codex parsers, and `lines_added`/`lines_removed` by GitHub Copilot CLI since v0.6 (once per
+session, not per turn); `rejected` is Claude-Code-only. Gemini CLI and Cline record no line or
+edit signal at all, so they store `0` throughout — **absent, not zero**, which is why every
+figure over these columns filters by what a source can answer (ADR 0011). They hold **counts only** — never the code content of the lines
 they count. `report --format csv` covers tokens and cost; `effectiveness --format csv`
 adds the activity and `$`/100-lines columns.
 
@@ -55,14 +75,22 @@ time against the embedded price table, because prices change and unpriced models
 honestly blank. For cost figures, use `assaio-agent report --format csv` (which carries a
 `cost` column) rather than SQL.
 
-**Two bookkeeping tables sit beside it**, neither holding usage: `ingest_file` (one row per
+**Beside those two, `session_step` holds the sequence**: one row per step, carrying the kind of
+step, its position, the model, its token total, how it ended, and an integer standing for the
+file it touched — never a path (see [PRIVACY.md](../../PRIVACY.md)). It is bounded by
+`trace.horizon_days` (30 by default), which is the only retention rule in the store; `0` turns
+it off and the table then grows without bound.
+
+**Three bookkeeping tables sit beside them**, none holding usage: `ingest_file` (one row per
 input already parsed — path, size, mtime, parsing build) makes a repeat `backfill` nearly
 free, and `ingest_source` (one row per source per run — files found, files read, records,
 skipped lines, zero-token records) is the baseline the [format-drift
-canaries](../format-resilience.md) compare against. Both are caches: dropping them costs one
-slow re-parse and a reset drift baseline, nothing more. `ingest_file` is pruned to what is
+canaries](../format-resilience.md) compare against, and `digest_snapshot` (the verdicts and
+totals each `digest` run reported, so the next one can say what moved). All three are caches:
+dropping them costs one slow re-parse, a reset drift baseline and a digest with nothing to
+compare against, nothing more. `ingest_file` is pruned to what is
 actually on disk after each pass, and `ingest_source` keeps only the newest runs per tool,
-so neither grows with how long assaio has been installed. Use `assaio-agent compact` to
+so none of them grows with how long assaio has been installed. Use `assaio-agent compact` to
 return freed pages to the filesystem — SQLite does not do that on its own.
 
 **Stability.** The schema may still evolve before v1.0. Changes will be additive where

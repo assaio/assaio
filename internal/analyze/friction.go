@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/layer"
 
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
@@ -26,9 +27,10 @@ func init() { Register(frictionValidator{}) }
 // tokens spent on calls that produced nothing.
 type frictionValidator struct{}
 
-func (frictionValidator) Name() string     { return frictionName }
-func (frictionValidator) Title() string    { return frictionTitle }
-func (frictionValidator) Describe() string { return frictionDescribe }
+func (frictionValidator) Name() string       { return frictionName }
+func (frictionValidator) Title() string      { return frictionTitle }
+func (frictionValidator) Describe() string   { return frictionDescribe }
+func (frictionValidator) Layer() layer.Layer { return layer.Activity } // how often a tool call fails or is declined
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (frictionValidator) Analyze(in Input) Result {

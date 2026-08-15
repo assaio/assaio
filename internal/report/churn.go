@@ -1,6 +1,7 @@
 package report
 
 import (
+	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -18,8 +19,8 @@ type ChurnStat struct {
 	// ReworkRate is ReworkLines / LinesAdded; 0 when LinesAdded is zero, never a
 	// divide-by-zero panic. That 0 is a placeholder for an undefined ratio, not a
 	// measured rate -- a renderer must check LinesAdded itself (e.g. via
-	// humanize.PercentOrDash on the raw counts) before formatting this as a confident
-	// percentage; see internal/analyze/rework.go's "rework" Figure.
+	// humanize.PercentOrDash on the raw counts) and CutsASession before formatting this as
+	// a confident percentage; see internal/analyze/rework.go's "rework" Figure.
 	ReworkRate float64
 	// Rows and Tokens are what the rate rests on: how many usage rows came from a source
 	// that records an undone line at all, and their tokens. Zero rows means the window
@@ -43,10 +44,23 @@ func BuildChurn(rows []store.UsageRow) ChurnStat {
 	return s
 }
 
+// ExceedsItsWhole reports that the removals outnumber the additions this window counted, so the
+// ratio is not a share of anything in it. The usual cause is a window opening between an
+// addition and its removal, but the counts cannot show that, so the name states what they do
+// show. Derived rather than stored, so a ChurnStat built anywhere answers from its own counts.
+func (c *ChurnStat) ExceedsItsWhole() bool { return c.ReworkLines > c.LinesAdded }
+
 // reworkRate is rework/added, 0 when added is zero -- never a divide-by-zero.
 func reworkRate(rework, added int64) float64 {
 	if added == 0 {
 		return 0
 	}
 	return float64(rework) / float64(added)
+}
+
+// ChurnBoundaryNote states why an unmeasurable rate is withheld on a window that does record
+// undone lines: the counts are real, the ratio between them is not.
+func ChurnBoundaryNote(c *ChurnStat) string {
+	return humanize.Int(c.ReworkLines) + " lines undone against " + humanize.Int(c.LinesAdded) +
+		" added inside this window, so there is no share to state -- most often a window that opened between an addition and its removal"
 }

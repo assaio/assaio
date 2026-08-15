@@ -68,7 +68,6 @@ func runDashboard(cmd *cobra.Command, since, output *string) error {
 	if err != nil {
 		return err
 	}
-	in.PlanMonthlyCost = cfg.Pricing.MonthlySubscriptionCost
 	subpaths, err := loadDrillSubpaths(cmd, st, &in, start)
 	if err != nil {
 		return err

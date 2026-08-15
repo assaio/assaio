@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 
 	"github.com/assaio/assaio/internal/label"
@@ -35,9 +37,10 @@ func init() { Register(intentValidator{}) }
 // which is the line this project does not cross.
 type intentValidator struct{}
 
-func (intentValidator) Name() string     { return intentName }
-func (intentValidator) Title() string    { return intentTitle }
-func (intentValidator) Describe() string { return intentDescribe }
+func (intentValidator) Name() string       { return intentName }
+func (intentValidator) Title() string      { return intentTitle }
+func (intentValidator) Describe() string   { return intentDescribe }
+func (intentValidator) Layer() layer.Layer { return layer.Activity } // how much of the window carries a label
 
 //nolint:gocritic // Input is required by the Validator interface; analyzed once per run, not a hot path.
 func (intentValidator) Analyze(in Input) Result {
@@ -51,15 +54,16 @@ func (intentValidator) Analyze(in Input) Result {
 	// have one: "none of your 331 sessions is labeled" is a confident answer, not an
 	// under-sampled one, and resting on the labeled count would report it as insufficient.
 	r.restsOn(len(in.Sessions), "sessions")
-	r.Purity = clamp01(fracOf(int64(tally.labeled), int64(len(in.Sessions))))
 
 	if tally.labeled == 0 {
 		r.Read = noDataRead
+		r.Purity = neutralPurity
 		r.Figures = []Figure{{Label: "labeled sessions", Value: "0 of " + humanize.Int(int64(len(in.Sessions)))}}
 		r.Takeaway = "Nothing is labeled yet -- 'assaio-agent mark --task <kind>' after a session unlocks reading every metric per kind of work."
 		r.Caveats = intentCaveats
 		return r
 	}
+	r.Purity = clamp01(fracOf(int64(tally.labeled), int64(len(in.Sessions))))
 
 	// Never readFor: its unfavorable branch is "watch", and see the type's own comment for
 	// why this metric has no unfavorable state.

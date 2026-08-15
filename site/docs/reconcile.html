@@ -151,6 +151,7 @@ this project refuses. Instead columns bind by header alias, and the binding is p
 </code></pre>
 <p>Only <code>day</code> and <code>cost</code> are required. A non-USD export is refused rather than converted at a
 rate assaio would have to invent.</p>
+<p>An export over 64 MiB is refused rather than read — narrow the exported range and run it again.</p>
 <h2 id="reading-the-output">Reading the output</h2>
 <p><strong>Scope comes first, and it is not a formality.</strong> An export's window is almost never the
 window you queried, and comparing two totals over two different date ranges reports a

@@ -1,12 +1,17 @@
 package analyze
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/assaio/assaio/internal/layer"
+)
 
 type fakeValidator struct{ name string }
 
-func (f fakeValidator) Name() string     { return f.name }
-func (f fakeValidator) Title() string    { return "Fake" }
-func (f fakeValidator) Describe() string { return "test fixture, not a real metric" }
+func (f fakeValidator) Name() string       { return f.name }
+func (f fakeValidator) Title() string      { return "Fake" }
+func (f fakeValidator) Describe() string   { return "test fixture, not a real metric" }
+func (f fakeValidator) Layer() layer.Layer { return layer.Activity }
 func (f fakeValidator) Analyze(Input) Result {
 	return Result{Name: f.name, Title: "Fake", Takeaway: "fake"}
 }

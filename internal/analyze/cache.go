@@ -2,6 +2,7 @@ package analyze
 
 import (
 	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/layer"
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/report"
 )
@@ -21,9 +22,10 @@ func init() { Register(cacheValidator{}) }
 // cache (cheaper) versus re-sent as fresh input, and whether cache writes are paying off.
 type cacheValidator struct{}
 
-func (cacheValidator) Name() string     { return cacheName }
-func (cacheValidator) Title() string    { return cacheTitle }
-func (cacheValidator) Describe() string { return cacheDescribe }
+func (cacheValidator) Name() string       { return cacheName }
+func (cacheValidator) Title() string      { return cacheTitle }
+func (cacheValidator) Describe() string   { return cacheDescribe }
+func (cacheValidator) Layer() layer.Layer { return layer.Activity } // how much billed input was served from cache
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (cacheValidator) Analyze(in Input) Result {

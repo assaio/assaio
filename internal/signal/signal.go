@@ -4,6 +4,8 @@
 // on their own machine. See docs/adr/0008-signal-catalog.md.
 package signal
 
+import "github.com/assaio/assaio/internal/layer"
+
 // How a signal's value came to be. "attributed" is named in ADR 0008 and lands with
 // attribution edges (B85), which is what will first produce a signal deserving it.
 const (
@@ -41,6 +43,12 @@ type Signal struct {
 	Unit string
 	// Status is Observed, Estimated or Derived.
 	Status string
+	// Layer is which of the four measurement layers this signal sits on. It is on every entry
+	// because relabeling one is how a product like this starts lying, and the mistake is easy
+	// to make from an ID alone: ai.step.outcome is an *activity* signal -- how one call ended
+	// inside a session -- not an outcome one, which is whether the code held (ROADMAP.md,
+	// "Four layers, never relabeled"; ADR 0013).
+	Layer layer.Layer
 	// Grains lists where reading it is honest.
 	Grains []string
 	// ZeroMeans is why this exists: "no rework happened" and "this source never recorded

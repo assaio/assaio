@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 )
 
@@ -28,9 +30,10 @@ func init() { Register(modelFitValidator{}) }
 // to cheaper ones (see modelTier), and contrasts AI-line output per token between tiers.
 type modelFitValidator struct{}
 
-func (modelFitValidator) Name() string     { return modelFitName }
-func (modelFitValidator) Title() string    { return modelFitTitle }
-func (modelFitValidator) Describe() string { return modelFitDescribe }
+func (modelFitValidator) Name() string       { return modelFitName }
+func (modelFitValidator) Title() string      { return modelFitTitle }
+func (modelFitValidator) Describe() string   { return modelFitDescribe }
+func (modelFitValidator) Layer() layer.Layer { return layer.Activity } // the premium-model token share; the lines-per-token note is context, not the claim
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (modelFitValidator) Analyze(in Input) Result {

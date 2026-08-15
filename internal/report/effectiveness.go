@@ -1,10 +1,8 @@
 package report
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/assaio/assaio/internal/label"
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -16,6 +14,11 @@ type EffRow struct {
 	Group string `json:"group"`
 	// LinesAdded is AI-added code lines, the primary effect proxy.
 	LinesAdded int64 `json:"lines_added"`
+	// LineCapable reports whether any row in this group came from a source that records a
+	// changed line. False means the group's line, edit and $/100-lines cells are absent rather
+	// than zero -- the whole point of this table is comparing groups by lines per cost, so a
+	// structural zero here invites dropping the tool that "produces nothing" (ADR 0011).
+	LineCapable bool `json:"line_capable"`
 	// LinesRemoved is AI-removed code lines.
 	LinesRemoved int64 `json:"lines_removed"`
 	// Edits is the count of productive edit tool-calls (Edit/Write/NotebookEdit/MultiEdit).
@@ -44,8 +47,8 @@ type EffRow struct {
 // model, or entrypoint) and computes each group's AI-line output against its cost. An
 // unknown dimension returns an error listing the valid ones.
 func BuildEffectiveness(rows []store.UsageRow, t pricing.Table, by string) ([]EffRow, error) {
-	if !isValidDim(by) {
-		return nil, fmt.Errorf("unknown dimension %q (want one of %s)", by, strings.Join(validDims, ", "))
+	if err := DimError(by); err != nil {
+		return nil, err
 	}
 
 	out := groupBy(
@@ -55,7 +58,9 @@ func BuildEffectiveness(rows []store.UsageRow, t pricing.Table, by string) ([]Ef
 		func(g *EffRow, i int) { accumulateEff(g, &rows[i], t) },
 	)
 	for i := range out {
-		out[i].CostPer100Lines = costPer100Lines(out[i].Cost, out[i].LinesAdded)
+		if out[i].LineCapable {
+			out[i].CostPer100Lines = costPer100Lines(out[i].Cost, out[i].LinesAdded)
+		}
 	}
 	return out, nil
 }
@@ -73,8 +78,6 @@ func usageDimValue(u *store.UsageRow, by string) string {
 		return u.Model
 	case "entrypoint":
 		return u.Entrypoint
-	case "member":
-		return u.Member
 	case label.Task:
 		return orUnlabeled(u.Task)
 	case label.Outcome:
@@ -88,6 +91,7 @@ func usageDimValue(u *store.UsageRow, by string) string {
 
 // accumulateEff folds u's activity counts and, when u.Model is priced, its cost into g.
 func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table) {
+	g.LineCapable = g.LineCapable || parser.HasLineOutput(u.Tool)
 	g.LinesAdded += u.LinesAdded
 	g.LinesRemoved += u.LinesRemoved
 	g.Edits += u.Edits

@@ -21,7 +21,9 @@ const devVersion = "dev"
 type Options struct {
 	Full bool
 	// TraceHorizonDays bounds how far back the step timeline is kept; steps older than it are
-	// pruned at the end of a run. 0 means the configured default (config.DefaultTraceHorizonDays).
+	// pruned at the end of a run. 0 means no horizon at all -- keep every step, prune nothing --
+	// which is config.Trace.HorizonDays' own deliberate semantics and the setting that makes the
+	// table unbounded (see internal/config/trace.go and traceHorizon below).
 	TraceHorizonDays int
 }
 

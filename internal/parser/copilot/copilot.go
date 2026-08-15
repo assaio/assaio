@@ -126,7 +126,7 @@ func records(start, shutdown *event) (recs []usage.Record, skipped int) {
 			OutputTokens:     parser.NonNeg(m.TokenDetails.Output.TokenCount),
 			CacheReadTokens:  parser.NonNeg(m.TokenDetails.CacheRead.TokenCount),
 			CacheWriteTokens: parser.NonNeg(m.TokenDetails.CacheWrite.TokenCount),
-			ReasoningTokens:  parser.NonNeg(m.Usage.ReasoningTokens),
+			ReasoningTokens:  parser.Subset(m.Usage.ReasoningTokens, parser.NonNeg(m.TokenDetails.Output.TokenCount)),
 			DedupeKey:        sessionID + ":" + model,
 			Cwd:              start.Data.Context.Cwd,
 			Granularity:      "session",

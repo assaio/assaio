@@ -43,6 +43,12 @@ func FuzzParse(f *testing.F) {
 				r.CacheWriteTokens < 0 || r.ReasoningTokens < 0 {
 				t.Fatalf("negative token field: %+v", r)
 			}
+			// Reasoning is a subset of output, never re-added for cost (usage.Record). Two
+			// independently read fields, or a sum that overflowed, can invert the two.
+			if r.ReasoningTokens > r.OutputTokens {
+				t.Fatalf("reasoning %d exceeds the output %d it is part of: %+v",
+					r.ReasoningTokens, r.OutputTokens, r)
+			}
 			if r.LinesAdded < 0 || r.LinesRemoved < 0 || r.Edits < 0 || r.ToolCalls < 0 ||
 				r.Compactions < 0 || r.ReworkLines < 0 || r.ToolErrors < 0 {
 				t.Fatalf("negative activity field: %+v", r)

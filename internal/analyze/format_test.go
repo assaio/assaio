@@ -4,15 +4,22 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/assaio/assaio/internal/layer"
 )
 
 func TestRenderResultTextHeaderFormat(t *testing.T) {
 	var buf bytes.Buffer
-	r := Result{Name: "adoption", Title: "Adoption & Usage Breadth", Read: Read{Key: "good", Label: "STRONG"}, Takeaway: "ok"}
+	r := Result{
+		Name: "adoption", Title: "Adoption & Usage Breadth", Layer: layer.Activity,
+		Read: Read{Key: "good", Label: "STRONG"}, Takeaway: "ok",
+	}
 	if err := RenderResultText(&buf, r); err != nil {
 		t.Fatal(err)
 	}
-	want := "ADOPTION · Adoption & Usage Breadth  [STRONG]\n"
+	// The layer is on the header line because that is where a reader meets the verdict, and a
+	// verdict read without its layer is the one misreading ROADMAP.md says would be lying.
+	want := "ADOPTION · Adoption & Usage Breadth  [STRONG]  (activity)\n"
 	if got := buf.String(); !strings.HasPrefix(got, want) {
 		t.Fatalf("header = %q, want prefix %q", got, want)
 	}

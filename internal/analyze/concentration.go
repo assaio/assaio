@@ -3,6 +3,8 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 
 	"github.com/assaio/assaio/internal/parser"
@@ -36,9 +38,10 @@ func init() { Register(concentrationValidator{}) }
 // diverges most from the AI-line output that spend produced.
 type concentrationValidator struct{}
 
-func (concentrationValidator) Name() string     { return concentrationName }
-func (concentrationValidator) Title() string    { return concentrationTitle }
-func (concentrationValidator) Describe() string { return concentrationDescribe }
+func (concentrationValidator) Name() string       { return concentrationName }
+func (concentrationValidator) Title() string      { return concentrationTitle }
+func (concentrationValidator) Describe() string   { return concentrationDescribe }
+func (concentrationValidator) Layer() layer.Layer { return layer.Output } // the verdict is the gap between a project's spend share and its line share
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (concentrationValidator) Analyze(in Input) Result {

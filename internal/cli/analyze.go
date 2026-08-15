@@ -101,7 +101,6 @@ func runAnalyze(cmd *cobra.Command, names []string, since *string, format string
 	if err != nil {
 		return err
 	}
-	in.PlanMonthlyCost = cfg.Pricing.MonthlySubscriptionCost
 	validators := analyze.Validators()
 	if !filter.Empty() {
 		if validators, err = narrowAnalysis(cmd, st, start, filter, &in, names, format); err != nil {
@@ -148,6 +147,9 @@ func buildAnalyzeInput(cmd *cobra.Command, st *store.Store, start time.Time) (an
 // buildAnalyzeInputFiltered is buildAnalyzeInput restricted to the sessions filter selects.
 // Every one of the five queries below takes the filter: narrowing only the usage rows would
 // state one subset's figures beside the whole window's delegation, attribution and turn mix.
+//
+// The plan price is set here rather than by each caller: a field every caller has to remember is
+// a field one of them will forget.
 func buildAnalyzeInputFiltered(cmd *cobra.Command, st *store.Store, start time.Time, filter store.LabelFilter) (analyze.Input, error) {
 	usageRows, err := st.UsageFiltered(cmd.Context(), start, filter)
 	if err != nil {
@@ -185,6 +187,11 @@ func buildAnalyzeInputFiltered(cmd *cobra.Command, st *store.Store, start time.T
 	if err := readSequenceFacts(cmd, st, start, &in, sessionRows); err != nil {
 		return analyze.Input{}, err
 	}
+	cfg, err := loadConfig(cmd)
+	if err != nil {
+		return analyze.Input{}, err
+	}
+	in.PlanMonthlyCost = cfg.Pricing.MonthlySubscriptionCost
 	// Provenance is diagnostic, not a figure: a store that cannot answer leaves it unknown
 	// rather than failing an analysis that is otherwise complete.
 	in.Ingested, in.ParsedBy, _ = st.Provenance(cmd.Context())

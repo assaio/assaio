@@ -126,7 +126,7 @@ func tableRow(r *Row, grouped bool, by, cost string) prettytable.Row {
 	if grouped {
 		label := dimValue(r, by)
 		if label == "" {
-			label = emptyDimLabel(by)
+			label = "(unknown)"
 		}
 		return prettytable.Row{
 			label + granularityMark(r.Granularity),

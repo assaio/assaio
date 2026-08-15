@@ -148,6 +148,11 @@ Hooks are optional but recommended: `make hooks` installs the lefthook pre-commi
 (Conventional Commits + `Signed-off-by` + no AI-assistant authorship trailers), so the
 gate runs before you push.
 
+If you work with an AI assistant, `.claude/` carries this repo's harness config — the same
+rules as this document, in the form a harness can execute, plus the reviewers and the release
+flow ([`.claude/README.md`](.claude/README.md)). It is a convenience, never a substitute for
+the gate above.
+
 Your PR description must include: what changed and why, the linked issue, how it was
 tested, and any documentation impact. The PR template will prompt for these.
 

@@ -36,8 +36,19 @@ func driftWarnings(ctx context.Context, st *store.Store) ([]drift.Warning, error
 // has already printed the shrunken numbers this is the only line to argue with.
 func printDriftWarnings(cmd *cobra.Command, ws []drift.Warning) {
 	for _, w := range ws {
-		cmd.PrintErrf("warning: possible format drift in %s (%s): %s\n", w.Tool, w.Canary, w.Detail)
+		cmd.PrintErrf("warning: %s in %s (%s): %s\n", driftLead(w.Canary), w.Tool, w.Canary, w.Detail)
 	}
+}
+
+// driftLead names what the canary observed. Four of them compare a source against its own
+// history, where drift is the likely cause; barren reports a condition, and calling that
+// "possible format drift" would name a cause its evidence cannot support -- these files may
+// never have been the token source at all.
+func driftLead(canary string) string {
+	if canary == drift.Barren {
+		return "nothing read from a detected source"
+	}
+	return "possible format drift"
 }
 
 // doctorDriftSection renders doctor's drift line and one indented line per fired canary.
@@ -60,7 +71,7 @@ func doctorDriftSection(ws []drift.Warning) string {
 func strictFailures(ws []drift.Warning, scans []sourceScan) []string {
 	var out []string
 	for _, w := range ws {
-		out = append(out, fmt.Sprintf("%s: possible format drift (%s)", w.Tool, w.Canary))
+		out = append(out, fmt.Sprintf("%s: %s (%s)", w.Tool, driftLead(w.Canary), w.Canary))
 	}
 	for _, sc := range scans {
 		if len(sc.configured) > 0 && sc.found == 0 {

@@ -42,6 +42,7 @@ type weekendUsageValidator struct{}
 func (weekendUsageValidator) Name() string     { return weekendUsageName }
 func (weekendUsageValidator) Title() string    { return weekendUsageTitle }
 func (weekendUsageValidator) Describe() string { return weekendUsageDescribe }
+func (weekendUsageValidator) Layer() layer.Layer { return layer.Activity }
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (weekendUsageValidator) Analyze(in Input) Result {

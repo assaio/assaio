@@ -9,7 +9,7 @@ import (
 	"github.com/assaio/assaio/internal/humanize"
 )
 
-// RankedMax is how many findings lead a window. Nineteen reads render as nineteen reads, and
+// RankedMax is how many findings lead a window. Twenty-one reads render as twenty-one reads, and
 // a reader facing a wall of equally weighted verdicts acts on none of them -- past some count
 // each additional correct measurement is worth less than the one before it. The rest are not
 // hidden by this: they are the same report, one screen down.

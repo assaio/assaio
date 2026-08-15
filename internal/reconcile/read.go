@@ -13,8 +13,9 @@ import (
 
 // maxExportBytes bounds a file this package will read into memory. A billing export is a
 // few thousand rows; anything past this is not one, and reading it would be the caller's
-// problem to notice only after it had already happened.
-const maxExportBytes = 64 << 20
+// problem to notice only after it had already happened. A var so a test can reach the bound
+// without writing 64 MiB to disk; nothing outside this package can set it.
+var maxExportBytes int64 = 64 << 20
 
 // ReadFile reads a vendor export from path, choosing the reader by extension. overrides
 // come from --map and win over every header alias.
@@ -24,7 +25,7 @@ func ReadFile(path string, overrides map[string]string) (*Export, error) {
 		return nil, err
 	}
 	defer func() { _ = f.Close() }()
-	limited := io.LimitReader(f, maxExportBytes+1)
+	limited := &countingReader{r: io.LimitReader(f, maxExportBytes+1)}
 	var exp *Export
 	switch strings.ToLower(filepath.Ext(path)) {
 	case ".json":
@@ -35,8 +36,28 @@ func ReadFile(path string, overrides map[string]string) (*Export, error) {
 	if err != nil {
 		return nil, err
 	}
+	// The LimitReader's spare byte is what tells an oversized file from one ending exactly on the
+	// bound: csv.Reader reads a cut as a clean io.EOF, so without this a truncated export
+	// reconciles as a complete one.
+	if limited.n > maxExportBytes {
+		return nil, fmt.Errorf("export %s is larger than the %d MiB this command reads; split it or narrow the exported range",
+			path, maxExportBytes>>20)
+	}
 	exp.Source = path
 	return exp, nil
+}
+
+// countingReader records how much was actually read, which is what turns the LimitReader's
+// spare byte into a detectable overrun rather than a silent truncation.
+type countingReader struct {
+	r io.Reader
+	n int64
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += int64(n)
+	return n, err
 }
 
 // readCSV parses a header row plus data rows. A row that cannot be parsed is skipped and

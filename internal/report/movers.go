@@ -96,7 +96,7 @@ func RenderMovers(w io.Writer, movers []MoverRow, by string) error {
 		m := &movers[i]
 		label := m.Group
 		if label == "" {
-			label = emptyDimLabel(by)
+			label = "(unknown)"
 		}
 		mark := ""
 		if m.hasUnpriced() {

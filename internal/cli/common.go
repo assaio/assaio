@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -124,15 +122,19 @@ func usageForDim(cmd *cobra.Command, st *store.Store, start time.Time, by string
 	return st.Usage(cmd.Context(), start)
 }
 
-// parseSinceAt turns "7d" into a start time relative to now. Only a day window is
-// supported in the MVP; the suffix must be 'd'.
+// parseSinceAt turns "7d" into the store-query floor N*24h back from now. A duration, not a
+// bucket boundary: consecutive runs of a recurring command must cover contiguous time, and the
+// helpers that compare day-buckets align on their own. Only a day window; the suffix must be 'd'.
 func parseSinceAt(window string, now time.Time) (time.Time, error) {
-	if !strings.HasSuffix(window, "d") {
-		return time.Time{}, fmt.Errorf("invalid window %q (want e.g. 7d)", window)
-	}
-	days, err := strconv.Atoi(strings.TrimSuffix(window, "d"))
-	if err != nil || days < 0 {
-		return time.Time{}, fmt.Errorf("invalid window %q", window)
+	days, err := windowDays(window)
+	if err != nil {
+		return time.Time{}, err
 	}
 	return now.AddDate(0, 0, -days), nil
+}
+
+// startOfUTCDay is the midnight opening t's UTC day -- where a stored day bucket begins.
+func startOfUTCDay(t time.Time) time.Time {
+	u := t.UTC()
+	return time.Date(u.Year(), u.Month(), u.Day(), 0, 0, 0, 0, time.UTC)
 }

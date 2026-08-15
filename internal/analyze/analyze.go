@@ -9,6 +9,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/assaio/assaio/internal/layer"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
 	"github.com/assaio/assaio/internal/trace"
@@ -133,6 +134,11 @@ type Result struct {
 	Title    string `json:"title"`
 	Describe string `json:"describe"`
 	Read     Read   `json:"read"`
+	// Layer is which of the four measurement layers this verdict rests on, stamped by Evaluate
+	// from the Validator's own declaration so a Result cannot claim a layer its metric did not.
+	// A figure inside the Result may sit on another layer as context; the label states what the
+	// verdict is a claim about, which is what a reader acts on.
+	Layer layer.Layer `json:"layer"`
 	// Purity is 0..1 for the dashboard's faceplate gauge: how "well-used" this
 	// dimension reads, set honestly per validator (see each validator's *Purity func).
 	Purity float64 `json:"purity"`
@@ -176,10 +182,16 @@ type Lead struct {
 // Validator is one independently testable, self-describing metric. Name is a stable
 // kebab-case slug (e.g. "model-fit") used on the command line and as the JSON key;
 // Title is a human label; Describe is a one-line summary for `assaio analyze --list`.
+//
+// Layer is on this interface rather than left to each Analyze to remember, because ROADMAP's
+// "a metric states which one it is" is a promise a future contributor could unknowingly undo:
+// a field is a field one metric will forget, while a method is a compile error. It answers for
+// the metric, not for one window, so it takes no Input.
 type Validator interface {
 	Name() string
 	Title() string
 	Describe() string
+	Layer() layer.Layer
 	Analyze(Input) Result
 }
 
@@ -208,6 +220,10 @@ var registry []Validator
 // call Register(yourValidator{}) from that file's init(). No other wiring is required --
 // the validator appears in `assaio analyze --list` and every analyze run automatically.
 func Register(v Validator) {
+	if !layer.Valid(v.Layer()) {
+		panic("analyze: validator " + v.Name() + " declares layer " + string(v.Layer()) +
+			", which is not one of activity|output|outcome|impact")
+	}
 	registry = append(registry, v)
 }
 

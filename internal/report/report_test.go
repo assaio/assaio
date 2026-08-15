@@ -145,57 +145,30 @@ func TestAggregateUnknownDim(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for unknown dimension")
 	}
-	for _, dim := range []string{"day", "project", "tool", "model", "entrypoint", "member"} {
+	for _, dim := range []string{"day", "project", "tool", "model", "entrypoint"} {
 		if !strings.Contains(err.Error(), dim) {
 			t.Fatalf("error %q must list valid dim %q", err.Error(), dim)
 		}
 	}
 }
 
-// TestAggregateByMemberGroupsAndRendersLocalPlaceholder guards the team-view dimension:
-// --by member must group real members apart from the local "" group, and the table must
-// render "" as "(local)" -- never a blank cell or the generic "(unknown)" other
-// dimensions use, since an unsynced local row isn't a missing value.
-func TestAggregateByMemberGroupsAndRendersLocalPlaceholder(t *testing.T) {
+// TestReportRefusesToRankNamedIndividuals is the Refusals line in BACKLOG.md held on the
+// other CLI surface that broke it: `report --by member` grouped each person's tokens and
+// spend onto their own row, in table, json and csv alike.
+func TestReportRefusesToRankNamedIndividuals(t *testing.T) {
 	rows := []store.UsageRow{
 		{Day: "2026-07-01", Tool: "claude-code", Model: "claude-opus-4-5", Member: "alice", In: 100, Out: 200},
-		{Day: "2026-07-02", Tool: "claude-code", Model: "claude-opus-4-5", Member: "", In: 50, Out: 10},
 	}
-	built := Build(rows, table())
-	agg, err := Aggregate(built, "member")
-	if err != nil {
-		t.Fatal(err)
+	_, err := Aggregate(Build(rows, table()), "member")
+	if err == nil {
+		t.Fatal("report --by member must be refused, not grouped")
 	}
-	if len(agg) != 2 {
-		t.Fatalf("len(agg) = %d want 2 (alice, local): %+v", len(agg), agg)
+	if !strings.Contains(err.Error(), "does not rank named individuals") {
+		t.Fatalf("the refusal must say why, got %q", err.Error())
 	}
-	byMember := map[string]Row{}
-	for _, r := range agg {
-		byMember[r.Member] = r
-	}
-	if alice, ok := byMember["alice"]; !ok || alice.In != 100 {
-		t.Fatalf("alice group = %+v, ok=%v, want In=100", alice, ok)
-	}
-	if local, ok := byMember[""]; !ok || local.In != 50 {
-		t.Fatalf("local group = %+v, ok=%v, want In=50", local, ok)
-	}
-
-	var buf bytes.Buffer
-	if err := RenderTable(&buf, agg, "member"); err != nil {
-		t.Fatal(err)
-	}
-	out := buf.String()
-	if !strings.Contains(out, "MEMBER") {
-		t.Fatalf("table missing MEMBER header: %s", out)
-	}
-	if !strings.Contains(out, "alice") {
-		t.Fatalf("table missing member name %q: %s", "alice", out)
-	}
-	if !strings.Contains(out, "(local)") {
-		t.Fatalf("table missing (local) placeholder for the empty member: %s", out)
-	}
-	if strings.Contains(out, "(unknown)") {
-		t.Fatalf("member dimension must never fall back to the generic (unknown) placeholder: %s", out)
+	// A refusal is not a typo, and must not be reported as one.
+	if strings.Contains(err.Error(), "unknown dimension") {
+		t.Fatalf("a refused dimension must not read as a misspelling: %q", err.Error())
 	}
 }
 

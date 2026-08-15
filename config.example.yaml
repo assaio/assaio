@@ -14,6 +14,20 @@ since: 30d
 # Override with ASSAIO_FORMAT.
 format: table
 
+# How far back the session-step timeline is kept. This is the one size bound assaio ships:
+# the timeline and its indexes are the largest thing written per unit of usage — 102.0 MB
+# against usage_record's 58.3 MB on the maintainer's store — so steps older than this are
+# pruned on every ingest.
+#
+# 30 days is also all that could ever be rebuilt: Claude Code deletes its own transcripts
+# after 30 by default, so a longer horizon holds history no re-read can restore.
+#
+# An explicit 0 means keep everything and is honoured rather than coerced — but then nothing
+# prunes the table and it has no upper bound (a measured 3.40 MB/day). `assaio-agent doctor`
+# says so on its timeline line.
+trace:
+  horizon_days: 30
+
 # Override where assaio looks for each tool's session logs — for a custom install
 # location, an OS-variant path the built-in defaults don't cover, or a synced/mounted
 # home directory.

@@ -69,6 +69,8 @@ func buildDrill(in analyze.Input, subpaths []store.SubpathRow, anonymize bool) *
 	)
 	scoped.WindowStart = in.WindowStart
 	scoped.Ingested, scoped.ParsedBy = in.Ingested, in.ParsedBy
+	// The horizon is the store's, not this project's slice of it.
+	scoped.HistoryStart = in.HistoryStart
 	// The sequences follow the sessions, or a detector would print the whole window's finding
 	// inside a panel headed by one project's name.
 	scoped.Trace = in.Trace.ForSessions(scoped.Sessions)

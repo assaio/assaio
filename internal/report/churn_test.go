@@ -1,6 +1,8 @@
 package report
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/assaio/assaio/internal/store"
@@ -61,5 +63,26 @@ func TestBuildChurnEmptyInputIsZeroValue(t *testing.T) {
 	got := BuildChurn(nil)
 	if got != (ChurnStat{}) {
 		t.Fatalf("got = %+v, want zero value", got)
+	}
+}
+
+// TestChurnLineWithholdsARateAboveItsWhole holds the same line on `status` that the rework
+// validator holds in analyze: both print this one number, so a guard in one of them would be
+// two answers to the same question (ADR 0011).
+func TestChurnLineWithholdsARateAboveItsWhole(t *testing.T) {
+	var buf bytes.Buffer
+	c := ChurnStat{LinesAdded: 5, ReworkLines: 400, ReworkRate: 80, Rows: 1}
+	if !c.ExceedsItsWhole() {
+		t.Fatal("400 undone against 5 added must be read as a window that cut a session")
+	}
+	if err := RenderChurnLine(&buf, c); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if strings.Contains(out, "8000%") || strings.Contains(out, "% of AI-added") {
+		t.Fatalf("churn line states a share above its own whole: %s", out)
+	}
+	if !strings.Contains(out, "never counted as added") && !strings.Contains(out, "opened between an addition") {
+		t.Fatalf("churn line withheld the rate without saying why: %s", out)
 	}
 }

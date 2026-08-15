@@ -11,6 +11,7 @@ import (
 	"github.com/assaio/assaio/internal/config"
 	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/i18n"
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/report"
 	"github.com/assaio/assaio/internal/store"
@@ -91,7 +92,11 @@ func statuslineText(cmd *cobra.Command, now time.Time) (string, error) {
 	parts := []string{
 		l.StatuslinePrefix,
 		humanize.Count(today.tokens) + " " + l.StatuslineTokens,
-		"+" + humanize.Count(today.lines) + " " + l.StatuslineLines,
+	}
+	// A source that records no changed line has no line figure, and humanize.Count(0) is "0".
+	// One line has no room for the sentence, so the segment is dropped (ADR 0011).
+	if today.lineCapable {
+		parts = append(parts, "+"+humanize.Count(today.lines)+" "+l.StatuslineLines)
 	}
 	if basis := costBasisSegment(cmd.Context(), st, now, cfg.Pricing, today, &l); basis != "" {
 		parts = append(parts, basis)
@@ -99,12 +104,15 @@ func statuslineText(cmd *cobra.Command, now time.Time) (string, error) {
 	return segments(append(parts, age)...), nil
 }
 
-// dayTotals is one window rolled up to what the line shows.
+// dayTotals is one window rolled up to what the line shows. lineCapable reports whether any
+// row came from a source that records changed lines at all, which is what separates a real
+// zero from a silence.
 type dayTotals struct {
 	tokens, lines  int64
 	cost           float64
 	hasUnpriced    bool
 	unpricedTokens int64
+	lineCapable    bool
 }
 
 // statuslineDay rolls up every record at or after start. It prices through report.Build
@@ -126,6 +134,7 @@ func statuslineDay(ctx context.Context, st *store.Store, start time.Time) (dayTo
 	}
 	for i := range rows {
 		out.lines += rows[i].LinesAdded
+		out.lineCapable = out.lineCapable || parser.HasLineOutput(rows[i].Tool)
 	}
 	return out, nil
 }

@@ -15,6 +15,7 @@ type Dashboard struct {
 	ToggleDarkLabel string // masthead: theme toggle button's initial (light-mode) aria-label
 	VerdictLabel    string // "Assay verdict" panel label and faceplate aria-label
 	ProvLabel       string // faceplate cell / ledger entry: the "Prov." caveat-present stamp
+	LayerHint       string // ledger entry: tooltip on the measurement-layer label
 	ConfidenceLabel string // ledger entry: prefix for what a verdict rests on
 	ReadsSuffix     string // panel label: "<n> <ReadsSuffix>"
 	// The lead section: the few findings worth a week's attention, the rule that ordered
@@ -55,6 +56,7 @@ var enDashboard = Dashboard{
 	ToggleDarkLabel: "Switch to dark theme",
 	VerdictLabel:    "Assay verdict",
 	ProvLabel:       "Prov.",
+	LayerHint:       "Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.",
 	ConfidenceLabel: "Confidence",
 	ReadsSuffix:     "reads",
 

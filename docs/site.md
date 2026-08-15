@@ -67,10 +67,12 @@ It runs in both directions, and the second one is the one that matters: a claim 
 behind it fails, **and so does a shipped capability the page never names**. `digest` and
 `mark --suggest` shipped in v0.17.0 and this page said neither for a whole release.
 
-What it deliberately does not check is prose. "Nineteen reads, one faceplate" has its number
+What it deliberately does not check is prose. "Twenty-one reads, one faceplate" has its number
 verified and its sentence trusted; the questions-it-answers section, the honest-scope section and
 the colophon are checked by a reader, not a regex. A guard that implied otherwise would be the
-false green this project exists to refuse. The set of covered claims is `commands`, `sources`,
+false green this project exists to refuse. The cost of that trade is real and was paid at v0.21:
+the same page carried "the nineteen directional reads" 250 lines below a verified
+"Twenty-one", because the second was inside a claim span and the first was not. The set of covered claims is `commands`, `sources`,
 `signals`, `validators` and `config`, and only top-level commands are enumerable — a page has to
 name every capability, not every subcommand of one.
 

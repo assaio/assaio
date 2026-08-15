@@ -69,7 +69,7 @@ func (st *parseState) tokenCountRecord(payload json.RawMessage) (usage.Record, b
 		InputTokens:     parser.NonNeg(d.input) - cacheRead,
 		CacheReadTokens: cacheRead,
 		OutputTokens:    parser.NonNeg(d.output),
-		ReasoningTokens: parser.NonNeg(d.reasoning),
+		ReasoningTokens: parser.Subset(d.reasoning, parser.NonNeg(d.output)),
 		DedupeKey:       fmt.Sprintf("%s:%s:%d", st.fileFP, st.session, st.turn),
 		Cwd:             st.cwd,
 		Project:         st.project,

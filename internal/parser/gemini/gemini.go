@@ -68,15 +68,21 @@ func Parse(r io.Reader) ([]usage.Record, int, error) {
 		if m.Tokens.Total == 0 && m.Tokens.Input == 0 && m.Tokens.Output == 0 {
 			continue
 		}
+		// Summed with plain +, three fields a log can each state as MaxInt64 overflow into a
+		// negative total that NonNeg then reads as zero -- leaving thoughts above an output of
+		// 0 and breaking the subset every cost figure assumes. Cached above input is the same
+		// shape one field over, and would store more prompt tokens than the vendor's own total.
+		output := parser.SumNonNeg(m.Tokens.Output, m.Tokens.Tool, m.Tokens.Thoughts)
+		cacheRead := parser.Subset(m.Tokens.Cached, parser.NonNeg(m.Tokens.Input))
 		out = append(out, usage.Record{
 			Tool:            tool,
 			SessionID:       sessionID,
 			Timestamp:       m.Timestamp,
 			Model:           m.Model,
-			InputTokens:     parser.NonNeg(m.Tokens.Input - m.Tokens.Cached),
-			CacheReadTokens: parser.NonNeg(m.Tokens.Cached),
-			OutputTokens:    parser.NonNeg(m.Tokens.Output + m.Tokens.Tool + m.Tokens.Thoughts),
-			ReasoningTokens: parser.NonNeg(m.Tokens.Thoughts),
+			InputTokens:     parser.NonNeg(m.Tokens.Input) - cacheRead,
+			CacheReadTokens: cacheRead,
+			OutputTokens:    output,
+			ReasoningTokens: parser.Subset(m.Tokens.Thoughts, output),
 			DedupeKey:       fmt.Sprintf("%s:%s:%d", fileFP, sessionID, index),
 			Granularity:     "turn",
 		})

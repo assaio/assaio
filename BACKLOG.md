@@ -163,10 +163,15 @@ on, since a link to a merged pull request is only as good as the session it link
   all (`files=2 records=0`), and the wider `~/.gemini` tree carries a different vocabulary
   (`CHECKPOINT`, `PLANNER_RESPONSE`, `CONVERSATION_HISTORY`) with no `tokens` object anywhere.
   Either the recording moved or these files were never the token source; settle which against a
-  fresh session before touching the parser. **The second half is ours, not Gemini's**: a source
-  this small is invisible to every drift canary, since each needs a 20-file sample floor. A
-  source that has always had a handful of files needs a canary that can fire on "discovered
-  files, parsed zero records", which none of the four does.
+  fresh session before touching the parser. Not establishable from this machine — it needs a
+  redacted capture from someone running Gemini CLI, which is `B144`'s standing caveat.
+  **The second half shipped in v0.22 as the `barren` canary, and this item's stated cause for it
+  was wrong.** It read "each needs a 20-file sample floor"; two of the four floors are 50 and the
+  discovery canary's total-loss branch has none, and an A/B with all four set to `1` produced
+  `no canary fired` on both builds. The blocker was never the floor but the baseline guard: a
+  source that has always yielded zero has a baseline of zero and there is no drop to detect. A
+  fix written from the wording above would have shipped green and changed nothing. Recorded
+  because the corrected cause is the reusable part.
 - [ ] **B111 · the human correction, recorded rather than proxied** — S · solo — **the claim
   this item was written on is false, measured 2026-08-12 and corrected here rather than
   discovered after shipping.** `toolUseResult.userModified` was described as marking an edit the
@@ -885,6 +890,105 @@ and all three shipped in v0.14:
   inflating the figure a flat plan is compared against.
 - `B143` — the parser plugin protocol rejects a field it does not define, as the metric and rule
   protocols already did.
+
+## Pool — from the v0.22 whole-codebase review
+
+What this review found and v0.22 fixed is in [CHANGELOG.md](CHANGELOG.md) and not repeated
+here. These are the items it measured and deliberately did not fix: two too large for the
+release, five that are judgement calls about invented thresholds rather than defects, and one
+file-size norm.
+
+- [ ] **B173 · `usage_record` is unbounded and has no measured bound anywhere** — M · solo —
+  measured on the maintainer's store: **1.31 MB/day over 44.7 days → ~476 MB/year**, with no
+  horizon, no automatic prune, and only a manual `clear --older-than` to reduce it. Today's big
+  table is the *bounded* one — `session_step` is capped at 30 days ≈ 102.0 MB steady state — and
+  the unbounded one crosses it in about 78 more usage-days and never comes back down. The rate is
+  one machine's; the unboundedness is structural. What makes this hard rather than a second
+  horizon: a usage record is the only thing a re-import can rebuild *and* the only thing a report
+  reads, so a retention rule has to answer what a five-year cost trend is worth against a store
+  nobody can carry. Deciding that is the work; the size is not in dispute.
+- [ ] **B174 · the team server has no retention, no size reporting and no reachable `doctor`** —
+  M · team — `internal/server/handlers.go` is the whole write path; there is no `Prune`, `Vacuum`,
+  `Size` or horizon anywhere under `internal/server/` or in `internal/cli/serve.go`. `compact`
+  takes `--db` but only reclaims free pages, and nothing server-side ever creates any. `doctor`
+  has **no `--db` flag at all**, so an operator cannot see size, reclaimable space or retention
+  for the store their whole team pushes into. `B173`'s answer probably decides this one's, since
+  a central store inherits every member's growth rate at once.
+- [ ] **B175 · `recovery`'s baseline contains the aftermath it is compared against** — S · solo —
+  `CostRatio` is `TokensPerTurnAfter / TokensPerTurn`, and the denominator counts every assistant
+  step *including* the aftermath windows. The sentence says "what a turn costs anywhere **else**
+  here"; the type's own doc says "anywhere **in** it" and is the accurate one. The ratio is
+  compressed toward 1.0, which is toward `CONTAINED` — a false green, in the direction that
+  flatters. Fix is to exclude the aftermath steps from the baseline and restate the figure;
+  measure the move on the real corpus before and after, because the size of the bias is the
+  whole question.
+- [ ] **B176 · `recovery`'s good/bad line is a picked number published as knowledge** — S · solo —
+  `recoveryExpensiveRatio = 1.5` decides the read, the takeaway and the gauge, and
+  `en_explain_sequence.go` states it to a reader as fact. Its sibling built in the same release
+  refuses to invent one and says why, deriving its line from the window's own median and MAD
+  (`edit_loops.go`). Mitigating, and why this is not filed as a defect: the constant is a *ratio
+  against the window*, not an absolute threshold, so it is scale-free in a way the items below
+  are not.
+- [ ] **B177 · a family of invented watch ceilings decides good/bad** — M · solo —
+  `turn_efficiency` (0.25), `rework` (0.15), `friction` (0.15, plus a bare `/0.33`),
+  `model_right_sizing` (300, 0.4), `context` (0.2), `explore_produce` (0.05), `cache` (0.5),
+  `model_fit` (0.8), `concentration` (0.2), `skill_economics` (0.5). None is derived from the
+  window's distribution and none cites a published definition. `burn-anomaly` shows the
+  alternative: `zThreshold = 3.5`, correctly attributed as the conventional MAD cutoff. The work
+  is not "tune them" — it is deciding, per metric, whether the line can be derived from the
+  window, cited from somewhere, or should be withdrawn in favour of a figure with no verdict
+  attached. A threshold nobody can source is a verdict assaio is not entitled to.
+- [ ] **B178 · `rhythm` publishes a WATCH verdict about one person's working hours** — S · solo —
+  `8`, `18`, `0.25`, `90min`, `0.15`. On a local store every session is one person's, so
+  "off-hours: 31% … marathons: 22% [WATCH]" is a workload judgement about an individual,
+  promotable to the top of the dashboard. The caveat at `rhythm.go:86` is true of a team store
+  and false of the default one, and the `8–18` boundary is never printed. This is close to the
+  Refusals below without crossing them; the honest options are a verdict-free descriptive read,
+  or a boundary the reader sets.
+- [ ] **B179 · `survival` prints a rate that is not comparable to itself across windows** — S ·
+  solo — survival is monotonic in commit age: `--since 7d` reads near 100% and `--since 365d`
+  far lower, on the same repository, because a young commit has had no time to be rewritten.
+  `renderSurvival` never says the rate is age-dependent, and the default 90d is one silent
+  arbitrary band. Either state the dependence beside the figure or report it per age bucket;
+  `B18`'s age-matching is the fuller answer and this is the disclosure that should not wait for
+  it.
+- [ ] **B180 · `throughput` reads growth in AI lines as a green verdict** — S · solo —
+  `readFor(ramping, "Ramping")` yields `Key: "good"` and `Purity` rises monotonically with the
+  line count, while `HowToRead` says "not a quality score". Colour, label and gauge all say more
+  lines is better. v0.22 made the claim legible — the read now states that it sits on the
+  **output** layer (ADR 0013) — and deliberately did not resolve whether a favourable verdict on
+  a rising line count should exist at all. `ROADMAP.md` calls promoting an output metric to an
+  outcome claim the most likely way this project starts lying, so the answer is probably a
+  neutral read with the trend as a figure, the shape `intent` already uses for a metric with no
+  unfavourable state.
+- [ ] **B181 · three files carry two responsibilities each** — S · solo —
+  `internal/digest/compare.go` (259 lines) holds the diff and a comparability engine that never
+  touches a `Mover`, and the package doc already names them as two → `comparability.go`.
+  `internal/cli/analyze.go` (231) holds the command and the input builder six other commands
+  call; the trace half was already extracted for this reason, and hiding a shared builder inside
+  one command's file is what produced the `metrics verify` plan-price bug v0.22 fixed →
+  `analyze_input.go`. `internal/parser/claude/steps.go` (233) holds the step recorder and
+  cross-platform target identity — UNC shares, drive letters, `gopath.Clean` vs `filepath` — a
+  pure function of two strings holding no recorder state → `target.go`. The five other files over
+  the budget were reviewed one by one and are each one responsibility; they stay.
+
+- [ ] **B182 · `report --format csv|json` still carries a `member` column** — S · both — the
+  `--by member` grouping is refused in every format, but the default `--by day` never reaches the
+  dimension check: `store.Usage` groups by member in SQL, `Build` copies it onto every `Row`, and
+  `RenderCSV`/`RenderJSON` emit it. On a central store `report --db team.db --format csv` is one
+  pivot away from the leaderboard the refusal exists to prevent, un-pseudonymized, and `report`
+  has no `--anonymize` flag where `dashboard` defaults to pseudonymous. Nothing is *ranked*, which
+  is why this is a decision rather than a defect: is `member` a data-export field or a report
+  field? If it stays, `report` needs the dashboard's default; if it goes, raw member data belongs
+  behind an explicit export. Either way the README's wording must match whichever holds.
+- [ ] **B183 · a step's `kind` cannot be corrected at all** — S · solo — `parser.StepKind` is
+  assaio's own classification of a tool call, and `restateStepSQL` does not touch it, so no path
+  including `backfill --full` can change a stored one. v0.22 moved `tokens` and `outcome` off the
+  rules that pinned them (`B116`); `kind` is the same class one step further, since it is not in
+  the restate to be pinned or assigned. Under the default 30-day horizon a wrong classification
+  ages out; under `trace.horizon_days: 0` it is permanent. The work is deciding whether the
+  current parse is the authority on it — the same question `granularity` answered yes to — and
+  adding the column if so.
 
 ## Refusals (will not build, regardless of demand)
 

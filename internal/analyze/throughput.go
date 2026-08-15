@@ -2,6 +2,8 @@ package analyze
 
 import (
 	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/layer"
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/report"
 )
 
@@ -25,9 +27,10 @@ func init() { Register(throughputValidator{}) }
 // whether the pace is picking up or cooling off week over week.
 type throughputValidator struct{}
 
-func (throughputValidator) Name() string     { return throughputName }
-func (throughputValidator) Title() string    { return throughputTitle }
-func (throughputValidator) Describe() string { return throughputDescribe }
+func (throughputValidator) Name() string       { return throughputName }
+func (throughputValidator) Title() string      { return throughputTitle }
+func (throughputValidator) Describe() string   { return throughputDescribe }
+func (throughputValidator) Layer() layer.Layer { return layer.Output } // the verdict is a line count and its trend
 
 // Trending: both figures below compare the recent span against the one before it, so the history
 // behind that earlier span is part of the claim (analyze.Trending).
@@ -38,6 +41,13 @@ func (throughputValidator) Analyze(in Input) Result {
 	r := Result{Name: throughputName, Title: throughputTitle, Describe: throughputDescribe, HowToRead: throughputHowToRead}
 	if len(in.Usage) == 0 {
 		r.noData("active days", "No usage in this window.")
+		return r
+	}
+	// The verdict is a line count, so a window whose sources record no line has no verdict to
+	// give. Summing them anyway printed "AI lines total: 0" under an output-layer read, which
+	// says the AI produced nothing rather than that nothing here counts what it produced.
+	if !report.AnySourceAnswers(in.Usage, parser.SignalLinesAdded) {
+		r.noData("active days", "No source in this window records a changed line, so output cannot be read from it.")
 		return r
 	}
 	// inv is still needed for Days (Totals carries no distinct-day count); TotalLinesAdded

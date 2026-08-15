@@ -7,7 +7,7 @@ body:
     attributes:
       label: AI tool
       description: Which AI coding tool or vendor should assaio connect to?
-      placeholder: e.g. Cursor, Windsurf, GitHub Copilot
+      placeholder: e.g. opencode, Aider, Windsurf
     validations:
       required: true
   - type: checkboxes

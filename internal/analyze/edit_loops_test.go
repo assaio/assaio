@@ -153,3 +153,28 @@ func figureNote(t *testing.T, r *Result, label string) string {
 	t.Fatalf("no figure labelled %q in %+v", label, r.Figures)
 	return ""
 }
+
+// TestEditLoopsProjectBarsAreDeterministicOnTiedRates is the determinism rule: byProject sorted on Rate alone,
+// over a slice built from map iteration. 2/10 and 3/15 are both 0.2 and editLoopsMinEdits is 10,
+// so ties are ordinary -- and the top-5 cut then changed between two runs over identical data.
+// The repo holds this line everywhere else (copilot.dominantModel, dashboard.TopProject,
+// cache.missCauseFigure).
+func TestEditLoopsProjectBarsAreDeterministicOnTiedRates(t *testing.T) {
+	p := repeatProfile{Judged: []repeatEdits{
+		{Project: "delta", Edits: 10, Repeats: 2},
+		{Project: "alpha", Edits: 15, Repeats: 3},
+		{Project: "charlie", Edits: 20, Repeats: 4},
+		{Project: "bravo", Edits: 10, Repeats: 5},
+	}}
+	want := []string{"bravo", "alpha", "charlie", "delta"}
+	for run := range 40 {
+		got := p.byProject()
+		names := make([]string, len(got))
+		for i := range got {
+			names[i] = got[i].Project
+		}
+		if strings.Join(names, ",") != strings.Join(want, ",") {
+			t.Fatalf("run %d ordered the tied projects %v, want %v", run, names, want)
+		}
+	}
+}

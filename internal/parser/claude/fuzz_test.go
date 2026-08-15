@@ -46,6 +46,12 @@ func FuzzParse(f *testing.F) {
 				r.CacheWriteTokens < 0 || r.ReasoningTokens < 0 || r.CacheWrite1hTokens < 0 {
 				t.Fatalf("negative token field: %+v", r)
 			}
+			// Vacuous while the Claude parser sets no reasoning, which is exactly when a gap
+			// opens unnoticed: the day it reads one, the invariant is already asserted.
+			if r.ReasoningTokens > r.OutputTokens {
+				t.Fatalf("reasoning %d exceeds the output %d it is part of: %+v",
+					r.ReasoningTokens, r.OutputTokens, r)
+			}
 			if r.CacheWrite1hTokens > r.CacheWriteTokens {
 				t.Fatalf("1h portion %d exceeds the cache write %d it is part of: %+v",
 					r.CacheWrite1hTokens, r.CacheWriteTokens, r)

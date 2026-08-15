@@ -3,6 +3,8 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/trace"
 )
@@ -27,9 +29,10 @@ func init() { Register(recoveryValidator{}) }
 // recoveryValidator reads what happens after something goes wrong in a sequence.
 type recoveryValidator struct{}
 
-func (recoveryValidator) Name() string     { return recoveryName }
-func (recoveryValidator) Title() string    { return recoveryTitle }
-func (recoveryValidator) Describe() string { return recoveryDescribe }
+func (recoveryValidator) Name() string       { return recoveryName }
+func (recoveryValidator) Title() string      { return recoveryTitle }
+func (recoveryValidator) Describe() string   { return recoveryDescribe }
+func (recoveryValidator) Layer() layer.Layer { return layer.Activity } // what a turn costs after a failed one
 
 // TraceScope declares the population: a person's own sessions. A sub-agent cannot abandon a run
 // on its own account -- it returns to whoever launched it -- and an SDK caller's one-shot has no

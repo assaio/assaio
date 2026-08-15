@@ -157,7 +157,7 @@ writes one JSON envelope to the plugin's <strong>stdin</strong>, closes it, and 
 <code>analyze --format json</code> shapes; only the version keys stay snake_case, matching the
 parser protocol's <code>assaio_plugin</code>):</p>
 <pre><code class="language-json">{
-  &quot;assaio_metric_input&quot;: 1,
+  &quot;assaio_metric_input&quot;: 2,
   &quot;now&quot;: &quot;2026-07-17T10:00:00Z&quot;,
   &quot;recentDays&quot;: 7,
   &quot;usage&quot;:    [{&quot;day&quot;:&quot;2026-07-16&quot;,&quot;tool&quot;:&quot;claude-code&quot;,&quot;model&quot;:&quot;...&quot;,&quot;project&quot;:&quot;...&quot;,
@@ -245,7 +245,7 @@ reshapes it says so explicitly (see <code>RELEASING.md</code>).</p>
 <p><strong>stdout</strong> — a one-line handshake, then exactly <strong>one</strong> JSON <code>Result</code> document
 (pretty-printed is fine; anything after it is a violation):</p>
 <ol>
-<li><code>{&quot;assaio_metric&quot;: 1, &quot;name&quot;: &quot;&lt;name&gt;&quot;}</code> — version must be <code>1</code>, <code>name</code> must equal
+<li><code>{&quot;assaio_metric&quot;: 2, &quot;name&quot;: &quot;&lt;name&gt;&quot;}</code> — version must be <code>1</code>, <code>name</code> must equal
 the configured name.</li>
 <li>One <code>Result</code> in the same shape <code>analyze --format json</code> emits — see <a href="https://assaio.dev/docs/metric-validator#what-a-validator-returns-result">What a validator
 returns: Result</a>. The wire <code>name</code> field is ignored:
@@ -359,7 +359,7 @@ with its reason.</p>
 absent means not recorded, and neither means zero.</strong> Before publishing a figure over any of
 them, check <code>answers</code> for whether the tools in this window record it at all, and declare the
 coverage you actually had.</p>
-<p>The envelope stays <code>assaio_metric_input: 1</code>: these fields are additive, and a plugin written
+<p>Those additions kept the envelope at <code>assaio_metric_input: 1</code>, because a plugin written
 against the earlier shape keeps working and simply ignores them.</p>
 <h2 id="what-the-boundary-enforces">What the boundary enforces</h2>
 <p>The honesty rules are enforced, not requested. A result that fails <strong>any</strong> check is
@@ -368,6 +368,13 @@ bare <code>analyze</code>/<code>dashboard</code> run a failing plugin is skipped
 the built-ins still render; an explicitly selected one (<code>analyze plugin:&lt;name&gt;</code>) is a
 hard error.</p>
 <ul>
+<li><code>layer</code> must be <code>activity</code>, <code>output</code>, <code>outcome</code> or <code>impact</code> — which of the four measurement
+layers your verdict rests on (ADR 0013). Required, because a built-in metric cannot compile
+without stating it and an extension surface weaker than the core it extends is not a surface.
+Declare what the <strong>verdict</strong> is a claim about: a figure inside the result may sit on a lower
+layer as context. <code>activity</code> is what happened (tokens, turns, tool calls, edits — cost too);
+<code>output</code> is what was produced (changed lines, commits, tests); <code>outcome</code> is whether it held
+(merged, survived, passed CI); <code>impact</code> is value delivered. Never relabel one as another.</li>
 <li><code>read.key</code> must be <code>good</code>, <code>watch</code>, or <code>neutral</code>; <code>read.label</code> non-empty, ≤ 16 chars.</li>
 <li><code>title</code> (≤ 80), <code>howToRead</code> and <code>takeaway</code> (≤ 400) are required; <code>describe</code> (≤ 200)
 and <code>caveats</code> (≤ 400 each, max 8) optional.</li>
@@ -406,11 +413,12 @@ for row in inp[&quot;usage&quot;]:
     if date.fromisoformat(row[&quot;day&quot;]).weekday() &gt;= 5:
         weekend += tokens
 
-print(json.dumps({&quot;assaio_metric&quot;: 1, &quot;name&quot;: &quot;weekend-usage&quot;}))
+print(json.dumps({&quot;assaio_metric&quot;: 2, &quot;name&quot;: &quot;weekend-usage&quot;}))
 
 if total == 0:
     print(json.dumps({
         &quot;title&quot;: &quot;Weekend Usage&quot;,
+        &quot;layer&quot;: &quot;activity&quot;,
         &quot;read&quot;: {&quot;key&quot;: &quot;neutral&quot;, &quot;label&quot;: &quot;—&quot;},
         &quot;howToRead&quot;: &quot;A rising weekend share can mean crunch time or just flexible hours -- read it next to team sentiment, not as a verdict on its own.&quot;,
         &quot;takeaway&quot;: &quot;No usage in this window.&quot;,
@@ -421,6 +429,7 @@ share = weekend / total
 watch = share &gt; 0.2
 print(json.dumps({
     &quot;title&quot;: &quot;Weekend Usage&quot;,
+    &quot;layer&quot;: &quot;activity&quot;,
     &quot;read&quot;: {&quot;key&quot;: &quot;watch&quot; if watch else &quot;good&quot;, &quot;label&quot;: &quot;WATCH&quot; if watch else &quot;LOW&quot;},
     &quot;purity&quot;: 1 - share,
     &quot;howToRead&quot;: &quot;A rising weekend share can mean crunch time or just flexible hours -- read it next to team sentiment, not as a verdict on its own.&quot;,
@@ -436,7 +445,7 @@ anything</strong> and prints the violations, if any, plus the rendered result:</
 <pre><code class="language-console">$ assaio-agent metrics verify weekend-usage
 weekend-usage: handshake OK
 result: VALID
-PLUGIN:WEEKEND-USAGE · Weekend Usage  [WATCH]
+PLUGIN:WEEKEND-USAGE · Weekend Usage  [WATCH]  (activity)
   ? A rising weekend share can mean crunch time or just flexible hours -- read it next to team sentiment, not as a verdict on its own.
   weekend token share: 34.2%
   Directional: a proxy for out-of-hours work, not a burnout measurement.

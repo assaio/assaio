@@ -249,6 +249,16 @@ button{font:inherit;}
 }
 
 /* prov stamp */
+.entry__layer{
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
+  border-top:1px solid var(--hairline);
+  padding-top:6px;
+  margin-top:2px;
+}
 .prov{
   display:inline-block;
   font:700 8.5px/1 var(--font-mono);
@@ -662,6 +672,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--{{.R.Read.Key}}">{{.R.Read.Label}}</span>
       {{if .R.Caveats}}<span class="prov">{{(locale).ProvLabel}}</span>{{end}}
     </div>
+    <span class="entry__layer" title="{{(locale).LayerHint}}">{{.R.Layer}}</span>
   </div>
   <div>
     {{if .R.HowToRead}}<p class="entry__howto">{{prose .R.HowToRead}}</p>{{end}}

@@ -59,7 +59,6 @@ func windowVerdicts(cmd *cobra.Command, cfg *config.Config, st *store.Store, sta
 	if err != nil {
 		return nil, nil, err
 	}
-	in.PlanMonthlyCost = cfg.Pricing.MonthlySubscriptionCost
 	verdicts = runValidatorResults(analyze.Validators(), &in)
 	plugins, failed := runMetricPlugins(cmd.Context(), cfg.Metrics, &in, cmd.ErrOrStderr())
 	return append(verdicts, plugins...), failed, nil

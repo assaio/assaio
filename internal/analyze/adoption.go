@@ -3,6 +3,8 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/report"
 )
@@ -30,9 +32,10 @@ func init() { Register(adoptionValidator{}) }
 // project/tool breadth, and whether usage is growing or shrinking week over week.
 type adoptionValidator struct{}
 
-func (adoptionValidator) Name() string     { return adoptionName }
-func (adoptionValidator) Title() string    { return adoptionTitle }
-func (adoptionValidator) Describe() string { return adoptionDescribe }
+func (adoptionValidator) Name() string       { return adoptionName }
+func (adoptionValidator) Title() string      { return adoptionTitle }
+func (adoptionValidator) Describe() string   { return adoptionDescribe }
+func (adoptionValidator) Layer() layer.Layer { return layer.Activity } // sessions, active days and breadth
 
 // Trending: both figures below compare the recent span against the one before it, so the history
 // behind that earlier span is part of the claim (analyze.Trending).

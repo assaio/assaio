@@ -65,6 +65,7 @@ func runBackfill(cmd *cobra.Command, opts ingest.Options) error {
 }
 
 func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
+	pruned := false
 	for _, r := range results {
 		cmd.Printf("%-12s  files=%d", r.Tool, r.Files)
 		if r.Unchanged != 0 {
@@ -76,6 +77,7 @@ func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
 		}
 		if r.PrunedSteps != 0 {
 			cmd.Printf("  steps-pruned=%d", r.PrunedSteps)
+			pruned = true
 		}
 		if r.Skipped != 0 {
 			cmd.Printf("  skipped=%d", r.Skipped)
@@ -84,5 +86,9 @@ func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
 			cmd.Printf("  failed=%d", r.Failed)
 		}
 		cmd.Println()
+	}
+	// Deleting rows frees pages inside the file without shrinking it.
+	if pruned {
+		cmd.Println("pruned steps free pages inside the store without shrinking it — run 'assaio-agent compact' to reclaim them")
 	}
 }

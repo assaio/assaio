@@ -247,6 +247,16 @@ button{font:inherit;}
 }
 
  
+.entry__layer{
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
+  border-top:1px solid var(--hairline);
+  padding-top:6px;
+  margin-top:2px;
+}
 .prov{
   display:inline-block;
   font:700 8.5px/1 var(--font-mono);
@@ -558,7 +568,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     
   </div>
-  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -585,7 +595,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--watch">
@@ -603,7 +613,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     
   </div>
-  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--good">
@@ -621,7 +631,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     
   </div>
-  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--good">
@@ -728,6 +738,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--good">STRONG</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">Breadth and growth show how far AI usage has spread across projects, not how good any of it is — a narrow or flat trend is a cue to invest in onboarding, not a mark against anyone.</p>
@@ -787,6 +798,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">A spike is a prompt to go look, not a fault: a migration or a long refactor legitimately burns more. What it rules out is a spike nobody noticed — a runaway loop, a re-ingested backfill, or an agent left running.</p>
@@ -840,6 +852,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--watch">WATCH</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">High cache reuse means repeated context is served cheaply from cache instead of re-billed as fresh input. It is a cost signal, not a quality one — a big one-shot task legitimately shows low reuse. Where a source states it, the lifetime a write bought and the vendor&#39;s own reason for a miss say which of those two a low share is.</p>
@@ -893,6 +906,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--watch">WATCH</span>
       
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">output</span>
   </div>
   <div>
     <p class="entry__howto">Concentration alone is neither good nor bad — one project can legitimately own the work. Read the gap instead: a project holding a far larger share of the tokens than of the AI-written lines is where spend is not converting into code.</p>
@@ -966,6 +980,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--watch">WATCH</span>
       
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">Frequent compaction means sessions are outgrowing their context window mid-task — worth trying shorter, more focused sessions rather than reading it as a quality problem.</p>
@@ -1025,6 +1040,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--good">SOLID</span>
       
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">Coverage is the honesty backbone — it says how much of every other figure rests on complete data. Low activity coverage means line and edit signals cover only part of your usage; low priced coverage means some cost is excluded, never a real zero.</p>
@@ -1086,6 +1102,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">—</span>
       
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">Going back to a file after running something is how work gets done — write, run, fix. The rate is a baseline, not a fault, which is why the finding is the session that sits far outside this window&#39;s own, not the rate itself.</p>
@@ -1105,6 +1122,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">Exploring is how an agent earns the right to write, so a high read share is not waste — unfamiliar or large codebases legitimately need more of it. What this flags is the extreme: a window that reads and searches endlessly and almost never writes.</p>
@@ -1130,6 +1148,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">Some failure is normal — an agent probes, a command exits non-zero, it adapts. A rising error rate is the useful signal: it usually means a broken command, a missing dependency, or a permission the agent keeps hitting, and every retry is paid for twice.</p>
@@ -1171,6 +1190,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">Intent is the one thing session logs never contain: what the work was for. Labels come from &#39;assaio-agent mark&#39; and let every other metric be filtered per kind of work, which is what makes &#34;did this hold up&#34; answerable instead of an average over research, refactors and greenfield features. This measures readiness to stratify, not diligence — an unlabeled session is fully counted everywhere and is never a failure.</p>
@@ -1200,6 +1220,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--watch">WATCH</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">High premium-model share isn&#39;t wrong, but routine edits and boilerplate are often just as good on cheaper models — a place to trim spend without losing output.</p>
@@ -1267,6 +1288,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">—</span>
       
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">A premium-model turn that emits only a handful of output tokens is often boilerplate or a quick answer a cheaper model handles as well. On a flat plan this is about speed and rate limits, not dollars. Task difficulty is invisible, so this is a prompt to look at a few, never a verdict.</p>
@@ -1286,6 +1308,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--good">LEAN</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">Reasoning tokens are billed as output. A high share means much of the model&#39;s work is internal deliberation, which can be overkill on routine tasks. Only some sources report it at all, so the coverage figure says how much of your output this even covers.</p>
@@ -1327,6 +1350,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">—</span>
       
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">Failure is normal; an agent probes and adapts. This asks whether recovering from one is expensive here — whether the turns after a failure cost more than the window&#39;s own turns — and names the sessions that stopped on one instead of getting past it.</p>
@@ -1346,6 +1370,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--good">LOW</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">output</span>
   </div>
   <div>
     <p class="entry__howto">Elevated rework or rejection flags friction worth a closer look at specific sessions, but the link between AI churn and real bugs is still contested, so treat it as a lead, not a verdict.</p>
@@ -1381,6 +1406,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">A signal about when the work happens, read across the whole window rather than attributed to an individual: a high off-hours share or frequent marathon sessions is a question about how work is scheduled, not a verdict on anyone&#39;s effort.</p>
@@ -1460,6 +1486,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">Conversational sessions are real work — design, debugging, and planning rarely touch files — so a high conversational share is not waste. This is a mix, not a scorecard: read it to understand how you use AI, not to push every session toward edits.</p>
@@ -1527,6 +1554,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">Shared skills and sub-agents are where a team&#39;s AI spend quietly concentrates. A skill burning a large share of the tokens is not a fault — research and review legitimately read a lot without writing — but it should be a deliberate choice rather than a surprise.</p>
@@ -1552,9 +1580,10 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">SET PLAN</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
-    <p class="entry__howto">This projects your window&#39;s API-equivalent cost onto a calendar month — the window&#39;s span in real days, not only the days you worked — and compares it against the flat plan price you configured. A high multiple means the plan is a bargain at your volume; below 1x means API pay-as-you-go might be cheaper. The API figure is an estimate at public prices, not your actual bill.</p>
+    <p class="entry__howto">This projects your API-equivalent cost onto a calendar month — across the days the projection rests on, not only the days you worked — and compares it against the flat plan price you configured. A high multiple means the plan is a bargain at your volume; below 1x means API pay-as-you-go might be cheaper. The API figure is an estimate at public prices, not your actual bill.</p>
     
     <div class="entry__stats">
       
@@ -1581,6 +1610,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--good">RAMPING</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">output</span>
   </div>
   <div>
     <p class="entry__howto">Lines added is an output-volume signal, not a quality score — read the trend alongside rework and model fit before deciding more code means more value.</p>
@@ -1642,6 +1672,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       <span class="entry__read entry__read--neutral">—</span>
       <span class="prov">Prov.</span>
     </div>
+    <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
     <p class="entry__howto">These are prompting-efficiency signals, not quality. A session that lands an edit in a turn or two is efficient; a long session can be deliberate, careful work. Task size is invisible here, so read it directionally, never as a per-person score.</p>
@@ -1749,7 +1780,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     
   </div>
-  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -1776,7 +1807,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--good">
@@ -1803,7 +1834,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="cell__read cell__read--neutral">—</span>
     
   </div>
-  <div class="gauge"><span class="gauge__fill" style="--fill:0.0%"></span></div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
 
 <div class="cell cell--good">

@@ -5,13 +5,19 @@ import (
 	"strconv"
 )
 
+// compactDecimals is the precision every tiered renderer prints a scaled value at. scaleTo
+// rounds to it and each renderer formats to it, from one constant, because the unit is chosen
+// from the value that will actually be printed -- rounding to one precision and printing at
+// another puts the ceiling back.
+const compactDecimals = 1
+
 // scaleTo divides v by base until the value that will actually be *printed* is below base,
 // and returns it with the index of the unit it reached. The rounding is what makes this
 // worth a function: choosing the unit from the raw value renders 999,999,999 as "1000.0M"
 // and 1,048,575 bytes as "1024.0 KB" -- a unit's ceiling stated in the unit below it.
 // steps bounds how far it may climb, so the caller never asks for a unit it has no name for.
-func scaleTo(v, base float64, decimals, steps int) (scaled float64, step int) {
-	for step < steps && roundTo(v, decimals) >= base {
+func scaleTo(v, base float64, steps int) (scaled float64, step int) {
+	for step < steps && roundTo(v, compactDecimals) >= base {
 		v /= base
 		step++
 	}

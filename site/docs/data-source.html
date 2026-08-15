@@ -269,7 +269,7 @@ and leave the rest at its zero value.</p>
 <td><code>ReasoningTokens</code></td>
 <td><code>int64</code></td>
 <td>Reasoning/thinking tokens, when reported separately.</td>
-<td>Recorded for transparency; whether they are billed separately is model-dependent.</td>
+<td>A <strong>subset</strong> of <code>OutputTokens</code>, never added to it — clamp with <code>parser.Subset</code>, and sum fields with <code>parser.SumNonNeg</code>, because plain <code>+</code> on int64 overflows into a negative that <code>NonNeg</code> then reads as zero. Recorded for transparency; whether they are billed separately is model-dependent.</td>
 </tr>
 <tr>
 <td><code>DedupeKey</code></td>
@@ -445,7 +445,9 @@ directory, uses <code>FuzzParseTask</code>). It seeds <code>f.Add</code> with th
 plus a few hand-written edge seeds (empty input, <code>{}</code>, a truncated JSON line, int64-max
 token values, invalid UTF-8), and asserts the parser's invariants on every returned
 record: <code>Parse</code> never panics (a non-nil error returns early, which is fine), <code>skipped &gt;= 0</code>,
-no token field is negative, <code>Tool</code> equals the package constant, and <code>DedupeKey</code> is
+no token field is negative, a field the log states as a portion of another stays inside it
+(<code>ReasoningTokens &lt;= OutputTokens</code>, <code>CacheWrite1hTokens &lt;= CacheWriteTokens</code>), <code>Tool</code> equals
+the package constant, and <code>DedupeKey</code> is
 non-empty. <code>make fuzz</code> runs each fuzzer for <code>FUZZTIME</code> (default <code>20s</code>); a discovered
 crasher is committed as a corpus file under <code>testdata/fuzz/</code> so it becomes a permanent
 regression seed.</p>

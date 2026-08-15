@@ -175,3 +175,72 @@ func TestEvaluateEmptyHistory(t *testing.T) {
 		t.Fatalf("want nil for no runs, got %+v", got)
 	}
 }
+
+// TestSkippedCanaryDoesNotDivideOneUnitByAnother holds the unit rule: Records counts emitted records, one
+// per API response and several lines each, while Skipped counts unreadable lines, undated
+// records and refused steps. Their sum is not a line count, so a 3% real skip rate reported
+// itself as 10.7% and cleared the threshold on arithmetic alone.
+func TestSkippedCanaryDoesNotDivideOneUnitByAnother(t *testing.T) {
+	healthy := run(5742, 40, 840, 0, 1)
+	// 200 files yielding 500 records and 60 unreadable lines: 0.3 skips per file, and the old
+	// share of Records+Skipped read 10.7%.
+	current := run(200, 200, 500, 60, 0)
+	if got := Evaluate(append(repeat(4, &healthy), current)); fired(got, Skipped) {
+		t.Fatalf("the skipped canary fired on a rate it computed from two different units: %+v", got)
+	}
+}
+
+// TestBarrenCanaryFiresOnlyOnASourceThatNeverYielded: a source that has always yielded zero has
+// a baseline of zero, so every history-comparing canary abstains and no sample floor changes
+// that -- verified by A/B on the real corpus with all four floors set to 1, where both builds
+// reported "no canary fired". The condition is the whole history rather than one run, because
+// Parsed counts files a run attempted: an incremental pass whose one changed input yields
+// nothing must not report a healthy source as barren.
+func TestBarrenCanaryFiresOnlyOnASourceThatNeverYielded(t *testing.T) {
+	healthy := run(6300, 40, 840, 0, 1)
+	cases := []struct {
+		name    string
+		history []store.SourceRun
+		current store.SourceRun
+		want    bool
+	}{
+		{
+			name:    "the live gemini-cli case: files found, nothing ever read out of them",
+			history: nil,
+			current: run(2, 2, 0, 0, 0),
+			want:    true,
+		},
+		{
+			name:    "a history of always yielding zero still fires",
+			history: repeat(4, &store.SourceRun{Tool: "gemini-cli", Discovered: 2, Parsed: 2}),
+			current: run(2, 2, 0, 0, 0),
+			want:    true,
+		},
+		{
+			name:    "an incremental pass whose one changed file yields nothing is not barren",
+			history: repeat(4, &healthy),
+			current: run(6300, 1, 0, 0, 0),
+			want:    false,
+		},
+		{
+			name:    "one record out is not barren",
+			history: nil,
+			current: run(2, 2, 1, 0, 0),
+			want:    false,
+		},
+		{
+			name:    "nothing discovered is the discovery canary's case, not this one",
+			history: nil,
+			current: run(0, 0, 0, 0, 0),
+			want:    false,
+		},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Evaluate(append(tt.history, tt.current))
+			if fired(got, Barren) != tt.want {
+				t.Fatalf("barren fired = %v, want %v; got %+v", fired(got, Barren), tt.want, got)
+			}
+		})
+	}
+}

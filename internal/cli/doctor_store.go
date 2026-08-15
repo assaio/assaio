@@ -2,10 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/assaio/assaio/internal/config"
 	"github.com/assaio/assaio/internal/drift"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -18,7 +20,7 @@ import (
 // canaries the whole --strict promise rests on never ran. The failure travels back as a
 // string so the caller can weigh it beside the other strict failures instead of deciding
 // doctor's exit code halfway down the report.
-func doctorStore(cmd *cobra.Command, home, dbPath string, since time.Time, window string, maxUnpricedShare float64) (warnings []drift.Warning, failures []string) {
+func doctorStore(cmd *cobra.Command, home, dbPath string, since time.Time, window string, maxUnpricedShare float64, traceHorizonDays int) (warnings []drift.Warning, failures []string) {
 	st, err := store.Open(dbPath)
 	if err != nil {
 		return nil, []string{doctorStoreFailure(cmd, "ERROR %v", err)}
@@ -35,6 +37,7 @@ func doctorStore(cmd *cobra.Command, home, dbPath string, since time.Time, windo
 	}
 	if h, stepErr := st.Steps(cmd.Context()); stepErr == nil && h.Steps > 0 {
 		cmd.Printf("timeline:     %s\n", stepHorizonLine(h))
+		cmd.Printf("              %s\n", traceHorizonNote(traceHorizonDays))
 	}
 	if oldest, histErr := st.HistoryStart(cmd.Context(), "claude-code"); histErr == nil {
 		cmd.Printf("retention:    %s\n", retentionLine(home, oldest, time.Now()))
@@ -71,4 +74,24 @@ func doctorStoreFailure(cmd *cobra.Command, format string, args ...any) string {
 	cmd.Printf("store:        %s\n", detail)
 	cmd.Println("drift:        not evaluated — the canaries need a readable store")
 	return "store: " + detail
+}
+
+// traceHorizonNote states the bound on the largest table assaio writes. A zero is honoured
+// deliberately and a negative one is rejected by Validate while a lenient load prunes at the
+// default, so the three cases read differently.
+//
+// The remedy names the horizon and nothing else: `clear --older-than` deletes usage records
+// first and steps second, so it would trade one table's growth for another's permanent history.
+func traceHorizonNote(days int) string {
+	switch {
+	case days > 0:
+		return "pruned past " + strconv.Itoa(days) + " day(s) on every ingest (trace.horizon_days)."
+	case days < 0:
+		return "trace.horizon_days is negative and was rejected; steps are pruned at the " +
+			strconv.Itoa(config.DefaultTraceHorizonDays) + "-day default. Set a valid value."
+	default:
+		return "trace.horizon_days is 0, so nothing prunes this table and it has no upper bound" +
+			" — it grew at a measured 3.40 MB/day on the maintainer's store. Set a horizon to bound it;" +
+			" `assaio-agent compact` then returns the freed pages."
+	}
 }

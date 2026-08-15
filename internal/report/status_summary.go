@@ -8,11 +8,6 @@ import (
 	"github.com/assaio/assaio/internal/humanize"
 )
 
-// statusCaveat states that the dashboard's efficiency signal is directional and scoped
-// to projects, never a per-person performance metric -- the deliberate difference from
-// a named team leaderboard.
-const statusCaveat = "Efficiency is directional and shown per project only -- never a per-person metric."
-
 // emptyStatusHint replaces the dashboard when the store holds no records at all.
 const emptyStatusHint = "No usage yet. Run 'assaio-agent backfill' to import months of local session logs, " +
 	"then 'assaio-agent status' shows your hottest projects and cost-per-line."
@@ -41,6 +36,11 @@ func RenderStatusSummary(w io.Writer, in *Insights) error {
 			return err
 		}
 	}
+	if note := LineCoverageDisclosure(&in.Inventory); note != "" {
+		if _, err := fmt.Fprintln(w, note); err != nil {
+			return err
+		}
+	}
 	if _, err := fmt.Fprintln(w, statusCaveat); err != nil {
 		return err
 	}
@@ -55,6 +55,10 @@ func RenderStatusSummary(w io.Writer, in *Insights) error {
 func RenderChurnLine(w io.Writer, c ChurnStat) error {
 	if c.Rows == 0 {
 		_, err := fmt.Fprint(w, "rework: not recorded by any source in this window — absent, not churn-free\n\n")
+		return err
+	}
+	if c.ExceedsItsWhole() {
+		_, err := fmt.Fprintf(w, "rework: %s\n\n", ChurnBoundaryNote(&c))
 		return err
 	}
 	_, err := fmt.Fprintf(w, "rework: %d lines reworked (%s of AI-added) — thrash proxy, within-session\n\n",
@@ -78,12 +82,26 @@ func writeHeadline(w io.Writer, in *Insights) error {
 			cost += "*"
 		}
 	}
-	ratio := "—"
+	lines, ratio := lineFigures(&inv)
+	_, err := fmt.Fprintf(w, "%s total · %s AI lines · %s/100 lines\n\n", cost, lines, ratio)
+	return err
+}
+
+// lineFigures renders the AI-line count and the $/100 ratio, withholding both when no source
+// in the window records a changed line at all. Summing LinesAdded with no capability gate and
+// formatting the result made a structural silence print as "0 AI lines" -- an AI that wrote
+// nothing rather than a source that never said (ADR 0011, applied throughout internal/analyze
+// and nowhere here). Gemini CLI and Cline answer no line signal, so their users read it daily.
+func lineFigures(inv *Inventory) (lines, ratio string) {
+	if inv.LineCapableRows == 0 {
+		return "—", "—"
+	}
+	lines = strconv.FormatInt(inv.TotalLinesAdded, 10)
+	ratio = "—"
 	if r := costPer100Lines(inv.TotalCost, inv.TotalLinesAdded); r != nil {
 		ratio = "$" + strconv.FormatFloat(*r, 'f', 4, 64)
 	}
-	_, err := fmt.Fprintf(w, "%s total · %d AI lines · %s/100 lines\n\n", cost, inv.TotalLinesAdded, ratio)
-	return err
+	return lines, ratio
 }
 
 func writeHotSection(w io.Writer, in *Insights) error {

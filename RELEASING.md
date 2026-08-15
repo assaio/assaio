@@ -28,9 +28,9 @@ The store applies migrations by **filename**:
 - **Before the first public release** — zero users, no shipped database anywhere — edit
   [`internal/store/migrations/0001_init.sql`](internal/store/migrations/0001_init.sql) in
   place. There is no upgraded DB to migrate, so a clean rebuild is the whole story.
-- **After the first public release, editing a shipped migration is forbidden.** Every
-  schema change **MUST** be a **new** file (`0002_*.sql`, `0003_*.sql`, …). Never touch a
-  migration that has already gone out in a release.
+- **After the first public release, a shipped migration is immutable in name and content.**
+  Every schema change **MUST** be a **new** file (`0002_*.sql`, `0003_*.sql`, …). Never edit
+  and never rename a migration that has already gone out in a release.
 
 Why this is a hard rule and not a style preference: an upgraded user's database already
 has `0001_init.sql` recorded as applied, so the runner **skips it** — your edited SQL
@@ -39,6 +39,17 @@ column that does not exist and breaks, while a fresh install works, making the b
 invisible in your own testing. A new `0002_*.sql` has a name the runner has never seen,
 so it runs exactly once on every database, new and old alike. A shipped migration is
 immutable — the same discipline as an immutable release tag.
+
+A **rename** is the worse half of the same rule and is easy to reach for while tidying: the
+runner has never seen the new name, so it re-executes a body it has already applied. `IF NOT
+EXISTS` guards the DDL and nothing guards the DML — re-running
+`0008_response_grain_claude.sql` moves every `claude-code` row into the archive table `doctor`
+describes as unreadable by any report, and then deletes the originals.
+
+`TestShippedMigrationsAreImmutableInNameAndContent` (`internal/store`) holds both halves: it
+carries a digest per shipped file and fails on an edit, a rename or a removal. Adding a
+migration means adding its digest in the same commit; changing a digest already listed is the
+thing this rule forbids.
 
 ## The changelog flow (exact, tag-coupled)
 

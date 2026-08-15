@@ -97,21 +97,20 @@ func TestSubpathsDistinctSessionCountNotRowCount(t *testing.T) {
 	}
 }
 
-// TestSubpathsKeepsMembersSeparate guards the central-store case: two members' rows for
-// the same subpath must not blend into one, and a session_id collision across members
-// (see TestSessionsSameSessionIDDifferentMembersStaySeparate) must not undercount
-// COUNT(DISTINCT session_id).
-func TestSubpathsKeepsMembersSeparate(t *testing.T) {
+// TestSubpathsSumAcrossMembers is the panel's own shape: it has a subpath column and no member
+// column, so one subpath is one row. Grouping in member printed the same subpath once per person,
+// each row holding one person's lines, and a reader took the top one for the subpath's total.
+func TestSubpathsSumAcrossMembers(t *testing.T) {
 	s := newStore(t)
 	ctx := context.Background()
 	ts := time.Date(2026, 7, 10, 10, 0, 0, 0, time.UTC)
 	_, err := s.Insert(ctx, []usage.Record{
 		{
-			Tool: "claude-code", SessionID: "shared", Timestamp: ts, Model: "m", DedupeKey: "alice:1", Granularity: "turn",
+			Tool: "claude-code", SessionID: "alice-1", Timestamp: ts, Model: "m", DedupeKey: "alice:1", Granularity: "turn",
 			Project: "web", Subpath: "apps/api", LinesAdded: 100, Member: "alice",
 		},
 		{
-			Tool: "claude-code", SessionID: "shared", Timestamp: ts, Model: "m", DedupeKey: "bob:1", Granularity: "turn",
+			Tool: "claude-code", SessionID: "bob-1", Timestamp: ts, Model: "m", DedupeKey: "bob:1", Granularity: "turn",
 			Project: "web", Subpath: "apps/api", LinesAdded: 50, Member: "bob",
 		},
 	})
@@ -123,18 +122,11 @@ func TestSubpathsKeepsMembersSeparate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 2 {
-		t.Fatalf("Subpaths = %+v, want 2 rows: one per member, even though subpath and session_id collide", rows)
+	if len(rows) != 1 {
+		t.Fatalf("Subpaths = %+v, want one row for one subpath", rows)
 	}
-	byMember := map[string]SubpathRow{}
-	for _, r := range rows {
-		byMember[r.Member] = r
-	}
-	if alice, ok := byMember["alice"]; !ok || alice.Lines != 100 || alice.Sessions != 1 {
-		t.Fatalf("alice row = %+v, ok=%v, want Lines=100 Sessions=1 (bob's lines must not blend in)", alice, ok)
-	}
-	if bob, ok := byMember["bob"]; !ok || bob.Lines != 50 || bob.Sessions != 1 {
-		t.Fatalf("bob row = %+v, ok=%v, want Lines=50 Sessions=1 (alice's lines must not blend in)", bob, ok)
+	if rows[0].Lines != 150 || rows[0].Sessions != 2 {
+		t.Fatalf("row = %+v, want Lines=150 Sessions=2 -- the subpath's own totals, not one member's", rows[0])
 	}
 }
 

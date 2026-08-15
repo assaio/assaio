@@ -40,6 +40,8 @@ assaio-agent reconcile usage.csv --map cost=amount,day=usage_date,model=sku
 Only `day` and `cost` are required. A non-USD export is refused rather than converted at a
 rate assaio would have to invent.
 
+An export over 64 MiB is refused rather than read — narrow the exported range and run it again.
+
 ## Reading the output
 
 **Scope comes first, and it is not a formality.** An export's window is almost never the

@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/assaio/assaio/internal/pricing"
+	"github.com/assaio/assaio/internal/store"
 )
 
 func cost(v float64) *float64 { return &v }
@@ -136,5 +140,45 @@ func TestRenderEmptyStatusHint(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Fatalf("empty status hint missing %q: %s", want, out)
 		}
+	}
+}
+
+// TestStatusWithholdsLinesFromASourceThatNeverRecordsThem is the same ADR 0011 rule on the
+// terminal dashboard: `%d AI lines` over a Gemini-only window printed "0 AI lines", and the
+// $/100 ratio built on it divided the whole window's cost by that fabricated zero.
+func TestStatusWithholdsLinesFromASourceThatNeverRecordsThem(t *testing.T) {
+	var buf bytes.Buffer
+	in := BuildInsights([]store.UsageRow{
+		{Day: "2026-08-15", Tool: "gemini-cli", Model: "gemini-2.5-pro", In: 1000, Out: 500},
+	}, pricing.Table{}, time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC), 7*24*time.Hour, 5)
+	if err := RenderStatusSummary(&buf, &in); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if strings.Contains(out, "0 AI lines") {
+		t.Fatalf("a structural silence rendered as a measured zero: %s", out)
+	}
+	if !strings.Contains(out, "— AI lines") {
+		t.Fatalf("want the AI-line figure withheld: %s", out)
+	}
+	if !strings.Contains(out, "absent, not zero") {
+		t.Fatalf("want the withheld figure to say why: %s", out)
+	}
+}
+
+// TestStatusDisclosesAPartialLineDenominator is B5: the cost in $/100 lines is the whole
+// window's while the lines come only from the sources that record them. `effectiveness` and
+// the dashboard colophon both said so; `status` printed the ratio with no disclosure at all.
+func TestStatusDisclosesAPartialLineDenominator(t *testing.T) {
+	var buf bytes.Buffer
+	in := BuildInsights([]store.UsageRow{
+		{Day: "2026-08-15", Tool: "claude-code", Model: "claude-opus-4-5", In: 1000, Out: 500, LinesAdded: 40},
+		{Day: "2026-08-15", Tool: "gemini-cli", Model: "gemini-2.5-pro", In: 4000, Out: 2000},
+	}, pricing.Table{}, time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC), 7*24*time.Hour, 5)
+	if err := RenderStatusSummary(&buf, &in); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "only from the sources that record them") {
+		t.Fatalf("want the ratio's two populations disclosed: %s", buf.String())
 	}
 }

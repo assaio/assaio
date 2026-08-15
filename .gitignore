@@ -1,4 +1,5 @@
-.claude/
+# .claude/ is tracked: it is the repo's harness config (see .claude/README.md).
+.claude/settings.local.json
 .superpowers/
 
 /bin/

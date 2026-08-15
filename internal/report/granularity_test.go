@@ -25,7 +25,7 @@ func TestAggregateMarksATotalThatBlendsGranularities(t *testing.T) {
 	got, err := Aggregate([]Row{
 		{Tool: "claude-code", Granularity: "turn", In: 100},
 		{Tool: "plugin:acme", Granularity: "session", In: 50},
-	}, "member")
+	}, "project")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestAggregateKeepsAUniformGranularity(t *testing.T) {
 	got, err := Aggregate([]Row{
 		{Tool: "claude-code", Granularity: "turn", In: 100},
 		{Tool: "codex", Granularity: "turn", In: 50},
-	}, "member")
+	}, "project")
 	if err != nil {
 		t.Fatal(err)
 	}

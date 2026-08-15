@@ -9,6 +9,9 @@ import (
 	"sort"
 	"time"
 
+	"github.com/assaio/assaio/internal/parser"
+	"github.com/assaio/assaio/internal/report"
+
 	"github.com/assaio/assaio/internal/analyze"
 )
 
@@ -34,8 +37,12 @@ type Snapshot struct {
 	UnpricedShare float64 `json:"unpricedShare"`
 	// UnpricedNote is the disclosure the cost surfaces print, stored verbatim so the digest
 	// quotes the same sentence rather than composing a second one around it.
-	UnpricedNote string            `json:"unpricedNote"`
-	Lines        int64             `json:"lines"`
+	UnpricedNote string `json:"unpricedNote"`
+	Lines        int64  `json:"lines"`
+	// LinesCapable reports whether any source in the window records a changed line. False means
+	// Lines is an absence, not a zero -- and this is the one surface written to be read out of
+	// context, where the reader cannot check (ADR 0011).
+	LinesCapable bool              `json:"linesCapable"`
 	Sessions     int               `json:"sessions"`
 	Models       map[string]int64  `json:"models"`
 	Projects     map[string]int64  `json:"projects"`
@@ -69,12 +76,13 @@ func Take(in *analyze.Input, results []analyze.Result, opts Options) Snapshot {
 		Version: SnapshotVersion, TakenAt: at, Window: window, ParsedBy: in.ParsedBy,
 		Tokens: in.Totals.Tokens, Cost: in.Totals.Cost, Priced: in.Totals.Priced,
 		UnpricedShare: opts.UnpricedShare, UnpricedNote: unpricedNote,
-		Lines:      in.Totals.Lines,
-		Sessions:   len(in.Sessions),
-		Models:     make(map[string]int64, len(in.ByModel)),
-		Projects:   make(map[string]int64, len(in.ByProject)),
-		Verdicts:   make(map[string]string, len(results)),
-		Confidence: make(map[string]string, len(results)),
+		Lines:        in.Totals.Lines,
+		LinesCapable: report.AnySourceAnswers(in.Usage, parser.SignalLinesAdded),
+		Sessions:     len(in.Sessions),
+		Models:       make(map[string]int64, len(in.ByModel)),
+		Projects:     make(map[string]int64, len(in.ByProject)),
+		Verdicts:     make(map[string]string, len(results)),
+		Confidence:   make(map[string]string, len(results)),
 	}
 	for _, m := range in.ByModel {
 		s.Models[m.Model] = m.Tokens

@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/assaio/assaio/internal/analyze"
+	"github.com/assaio/assaio/internal/layer"
 )
 
 // Metric-result contract limits. Counts and lengths bound what a plugin can push onto
@@ -72,6 +73,12 @@ func validateMetricResult(r *analyze.Result) []string {
 	case "good", "watch", "neutral":
 	default:
 		vs = append(vs, fmt.Sprintf("read.key %q is not one of good|watch|neutral", r.Read.Key))
+	}
+	// Required, not optional: the core forces every built-in metric to state its layer with a
+	// compile error, and an extension surface weaker than the core it extends is the failure
+	// B155 named. A plugin verdict with no layer is exactly the hole ADR 0013 closes.
+	if !layer.Valid(r.Layer) {
+		vs = append(vs, fmt.Sprintf("layer %q is not one of activity|output|outcome|impact", r.Layer))
 	}
 	vs = checkText(vs, "read.label", r.Read.Label, maxMetricLabelLen, true)
 	vs = checkText(vs, "title", r.Title, maxMetricTitleLen, true)

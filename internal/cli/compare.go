@@ -62,8 +62,7 @@ func runCompare(cmd *cobra.Command, st *store.Store, since, by string) error {
 // covering one extra bucket. The floor is the midnight of prior's first bucket, so that
 // bucket is whole rather than a partial slice from the current time of day.
 func compareWindow(now time.Time, days int) (priorStart time.Time, cutoff string) {
-	u := now.UTC()
-	midnight := time.Date(u.Year(), u.Month(), u.Day(), 0, 0, 0, 0, time.UTC)
+	midnight := startOfUTCDay(now)
 	priorStart = midnight.AddDate(0, 0, -(2*days - 1))
 	cutoff = midnight.AddDate(0, 0, -(days - 1)).Format("2006-01-02")
 	return priorStart, cutoff

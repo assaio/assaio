@@ -52,13 +52,13 @@ func TestReportDBFlagOpensAlternateStore(t *testing.T) {
 	var out bytes.Buffer
 	root.SetOut(&out)
 	root.SetErr(&out)
-	root.SetArgs([]string{"report", "--db", altDB, "--by", "member", "--format", "csv"})
+	root.SetArgs([]string{"report", "--db", altDB, "--by", "model", "--format", "csv"})
 	if err := root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 	got := out.String()
-	if !strings.Contains(got, "alice") || !strings.Contains(got, "bob") {
-		t.Fatalf("report --db must read the alternate store's members: %q", got)
+	if !strings.Contains(got, "claude-opus-4-5") || !strings.Contains(got, ",150,210,") {
+		t.Fatalf("report --db must read the alternate store's rows: %q", got)
 	}
 
 	root2 := NewRootCmd()

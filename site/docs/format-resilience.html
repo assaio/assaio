@@ -209,8 +209,8 @@ exactly what an honesty-first tool must not do silently.</p>
 <h2 id="detection--three-channels">Detection — three channels</h2>
 <ol>
 <li>
-<p><strong>Local canaries, automatic.</strong> After every <code>backfill</code>, each source is judged against
-its own recent history:</p>
+<p><strong>Local canaries, automatic.</strong> After every <code>backfill</code>, four of the five judge a source
+against its own recent history, and one judges a condition:</p>
 <table>
 <thead>
 <tr>
@@ -232,24 +232,36 @@ its own recent history:</p>
 </tr>
 <tr>
 <td><code>skipped</code></td>
-<td>at least a tenth of the lines read fail to unmarshal</td>
-<td>50 skipped lines</td>
+<td>skips average one or more per file read</td>
+<td>50 skipped inputs</td>
 </tr>
 <tr>
 <td><code>zero-token</code></td>
 <td>at least a quarter of parsed records carry no tokens at all</td>
 <td>50 records</td>
 </tr>
+<tr>
+<td><code>barren</code></td>
+<td>files are found and no run on record has read a usage record out of them</td>
+<td>nothing — the condition is absolute</td>
+</tr>
 </tbody>
 </table>
 <p>The design rules behind those numbers matter more than the numbers: the baseline is a
 <strong>median</strong> of recent runs, so one odd pass cannot move it; every comparison is a
 <strong>ratio</strong>, so an incremental pass that read four files stays comparable to a full one
-that read six thousand; and every canary has a <strong>sample floor</strong> below which it says
-nothing, because a share computed from a handful of records is not evidence. A source
-with no files — an exec plugin — is judged only by the two canaries that need none.</p>
-<p>A breach prints <code>warning: possible format drift in &lt;tool&gt;</code> and appears in <code>doctor</code>'s
-drift section; <code>doctor --strict</code> turns it into an exit code for cron or CI. While a
+that read six thousand; and every canary that computes a share has a <strong>sample floor</strong>
+below which it says nothing, because a share computed from a handful of records is not
+evidence. A source with no files — an exec plugin — is judged only by <code>zero-token</code>, the
+one canary that needs none.</p>
+<p><code>barren</code> is the exception to all of it, and deliberately so: a comparison cannot see a
+source that never worked, because its baseline is zero and there is no drop to detect.
+That was measured, not assumed — setting all four sample floors to <code>1</code> and re-running
+the real corpus fired nothing on either build. It reads the whole history rather than
+one run, because an ordinary incremental pass whose single changed input yields nothing
+is not a barren source.</p>
+<p>A breach prints <code>warning: possible format drift in &lt;tool&gt;</code> — or, for <code>barren</code>, <code>warning: nothing read from a detected source</code>, because a condition is not a diagnosis — and appears
+in <code>doctor</code>'s drift section; <code>doctor --strict</code> turns it into an exit code for cron or CI. While a
 source's discovery canary is lit, its per-input ingest state is frozen rather than
 pruned: &quot;the files are gone&quot; and &quot;we stopped finding them&quot; are indistinguishable, and
 the state is the evidence.</p>

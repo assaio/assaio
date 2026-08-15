@@ -1,8 +1,10 @@
 package reconcile
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -100,5 +102,26 @@ func TestOverridesWinOverAliases(t *testing.T) {
 	}
 	if exp.Rows[0].Cost != 9.99 {
 		t.Fatalf("cost = %v, want the overridden column's 9.99", exp.Rows[0].Cost)
+	}
+}
+
+// TestReadFileRefusesATruncatedExport is the truncation defect: io.LimitReader's spare byte was there and nothing
+// compared against it, so csv.Reader saw the cut as a clean end of file. Skipped stayed 0, no
+// Limits entry was written, and every row past the cut was reported as Unexplained -- the one
+// number this command exists to produce, inflated by a file it silently stopped reading.
+func TestReadFileRefusesATruncatedExport(t *testing.T) {
+	defer func(v int64) { maxExportBytes = v }(maxExportBytes)
+	maxExportBytes = 64
+
+	var b strings.Builder
+	b.WriteString("date,cost\n")
+	for i := 1; i <= 20; i++ {
+		fmt.Fprintf(&b, "2026-08-%02d,1.00\n", i)
+	}
+	path := writeTemp(t, "usage.csv", b.String())
+	if _, err := ReadFile(path, nil); err == nil {
+		t.Fatal("an export past the size bound must be an error, never a partial reconciliation")
+	} else if !strings.Contains(err.Error(), "larger than") {
+		t.Fatalf("the error must name the bound it hit, got %q", err)
 	}
 }

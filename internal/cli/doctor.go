@@ -63,7 +63,7 @@ reach it.`,
 			if err != nil {
 				return err
 			}
-			warnings, storeFailures := doctorStore(cmd, home, dbPath, since, cfg.Since, cfg.Pricing.UnpricedCeiling())
+			warnings, storeFailures := doctorStore(cmd, home, dbPath, since, cfg.Since, cfg.Pricing.UnpricedCeiling(), cfg.Trace.HorizonDays)
 
 			models, snapshotDate := pricing.Info()
 			cmd.Printf("pricing:      %d models, snapshot %s (refresh ships with releases)\n", models, snapshotDate)

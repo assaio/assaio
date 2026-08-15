@@ -152,6 +152,15 @@ func (p *repeatProfile) byProject() []repeatEdits {
 			out = append(out, *r)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Rate() > out[j].Rate() })
+	// Rate alone is not a total order over a map-iteration-ordered slice: 2/10 and 3/15 both
+	// give 0.2 and editLoopsMinEdits is 10, so ties are ordinary and the top-5 cut changed
+	// between identical runs. The name settles them, as it does in copilot.dominantModel,
+	// dashboard.TopProject and cache.missCauseFigure.
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Rate() != out[j].Rate() {
+			return out[i].Rate() > out[j].Rate()
+		}
+		return out[i].Project < out[j].Project
+	})
 	return out
 }

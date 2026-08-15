@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 
 	"github.com/assaio/assaio/internal/parser"
@@ -39,9 +41,10 @@ func init() { Register(rhythmValidator{}) }
 // the longest focused stretches run.
 type rhythmValidator struct{}
 
-func (rhythmValidator) Name() string     { return rhythmName }
-func (rhythmValidator) Title() string    { return rhythmTitle }
-func (rhythmValidator) Describe() string { return rhythmDescribe }
+func (rhythmValidator) Name() string       { return rhythmName }
+func (rhythmValidator) Title() string      { return rhythmTitle }
+func (rhythmValidator) Describe() string   { return rhythmDescribe }
+func (rhythmValidator) Layer() layer.Layer { return layer.Activity } // when sessions run
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (rhythmValidator) Analyze(in Input) Result {

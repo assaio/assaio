@@ -68,3 +68,20 @@ all in the shipping PR.
 - [ADR 0005](adr/0005-exec-rule-plugin-protocol.md) — exec plugin protocol for
   out-of-tree **rules** (verdicts on stdin → severity alerts), why `check` is their only
   host, and why the gate fails closed.
+- [ADR 0006](adr/0006-session-annotations.md) — session annotations are **closed-vocabulary
+  labels**, never free text, and they never leave the machine.
+- [ADR 0007](adr/0007-canonical-event-contract.md) — the canonical **event contract** the
+  evidence graph is built on.
+- [ADR 0008](adr/0008-signal-catalog.md) — the **signal catalog**: what assaio can report,
+  what a zero means, and which sources can answer each one.
+- [ADR 0009](adr/0009-local-git-evidence-collector.md) — the local **git evidence
+  collector** observes commits and stores none of their content.
+- [ADR 0010](adr/0010-attribution-conformance-corpus.md) — the **attribution conformance
+  corpus** defines an honest session→commit link before an engine exists.
+- [ADR 0011](adr/0011-capability-gated-metrics.md) — a metric reads only the sources that
+  record its field, so a structural silence never averages in as a zero.
+- [ADR 0012](adr/0012-session-step-timeline.md) — the **session step timeline**: what a
+  session did in what order, why it carries an integer rather than a path, and why its
+  retention horizon is load-bearing.
+- [ADR 0013](adr/0013-measurement-layers.md) — every figure states its **measurement
+  layer**, so an output figure can never be read as an outcome claim.

@@ -50,8 +50,9 @@ Full detail, including the exact fields extracted: [PRIVACY.md](PRIVACY.md).
 
 **The optional team server** (`serve` + `sync`) pools a team's usage on infrastructure you
 stand up. It is the one piece that uses the network — the guarantee above is about the local
-analysis. Team views stay aggregated and pseudonymized by default; a per-member view is a
-deliberate, governed opt-in, never a surveillance leaderboard.
+analysis. Team views stay aggregated and pseudonymized by default, and the per-member row shows
+engagement only — output and spend are the team's. Nothing is ranked per named individual: `--by member` is refused rather than
+caveated, in table, JSON and CSV alike.
 
 ## Install
 
@@ -113,9 +114,10 @@ log your AI coding tools have written — often months of data.
 
 ```console
 $ assaio-agent backfill
-claude-code   files=3  records=4  inserted=4
+claude-code   files=3  records=4  inserted=4  steps=9
 codex         files=1  records=1  inserted=1
 gemini-cli    files=0  records=0  inserted=0
+copilot-cli   files=0  records=0  inserted=0
 cline         files=0  records=0  inserted=0
 ```
 
@@ -194,8 +196,7 @@ Two commands build on that:
   **top movers** — which projects' cost and AI lines rose or fell vs. the previous equal
   window.
 
-What comes next — vendor billing reconciliation (estimate vs. real invoice), tiered
-pricing, a status-line one-liner — is in [ROADMAP.md](ROADMAP.md).
+What comes next is in [ROADMAP.md](ROADMAP.md).
 
 ## What assaio measures — and what it doesn't (yet)
 
@@ -245,7 +246,7 @@ for something to hand a teammate, and `doctor` when a number looks wrong.
 | `demo`     | Print the full reports on bundled sample data — no logs needed, the 60-second first look. |
 | `init`     | First run: show what will be read, import it, write the report, name what to run next. |
 | `backfill` | Import all historical local session logs into the store. |
-| `report`   | Print a token/cost report. `--since 7d`, `--by day\|project\|tool\|model\|entrypoint\|member`, `--format table\|json\|csv`, `--compare` for period-over-period top movers. |
+| `report`   | Print a token/cost report. `--since 7d`, `--by day\|project\|tool\|model\|entrypoint\|task\|outcome\|difficulty`, `--format table\|json\|csv`, `--compare` for period-over-period top movers. |
 | `effectiveness` | Print AI output vs. cost — AI lines, edits, rejections, and **`$`/100 AI lines** — per project. Same `--since`, `--by`, `--format`, `--compare` flags (defaults to `--by project`). A directional, per-project diagnostic. |
 | `analyze` | Run metric validators — adoption, model fit, context health, throughput, rework, plus any configured [metric plugins](docs/extending/metric-plugin.md) — and print each one's directional report, led by the few findings **worth a week's attention** with the reasons that ordered them. A window with nothing worth acting on says so instead of promoting the least weak read. `--since`, `--format text\|json`, `--list`, or pass `[name...]` to run a subset. |
 | `check`    | Exit non-zero when usage exceeds a budget — `--max-tokens N` (plan-independent default) or `--max-cost N` (labeled API-equivalent) — or when a configured [rule plugin](docs/extending/rule-plugin.md) raises an `error` alert. A CI / pre-push gate. |
@@ -253,8 +254,9 @@ for something to hand a teammate, and `doctor` when a number looks wrong.
 | `serve`    | Run the self-hosted **team server**: collects usage pushed by teammates' `sync` and serves the aggregated, pseudonymized-by-default team dashboard. |
 | `sync`     | Push this machine's local usage to a team server — pseudonymous by default, `--member` is an explicit opt-in to a real name. |
 | `doctor`   | Show detected tools, log locations, store inventory and size, format-drift canaries, how much of your store the price table cannot cost, and accuracy caveats. `--strict` exits non-zero for cron/CI — including when too much of the store carries no model price for `$` to mean anything (`pricing.max_unpriced_share`, default 5%). |
+| `survival` | Read the local git history beside your AI usage: how much of a repository's recent work still lives in `HEAD`. Directional and age-dependent by construction — a short window reads near 100% because its commits have had no time to be rewritten — so it is a lead, never a productivity figure. `--since`, `--repo`. |
 | `status`   | A terminal overview: inventory, headline `$`/100 lines, hottest projects, and what's going stale — projects only. `--since`. |
-| `statusline` | Print **one ambient line** for an editor or shell status bar: today's tokens, AI lines, cost basis, and how fresh the data is. The day is your machine's local day. Read-only, and never fails loudly — see [automation](docs/automation.md#option-c--claude-code-session-hooks-for-statusline). |
+| `statusline` | Print **one ambient line** for an editor or shell status bar: today's tokens, AI lines where a source records them, cost basis, and how fresh the data is. The day is your machine's local day. Read-only, and never fails loudly — see [automation](docs/automation.md#option-c--claude-code-session-hooks-for-statusline). |
 | `explain`  | Print a metric's **long-form page** — what it measures, how to read it, what to do about it, and its limits. Needs no store, so it works before your first import; no argument lists every metric. |
 | `mark`     | Label a session with what the work actually was — task class, outcome, difficulty. Category values only, never free text, and never sent by `sync`. Defaults to the newest session in the repository you are standing in; `--last`, an id prefix, `--list`, `--unmark`. Every metric can then be read per kind of work. **`--suggest`** derives a label from what the store already recorded — branch, skill, sub-agent, entrypoint — and shows the evidence for each; **`--accept-suggested`** writes them, never replacing one made by hand. The derivation is a rule engine: add your own convention under `labels.rules`, and a repository with no convention yields nothing rather than a guess. |
 | `digest`   | Write markdown saying what **moved** since the last digest — totals, per-model and per-project movers, verdict changes — fit for cron or launchd, with delivery left to your own script. States when the comparison is weak: overlapping windows, windows of different lengths, or a parser that changed between the runs and therefore corrected history underneath the numbers. `--weekly`, `--since`, `--dry-run`. |
@@ -333,8 +335,8 @@ table shows `—`, JSON reports `"cost": null`, CSV leaves the cell empty, the r
 excluded from the `TOTAL`, and the footnote states what share of the window's tokens the
 cost could not see. Wrong-but-precise numbers are worse than an honest blank.
 
-More tools (opencode, Aider, Factory droid, Cursor) are on the
-[roadmap](ROADMAP.md).
+More sources — opencode, Aider, Qwen, Roo & Kilo Code — are on the
+[roadmap](ROADMAP.md), and buildable out-of-tree today.
 
 ## Adapt it to your organization
 
@@ -356,7 +358,8 @@ Go API, so they survive core refactors. An in-process Go API is still ahead; see
 ## Status and roadmap
 
 `assaio` is pre-1.0 and already reaches well past an offline token reporter: five parsers,
-nineteen metric validators that each carry a confidence envelope, format-drift canaries, a
+twenty-one metric validators that each carry a confidence envelope and state which
+measurement layer they sit on, format-drift canaries, a
 published source-depth matrix, offline reconciliation against a vendor's own export, the
 offline **Assay** dashboard, and a self-hosted team-server MVP.
 [FEATURES.md](FEATURES.md) is the maintained inventory, with the release each capability

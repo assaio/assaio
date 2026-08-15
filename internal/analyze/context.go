@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"github.com/assaio/assaio/internal/layer"
 	"github.com/assaio/assaio/internal/report"
 )
 
@@ -25,9 +26,10 @@ func init() { Register(contextValidator{}) }
 // contexts got, focused active time, and how often sessions had to compact.
 type contextValidator struct{}
 
-func (contextValidator) Name() string     { return contextName }
-func (contextValidator) Title() string    { return contextTitle }
-func (contextValidator) Describe() string { return contextDescribe }
+func (contextValidator) Name() string       { return contextName }
+func (contextValidator) Title() string      { return contextTitle }
+func (contextValidator) Describe() string   { return contextDescribe }
+func (contextValidator) Layer() layer.Layer { return layer.Activity } // how often sessions hit compaction
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (contextValidator) Analyze(in Input) Result {
@@ -45,7 +47,7 @@ func (contextValidator) Analyze(in Input) Result {
 	r.Figures = contextFigures(&stats, in.Sessions)
 	if stats.Compacting == 0 {
 		r.Read = noDataRead
-		r.Purity = 0.5
+		r.Purity = neutralPurity
 		r.Takeaway = "No source in this window marks a context compaction, so context health cannot be read from it."
 		r.Caveats = []string{contextCoverageCaveat(&stats)}
 		return r

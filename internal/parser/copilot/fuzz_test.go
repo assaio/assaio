@@ -32,6 +32,12 @@ func FuzzParse(f *testing.F) {
 				r.LinesAdded < 0 || r.LinesRemoved < 0 {
 				t.Fatalf("negative count in %+v", r)
 			}
+			// Reasoning is a subset of output, never re-added for cost (usage.Record). Two
+			// independently read fields can invert the two.
+			if r.ReasoningTokens > r.OutputTokens {
+				t.Fatalf("reasoning %d exceeds the output %d it is part of: %+v",
+					r.ReasoningTokens, r.OutputTokens, r)
+			}
 			if r.Model == "" || r.DedupeKey == "" {
 				t.Fatalf("record without identity: %+v", r)
 			}

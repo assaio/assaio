@@ -14,11 +14,11 @@ func writeSignals(b *strings.Builder, signals []Signal) {
 <strong>What a zero means</strong> is part of the declaration, because "no rework happened" and
 "this source never recorded rework" are different facts. <em>Sources</em> names the shipped
 parsers that can answer it; an empty column is a signal nothing in the tree produces yet.`)
-	t := newTable(b, "signals", "Id", "Unit", "Status", "Grains", "A zero means", "What it is", "Sources")
+	t := newTable(b, "signals", "Id", "Unit", "Layer", "Status", "Grains", "A zero means", "What it is", "Sources")
 	for i := range signals {
 		s := &signals[i]
 		t.row("signal."+s.ID,
-			cell("m", s.ID), cell("", s.Unit), cell("", s.Status),
+			cell("m", s.ID), cell("", s.Unit), cell("dim", s.Layer), cell("", s.Status),
 			cell("dim", strings.Join(s.Grains, " ")),
 			cell("dim", s.ZeroMeans), cell("", s.Describe),
 			cell("dim", join(s.Sources)))
@@ -50,11 +50,14 @@ func writeValidators(b *strings.Builder, validators []Validator) {
 each one file in the codebase and each printing a directional verdict with its caveat. A
 <em>window</em>-scoped read cannot honestly be narrowed to one project — a flat plan price or
 attribution pooled across every project is a fact about the whole window — so the dashboard's
-project drill-down skips those rather than recomputing them over a slice.`)
-	t := newTable(b, "validators", "Name", "Title", "Scope", "What it reads")
+project drill-down skips those rather than recomputing them over a slice. <em>Layer</em> is which
+of the four measurement layers the verdict rests on — activity, output, outcome or impact — and it
+is never relabelled (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0013-measurement-layers.md">ADR 0013</a>).`)
+	t := newTable(b, "validators", "Name", "Title", "Layer", "Scope", "What it reads")
 	for _, v := range validators {
 		t.row("validator."+v.Name,
-			cell("m", v.Name), cell("", v.Title), cell("dim", v.Scope), cell("", v.Describe))
+			cell("m", v.Name), cell("", v.Title), cell("dim", v.Layer), cell("dim", v.Scope),
+			cell("", v.Describe))
 	}
 	t.close()
 	b.WriteString(`</section>`)

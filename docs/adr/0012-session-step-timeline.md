@@ -66,7 +66,18 @@ reading.
 **The timeline is bounded by a horizon, and the bound is load-bearing.** Measured on the
 maintainer's store after a full rebuild: 335,527 steps against 178,016 records (1.88 stored
 steps per record), and 101.9 MB of table and indexes against `usage_record`'s 58.3 MB — roughly
-1.7x the table it describes. The row multiplier alone said the growth was modest and that
+1.7x the table it describes.
+
+> **Correction, v0.22.0.** That 1.88 is not age-matched, and neither is the 1.7x. `session_step`
+> is pruned to 30 days and `usage_record` is not, so dividing their totals compares a bounded
+> table against an unbounded one — the comparison this project's own honesty rules forbid for bug
+> density. Over the 30 days both tables cover, the real figures are **2.19 steps per record** and
+> **1.99x** the bytes; per day of coverage the timeline costs 3.40 MB against 1.31 MB. The
+> understatement is 15–50% depending on which reading you take. The sentence above and the same
+> claim in `migrations/0012_session_step.sql` are left as they shipped, because a shipped
+> migration is immutable in name and content (`RELEASING.md`) and an ADR records the decision as
+> it was made; `store.PruneSteps` carries the corrected figure, and it is the comment a reader of
+> the retention code lands on. The row multiplier alone said the growth was modest and that
 reading was wrong: bytes are dominated by per-row overhead and indexes, not column count. `trace.horizon_days` defaults to
 30, which is also all that can ever be rebuilt: Claude Code deletes transcripts at 30 by
 default. An explicit `0` means keep everything and is honoured rather than coerced.

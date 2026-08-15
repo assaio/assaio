@@ -89,6 +89,7 @@ func runClear(cmd *cobra.Command, req clearRequest) error {
 	} else {
 		cmd.Printf("clearing %s\n", dbPath)
 	}
+	printLabelWarning(cmd, st, req)
 	// Labels first: their scope is read from the usage records the clear is about to
 	// remove, so asking afterwards would find nothing to scope by.
 	if err := clearLabels(cmd, st, req, before); err != nil {
@@ -144,6 +145,28 @@ func clearCutoff(olderThan string) (time.Time, error) {
 		return time.Time{}, nil
 	}
 	return parseSinceAt(olderThan, time.Now())
+}
+
+// printLabelWarning names what --labels is about to take. A notice, not consent -- `--yes` is
+// already required -- whose value is that the count appears before the deletion: unscoped
+// --labels is a bare DELETE, and no re-import rebuilds a label a person typed.
+func printLabelWarning(cmd *cobra.Command, st *store.Store, req clearRequest) {
+	if !req.labels {
+		return
+	}
+	n, err := st.LabelCount(cmd.Context())
+	if err != nil {
+		cmd.Println("could not count the session labels this will delete; they are unrecoverable either way")
+		return
+	}
+	if n == 0 {
+		return
+	}
+	if !req.targetsUsage() {
+		cmd.Printf("--labels with no other scope: deleting all %s session label(s); no re-import can rebuild them\n", humanize.Int(n))
+		return
+	}
+	cmd.Printf("--labels: up to %s session label(s) in scope; no re-import can rebuild them\n", humanize.Int(n))
 }
 
 // clearLabels deletes the annotations when --labels was passed, and otherwise says how many

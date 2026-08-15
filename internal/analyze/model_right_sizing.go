@@ -3,6 +3,8 @@ package analyze
 import (
 	"strconv"
 
+	"github.com/assaio/assaio/internal/layer"
+
 	"github.com/assaio/assaio/internal/humanize"
 )
 
@@ -26,9 +28,10 @@ func init() { Register(rightSizeValidator{}) }
 // cheaper or faster model might have handled -- as candidates to review, not a verdict.
 type rightSizeValidator struct{}
 
-func (rightSizeValidator) Name() string     { return rightSizeName }
-func (rightSizeValidator) Title() string    { return rightSizeTitle }
-func (rightSizeValidator) Describe() string { return rightSizeDescribe }
+func (rightSizeValidator) Name() string       { return rightSizeName }
+func (rightSizeValidator) Title() string      { return rightSizeTitle }
+func (rightSizeValidator) Describe() string   { return rightSizeDescribe }
+func (rightSizeValidator) Layer() layer.Layer { return layer.Activity } // premium turns whose output tokens were small
 
 // WindowScoped: TurnSizing is per-model across the window, with no project dimension.
 func (rightSizeValidator) WindowScoped() {}
