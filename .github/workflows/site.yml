@@ -38,7 +38,7 @@ jobs:
   noversion:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: The site names no version
         run: |
           set -euo pipefail
@@ -78,7 +78,7 @@ jobs:
   selfcontained:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: The site fetches nothing at render time
         run: |
           set -euo pipefail
@@ -124,7 +124,7 @@ jobs:
   servedpaths:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Every internal link names a path the host serves
         run: |
           set -euo pipefail
@@ -152,7 +152,7 @@ jobs:
   sharecard:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: The page carries a share card, and the card exists
         run: |
           set -euo pipefail
