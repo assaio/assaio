@@ -21,6 +21,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-08-15
+
 Round two of the correctness lockdown: a whole-codebase review, then a four-reviewer pass over
 the fixes, which overturned three of them. What that second pass changed is recorded here rather
 than quietly corrected, because a fix written from a wrong cause is the failure this release
@@ -2070,7 +2072,8 @@ exists to stop.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/assaio/assaio/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/assaio/assaio/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/assaio/assaio/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/assaio/assaio/compare/v0.18.0...v0.19.0
