@@ -239,7 +239,7 @@ function chrome(top) {
   lim.lines.forEach((l, i) => x.fillText(l, u(M), u(DH() - 50 + i * 22)));
 }
 
-const band = () => [170, DH() - 150];
+const band = () => [170, DH() - 186];
 const ease = p => 1 - Math.pow(1 - Math.min(1, Math.max(0, p)), 3);
 
 // SETTLE is the share of a scene its animation may use. Everything lands by then and the
@@ -387,38 +387,46 @@ function scRays(pRaw) {
 
 function scProfile(pRaw) {
   const p = q(pRaw); bg(); chrome('where the slack is');
-  const rowH = ts(112);
-  const line = fitText(A.Profile.Line || '', u(COLW), 2, ts(44), ts(28), 600);
   const [t, b] = band();
-  column([
-    { h: A.Profile.Axes.length * rowH, draw: y => {
-        A.Profile.Axes.forEach((ax, i) => {
-          const a = ease((p - i * .06) / .42); if (a <= 0) return;
-          const py = y + i * rowH;
-          x.save(); x.globalAlpha = a;
-          const col = ax.Reserve ? AMBER : FG;
-          font(ts(25), 400); const avw = mw(ax.Value);
-          atFit(ax.Left + ' — ' + ax.Right, M, py + ts(28), COLW - avw - ts(30), col, ts(29), 600);
-          at(ax.Value, 1080 - M, py + ts(28), ax.Reserve ? AMBER : DIM, ts(25), 400, 'right');
-          x.fillStyle = 'rgba(237,231,220,.16)';
-          x.fillRect(u(M), u(py + ts(50)), u(COLW), u(ts(9)));
-          x.fillStyle = ax.Reserve ? AMBER : '#3E8B79';
-          x.beginPath(); x.arc(u(M) + u(COLW) * ax.At * a, u(py + ts(54.5)), u(ts(16)), 0, 7); x.fill();
-          x.restore();
-        });
-      } },
-    { h: A.Profile.Line ? ts(34) + line.lines.length * line.size * 1.25 + ts(52) : 0, draw: y => {
-        if (!A.Profile.Line) return;
-        x.globalAlpha = ease((p - .55) / .4);
-        at(('reserve · ' + A.Profile.Title + ' · every card has one').toUpperCase(), M, y + ts(22), AMBER, ts(22), 500);
-        drawFit(line, M, y + ts(34) + line.size, AMBER, line.size * 1.25);
-        if (A.Profile.Caveats.length) {
-          const cav = fitText(A.Profile.Caveats[0], u(COLW), 2, ts(20), ts(15), 400);
-          cav.lines.forEach((l, i) => { font(cav.size, 400); x.fillStyle = FAINT; x.fillText(l, u(M), u(y + ts(34) + line.size + line.lines.length * line.size * 1.25 + ts(14) + i * cav.size * 1.35)); });
-        }
-        x.globalAlpha = 1;
-      } },
-  ], ts(56), t, b);
+  // fitColumn, not column: this is the densest scene, and on a square it is genuinely taller
+  // than the band. Centring an oversized stack starts it at the top and runs it out of the
+  // bottom -- which is how the caveat ended up printed over assaio.dev and the limit line.
+  fitColumn(k => {
+    const rowH = ts(112) * k;
+    const line = fitText(A.Profile.Line || '', u(COLW), 2, ts(44) * k, ts(26) * k, 600);
+    const cav = A.Profile.Caveats.length ? fitText(A.Profile.Caveats[0], u(COLW), 3, ts(19) * k, ts(13) * k, 400) : null;
+    const cavH = cav ? ts(16) * k + cav.lines.length * cav.size * 1.32 : 0;
+    return [
+      { h: A.Profile.Axes.length * rowH, draw: y => {
+          A.Profile.Axes.forEach((ax, i) => {
+            const a = ease((p - i * .06) / .42); if (a <= 0) return;
+            const py = y + i * rowH;
+            x.save(); x.globalAlpha = a;
+            const col = ax.Reserve ? AMBER : FG;
+            font(ts(25) * k, 400); const avw = mw(ax.Value);
+            atFit(ax.Left + ' — ' + ax.Right, M, py + ts(28) * k, COLW - avw - ts(30) * k, col, ts(29) * k, 600);
+            at(ax.Value, 1080 - M, py + ts(28) * k, ax.Reserve ? AMBER : DIM, ts(25) * k, 400, 'right');
+            x.fillStyle = 'rgba(237,231,220,.16)';
+            x.fillRect(u(M), u(py + ts(50) * k), u(COLW), u(ts(9) * k));
+            x.fillStyle = ax.Reserve ? AMBER : '#3E8B79';
+            x.beginPath(); x.arc(u(M) + u(COLW) * ax.At * a, u(py + ts(54.5) * k), u(ts(16) * k), 0, 7); x.fill();
+            x.restore();
+          });
+        } },
+      { h: A.Profile.Line ? ts(34) * k + line.lines.length * line.size * 1.25 + cavH : 0, draw: y => {
+          if (!A.Profile.Line) return;
+          x.globalAlpha = ease((p - .55) / .4);
+          at(('reserve · ' + A.Profile.Title + ' · every card has one').toUpperCase(), M, y + ts(22) * k, AMBER, ts(22) * k, 500);
+          drawFit(line, M, y + ts(34) * k + line.size, AMBER, line.size * 1.25);
+          if (cav) {
+            const top = y + ts(34) * k + line.lines.length * line.size * 1.25 + ts(16) * k;
+            font(cav.size, 400); x.fillStyle = FAINT;
+            cav.lines.forEach((l, i) => x.fillText(l, u(M), u(top + (i + 1) * cav.size * 1.32)));
+          }
+          x.globalAlpha = 1;
+        } },
+    ];
+  }, ts(56), t, b);
 }
 
 function scLedger(pRaw) {

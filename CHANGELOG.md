@@ -21,6 +21,23 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-08-17
+
+### Fixed
+
+- **`share`: the profile frame printed its own caveat over the card's footer.** The block
+  declared a fixed allowance for a line that wraps, so on a 1:1 reel the axis disclaimer ran
+  past the body band and landed on `assaio.dev`, the hashtag and the limit line — the three
+  things that exist to qualify everything above them. The scene now sizes itself to the space
+  it has, the way the poster already did, so an oversized stack shrinks instead of overflowing.
+- **`share`: the suggested post is formatted for where it gets pasted.** It used padded
+  columns and indented commands, which line up in a terminal and in nothing else; composers
+  that strip blank lines on paste then collapsed it into one wall of text. Every line now
+  stands on its own, the two commands are one unindented line, and **assaio.dev** is named in
+  the post rather than only inside the install command — a reader who wants to know what
+  produced the numbers before running anything needs somewhere to go that is not a shell.
+
+
 ## [0.23.0] - 2026-08-17
 
 ### Added
@@ -2110,7 +2127,8 @@ exists to stop.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.23.1...HEAD
+[0.23.1]: https://github.com/assaio/assaio/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/assaio/assaio/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/assaio/assaio/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/assaio/assaio/compare/v0.20.0...v0.21.0
