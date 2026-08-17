@@ -5,6 +5,10 @@
 /bin/
 /dist/
 assaio-dashboard.html
+assaio-share.html
+assay-poster.png
+assay.mp4
+assay.webm
 *.db
 *.db-wal
 *.db-shm

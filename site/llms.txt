@@ -33,6 +33,8 @@ What a weekly loop looks like: `backfill` imports, `analyze` prints the reads wo
 itself is weak, and `mark --suggest` derives a session's labels from what the logs already hold
 instead of asking anyone to type them.
 
+Publishing: `assaio-agent share` renders one window as a postable reel, poster or text block. Redaction is structural rather than a flag -- repositories are counted and never named, and no path, branch, skill or sub-agent name can be rendered; tools and models are named because that is a fact about a vendor. It makes no network request.
+
 Privacy posture: prompts and file contents are never read or stored — the parsers extract
 token counts, model names, timestamps, session ids and activity counts only. Line counts
 come from diff `+`/`-` markers; the code on those lines is counted, never kept. There is no

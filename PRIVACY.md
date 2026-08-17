@@ -243,7 +243,7 @@ requirements.
 ## Network
 
 The core analysis commands — `backfill`, `report`, `effectiveness`, `analyze`, `status`,
-`dashboard`, `reconcile` — make **no network calls**. The model price table is embedded into the binary
+`dashboard`, `share`, `reconcile` — make **no network calls**. The model price table is embedded into the binary
 at build time, so every report works fully offline; nothing is fetched, uploaded, or
 phoned home.
 
@@ -252,7 +252,15 @@ The two **optional team commands are the exception**, and only run when you invo
 runs that server. Both talk only to infrastructure **you** stand up and point them at (see
 below). If you never run them, `assaio` never touches the network.
 
-## Sharing a dashboard
+`assaio-agent share` is not an exception to this — it makes no request, and neither does the
+page it writes. It is the one command that **starts another program**: after writing the file
+it asks your desktop to open it (`open`, `xdg-open`, `rundll32`), which launches your browser.
+That is the only program `assaio` ever launches, and `--no-open` writes the file and stops.
+
+## Sharing a dashboard, and sharing an assay
+
+`assaio` writes two shareable artifacts, and their guarantees differ. Read this section before
+generalizing from one to the other.
 
 `assaio-agent dashboard` writes a single self-contained HTML file — all styling is inline,
 with no external fonts, scripts, or requests, so it renders offline and phones nowhere.
@@ -260,10 +268,25 @@ Because that file is meant to be shared, it **pseudonymizes project names by def
 (a stable `project-xxxx` label); pass `--no-anonymize` to keep real names. The interactive
 CLI tables always show real names — the setting governs only the shareable export.
 
+`assaio-agent share` is the artifact built *for* publication, and its redaction is
+**structural rather than a flag** — there is no `--no-anonymize` equivalent, because no field
+it renders can hold a repository, member, path, branch, skill or sub-agent name. Repositories
+appear only as a count, labelled *never named*; an out-of-tree parser's tool label collapses to
+`a plugin source`, since that name comes from your own config rather than from a vendor. Tools
+and models **are** named, deliberately: which coding agent and which model ran is a fact about a
+vendor, not about you. The preview page is self-contained — inline CSS, one inline script, no
+external font, image or request — and the PNG, MP4 or WebM it offers are produced in your own
+browser from a canvas and saved by your own download. Nothing is transmitted at any point.
+
 ## Telemetry
 
 None. No usage pings, no analytics, no crash reporting. The agent does not know we
 exist and does not tell us it ran.
+
+One distinction worth stating, because a card makes it look otherwise: a card you choose to
+post carries the project's hashtag and its install line **on the image**, deliberately, so a
+re-shared image keeps them. That is a caption `assaio` wrote, not a signal it sent, and it
+travels only if you post it.
 
 ## The optional team server
 

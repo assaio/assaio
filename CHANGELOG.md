@@ -21,6 +21,44 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-08-17
+
+### Added
+
+- **`assaio-agent share` — an assay fit to post in public** (`B149`). Renders one window as a
+  square reel (1:1 or 9:16) that walks through the numbers, an archetype drawn from the *shape*
+  of the work rather than its volume, and a fingerprint of the window's sessions; a still
+  **poster** for anyone who wants an image rather than a video; the ready-to-paste post text
+  beside them; and `--format text` for a block that survives SSH and pastes into a review or a
+  README. Run it with no flags: an empty store imports the local logs first, so a fresh install
+  reaches a finished card in one command with nothing to configure. The preview is a local,
+  self-contained file that makes no network request — the PNG and the video are produced in your
+  own browser and saved by your own download.
+
+  **Redaction is the feature, not a flag.** No field the renderer can reach holds a repository,
+  member, path, branch, skill or sub-agent name, so there is no `--no-anonymize` equivalent to
+  get wrong; repositories appear only as a count, and an out-of-tree parser's tool label
+  collapses to `a plugin source` because that string comes from your own config rather than from
+  a vendor. Tools and models *are* named, deliberately: which coding agent and which model ran is
+  a public fact about a vendor, not about a person.
+
+  **Nothing on a card originates here.** Every figure is quoted from what `analyze` already
+  published for the same window — including its exact formatting, so a shared `92.6%` cannot
+  become a reported `93%` — and every rendered frame carries the measurement layer it rests on,
+  whether the cost figure is complete or a floor, and a sample-data marker under `--demo`. The
+  archetype carries no percentile and no rank: that would need a population, and there is none.
+
+  Two halves of `B149` did not ship. The token/cost **trend** is `B184`. The sorted spend
+  distribution across repositories was dropped rather than deferred: ordering and proportions are
+  what someone who knows the setup reads a pseudonym back out of, which is the same reason that
+  item refuses pseudonyms.
+
+### Changed
+
+- The vendored LiteLLM price table is refreshed to its 2026-08-17 snapshot (20 models added since
+  the previous one).
+
+
 ## [0.22.0] - 2026-08-15
 
 Round two of the correctness lockdown: a whole-codebase review, then a four-reviewer pass over
@@ -2072,7 +2110,8 @@ exists to stop.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/assaio/assaio/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/assaio/assaio/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/assaio/assaio/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/assaio/assaio/compare/v0.19.0...v0.20.0

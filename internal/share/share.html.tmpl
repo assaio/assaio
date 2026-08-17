@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>assaio share — preview</title>
+<style>
+:root{
+  --ink:#14120F; --paper:#EFEAE1; --teal:#3E8B79; --teal-lift:#4F9E8B; --amber:#B06E33;
+  --bg:#0C0B09; --fg:#EDE7DC; --dim:#9C9486; --faint:#6E675C;
+  --rule:rgba(237,231,220,.15); --rule-soft:rgba(237,231,220,.07);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scrollbar-color:var(--faint) transparent}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--mono);
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+::selection{background:var(--teal-lift);color:var(--ink)}
+:focus-visible{outline:2px solid var(--teal-lift);outline-offset:3px;border-radius:2px}
+h1{margin:0;font-size:1rem;font-weight:600;letter-spacing:-.02em}
+.bar{border-bottom:1px solid var(--rule);padding:.9rem 1.5rem;display:flex;align-items:center;gap:.7rem}
+.bar svg{flex:none}
+.bar span{margin-left:auto;font-size:.72rem;color:var(--faint);letter-spacing:.06em}
+.wrap{max-width:74rem;margin-inline:auto;padding:2rem 1.5rem 4rem;
+  display:grid;grid-template-columns:minmax(0,1fr) 19rem;gap:2.5rem;align-items:start}
+@media (max-width:60rem){.wrap{grid-template-columns:1fr}}
+.stageBox{display:grid;justify-items:center;gap:.9rem}
+canvas{width:100%;max-width:32rem;height:auto;border-radius:3px;
+  box-shadow:0 18px 44px -18px rgba(0,0,0,.6),0 2px 6px -2px rgba(0,0,0,.4);background:var(--ink)}
+canvas.tall{max-width:19rem}
+.ticks{display:flex;gap:.3rem;width:100%;max-width:32rem}
+.ticks.tall{max-width:19rem}
+.ticks i{flex:1;height:3px;border-radius:2px;background:var(--rule);overflow:hidden}
+.ticks i b{display:block;height:100%;width:0;background:var(--teal-lift)}
+.hint{font-size:.7rem;color:var(--faint);letter-spacing:.08em}
+aside{display:grid;gap:1.4rem;align-content:start}
+.h{font-size:.62rem;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.seg{display:flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden;margin-top:.5rem}
+.seg button{flex:1;appearance:none;background:none;border:0;border-right:1px solid var(--rule);
+  color:var(--dim);font:inherit;font-size:.7rem;padding:.45rem .2rem;cursor:pointer;transition:.18s}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--teal-lift);color:var(--ink)}
+.seg button:hover:not([aria-pressed="true"]){color:var(--fg);background:var(--rule-soft)}
+.btn{display:flex;align-items:center;gap:.55rem;width:100%;appearance:none;border:1px solid var(--rule);
+  background:none;color:var(--fg);font:inherit;font-size:.78rem;padding:.6rem .7rem;border-radius:2px;
+  cursor:pointer;text-align:left;transition:.18s}
+.btn:hover{border-color:var(--fg);background:var(--rule-soft)}
+.btn.pri{background:var(--teal-lift);border-color:var(--teal-lift);color:var(--ink);font-weight:600}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.5;cursor:progress}
+.leak{border:1px dashed var(--rule);border-radius:2px;padding:.7rem .8rem;font-size:.68rem;line-height:1.6;color:var(--dim)}
+.leak b{color:var(--teal-lift)}
+.leak s{color:var(--faint)}
+textarea{width:100%;min-height:13rem;resize:vertical;background:var(--rule-soft);color:var(--fg);
+  border:1px solid var(--rule);border-radius:2px;padding:.7rem;font:inherit;font-size:.74rem;line-height:1.7}
+pre{margin:0;overflow-x:auto;background:var(--rule-soft);border:1px solid var(--rule);border-radius:2px;
+  padding:1rem;font-size:.72rem;line-height:1.5;color:var(--fg)}
+.fine{font-size:.68rem;line-height:1.65;color:var(--faint);max-width:32rem}
+.fine li{margin-bottom:.3rem}
+.say{font-size:.7rem;color:var(--teal-lift);min-height:1.2em}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <svg width="17" height="17" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 28 10v12L16 29 4 22V10z" fill="none" stroke="#4F9E8B" stroke-width="2.5"/><circle cx="16" cy="16" r="4" fill="#4F9E8B"/></svg>
+  <h1>assaio share</h1>
+  <span>local file · nothing has left this machine</span>
+</div>
+
+<div class="wrap">
+  <div>
+    <div class="stageBox">
+      <div class="ticks" id="ticks"></div>
+      <canvas id="c" width="1080" height="1080"></canvas>
+      <div id="textOut" hidden style="width:100%"><pre id="textPre"></pre></div>
+      <p class="hint" id="hint">1080 × 1080 · MP4 · loops</p>
+    </div>
+    <ul class="fine">{{range .Fine}}<li>{{.}}</li>{{end}}</ul>
+  </div>
+
+  <aside>
+    <div>
+      <div class="h">Format</div>
+      <div class="seg" id="fmt">
+        <button type="button" data-fmt="square" aria-pressed="true">reel 1:1</button>
+        <button type="button" data-fmt="tall">reel 9:16</button>
+        <button type="button" data-fmt="poster">poster</button>
+        <button type="button" data-fmt="text">text</button>
+      </div>
+    </div>
+    <div>
+      <div class="h">What leaves this machine</div>
+      <div class="leak">
+        <b>✓ models, tools, counts, shares</b><br>
+        <s>✗ repository names → a count only</s><br>
+        <s>✗ paths, branches, skill and sub-agent names</s><br>
+        <s>✗ prompts and source code — never read</s>
+      </div>
+    </div>
+    <div style="display:grid;gap:.45rem">
+      <button class="btn pri" id="save" type="button">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M8 1.5v9m0 0 3.2-3.2M8 10.5 4.8 7.3M1.5 12v1.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V12"/></svg>
+        <span id="saveLabel">Save the reel</span>
+      </button>
+      <button class="btn" id="copyImg" type="button">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="5.5" y="1.5" width="9" height="9" rx="1.5"/><path d="M10.5 13.5v1a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h1"/></svg>
+        <span id="copyLabel">Copy this frame</span>
+      </button>
+      <button class="btn" id="copyTxt" type="button">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h7"/></svg>
+        Copy the post
+      </button>
+      <p class="say" id="say"></p>
+      <p class="hint" style="line-height:1.7">No platform lets a link attach media, so posting is paste — <b style="color:var(--dim)">⌘V</b> in the composer.</p>
+    </div>
+    <div>
+      <div class="h">Post</div>
+      <textarea id="post" spellcheck="false">{{.Post}}</textarea>
+    </div>
+  </aside>
+</div>
+
+<script>
+const A = {{payload .}};
+const PAL = ['#4F9E8B', '#3E8B79', '#2F6D5F', '#B06E33', '#6E675C'];
+const INK = '#14120F', FG = '#EDE7DC', DIM = '#9C9486', FAINT = '#6E675C', AMBER = '#B06E33';
+const MONO = '"SF Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+const c = document.getElementById('c'), x = c.getContext('2d');
+let W = 1080, H = 1080, tall = false, poster = false;
+
+// Design units are always 1080 wide; u() maps them to the canvas. DH is the canvas height
+// in those same units, which is what makes one layout serve 1:1 and 9:16: a scene places
+// its blocks against the height it actually has instead of against a constant, so the
+// taller format gets more breathing room rather than 840px of dead space at the bottom.
+const u = v => v * W / 1080;
+const DH = () => H * 1080 / W;
+const M = 68;
+const COLW = 1080 - M * 2;
+// Type grows where there is room to grow into. A 9:16 canvas is 78% taller at the same
+// width, so a size tuned for the square leaves the story a centred island in a lot of
+// empty ink -- measured at 15% of the band filled against the square's 24%.
+const ts = v => v * (tall ? 1.35 : 1);
+
+// mw measures text in design units rather than canvas pixels, so a width budget reads the
+// same on both formats.
+const mw = t => x.measureText(t).width * 1080 / W;
+
+// atFit draws t at the largest size that fits maxw. Labels sit opposite right-aligned
+// numbers, and a model name long enough to reach the number would otherwise overprint it.
+function atFit(t, px, py, maxw, col, size, weight, align) {
+  let s = size;
+  for (; s > 12; s -= 1) { font(s, weight); if (mw(t) <= maxw) break; }
+  at(t, px, py, col, s, weight, align);
+}
+
+function font(size, weight) { x.font = (weight || 400) + ' ' + u(size) + 'px ' + MONO; }
+function at(t, px, py, col, size, weight, align) {
+  font(size, weight); x.fillStyle = col; x.textAlign = align || 'left';
+  x.fillText(t, u(px), u(py)); x.textAlign = 'left';
+}
+
+// breakLines splits t at the current font. Everything is measured, nothing guessed: the
+// text on a card is somebody's real model names and real numbers, and a layout tuned to
+// one machine's figures overflows on the next one's.
+function breakLines(t, maxw) {
+  const words = String(t).split(' ');
+  const out = []; let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (x.measureText(test).width > maxw && line) { out.push(line); line = w; }
+    else line = test;
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+// fitText finds the largest size at which t fits maxLines. This is what makes a block's
+// height knowable before it is drawn, and a knowable height is what stops one block
+// landing on top of the next -- the collision the first poster shipped with.
+function fitText(t, maxw, maxLines, from, to, weight) {
+  for (let size = from; size >= to; size -= 2) {
+    font(size, weight);
+    const lines = breakLines(t, maxw);
+    if (lines.length <= maxLines) return { size, lines };
+  }
+  font(to, weight);
+  return { size: to, lines: breakLines(t, maxw).slice(0, maxLines) };
+}
+
+function drawFit(f, px, py, col, lead) {
+  x.fillStyle = col;
+  font(f.size, f.weight || 600);
+  f.lines.forEach((line, i) => x.fillText(line, u(px), u(py + i * (lead || f.size * 1.2))));
+  return f.lines.length * (lead || f.size * 1.2);
+}
+
+// column centres a stack of blocks in the usable band. Each block states its own height,
+// so the band absorbs the difference between a square and a story instead of any single
+// block having to know which one it is in.
+function column(blocks, gap, top, bottom) {
+  const total = blocks.reduce((n, b) => n + b.h, 0) + gap * (blocks.length - 1);
+  let y = top + Math.max(0, (bottom - top - total) / 2);
+  for (const b of blocks) { b.draw(y); y += b.h + gap; }
+  return total;
+}
+
+// fitColumn is column for a band that must actually constrain rather than merely position.
+// Centring alone does not: when the stack is taller than the band it starts at the top and
+// runs straight out of the bottom, which is how the poster's reserve line ended up printed
+// over its own footer. build(k) rebuilds every block at scale k, and the largest k that
+// fits wins -- so a crowded window gets tighter type instead of overlapping type.
+function fitColumn(build, gap, top, bottom) {
+  for (let k = 1; k >= 0.62; k -= 0.03) {
+    const blocks = build(k);
+    const total = blocks.reduce((n, b) => n + b.h, 0) + gap * k * (blocks.length - 1);
+    if (total <= bottom - top) { column(blocks, gap * k, top, bottom); return k; }
+  }
+  column(build(0.62), gap * 0.62, top, bottom);
+  return 0.62;
+}
+
+function bg() {
+  x.fillStyle = INK; x.fillRect(0, 0, W, H);
+  const g = x.createRadialGradient(W / 2, H * 0.26, 0, W / 2, H * 0.26, Math.max(W, H) * 0.8);
+  g.addColorStop(0, 'rgba(79,158,139,.15)'); g.addColorStop(1, 'rgba(79,158,139,0)');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+}
+
+function chrome(top) {
+  at(String(top).toUpperCase(), M, 92, FAINT, 23, 500);
+  at('COUNTED LOCALLY', 1080 - M, 92, '#4F9E8B', 23, 500, 'right');
+  at('assaio.dev', M, DH() - 84, FAINT, 22, 400);
+  at(A.Hashtag, 1080 - M, DH() - 84, FAINT, 22, 500, 'right');
+  // The limit line is on the artwork, not on the page: the PNG and the MP4 are what leave
+  // the machine, and a figure whose limits stayed behind travels as an unqualified fact.
+  const lim = fitText(A.Limit, u(COLW), 2, 19, 14, 400);
+  x.fillStyle = A.Limit.startsWith('SAMPLE') ? AMBER : FAINT;
+  lim.lines.forEach((l, i) => x.fillText(l, u(M), u(DH() - 50 + i * 22)));
+}
+
+const band = () => [170, DH() - 150];
+const ease = p => 1 - Math.pow(1 - Math.min(1, Math.max(0, p)), 3);
+
+// SETTLE is the share of a scene its animation may use. Everything lands by then and the
+// rest of the scene holds still, because a frame that stops moving at the moment it cuts
+// is a frame nobody finished reading.
+const SETTLE = 0.5;
+const q = p => Math.min(1, p / SETTLE);
+
+// ── scenes ───────────────────────────────────────────────────────────────────
+function scHook(pRaw) {
+  const p = q(pRaw); bg(); chrome(A.Window + ' of AI');
+  const hook = fitText(A.Hook.Line, u(COLW), 4, ts(96), ts(52), 600);
+  const sub = fitText(A.Hook.Sub || '', u(COLW), 2, ts(30), ts(22), 400);
+  const [t, b] = band();
+  column([
+    { h: hook.lines.length * hook.size * 1.18, draw: y => { x.globalAlpha = ease(p / .55); drawFit(hook, M, y + hook.size, FG, hook.size * 1.18); x.globalAlpha = 1; } },
+    { h: sub.lines.length * sub.size * 1.4, draw: y => { x.globalAlpha = ease((p - .3) / .5); drawFit({ ...sub, weight: 400 }, M, y + sub.size, DIM, sub.size * 1.4); x.globalAlpha = 1; } },
+  ], ts(56), t, b);
+}
+
+function scModels(pRaw) {
+  const p = q(pRaw); bg(); chrome('what it ran on');
+  const rowH = ts(62), barH = ts(44);
+  const tools = A.Tools.map(t => t.Label + ' ' + t.Value).join('  ·  ');
+  const toolFit = fitText(tools, u(COLW), 2, ts(26), ts(19), 400);
+  const [t, b] = band();
+  column([
+    { h: barH, draw: y => {
+        let cx = u(M);
+        A.Models.forEach((m, i) => {
+          const w = u(COLW) * m.Frac * ease((p - i * .05) / .45);
+          x.fillStyle = PAL[m.Hue]; x.fillRect(cx, u(y), Math.max(0, w - u(4)), u(barH));
+          cx += u(COLW) * m.Frac;
+        });
+      } },
+    { h: A.Models.length * rowH, draw: y => {
+        A.Models.forEach((m, i) => {
+          const a = ease((p - .12 - i * .07) / .4); if (a <= 0) return;
+          const py = y + i * rowH + rowH * .7;
+          x.save(); x.globalAlpha = a;
+          x.fillStyle = PAL[m.Hue]; x.fillRect(u(M), u(py - ts(22)), u(ts(24)), u(ts(24)));
+          font(ts(31), 600); const vw = mw(m.Value);
+          atFit(m.Label, M + ts(42), py, COLW - ts(42) - vw - ts(28), FG, ts(31), 400);
+          at(m.Value, 1080 - M, py, FG, ts(31), 600, 'right');
+          x.restore();
+        });
+      } },
+    { h: toolFit.lines.length * toolFit.size * 1.4, draw: y => {
+        x.globalAlpha = ease((p - .55) / .4);
+        drawFit({ ...toolFit, weight: 400 }, M, y + toolFit.size, DIM, toolFit.size * 1.4);
+        x.globalAlpha = 1;
+      } },
+  ], ts(52), t, b);
+}
+
+function sigil(cxp, cyp, r, p) {
+  const pts = i => [cxp + Math.cos(i * Math.PI / 3 - Math.PI / 2) * r, cyp + Math.sin(i * Math.PI / 3 - Math.PI / 2) * r];
+  x.strokeStyle = '#4F9E8B'; x.lineWidth = u(3); x.globalAlpha = ease(p / .45);
+  x.beginPath();
+  for (let i = 0; i < 6; i++) { const [px, py] = pts(i); i ? x.lineTo(px, py) : x.moveTo(px, py); }
+  x.closePath(); x.stroke();
+  x.globalAlpha = ease(p / .45) * .28; x.beginPath();
+  for (let i = 0; i < 6; i++) { const [px, py] = pts(i); x.moveTo(cxp, cyp); x.lineTo(px, py); }
+  x.stroke();
+  for (let i = 0; i < 6; i++) {
+    const a = ease((p - .3 - i * .05) / .3); if (a <= 0) continue;
+    const [px, py] = pts(i);
+    x.globalAlpha = a; x.fillStyle = (i % 3 === 2) ? AMBER : '#4F9E8B';
+    x.beginPath(); x.arc(px, py, r * .09, 0, 7); x.fill();
+  }
+  x.globalAlpha = ease((p - .25) / .3);
+  x.fillStyle = '#4F9E8B'; x.beginPath(); x.arc(cxp, cyp, r * .2, 0, 7); x.fill();
+  x.globalAlpha = 1;
+}
+
+function scArchetype(pRaw) {
+  const p = q(pRaw); bg(); chrome('archetype ' + A.Archetype.Index + ' of ' + A.Archetype.Of);
+  const r = ts(150);
+  const name = fitText(A.Archetype.Name.toUpperCase(), u(COLW), 1, ts(92), ts(48), 600);
+  const flavor = fitText(A.Archetype.Flavor, u(COLW), 3, ts(31), ts(23), 400);
+  const [t, b] = band();
+  column([
+    { h: r * 2.2, draw: y => sigil(W / 2, u(y + r * 1.1), u(r), p) },
+    { h: name.size * 1.2, draw: y => {
+        x.globalAlpha = ease((p - .35) / .35);
+        font(name.size, 600); x.fillStyle = FG; x.textAlign = 'center';
+        x.fillText(name.lines[0], W / 2, u(y + name.size));
+        x.textAlign = 'left'; x.globalAlpha = 1;
+      } },
+    { h: flavor.lines.length * flavor.size * 1.45, draw: y => {
+        x.globalAlpha = ease((p - .5) / .4);
+        drawFit({ ...flavor, weight: 400 }, M, y + flavor.size, DIM, flavor.size * 1.45);
+        x.globalAlpha = 1;
+      } },
+  ], ts(50), t, b);
+}
+
+// rayGeom precomputes each ray's endpoints once per canvas size. Recomputing 2,500 sines
+// every frame, and stroking each ray as its own path, was enough to lock the tab: the
+// fingerprint is the one scene whose cost scales with how much someone actually used AI,
+// so it is also the one that has to be cheap.
+let geom = null, geomKey = '';
+function rayGeom(cyp, r0, r1) {
+  const key = W + 'x' + H;
+  if (geomKey === key) return geom;
+  const byHue = PAL.map(() => []);
+  for (const ray of A.Rays.Rays) {
+    const ang = ray.Angle * Math.PI * 2 - Math.PI / 2, cos = Math.cos(ang), sin = Math.sin(ang);
+    const len = r0 + ray.Len * (r1 - r0);
+    byHue[ray.Hue].push([ang, W / 2 + cos * r0, cyp + sin * r0, W / 2 + cos * len, cyp + sin * len]);
+  }
+  for (const list of byHue) list.sort((a, b) => a[0] - b[0]);
+  geom = byHue; geomKey = key;
+  return geom;
+}
+
+function scRays(pRaw) {
+  const p = q(pRaw); bg(); chrome(A.Rays.Total + ' sessions');
+  const note = fitText(A.Rays.Note, u(COLW), 2, ts(27), ts(20), 400);
+  const [t, b] = band();
+  const dia = Math.min(COLW, (b - t) - note.lines.length * note.size * 1.4 - ts(70));
+  column([
+    { h: dia, draw: y => {
+        const cyp = u(y + dia / 2), r1 = u(dia / 2), r0 = r1 * .28;
+        const sweep = ease(p / .75) * Math.PI * 2 - Math.PI / 2;
+        x.lineWidth = u(ts(2.4)); x.globalAlpha = .55;
+        rayGeom(cyp, r0, r1).forEach((list, hue) => {
+          if (!list.length) return;
+          x.strokeStyle = PAL[hue]; x.beginPath();
+          for (const [ang, x1, y1, x2, y2] of list) {
+            if (ang > sweep) break;
+            x.moveTo(x1, y1); x.lineTo(x2, y2);
+          }
+          x.stroke();
+        });
+        x.globalAlpha = 1;
+      } },
+    { h: note.lines.length * note.size * 1.4, draw: y => {
+        x.globalAlpha = ease((p - .6) / .35);
+        drawFit({ ...note, weight: 400 }, M, y + note.size, DIM, note.size * 1.4);
+        x.globalAlpha = 1;
+      } },
+  ], ts(56), t, b);
+}
+
+function scProfile(pRaw) {
+  const p = q(pRaw); bg(); chrome('where the slack is');
+  const rowH = ts(112);
+  const line = fitText(A.Profile.Line || '', u(COLW), 2, ts(44), ts(28), 600);
+  const [t, b] = band();
+  column([
+    { h: A.Profile.Axes.length * rowH, draw: y => {
+        A.Profile.Axes.forEach((ax, i) => {
+          const a = ease((p - i * .06) / .42); if (a <= 0) return;
+          const py = y + i * rowH;
+          x.save(); x.globalAlpha = a;
+          const col = ax.Reserve ? AMBER : FG;
+          font(ts(25), 400); const avw = mw(ax.Value);
+          atFit(ax.Left + ' — ' + ax.Right, M, py + ts(28), COLW - avw - ts(30), col, ts(29), 600);
+          at(ax.Value, 1080 - M, py + ts(28), ax.Reserve ? AMBER : DIM, ts(25), 400, 'right');
+          x.fillStyle = 'rgba(237,231,220,.16)';
+          x.fillRect(u(M), u(py + ts(50)), u(COLW), u(ts(9)));
+          x.fillStyle = ax.Reserve ? AMBER : '#3E8B79';
+          x.beginPath(); x.arc(u(M) + u(COLW) * ax.At * a, u(py + ts(54.5)), u(ts(16)), 0, 7); x.fill();
+          x.restore();
+        });
+      } },
+    { h: A.Profile.Line ? ts(34) + line.lines.length * line.size * 1.25 + ts(52) : 0, draw: y => {
+        if (!A.Profile.Line) return;
+        x.globalAlpha = ease((p - .55) / .4);
+        at(('reserve · ' + A.Profile.Title + ' · every card has one').toUpperCase(), M, y + ts(22), AMBER, ts(22), 500);
+        drawFit(line, M, y + ts(34) + line.size, AMBER, line.size * 1.25);
+        if (A.Profile.Caveats.length) {
+          const cav = fitText(A.Profile.Caveats[0], u(COLW), 2, ts(20), ts(15), 400);
+          cav.lines.forEach((l, i) => { font(cav.size, 400); x.fillStyle = FAINT; x.fillText(l, u(M), u(y + ts(34) + line.size + line.lines.length * line.size * 1.25 + ts(14) + i * cav.size * 1.35)); });
+        }
+        x.globalAlpha = 1;
+      } },
+  ], ts(56), t, b);
+}
+
+function scLedger(pRaw) {
+  const p = q(pRaw); bg(); chrome('what came out');
+  const stats = A.Ledger.slice(0, 3);
+  const rowH = ts(190);
+  const [t, b] = band();
+  column([
+    { h: stats.length * rowH, draw: y => {
+        stats.forEach((s, i) => {
+          const a = ease((p - i * .1) / .45); if (a <= 0) return;
+          x.save(); x.globalAlpha = a;
+          at(s.Value, M, y + i * rowH + ts(86), i === 1 ? '#4F9E8B' : FG, ts(104), 600);
+          at(s.Label, M, y + i * rowH + ts(126), DIM, ts(28), 400);
+          if (s.Note) atFit(s.Note, M, y + i * rowH + ts(158), COLW, FAINT, ts(21), 400);
+          x.restore();
+        });
+      } },
+  ], 0, t, b);
+}
+
+// scInvite is its own frame because it is the only one with a job to do. Crowded into the
+// corner of the ledger it was the smallest thing on the busiest card; alone it gets the
+// full frame and the seconds the loop ends on.
+function scInvite(pRaw) {
+  const p = q(pRaw); bg(); chrome('your turn');
+  const head = fitText('Two commands and you have yours.', u(COLW), 3, ts(76), ts(44), 600);
+  const [t, b] = band();
+  column([
+    { h: head.lines.length * head.size * 1.2, draw: y => {
+        x.globalAlpha = ease(p / .5);
+        drawFit(head, M, y + head.size, FG, head.size * 1.2);
+        x.globalAlpha = 1;
+      } },
+    { h: ts(128), draw: y => {
+        x.globalAlpha = ease((p - .25) / .45);
+        x.fillStyle = 'rgba(79,158,139,.10)';
+        x.fillRect(u(M), u(y), u(COLW), u(ts(118)));
+        x.fillStyle = '#4F9E8B'; x.fillRect(u(M), u(y), u(ts(5)), u(ts(118)));
+        at(A.Install, M + ts(28), y + ts(48), FG, ts(27), 400);
+        at(A.ShareCmd, M + ts(28), y + ts(92), FG, ts(27), 400);
+        x.globalAlpha = 1;
+      } },
+    { h: ts(96), draw: y => {
+        x.globalAlpha = ease((p - .5) / .45);
+        at(A.Hashtag, M, y + ts(52), '#4F9E8B', ts(58), 600);
+        at('assaio.dev · counted locally, nothing uploaded', M, y + ts(92), DIM, ts(25), 400);
+        x.globalAlpha = 1;
+      } },
+  ], ts(58), t, b);
+}
+
+// scPoster is the whole assay as one still, for anyone who wants an image and a post
+// rather than a video. It is composed rather than screenshotted from the reel: a paused
+// reel frame shows one seventh of the story, and the seventh it shows is whichever one
+// the clock happened to land on.
+function scPoster() {
+  bg();
+  at((A.Window + ' of AI').toUpperCase(), M, 88, FAINT, 23, 500);
+  at('COUNTED LOCALLY', 1080 - M, 88, '#4F9E8B', 23, 500, 'right');
+
+  const build = k => {
+    const hook = fitText(A.Hook.Line, u(COLW), 2, 82 * k, 42 * k, 600);
+    const flavor = fitText(A.Archetype.Flavor, u(COLW), 2, 26 * k, 18 * k, 400);
+    const reserve = fitText(A.Profile.Line || '', u(COLW), 2, 34 * k, 22 * k, 600);
+    const models = A.Models.slice(0, 4).map(m => m.Label + ' ' + m.Value).join('  ·  ');
+    const modelFit = fitText(models, u(COLW), 2, 24 * k, 15 * k, 400);
+    return [
+      { h: hook.lines.length * hook.size * 1.18 + 42 * k, draw: y => {
+          drawFit(hook, M, y + hook.size, FG, hook.size * 1.18);
+          at(A.Hook.Sub || '', M, y + hook.lines.length * hook.size * 1.18 + 28 * k, DIM, 25 * k, 400);
+        } },
+      { h: 30 * k + modelFit.lines.length * modelFit.size * 1.4, draw: y => {
+          let cx = u(M);
+          A.Models.forEach(m => {
+            x.fillStyle = PAL[m.Hue];
+            x.fillRect(cx, u(y), Math.max(0, u(COLW) * m.Frac - u(4)), u(24 * k));
+            cx += u(COLW) * m.Frac;
+          });
+          drawFit({ ...modelFit, weight: 400 }, M, y + 24 * k + modelFit.size + 8 * k, DIM, modelFit.size * 1.4);
+        } },
+      { h: 100 * k, draw: y => {
+          x.strokeStyle = 'rgba(237,231,220,.16)'; x.lineWidth = u(2);
+          x.beginPath(); x.moveTo(u(M), u(y)); x.lineTo(u(1080 - M), u(y)); x.stroke();
+          A.Ledger.slice(0, 3).forEach((s2, i) => {
+            const px = M + i * (COLW / 3);
+            at(s2.Value, px, y + 60 * k, i === 1 ? '#4F9E8B' : FG, 54 * k, 600);
+            at(s2.Label, px, y + 90 * k, DIM, 21 * k, 400);
+          });
+        } },
+      { h: 38 * k + flavor.lines.length * flavor.size * 1.35, draw: y => {
+          at(A.Archetype.Name.toUpperCase(), M, y + 26 * k, FG, 31 * k, 600);
+          drawFit({ ...flavor, weight: 400 }, M, y + 38 * k + flavor.size, DIM, flavor.size * 1.35);
+        } },
+      { h: A.Profile.Line ? 30 * k + reserve.lines.length * reserve.size * 1.25 : 0, draw: y => {
+          if (!A.Profile.Line) return;
+          at(('reserve · ' + A.Profile.Title).toUpperCase(), M, y + 19 * k, AMBER, 21 * k, 500);
+          drawFit(reserve, M, y + 30 * k + reserve.size, AMBER, reserve.size * 1.25);
+        } },
+    ];
+  };
+  fitColumn(build, 38, 140, DH() - 220);
+
+  x.strokeStyle = 'rgba(237,231,220,.16)'; x.lineWidth = u(2);
+  x.beginPath(); x.moveTo(u(M), u(DH() - 176)); x.lineTo(u(1080 - M), u(DH() - 176)); x.stroke();
+  at('Two commands and you have yours', M, DH() - 132, FG, 30, 600);
+  at(A.Install + ' && ' + A.ShareCmd, M, DH() - 94, DIM, 21, 400);
+  at('assaio.dev', M, DH() - 62, FAINT, 21, 400);
+  at(A.Hashtag, 1080 - M, DH() - 62, '#4F9E8B', 30, 600, 'right');
+  const plim = fitText(A.Limit, u(COLW), 1, 18, 13, 400);
+  x.fillStyle = A.Limit.startsWith('SAMPLE') ? AMBER : FAINT;
+  x.fillText(plim.lines[0], u(M), u(DH() - 32));
+}
+
+// ── the loop ─────────────────────────────────────────────────────────────────
+const SCENES = [scHook, scModels, scArchetype, scRays, scProfile, scLedger, scInvite];
+const CUES = [0, 3200, 6800, 10400, 14200, 18200, 21800], END = 25400;
+const ticksBox = document.getElementById('ticks');
+ticksBox.innerHTML = SCENES.map(() => '<i><b></b></i>').join('');
+const ticks = [...ticksBox.querySelectorAll('b')];
+let t0 = performance.now();
+
+function frameAt(ms) {
+  let i = 0;
+  for (let k = 0; k < CUES.length; k++) if (ms >= CUES[k]) i = k;
+  const start = CUES[i], end = (i + 1 < CUES.length) ? CUES[i + 1] : END;
+  return [i, (ms - start) / (end - start)];
+}
+
+function draw(now) {
+  try {
+    if (poster) { scPoster(); return; }
+    const ms = (now - t0) % END;
+    const [i, p] = frameAt(ms);
+    SCENES[i](p);
+    ticks.forEach((b, k) => { b.style.width = k < i ? '100%' : k === i ? (p * 100).toFixed(1) + '%' : '0'; });
+  } catch (e) {
+    // A scene that throws must not end the loop: the canvas would hold its background and
+    // "Save the reel" would record that frozen frame as if it were the card.
+    console.error('scene failed', e);
+  } finally {
+    requestAnimationFrame(draw);
+  }
+}
+requestAnimationFrame(draw);
+
+// ── format ───────────────────────────────────────────────────────────────────
+const textPre = document.getElementById('textPre');
+textPre.textContent = {{.Post}};
+function setFormat(f) {
+  tall = f === 'tall'; poster = f === 'poster';
+  const showText = f === 'text';
+  document.getElementById('textOut').hidden = !showText;
+  c.hidden = showText; ticksBox.hidden = showText || poster;
+  c.classList.toggle('tall', tall); ticksBox.classList.toggle('tall', tall);
+  W = 1080; H = tall ? 1920 : 1080;
+  c.width = W; c.height = H; geomKey = '';
+  document.getElementById('hint').textContent = showText ? 'plain text · paste anywhere'
+    : poster ? '1080 × 1080 · one image · PNG'
+    : (W + ' × ' + H + ' · MP4 · ' + Math.round(END / 1000) + 's · loops');
+  document.getElementById('saveLabel').textContent = showText ? 'Save the text'
+    : poster ? 'Save the image' : 'Save the reel';
+  document.getElementById('copyLabel').textContent = poster ? 'Copy the image' : 'Copy this frame';
+  t0 = performance.now();
+}
+document.getElementById('fmt').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  [...e.currentTarget.children].forEach(n => n.setAttribute('aria-pressed', String(n === b)));
+  setFormat(b.dataset.fmt);
+});
+
+// ── export ───────────────────────────────────────────────────────────────────
+const say = document.getElementById('say');
+const tell = m => { say.textContent = m; clearTimeout(tell.t); tell.t = setTimeout(() => say.textContent = '', 5000); };
+const dl = (blob, name) => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+};
+function mime() {
+  for (const m of ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'])
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+  return '';
+}
+document.getElementById('save').addEventListener('click', e => {
+  if (!document.getElementById('textOut').hidden) {
+    dl(new Blob([textPre.textContent], { type: 'text/plain' }), 'assay.txt'); tell('Saved assay.txt'); return;
+  }
+  if (poster) { c.toBlob(b => dl(b, 'assay-poster.png'), 'image/png'); tell('Saved assay-poster.png'); return; }
+  const type = mime();
+  if (!type) { c.toBlob(b => dl(b, 'assay.png'), 'image/png'); tell('No recorder here — saved a PNG frame instead.'); return; }
+  const btn = e.currentTarget; btn.disabled = true; tell('Recording one full loop…');
+  const rec = new MediaRecorder(c.captureStream(30), { mimeType: type, videoBitsPerSecond: 8_000_000 });
+  const parts = [];
+  rec.ondataavailable = ev => ev.data.size && parts.push(ev.data);
+  rec.onstop = () => {
+    const ext = type.startsWith('video/mp4') ? 'mp4' : 'webm';
+    dl(new Blob(parts, { type }), 'assay.' + ext);
+    btn.disabled = false;
+    tell('Saved assay.' + ext + (ext === 'webm' ? ' — this browser cannot write MP4.' : ''));
+  };
+  t0 = performance.now(); rec.start();
+  setTimeout(() => rec.stop(), END + 300);
+});
+document.getElementById('copyImg').addEventListener('click', () => {
+  c.toBlob(async b => {
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]); tell('Copied — ⌘V in the composer.'); }
+    catch { dl(b, 'assay.png'); tell('Clipboard blocked — saved a PNG instead.'); }
+  }, 'image/png');
+});
+document.getElementById('copyTxt').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(document.getElementById('post').value); tell('Post copied.'); }
+  catch { tell('Clipboard blocked — select the text and copy it.'); }
+});
+</script>
+</body>
+</html>
