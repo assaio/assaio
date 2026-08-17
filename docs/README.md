@@ -85,3 +85,6 @@ all in the shipping PR.
   retention horizon is load-bearing.
 - [ADR 0013](adr/0013-measurement-layers.md) — every figure states its **measurement
   layer**, so an output figure can never be read as an outcome claim.
+- [ADR 0014](adr/0014-public-artifact-rules.md) — what a **publicly postable** artifact may
+  say: no figure originates in the renderer, redaction is structural rather than a flag, and
+  every frame carries its own limits because a shared image outlives its caption.

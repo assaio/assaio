@@ -60,6 +60,16 @@ depends on `B116` and `B118`, which live in the code-health pool below because t
 corrections to a shipped mechanism rather than calibration work; `B116` is additionally a v1.0
 condition.
 
+- [ ] **B184 · a trend on the shared card** — S · both — the shipped `share` renders point
+  figures only: tokens, lines, `$`/100 lines, the model mix, the archetype and the one reserve.
+  `B149` also asked for the token/cost *trend*, and that half did not ship. It is the half that
+  makes a second card worth posting — "down 12% and the same output" is a story, while a second
+  month of point figures is the same picture again. The data is already there (`report --compare`
+  and `internal/digest` both compute it), so this is a renderer change, not a measurement one.
+  The honesty constraint travels with it: `digest` already declares when a comparison is weak —
+  overlapping windows, unequal lengths, a parser that changed between the two runs — and a card
+  that shows a delta without that declaration would publish a movement the store cannot support.
+
 - [ ] **B144 · calibrate Gemini CLI and Cline against a real capture** — S · both — both are
   calibrated today against a *constructed* sample in the source's shape, because the maintainer's
   machine holds neither a Gemini chat log carrying token counts nor a Cline install. A
@@ -67,32 +77,19 @@ condition.
   vendor writes, and each trace already declares which it is (`capture: real|constructed`). Needs
   one redacted capture per source from anybody who runs them.
 
-## Next — "Worth opening twice"
+## Shipped — "Worth opening twice"
 
-The items that decide whether the analysis already shipped reaches anybody. Most of it has now
-shipped — findings that arrive ordered with their reasons shown (`B148`), a digest that reports
-what *moved* and declares when the comparison itself is weak (`B11`), a label derived through a
-rule engine rather than typed (`B152`), and the extension surface no longer weaker than the core
-it extends (`B155`). All four are in [CHANGELOG.md](CHANGELOG.md). One remains: an assay that can
-be posted in public. Not a detour from depth: this is the only milestone that answers the questions
-[ROADMAP.md](ROADMAP.md#how-we-prioritize) names as the measure of whether the project is
-working — how long from install to a first useful insight, whether someone runs a second report
-the following week, how often a finding is acted on. Every one of these sat in an unscheduled
-pool until now, which is exactly why none of them ever came up for air.
-
-- [ ] **B149 · a shareable assay** — M · both — `assaio share --since 30d` renders a single
-  image or page fit to post publicly: tool and model mix, the token/cost trend, a few
-  findings, and the coverage and confidence behind them. Redaction is the feature, not a
-  flag: no repository names, no member names, no file paths, no identifiers, ever, and a
-  preview before anything is written so the person sees exactly what would leave their
-  machine. Carries the line the dashboard already earns — prompts and source code were not
-  collected. **The redaction rule is settled, and it is stated here because it constrains the
-  renderer rather than following it:** tools and models are named, because which coding agent
-  and which model ran is a public fact about the vendor, not about the person; projects are
-  never named and never pseudonymized, because a stable pseudonym preserves the ordering and
-  proportions someone who knows the setup can read — they appear only as a count and a sorted
-  distribution ("5 repositories, the heaviest 43% of spend"). A figure that cannot be rendered
-  under that rule is not rendered.
+Everything that decided whether the analysis already shipped reaches anybody: findings that
+arrive ordered with their reasons shown (`B148`), a digest that reports what *moved* and
+declares when the comparison itself is weak (`B11`), a label derived through a rule engine
+rather than typed (`B152`), the extension surface no longer weaker than the core it extends
+(`B155`), and an assay that can be posted in public with redaction as the feature rather than
+a flag (`B149`). All five are in [CHANGELOG.md](CHANGELOG.md). One piece of `B149` was dropped
+deliberately rather than deferred: the item asked for repositories as a count *and a sorted
+spend distribution* ("5 repositories, the heaviest 43% of spend"), and that distribution is a
+re-identification surface — the ordering and proportions are exactly what somebody who knows
+the setup reads a pseudonym back out of, which is the reason the same item refuses pseudonyms.
+The count ships; the distribution does not, and will not. What is still missing is `B184`.
 
 ## Then — "Everything the logs already say"
 

@@ -1294,6 +1294,43 @@
       ]
     },
     {
+      "path": "share",
+      "short": "Build a postable card, reel and text about this machine's AI usage",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "demo",
+          "type": "bool",
+          "default": "false",
+          "usage": "render bundled sample data instead of this machine's usage"
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "default": "html",
+          "usage": "output format: html|text"
+        },
+        {
+          "name": "no-open",
+          "type": "bool",
+          "default": "false",
+          "usage": "write the preview without opening a browser"
+        },
+        {
+          "name": "output",
+          "type": "string",
+          "default": "assaio-share.html",
+          "usage": "preview output path"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        }
+      ]
+    },
+    {
       "path": "signals",
       "short": "What assaio can report, what each figure means, and what your data supports",
       "hidden": false,
