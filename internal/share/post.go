@@ -21,6 +21,10 @@ const Hashtag = "#ProofOfPrompt"
 const (
 	InstallCommand = "brew install assaio/tap/assaio-agent"
 	ShareCommand   = "assaio-agent share"
+	// Site is named in the post as well as on the artwork: a reader who wants to know what
+	// produced these numbers before running anything needs somewhere to go that is not a
+	// shell command.
+	Site = "assaio.dev"
 )
 
 // post writes the text that travels with the image. Two halves, because a post that only
@@ -32,17 +36,20 @@ const (
 func post(a *Assay, f *facts) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "My %s of AI, measured rather than guessed.\n\n", a.Window)
-	fmt.Fprintf(&b, "FAME  · %s\n", fameLine(f))
-	fmt.Fprintf(&b, "SHAME · %s\n", shameLine(a, f))
-	// The hook only earns a line here when it says something the two halves above did not.
-	// A scale or money hook repeats the fame line word for word, and a post that states its
-	// own headline twice reads as padding.
+	// Em dash rather than padded columns: the destination is a proportional font, where two
+	// spaces after FAME line up with nothing. Each line also stands on its own, because the
+	// composers that strip blank lines on paste turn a block layout into one wall of text.
+	fmt.Fprintf(&b, "FAME — %s\n", fameLine(f))
+	fmt.Fprintf(&b, "SHAME — %s\n\n", shameLine(a, f))
 	if a.Hook.Family != "scale" && a.Hook.Family != "money" && a.Hook.Line != "" {
-		fmt.Fprintf(&b, "\n%s\n", a.Hook.Line)
+		fmt.Fprintf(&b, "%s\n\n", a.Hook.Line)
 	}
-	b.WriteString("\nTwo commands and you have yours:\n")
-	fmt.Fprintf(&b, "  %s\n  %s\n", InstallCommand, ShareCommand)
-	b.WriteString("\nCounted locally. Nothing uploaded, no account, no repo names.\n\n")
+	b.WriteString("Counted locally from my own session logs: nothing uploaded, no account, no repository names.\n\n")
+	b.WriteString("Two commands and you have yours:\n")
+	// One line, unindented: leading spaces are stripped on paste, which left the second
+	// command hanging under a broken indent.
+	fmt.Fprintf(&b, "%s && %s\n\n", InstallCommand, ShareCommand)
+	fmt.Fprintf(&b, "%s\n\n", Site)
 	fmt.Fprintf(&b, "%s — what are your numbers of fame or shame? ;)", Hashtag)
 	return b.String()
 }
