@@ -10,6 +10,7 @@ package dashboard
 import (
 	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/i18n"
+	"github.com/assaio/assaio/internal/pseudonym"
 	"github.com/assaio/assaio/internal/report"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -117,7 +118,7 @@ func anonymizeVerdicts(verdicts []analyze.Result) {
 			continue
 		}
 		for j := range verdicts[i].Bars {
-			verdicts[i].Bars[j].Label = report.Pseudonym(kind, verdicts[i].Bars[j].Label)
+			verdicts[i].Bars[j].Label = pseudonym.For(kind, verdicts[i].Bars[j].Label)
 		}
 	}
 }

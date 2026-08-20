@@ -5,7 +5,7 @@ import (
 
 	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/pricing"
-	"github.com/assaio/assaio/internal/report"
+	"github.com/assaio/assaio/internal/pseudonym"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -42,7 +42,7 @@ type Team struct {
 // session count -- engagement frequency, an adoption-spread signal -- deliberately never
 // by cost or lines added, which would read as a productivity scoreboard (AGENTS.md
 // honesty rules: aggregate/pseudonymized by default, never a leaderboard). Member labels
-// are pseudonymized by default via report.Pseudonym, matching project names' own
+// are pseudonymized by default via pseudonym.For, matching project names' own
 // opt-in-to-reveal convention.
 func buildTeam(usageRows []store.UsageRow, sessionRows []store.SessionRow, prices pricing.Table, anonymize bool) *Team {
 	if !hasMemberData(usageRows) {
@@ -152,7 +152,7 @@ func memberLabel(m string, anonymize bool) string {
 		return "(local)"
 	}
 	if anonymize {
-		return report.Pseudonym("member", m)
+		return pseudonym.For("member", m)
 	}
 	return m
 }

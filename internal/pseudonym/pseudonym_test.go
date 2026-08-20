@@ -1,4 +1,4 @@
-package report
+package pseudonym
 
 import (
 	"bytes"
@@ -10,12 +10,12 @@ import (
 	"testing"
 )
 
-// TestMain gives every test in this package a hermetic data directory: Pseudonym now
+// TestMain gives every test in this package a hermetic data directory: For now
 // persists a per-install secret to disk (see installSecret), and without this, running
 // `go test` would read and write the real user's data directory instead of a throwaway
 // one.
 func TestMain(m *testing.M) {
-	dir, err := os.MkdirTemp("", "assaio-report-test")
+	dir, err := os.MkdirTemp("", "assaio-pseudonym-test")
 	if err != nil {
 		panic(err)
 	}
@@ -27,94 +27,94 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestPseudonymDeterministic(t *testing.T) {
-	a := Pseudonym("project", "acme-web")
-	b := Pseudonym("project", "acme-web")
+func TestForDeterministic(t *testing.T) {
+	a := For("project", "acme-web")
+	b := For("project", "acme-web")
 	if a != b {
-		t.Fatalf("Pseudonym(%q) = %q, then %q: not deterministic", "acme-web", a, b)
+		t.Fatalf("For(%q) = %q, then %q: not deterministic", "acme-web", a, b)
 	}
 }
 
-func TestPseudonymDiffersByInput(t *testing.T) {
+func TestForDiffersByInput(t *testing.T) {
 	names := []string{"acme-web", "acme-infra", "playground", "billing-service"}
 	seen := make(map[string]string, len(names))
 	for _, n := range names {
-		p := Pseudonym("project", n)
+		p := For("project", n)
 		if other, ok := seen[p]; ok {
-			t.Fatalf("Pseudonym collision: %q and %q both produced %q", n, other, p)
+			t.Fatalf("For collision: %q and %q both produced %q", n, other, p)
 		}
 		seen[p] = n
 	}
 }
 
-func TestPseudonymEmptyIsUnknown(t *testing.T) {
-	if got := Pseudonym("project", ""); got != "unknown" {
-		t.Fatalf("Pseudonym(%q, \"\") = %q, want %q", "project", got, "unknown")
+func TestForEmptyIsUnknown(t *testing.T) {
+	if got := For("project", ""); got != "unknown" {
+		t.Fatalf("For(%q, \"\") = %q, want %q", "project", got, "unknown")
 	}
 }
 
-func TestPseudonymShape(t *testing.T) {
-	got := Pseudonym("project", "acme-web")
-	const wantLen = len("project-") + pseudonymHexLen
+func TestForShape(t *testing.T) {
+	got := For("project", "acme-web")
+	const wantLen = len("project-") + hexLen
 	if len(got) != wantLen {
-		t.Fatalf("Pseudonym(%q) = %q, want length %d", "acme-web", got, wantLen)
+		t.Fatalf("For(%q) = %q, want length %d", "acme-web", got, wantLen)
 	}
 	if got[:len("project-")] != "project-" {
-		t.Fatalf("Pseudonym(%q) = %q, want prefix %q", "acme-web", got, "project-")
+		t.Fatalf("For(%q) = %q, want prefix %q", "acme-web", got, "project-")
 	}
 }
 
-func TestPseudonymMemberKindGetsMemberPrefix(t *testing.T) {
-	got := Pseudonym("member", "alice")
+func TestForMemberKindGetsMemberPrefix(t *testing.T) {
+	got := For("member", "alice")
 	const wantPrefix = "member-"
 	if got[:len(wantPrefix)] != wantPrefix {
-		t.Fatalf("Pseudonym(%q, %q) = %q, want prefix %q", "member", "alice", got, wantPrefix)
+		t.Fatalf("For(%q, %q) = %q, want prefix %q", "member", "alice", got, wantPrefix)
 	}
 }
 
-func TestPseudonymSameNameDiffersByKind(t *testing.T) {
-	project := Pseudonym("project", "acme")
-	member := Pseudonym("member", "acme")
+func TestForSameNameDiffersByKind(t *testing.T) {
+	project := For("project", "acme")
+	member := For("member", "acme")
 	if project == member {
-		t.Fatalf("Pseudonym(%q) and Pseudonym(%q) must not collide: both %q", "project, acme", "member, acme", project)
+		t.Fatalf("For(%q) and For(%q) must not collide: both %q", "project, acme", "member, acme", project)
 	}
 }
 
-// TestPseudonymNotReversibleWithoutTheKey is the finding-2 regression against the old
+// TestForNotReversibleWithoutTheKey is the finding-2 regression against the old
 // vulnerability: the pre-fix scheme was a bare, unsalted SHA256("kind:name")[:n], so
 // anyone who knew the convention could dictionary-attack any guessable name by hashing
 // candidates and matching the displayed label. The HMAC-keyed scheme must never reproduce
 // that bare hash.
-func TestPseudonymNotReversibleWithoutTheKey(t *testing.T) {
+func TestForNotReversibleWithoutTheKey(t *testing.T) {
 	guess := "acme-web"
 	bareHash := sha256.Sum256([]byte("project:" + guess))
-	bareLabel := "project-" + hex.EncodeToString(bareHash[:])[:pseudonymHexLen]
-	if got := Pseudonym("project", guess); got == bareLabel {
-		t.Fatalf("Pseudonym(%q) = %q must not match the unsalted dictionary-attack hash %q", guess, got, bareLabel)
+	bareLabel := "project-" + hex.EncodeToString(bareHash[:])[:hexLen]
+	if got := For("project", guess); got == bareLabel {
+		t.Fatalf("For(%q) = %q must not match the unsalted dictionary-attack hash %q", guess, got, bareLabel)
 	}
 }
 
-// TestPseudonymWithSecretStableForSameSecret is "same input + same install -> stable" at
+// TestForWithSecretStableForSameSecret is "same input + same install -> stable" at
 // the pure-function level: two calls under the same secret bytes (standing in for the
 // same install's persisted key) must agree.
-func TestPseudonymWithSecretStableForSameSecret(t *testing.T) {
-	secret := bytes.Repeat([]byte{0x07}, pseudonymKeySize)
-	a := pseudonymWithSecret("member", "alice", secret)
-	b := pseudonymWithSecret("member", "alice", secret)
+func TestForWithSecretStableForSameSecret(t *testing.T) {
+	secret := bytes.Repeat([]byte{0x07}, keySize)
+	a := withSecret("member", "alice", secret)
+	b := withSecret("member", "alice", secret)
 	if a != b {
-		t.Fatalf("pseudonymWithSecret must be stable for the same secret: %q != %q", a, b)
+		t.Fatalf("withSecret must be stable for the same secret: %q != %q", a, b)
 	}
 }
 
-// TestPseudonymDiffersAcrossInstalls is "different installs -> different key -> different
+// TestForDiffersAcrossInstalls is "different installs -> different key -> different
 // output": two distinct secrets standing in for two different machines' persisted keys
 // must diverge on the identical (kind, name) input, which is what stops the same real
 // name from correlating across installs.
-func TestPseudonymDiffersAcrossInstalls(t *testing.T) {
-	secretA := bytes.Repeat([]byte{0x01}, pseudonymKeySize)
-	secretB := bytes.Repeat([]byte{0x02}, pseudonymKeySize)
-	a := pseudonymWithSecret("project", "acme-web", secretA)
-	b := pseudonymWithSecret("project", "acme-web", secretB)
+func TestForDiffersAcrossInstalls(t *testing.T) {
+	secretA := bytes.Repeat([]byte{0x01}, keySize)
+	secretB := bytes.Repeat([]byte{0x02}, keySize)
+	a := withSecret("project", "acme-web", secretA)
+	b := withSecret("project", "acme-web", secretB)
 	if a == b {
 		t.Fatalf("the same name under two different install secrets must not match: both %q", a)
 	}
@@ -127,8 +127,8 @@ func TestLoadOrCreateSecretPersistsAcrossCalls(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(first) != pseudonymKeySize {
-		t.Fatalf("secret length = %d, want %d", len(first), pseudonymKeySize)
+	if len(first) != keySize {
+		t.Fatalf("secret length = %d, want %d", len(first), keySize)
 	}
 
 	if runtime.GOOS != "windows" {

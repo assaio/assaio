@@ -9,12 +9,12 @@ import (
 	"github.com/assaio/assaio/internal/paths"
 )
 
-// fixedPseudonymKey seeds report.Pseudonym's per-install secret so these tests pseudonymize
+// fixedPseudonymKey seeds pseudonym.For's per-install secret so these tests pseudonymize
 // deterministically instead of depending on whatever key is on the machine.
 var fixedPseudonymKey = bytes.Repeat([]byte{0x5a}, 32)
 
 // TestMain gives every test in this package a hermetic data directory. BuildDashboard and
-// the GET / handler pseudonymize member/project labels, and report.Pseudonym persists a
+// the GET / handler pseudonymize member/project labels, and pseudonym.For persists a
 // per-install secret to paths.DataDir(); without this seam the tests would create
 // pseudonym.key in the real user's home dir.
 func TestMain(m *testing.M) {

@@ -301,6 +301,12 @@ trusted network — not yet production-hardened.
 Each synced member is **pseudonymized by default** (a stable `member-xxxx` label); team
 views are aggregated by default. A per-member, real-name view is never silent — it is a
 deliberate, governed opt-in an admin enables, not what the default configuration produces,
-and never a performance-evaluation leaderboard. The **deeper** stage — correlating with
+and never a performance-evaluation leaderboard.
+
+The pseudonym holds on the way **out** as well as on the way in. Reading a central store with
+`report` labels members in every format — table, JSON and CSV alike — and a metric plugin, which
+is an out-of-tree subprocess, receives labels rather than names. Raw identity has exactly one
+door: `report --identify`, which names individuals and says so in its own output. Nothing else
+in this repository turns a synced name back into a printed one. The **deeper** stage — correlating with
 your git remotes and issue tracker for survival / bug / quality signals — is still ahead;
 see [ROADMAP.md](ROADMAP.md).

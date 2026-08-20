@@ -7,6 +7,7 @@ import (
 
 	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/digest"
+	"github.com/assaio/assaio/internal/pseudonym"
 	"github.com/assaio/assaio/internal/report"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -116,7 +117,7 @@ func projectPseudonym(anonymize bool) func(string) string {
 	if !anonymize {
 		return nil
 	}
-	return func(project string) string { return report.Pseudonym(analyze.PseudonymProject, project) }
+	return func(project string) string { return pseudonym.For(analyze.PseudonymProject, project) }
 }
 
 // previousSnapshot reads the last run's basis for the same window. A payload this build

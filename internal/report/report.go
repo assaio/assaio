@@ -22,7 +22,8 @@ type Row struct {
 	Project    string `json:"project"`
 	Entrypoint string `json:"entrypoint"`
 	// Member is "" for purely local usage; non-empty only on a central store synced
-	// from a team member.
+	// from a team member. It is a pseudonym unless the export explicitly asked for raw
+	// names -- see MemberIdentity.
 	Member string `json:"member"`
 	// Granularity is "turn" for per-request records, "session" for session-aggregate
 	// sources, or GranularityMixed once a group has merged both. It travels with the row
@@ -67,8 +68,19 @@ func cacheEff(in, cacheRead int64) *float64 {
 
 // Build prices each usage row against t, matching the model exactly first and falling
 // back to pricing.NormalizeModel. Unmatched models are returned with Priced=false and
-// Cost=nil.
+// Cost=nil. Member names come back pseudonymous; BuildIdentified is the way to ask for
+// the raw ones, and it is a different function name so that asking is greppable.
 func Build(rows []store.UsageRow, t pricing.Table) []Row {
+	return build(rows, t, MemberPseudonymous)
+}
+
+// BuildIdentified is Build with raw member names kept, for an operator who has explicitly
+// asked to export identifiable rows.
+func BuildIdentified(rows []store.UsageRow, t pricing.Table) []Row {
+	return build(rows, t, MemberIdentified)
+}
+
+func build(rows []store.UsageRow, t pricing.Table, id MemberIdentity) []Row {
 	out := make([]Row, 0, len(rows))
 	for i := range rows {
 		u := &rows[i]
@@ -88,6 +100,7 @@ func Build(rows []store.UsageRow, t pricing.Table) []Row {
 		r.CacheEff = cacheEff(r.In, r.CacheRead)
 		out = append(out, r)
 	}
+	resolveMembers(out, id)
 	return out
 }
 

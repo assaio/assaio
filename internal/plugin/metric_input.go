@@ -82,7 +82,8 @@ type metricUsageRow struct {
 	Model      string `json:"model"`
 	Project    string `json:"project"`
 	Entrypoint string `json:"entrypoint"`
-	Member     string `json:"member"`
+	// Member is a pseudonym, never the name a member synced under -- see memberLabels.
+	Member string `json:"member"`
 	// Granularity is "turn" or "session". A plugin that sums these rows without reading it
 	// would fold whole-session aggregates into a per-turn figure, which is the same misread
 	// the core reports now disclose.
@@ -107,10 +108,11 @@ type metricUsageRow struct {
 }
 
 type metricSessionRow struct {
-	SessionID         string    `json:"sessionId"`
-	Project           string    `json:"project"`
-	Tool              string    `json:"tool"`
-	Model             string    `json:"model"`
+	SessionID string `json:"sessionId"`
+	Project   string `json:"project"`
+	Tool      string `json:"tool"`
+	Model     string `json:"model"`
+	// Member is a pseudonym, never the name a member synced under -- see memberLabels.
 	Member            string    `json:"member"`
 	FirstTs           time.Time `json:"firstTs"`
 	LastTs            time.Time `json:"lastTs"`

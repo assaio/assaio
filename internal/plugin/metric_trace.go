@@ -11,7 +11,8 @@ import (
 type metricTimeline struct {
 	Tool      string `json:"tool"`
 	SessionID string `json:"sessionId"`
-	Member    string `json:"member"`
+	// Member is a pseudonym, never the name a member synced under -- see memberLabels.
+	Member string `json:"member"`
 	// Timeline is "" for a session's main loop, otherwise the id of the sub-agent whose
 	// transcript records its parent's session id. Part of a sequence's identity rather than
 	// decoration: a forked sub-agent replays its origin's prefix, so one step can legitimately
@@ -55,10 +56,11 @@ type metricStep struct {
 func traceWire(set *trace.Set) []metricTimeline {
 	sequences := set.All()
 	out := make([]metricTimeline, 0, len(sequences))
+	member := memberLabels()
 	for i := range sequences {
 		t := &sequences[i]
 		out = append(out, metricTimeline{
-			Tool: t.Tool, SessionID: t.SessionID, Member: t.Member, Timeline: t.Timeline,
+			Tool: t.Tool, SessionID: t.SessionID, Member: member(t.Member), Timeline: t.Timeline,
 			Entrypoint: t.Entrypoint, Project: t.Project, Scope: trace.Scope(t),
 			Steps: stepWire(t.Steps),
 		})

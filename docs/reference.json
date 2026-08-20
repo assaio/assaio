@@ -1261,6 +1261,12 @@
           "usage": "output format: table|json|csv"
         },
         {
+          "name": "identify",
+          "type": "bool",
+          "default": "false",
+          "usage": "export raw member names instead of pseudonyms (team stores only; names individuals)"
+        },
+        {
           "name": "since",
           "type": "string",
           "default": "30d",

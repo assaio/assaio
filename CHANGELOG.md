@@ -21,6 +21,24 @@ Discussion.
 
 ## [Unreleased]
 
+### Breaking
+
+- **`report --format json|csv` now emits a member pseudonym, not the synced name.** On a
+  central store the `member` field carried the raw name every sync had pushed, on the default
+  `--by day` path that never reaches the dimension check — one pivot away from the leaderboard
+  the `--by member` refusal exists to prevent, and flatly contrary to what the README promised.
+  Every format now carries a stable `member-xxxx` label instead, and the export says which
+  identity it holds. Scripts that joined on a raw name need `--identify`, which names
+  individuals deliberately. A purely local store is unaffected: it has no member to label.
+
+### Fixed
+
+- **A metric plugin was handed raw member names.** The usage rows, session rows and step
+  timelines sent to an out-of-tree subprocess carried the name each member synced under. They
+  now carry the same pseudonym every other surface uses, so a plugin can still group by member
+  without being told who that is. Regression tests search the whole rendered payload for the
+  name rather than checking a field, so a field added later cannot reopen the hole.
+
 ## [0.23.1] - 2026-08-17
 
 ### Fixed

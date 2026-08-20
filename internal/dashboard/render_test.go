@@ -11,13 +11,13 @@ import (
 
 	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/paths"
-	"github.com/assaio/assaio/internal/report"
+	"github.com/assaio/assaio/internal/pseudonym"
 	"github.com/assaio/assaio/internal/store"
 )
 
 var update = flag.Bool("update", false, "update golden files")
 
-// fixedPseudonymKey seeds report.Pseudonym's per-install secret so this package's
+// fixedPseudonymKey seeds pseudonym.For's per-install secret so this package's
 // anonymized output -- including the golden HTML files, which embed pseudonymized
 // labels -- is byte-reproducible across machines and runs, rather than depending on a
 // randomly generated key.
@@ -25,7 +25,7 @@ var fixedPseudonymKey = bytes.Repeat([]byte{0x5a}, 32)
 
 // TestMain gives every test in this package a hermetic, fixed data directory. Dashboard
 // tests call Build/RenderHTML directly rather than through the CLI's own per-test
-// XDG_DATA_HOME convention, and report.Pseudonym now persists a per-install secret to
+// XDG_DATA_HOME convention, and pseudonym.For now persists a per-install secret to
 // disk (see internal/report/anonymize.go) -- without this, tests would read and write the
 // real user's data directory, and golden-file comparisons would depend on whatever key
 // happened to already be there.
@@ -56,11 +56,11 @@ func TestMain(m *testing.M) {
 }
 
 // TestPseudonymKeyIsSeededDeterministically guards the TestMain seam above: if
-// report.Pseudonym's key file name or size ever changes, this fails loudly instead of
+// pseudonym.For's key file name or size ever changes, this fails loudly instead of
 // this package's golden files silently starting to compare against a random key.
 func TestPseudonymKeyIsSeededDeterministically(t *testing.T) {
-	got := report.Pseudonym("project", "acme-web")
-	want := report.Pseudonym("project", "acme-web")
+	got := pseudonym.For("project", "acme-web")
+	want := pseudonym.For("project", "acme-web")
 	if got != want {
 		t.Fatalf("Pseudonym must be stable within a test run: %q != %q", got, want)
 	}

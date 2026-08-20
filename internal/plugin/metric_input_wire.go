@@ -10,6 +10,7 @@ import (
 	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/pricing"
+	"github.com/assaio/assaio/internal/pseudonym"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -61,13 +62,33 @@ func answersWire(usage []store.UsageRow, sessions []store.SessionRow) map[string
 	return out
 }
 
+// memberLabels pseudonymizes the member names leaving this process. A metric plugin is an
+// out-of-tree subprocess and a central store's members are other people, so the name they
+// synced under is not this boundary's to hand over; the label is stable, so a plugin can
+// still group by member.
+func memberLabels() func(string) string {
+	seen := map[string]string{}
+	return func(name string) string {
+		if name == "" {
+			return ""
+		}
+		label, ok := seen[name]
+		if !ok {
+			label = pseudonym.For("member", name)
+			seen[name] = label
+		}
+		return label
+	}
+}
+
 func usageWire(rows []store.UsageRow) []metricUsageRow {
 	out := make([]metricUsageRow, 0, len(rows))
+	member := memberLabels()
 	for i := range rows {
 		r := &rows[i]
 		out = append(out, metricUsageRow{
 			Day: r.Day, Tool: r.Tool, Model: r.Model, Project: r.Project,
-			Entrypoint: r.Entrypoint, Member: r.Member, Granularity: r.Granularity,
+			Entrypoint: r.Entrypoint, Member: member(r.Member), Granularity: r.Granularity,
 			In: r.In, Out: r.Out, CacheRead: r.CacheRead, CacheWrite: r.CacheWrite,
 			CacheWrite1h: r.CacheWrite1h,
 			Reasoning:    r.Reasoning, LinesAdded: r.LinesAdded, LinesRemoved: r.LinesRemoved,
@@ -80,11 +101,12 @@ func usageWire(rows []store.UsageRow) []metricUsageRow {
 
 func sessionWire(rows []store.SessionRow) []metricSessionRow {
 	out := make([]metricSessionRow, 0, len(rows))
+	member := memberLabels()
 	for i := range rows {
 		s := &rows[i]
 		out = append(out, metricSessionRow{
 			SessionID: s.SessionID, Project: s.Project, Tool: s.Tool, Model: s.Model,
-			Member: s.Member, FirstTs: s.FirstTs, LastTs: s.LastTs, Turns: s.Turns,
+			Member: member(s.Member), FirstTs: s.FirstTs, LastTs: s.LastTs, Turns: s.Turns,
 			OutputTokens: s.OutputTokens, PeakContextTokens: s.PeakContextTokens,
 			Edits: s.Edits, Compactions: s.Compactions, ActiveMinutes: s.ActiveMinutes,
 		})

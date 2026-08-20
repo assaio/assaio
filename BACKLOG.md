@@ -969,15 +969,6 @@ file-size norm.
   pure function of two strings holding no recorder state → `target.go`. The five other files over
   the budget were reviewed one by one and are each one responsibility; they stay.
 
-- [ ] **B182 · `report --format csv|json` still carries a `member` column** — S · both — the
-  `--by member` grouping is refused in every format, but the default `--by day` never reaches the
-  dimension check: `store.Usage` groups by member in SQL, `Build` copies it onto every `Row`, and
-  `RenderCSV`/`RenderJSON` emit it. On a central store `report --db team.db --format csv` is one
-  pivot away from the leaderboard the refusal exists to prevent, un-pseudonymized, and `report`
-  has no `--anonymize` flag where `dashboard` defaults to pseudonymous. Nothing is *ranked*, which
-  is why this is a decision rather than a defect: is `member` a data-export field or a report
-  field? If it stays, `report` needs the dashboard's default; if it goes, raw member data belongs
-  behind an explicit export. Either way the README's wording must match whichever holds.
 - [ ] **B183 · a step's `kind` cannot be corrected at all** — S · solo — `parser.StepKind` is
   assaio's own classification of a tool call, and `restateStepSQL` does not touch it, so no path
   including `backfill --full` can change a stored one. v0.22 moved `tokens` and `outcome` off the

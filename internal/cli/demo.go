@@ -10,6 +10,7 @@ import (
 
 	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/dashboard"
+	"github.com/assaio/assaio/internal/report"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -74,11 +75,11 @@ func runDemo(cmd *cobra.Command, dash bool) error {
 // same build/render helpers the real report/effectiveness/analyze commands use.
 func runDemoReports(cmd *cobra.Command, st *store.Store, start time.Time, lw *lineWriter) error {
 	demoHeader(lw, "report -- cost & tokens by project")
-	built, err := buildReport(cmd, st, start, "project")
+	built, err := buildReport(cmd, st, start, "project", report.MemberPseudonymous)
 	if err != nil {
 		return err
 	}
-	if err := renderReport(cmd, built, "table", "project"); err != nil {
+	if err := renderReport(cmd, built, "table", "project", report.MemberPseudonymous); err != nil {
 		return err
 	}
 	lw.println("")

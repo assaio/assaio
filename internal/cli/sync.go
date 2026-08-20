@@ -19,7 +19,7 @@ import (
 )
 
 // memberHexLen is the sync-member pseudonym's hex length ("member-a1b2c3d4e5"): 40 bits,
-// matching internal/report.Pseudonym. A shorter label collided at team scale by the
+// matching internal/pseudonym.For. A shorter label collided at team scale by the
 // birthday bound, silently merging two members' usage under one id on the shared store.
 const memberHexLen = 10
 

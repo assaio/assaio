@@ -4,7 +4,7 @@ import (
 	"sort"
 
 	"github.com/assaio/assaio/internal/analyze"
-	"github.com/assaio/assaio/internal/report"
+	"github.com/assaio/assaio/internal/pseudonym"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -80,7 +80,7 @@ func buildDrill(in analyze.Input, subpaths []store.SubpathRow, anonymize bool) *
 	}
 
 	if anonymize {
-		name = report.Pseudonym(analyze.PseudonymProject, name)
+		name = pseudonym.For(analyze.PseudonymProject, name)
 		subpaths = pseudonymizeSubpaths(subpaths)
 	}
 	return &ProjectDrill{
@@ -99,7 +99,7 @@ func pseudonymizeSubpaths(rows []store.SubpathRow) []store.SubpathRow {
 	for i := range rows {
 		out[i] = rows[i]
 		if rows[i].Subpath != "" {
-			out[i].Subpath = report.Pseudonym("subpath", rows[i].Subpath)
+			out[i].Subpath = pseudonym.For("subpath", rows[i].Subpath)
 		}
 	}
 	return out
