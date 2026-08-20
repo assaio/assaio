@@ -267,15 +267,10 @@ stable wrong answer, which is worse than a breaking correct one.
    situation where the store held a figure no re-read could correct.
 5. **Failure is visible.** Unsupported or failed evidence renders `—`, an error, or an
    unexplained-delta warning — never a zero and never a confident percentage.
-6. **Then the contracts freeze.** The exec plugin protocols, the event and signal contracts and
-   the sync API get conformance fixtures and semver guarantees (`B23`, `B99`).
-
-Deliberately **not** in that list: freezing the SQLite schema. v0.12 needed a migration that
-rewrote stored rows to correct a semantic error, and it will not be the last; a frozen store
-schema would make every future correction a breaking change and create pressure to leave a wrong
-number in place. The store stays internally versioned and migratable, and that is a promise
-about *correctability*, not an absence of one. The in-process plugin API (`B24`) also leaves the
-v1.0 path entirely — it is a research question, not a readiness condition.
+6. **Then the contracts freeze.** Which contracts, and what is deliberately left out of them,
+   is [docs/compatibility.md](docs/compatibility.md) — the single answer, because this file, the
+   release guide and the extension docs each carried a different one for several releases
+   (`B23`, `B99`).
 
 ### Why local analysis is the stronger half, not the smaller one
 
@@ -438,12 +433,12 @@ cloud is where this theme's hardening (per-member auth, retention, TLS) ultimate
 
 `assaio` is built to be extended, and the extension surfaces should become dependable
 enough to build a community on. The third exec-plugin protocol, **rule** units gating
-`check` (ADR 0005), has landed; what remains: a published, versioned freeze of the plugin
-protocols and the SQLite schema under semver (`B23`); JSON Schemas and a scaffolder for
+`check` (ADR 0005), has landed; what remains: a published, versioned freeze of the contracts
+[docs/compatibility.md](docs/compatibility.md) names (`B23`); JSON Schemas and a scaffolder for
 plugin authors (`B06`); and a community registry page once a few plugins exist (`B57`).
 Exec plugins stay the universal baseline — any language, no ABI, no rebuild.
 
-The in-process plugin API (`B24`) needs its mechanism revisited before it is built. Go's
+The in-process plugin API (`B24`) is deferred and is not a v1 contract. Go's
 native `plugin` package fights everything this project promises: it needs cgo, does not work
 on Windows, and requires plugin and host to be built with identical toolchain and dependency
 versions — which is incompatible with shipping one static binary per platform. A sandboxed

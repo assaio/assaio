@@ -14,7 +14,7 @@ While pre-1.0:
 |---|---|---|
 | **Patch** `v0.X.Y+1` | Bug fixes, docs, dependency bumps — no behavior change beyond the fixed bug. | Parser handles a format quirk; price-table refresh. |
 | **Minor** `v0.X+1.0` | New features or tools; any breaking change (allowed pre-1.0, always called out in release notes under a **Breaking** heading). | New parser; new command; record-schema change. |
-| **Major** `v1.0.0` | The stability promise: public plugin/SDK API and the SQLite schema become stable per [ROADMAP.md](ROADMAP.md). | — |
+| **Major** `v1.0.0` | The stability promise: the contracts listed in [docs/compatibility.md](docs/compatibility.md) freeze. The SQLite schema is **not** among them — it stays an implementation detail with migration and export guarantees. | — |
 
 Cadence: patch releases ship as soon as a meaningful fix lands (days, not weeks);
 minor releases when a coherent feature set is ready. No date-driven schedule.

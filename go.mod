@@ -2,6 +2,11 @@ module github.com/assaio/assaio
 
 go 1.25.0
 
+// The language version stays at 1.25 so `go install` works on it; the toolchain floor is
+// 1.26.6, the patch that closes the six reachable standard-library advisories govulncheck
+// reports against 1.26.5. `make vuln` is the check, and CI builds releases on it.
+toolchain go1.26.6
+
 require (
 	github.com/jedib0t/go-pretty/v6 v6.8.3
 	github.com/knadh/koanf/parsers/yaml v1.1.1
@@ -33,7 +38,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	modernc.org/libc v1.74.4 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect

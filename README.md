@@ -67,7 +67,7 @@ macOS, Linux, and Windows (amd64/arm64), and the test suite runs in CI on all th
 brew install assaio/tap/assaio-agent
 ```
 
-**Any platform, with Go 1.25+:**
+**Any platform, with Go 1.25+** (the release toolchain is 1.26.6, the patch level `govulncheck` requires)**:**
 
 ```sh
 go install github.com/assaio/assaio/cmd/assaio-agent@latest

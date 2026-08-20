@@ -37,11 +37,12 @@ func ingestParsed(ctx context.Context, st *store.Store, cache projectCache, res 
 	resolveProjects(recs, cache)
 	res.Records += len(recs)
 	res.ZeroToken += zeroTokenCount(recs)
-	n, err := st.InsertLocal(ctx, recs)
+	n, lowered, err := st.InsertLocal(ctx, recs)
 	if err != nil {
 		return err
 	}
 	res.Inserted += n
+	res.Lowered += lowered
 	return nil
 }
 

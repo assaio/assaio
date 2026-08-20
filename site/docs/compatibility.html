@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The team server — assaio</title>
-<meta name="description" content="assaio-agent serve runs a self-hosted team server: teammates&#39; assaio-agent sync runs push their local usage to it over HTTP, and it serves back one aggregated, pseudonymized-by-default Assay dashboard for the whole team at GET / (internal/server).">
-<link rel="canonical" href="https://assaio.dev/docs/team-server">
+<title>Compatibility — assaio</title>
+<meta name="description" content="What assaio promises not to break, and what it deliberately does not promise.">
+<link rel="canonical" href="https://assaio.dev/docs/compatibility">
 <meta property="og:type" content="article">
-<meta property="og:url" content="https://assaio.dev/docs/team-server">
-<meta property="og:title" content="The team server — assaio">
-<meta property="og:description" content="assaio-agent serve runs a self-hosted team server: teammates&#39; assaio-agent sync runs push their local usage to it over HTTP, and it serves back one aggregated, pseudonymized-by-default Assay dashboard for the whole team at GET / (internal/server).">
+<meta property="og:url" content="https://assaio.dev/docs/compatibility">
+<meta property="og:title" content="Compatibility — assaio">
+<meta property="og:description" content="What assaio promises not to break, and what it deliberately does not promise.">
 <meta property="og:image" content="https://assaio.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -124,48 +124,71 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
     <a href="https://github.com/assaio/assaio/releases">Releases</a>
   </nav>
 </header>
-<div class="layout"><aside class="side"><nav><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a class="on" href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="the-team-server">The team server</h1>
-<p><em>Part of <a href="https://assaio.dev/docs">Extending assaio</a>.</em></p>
-<p><code>assaio-agent serve</code> runs a self-hosted team server: teammates' <code>assaio-agent sync</code> runs
-push their local usage to it over HTTP, and it serves back one aggregated,
-pseudonymized-by-default Assay dashboard for the whole team at <code>GET /</code>
-(<code>internal/server</code>). This is an MVP — a single shared bearer token gates the <em>write</em>
-endpoint (<code>POST /v1/usage</code>) only, there is no TLS, and <strong>the served dashboard itself has
-no auth at all</strong> in this version — anyone who can reach the port sees it; run <code>serve</code>
-behind a reverse proxy on a trusted network, not exposed to the open internet (see
-<code>internal/server</code>'s package doc and the security note <code>serve</code> prints on startup).</p>
-<p>The extension mechanism does not change at that boundary. <code>server.BuildDashboard</code>
-(<code>internal/server/dashboard.go</code>) calls the exact same <code>dashboard.Build</code> the local
-<code>assaio-agent dashboard</code> command calls, over the exact same process-wide
-<code>analyze.Validators()</code> registry every validator self-registers into — there is no
-separate server-side validator list. That means a custom validator compiled into your
-team's <code>assaio-agent</code> build (see <a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a>)
-shows up on the team server's dashboard automatically: same faceplate cell, same ledger
-entry, same anonymization rules, with nothing to configure on the server side. The
-deliberate exception is <strong>exec plugins</strong>: <code>serve</code> executes neither <a href="https://assaio.dev/docs/metric-plugin">metric
-plugins</a> nor <a href="https://assaio.dev/docs/rule-plugin">rule
-plugins</a>, because its dashboard endpoint is
-unauthenticated and rebuilt per request — they are local-CLI surfaces (<code>analyze</code>,
-<code>dashboard</code>, <code>metrics verify</code>, and <code>check</code> for rules; see <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0004-exec-metric-plugin-protocol.md">ADR
-0004</a> and <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0005-exec-rule-plugin-protocol.md">ADR
-0005</a>). The one
-difference from the local CLI is that the served dashboard's anonymization is not
-optional — <code>BuildDashboard</code> hardcodes <code>anonymize = true</code>, so a real-name view is only
-ever available locally, as an explicit <code>--no-anonymize</code> run against a copy of the store
-(<code>assaio-agent dashboard --db &lt;path-to-central-db&gt; --no-anonymize</code>), never as the
-served default.</p>
-<pre><code class="language-yaml"># on the server
-server:
-  addr: 127.0.0.1:8787    # loopback by default; widen deliberately
-  token: &quot;&quot;    # required; override with ASSAIO_SERVER_TOKEN, do not commit a real one
-
-# on each teammate's machine
-sync:
-  server: &quot;http://assaio.internal:8787&quot;
-  token: &quot;&quot;    # override with ASSAIO_SYNC_TOKEN
-  member: &quot;&quot;   # opt-in self-identification; default: an auto pseudonym from hostname+OS-user
-</code></pre>
-<hr>
+<div class="layout"><aside class="side"><nav><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a class="on" href="https://assaio.dev/docs/compatibility">Compatibility</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="compatibility">Compatibility</h1>
+<p>What <code>assaio</code> promises not to break, and what it deliberately does not promise. This file is
+the single answer: <a href="https://github.com/assaio/assaio/blob/main/ROADMAP.md">ROADMAP.md</a>, <a href="https://github.com/assaio/assaio/blob/main/RELEASING.md">RELEASING.md</a> and
+<a href="https://assaio.dev/docs">extending.md</a> link here rather than restating it, because for several releases
+they each carried a different version of it and nothing noticed.</p>
+<p><code>assaio</code> is pre-1.0. Until <code>v1.0</code>, a minor release may break any of it, and the changelog says
+so under a <strong>Breaking</strong> heading. What follows is what <code>v1.0</code> means.</p>
+<h2 id="frozen-at-v10">Frozen at v1.0</h2>
+<p>These are the contracts a third party builds against. At <code>v1.0</code> each gets a version, a
+compatibility test, and a written deprecation path; after it, a breaking change needs a major.</p>
+<table>
+<thead>
+<tr>
+<th>Contract</th>
+<th>Where it lives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Exec plugin protocols — parser, metric, rule</td>
+<td><a href="https://assaio.dev/docs">extending.md</a>, ADR <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0003-exec-plugin-protocol.md">0003</a> / <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0004-exec-metric-plugin-protocol.md">0004</a> / <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0005-exec-rule-plugin-protocol.md">0005</a></td>
+</tr>
+<tr>
+<td>The observation envelope and its payload types</td>
+<td>ADR <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0007-canonical-event-contract.md">0007</a></td>
+</tr>
+<tr>
+<td>Signal ids and what a zero means for each</td>
+<td>ADR <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0008-signal-catalog.md">0008</a>, <code>assaio-agent signals</code></td>
+</tr>
+<tr>
+<td>The team sync protocol</td>
+<td><a href="https://assaio.dev/docs/team-server">extending/team-server.md</a></td>
+</tr>
+<tr>
+<td>Machine-readable output — <code>analyze --format json</code>, <code>report --format json|csv</code>, <code>docs export</code></td>
+<td><code>docs/reference.json</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="not-frozen-and-guaranteed-instead">Not frozen, and guaranteed instead</h2>
+<p><strong>The SQLite schema is an implementation detail.</strong> It is not a public API and will not be
+frozen at <code>v1.0</code>. Reading the database directly is supported for exploration
+(<a href="https://assaio.dev/docs/query-your-data">extending/query-your-data.md</a>) and unsupported as an integration.</p>
+<p>What is guaranteed in its place:</p>
+<ul>
+<li><strong>Forward migration</strong> from any released version to any later one, applied automatically and
+tested from the oldest supported version. A shipped migration is immutable in name and
+content (see <a href="https://github.com/assaio/assaio/blob/main/RELEASING.md#schema-changes-hard-rule">RELEASING.md</a>).</li>
+<li><strong>Export.</strong> Everything the store holds is reachable through the machine-readable outputs
+above, which <em>are</em> frozen. No analysis or export requires a network, a server, or a licence.</li>
+<li><strong>Backup.</strong> The store is one file; copying it while <code>assaio</code> is idle is a complete backup.</li>
+</ul>
+<p>The reason is v0.12: correcting a semantic error needed a migration that rewrote stored rows,
+and it will not be the last. A frozen store schema would have made that correction the breaking
+change instead of the bug. The promise worth making is that history stays <em>correctable</em>.</p>
+<h2 id="deferred-and-not-a-v1-contract">Deferred, and not a v1 contract</h2>
+<p><strong>An in-process Go plugin API.</strong> Exec protocols are the extension boundary: language-neutral,
+opt-in, validated at the boundary, and bounded in time and size. A dynamically loaded in-process
+API needs a measured performance or deployment need that nobody has demonstrated, and Go's own
+<code>plugin</code> package cannot deliver it portably. If it ever arrives it will be additive — a second
+boundary beside the exec one, never a replacement for it.</p>
+<p><strong>Assaio Cloud.</strong> The managed service is not part of this repository's compatibility surface.
+The contracts above are the same ones it will speak; nothing in the open-source binary may come
+to require it.</p>
 </main>
 </div>
 <footer>

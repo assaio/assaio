@@ -85,7 +85,7 @@ func TestTimelinesAttachTheSessionScopeAndLeaveItEmptyWhenUnknown(t *testing.T) 
 	s := stepStore(t)
 	at := time.Date(2026, 8, 12, 9, 0, 0, 0, time.UTC)
 
-	if _, err := s.InsertLocal(ctx, []usage.Record{{
+	if _, _, err := s.InsertLocal(ctx, []usage.Record{{
 		Tool: "claude-code", SessionID: "known", Timestamp: at, Model: "m", DedupeKey: "r1",
 		Entrypoint: "cli", Project: "assaio", Granularity: "turn", InputTokens: 1,
 	}}); err != nil {

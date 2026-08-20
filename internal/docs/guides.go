@@ -34,6 +34,7 @@ const (
 // appearing last or not at all.
 var order = []string{
 	"docs/extending.md",
+	"docs/compatibility.md",
 	"docs/extending/metric-validator.md",
 	"docs/extending/metric-validator-example.md",
 	"docs/extending/metric-plugin.md",

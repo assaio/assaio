@@ -938,6 +938,22 @@ file-size norm.
   current parse is the authority on it — the same question `granularity` answered yes to — and
   adding the column if so.
 
+- [ ] **B186 · one assistant message, two transcripts, two different counts** — M · solo — found
+  by the downward-restatement canary `B116` asked for, on its first run against the maintainer's
+  store. A Claude sub-agent's transcript and its parent session both carry the same assistant
+  `msg_` id, and the two files see different amounts of it: for
+  `msg_011Ce6Ytmoyd4FXNBViS2XzB` the parent holds 4 `tool_use` blocks and the sub-agent file
+  holds 1. The dedupe key is the message id alone, so whichever file the walk reads last wins
+  the restate, and the stored `tool_calls` oscillates between 4 and 1 forever — the canary
+  reports the same 6 rows on every `backfill --full`, unchanged while the store gains new
+  records around them. **Measured: 6 of 192,277 records (0.003%), a swing of ~18 tool calls
+  against a window of 216,790**, which is why this is a defect to fix rather than a figure to
+  distrust. The decision is which file is the authority on a message that appears in two: the
+  parent transcript is the authority on the parent's turn and the sub-agent file on its own, so
+  the key probably has to carry the scope it was read in — the same shape the sync path already
+  uses to keep two members' rows apart. Whatever the answer, the canary is the regression test:
+  it must reach zero and stay there.
+
 - [ ] **B185 · give the withdrawn verdicts a line derived from your own history** — L · both —
   v0.24 withdrew the good/bad call from thirteen metrics because their thresholds were numbers
   picked once (`B176`–`B178`, `B180`, and the same class in `reasoning-share` and

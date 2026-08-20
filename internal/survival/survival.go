@@ -11,6 +11,8 @@ package survival
 
 import (
 	"context"
+	"slices"
+	"time"
 
 	"github.com/assaio/assaio/internal/event"
 	"github.com/assaio/assaio/internal/vcs"
@@ -44,6 +46,36 @@ type Result struct {
 	// other reported more surviving lines than were ever added.
 	Merges     int
 	MergeLines int64
+	// OldestCommit and NewestCommit bound the window's commits in time. Survival is monotonic
+	// in commit age -- a line written yesterday has had no time to be rewritten, so the same
+	// repository reads near 100% over a week and far lower over a year -- and a rate whose age
+	// is unstated invites a comparison between two windows that measured different things
+	// (B179). Zero on both when no commit carried a time.
+	OldestCommit, NewestCommit time.Time
+	// MedianCommit is the middle commit's time. The age a reader wants is relative to when they
+	// asked, which is MedianCommitAgeDays; the timestamp is here so a caller can ask it of any
+	// moment rather than only of now.
+	MedianCommit time.Time
+}
+
+// AgeSpanDays is how many days separate the window's oldest and newest commit, and whether
+// both were dated at all. It is the span the rate above is a rate *over*, not the age of any
+// one line.
+func (r *Result) AgeSpanDays() (days int, ok bool) {
+	if r.OldestCommit.IsZero() || r.NewestCommit.IsZero() {
+		return 0, false
+	}
+	return int(r.NewestCommit.Sub(r.OldestCommit).Hours() / 24), true
+}
+
+// MedianCommitAgeDays is how old the window's middle commit is at asOf -- the single number
+// that says what "78% survived" was measured on. A window of last week's commits and one of
+// last year's produce very different rates from the same repository.
+func (r *Result) MedianCommitAgeDays(asOf time.Time) (days int, ok bool) {
+	if r.MedianCommit.IsZero() {
+		return 0, false
+	}
+	return int(asOf.Sub(r.MedianCommit).Hours() / 24), true
 }
 
 // Analyze reads the survival picture from the window's commit observations and the paths
@@ -69,12 +101,16 @@ func Analyze(ctx context.Context, root string, commits []event.Event, files []st
 // kept out of the rate, and answered for separately by blame.
 func (r *Result) tally(commits []event.Event) map[string]bool {
 	inWindow := make(map[string]bool, len(commits))
+	times := make([]time.Time, 0, len(commits))
 	for i := range commits {
 		c, ok := commits[i].Payload.(event.Commit)
 		if !ok {
 			continue // a mixed observation stream is what the contract is for; read only ours
 		}
 		r.Commits++
+		if t := commits[i].OccurredAt; !t.IsZero() {
+			times = append(times, t)
+		}
 		if c.Revert {
 			r.Reverts++
 		}
@@ -87,7 +123,20 @@ func (r *Result) tally(commits []event.Event) map[string]bool {
 		r.GitAdded += c.LinesAdded
 		r.Changed = add(r.Changed, c.Files)
 	}
+	r.datesFrom(times)
 	return inWindow
+}
+
+// datesFrom stamps the window's time bounds and its middle commit. Undated commits are left
+// out rather than defaulted: an unstamped observation has no age, and giving it one would be
+// the fabricated figure the rest of this package refuses.
+func (r *Result) datesFrom(times []time.Time) {
+	if len(times) == 0 {
+		return
+	}
+	slices.SortFunc(times, func(a, b time.Time) int { return a.Compare(b) })
+	r.OldestCommit, r.NewestCommit = times[0], times[len(times)-1]
+	r.MedianCommit = times[len(times)/2]
 }
 
 // blameTally is what one pass over the touched files found: lines still in HEAD from the

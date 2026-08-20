@@ -21,7 +21,7 @@ func cacheRec(key string, write, long int64, reason string) usage.Record {
 func TestCacheTierAndMissReasonRoundTrip(t *testing.T) {
 	st := newStore(t)
 	ctx := context.Background()
-	if _, err := st.InsertLocal(ctx, []usage.Record{
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{
 		cacheRec("msg_1", 100, 60, "tools_changed"),
 		cacheRec("msg_2", 40, 0, ""),
 	}); err != nil {
@@ -54,7 +54,7 @@ func TestCacheTierAndMissReasonRoundTrip(t *testing.T) {
 func TestCacheMissesExcludesTurnsWithNoStatedReason(t *testing.T) {
 	st := newStore(t)
 	ctx := context.Background()
-	if _, err := st.InsertLocal(ctx, []usage.Record{cacheRec("msg_1", 10, 0, "")}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{cacheRec("msg_1", 10, 0, "")}); err != nil {
 		t.Fatal(err)
 	}
 	misses, err := st.CacheMisses(ctx, time.Time{})
@@ -71,11 +71,11 @@ func TestCacheMissesExcludesTurnsWithNoStatedReason(t *testing.T) {
 func TestARereadFillsInTheCacheTierOnStoredHistory(t *testing.T) {
 	st := newStore(t)
 	ctx := context.Background()
-	if _, err := st.InsertLocal(ctx, []usage.Record{cacheRec("msg_1", 100, 0, "")}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{cacheRec("msg_1", 100, 0, "")}); err != nil {
 		t.Fatal(err)
 	}
 	// The same turn, re-read by a build that now extracts both fields.
-	if _, err := st.InsertLocal(ctx, []usage.Record{cacheRec("msg_1", 100, 60, "model_changed")}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{cacheRec("msg_1", 100, 60, "model_changed")}); err != nil {
 		t.Fatal(err)
 	}
 	rows, err := st.Usage(ctx, time.Time{})
@@ -168,12 +168,12 @@ func TestARereadCorrectsAPartialOutputCount(t *testing.T) {
 		DedupeKey: "msg_1", Granularity: "turn", OutputTokens: 2,
 		CacheWriteTokens: 2400, CacheWrite1hTokens: 2400,
 	}
-	if _, err := st.InsertLocal(ctx, []usage.Record{partial}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{partial}); err != nil {
 		t.Fatal(err)
 	}
 	complete := partial
 	complete.OutputTokens = 158
-	if _, err := st.InsertLocal(ctx, []usage.Record{complete}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{complete}); err != nil {
 		t.Fatal(err)
 	}
 	rows, err := st.Usage(ctx, time.Time{})

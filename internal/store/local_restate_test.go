@@ -38,10 +38,10 @@ func TestInsertLocalRestatesAHalfAttributedTurn(t *testing.T) {
 	ctx := context.Background()
 	st := openTempStore(t)
 
-	if _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 0, 12)}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 0, 12)}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 2, 40)}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 2, 40)}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -63,10 +63,10 @@ func TestInsertLocalNeverDegradesAStoredTokenCount(t *testing.T) {
 	thin := liveTurn(1, 0, 0)
 	thin.InputTokens, thin.OutputTokens = 10, 20
 
-	if _, err := st.InsertLocal(ctx, []usage.Record{rich}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{rich}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.InsertLocal(ctx, []usage.Record{thin}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{thin}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -90,11 +90,11 @@ func TestInsertLocalLetsACorrectedRuleLowerActivity(t *testing.T) {
 	ctx := context.Background()
 	st := openTempStore(t)
 
-	if _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 2, 40)}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 2, 40)}); err != nil {
 		t.Fatal(err)
 	}
 	// The same file re-read by a build that no longer counts a repeated line twice.
-	if _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 1, 20)}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 1, 20)}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -110,11 +110,11 @@ func TestInsertLocalCountsOnlyNewRows(t *testing.T) {
 	ctx := context.Background()
 	st := openTempStore(t)
 
-	first, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 0, 12)})
+	first, _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 0, 12)})
 	if err != nil {
 		t.Fatal(err)
 	}
-	again, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 2, 40)})
+	again, _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(3, 2, 40)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,12 +150,12 @@ func TestInsertLocalRelabelsGranularityFromTheCurrentParse(t *testing.T) {
 	ctx := context.Background()
 	st := openTempStore(t)
 
-	if _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(1, 0, 5)}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(1, 0, 5)}); err != nil {
 		t.Fatal(err)
 	}
 	aggregate := liveTurn(1, 0, 5)
 	aggregate.Granularity = "session"
-	if _, err := st.InsertLocal(ctx, []usage.Record{aggregate}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{aggregate}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -170,7 +170,7 @@ func TestInsertLeavesAStoredGranularityAlone(t *testing.T) {
 	ctx := context.Background()
 	st := openTempStore(t)
 
-	if _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(1, 0, 5)}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{liveTurn(1, 0, 5)}); err != nil {
 		t.Fatal(err)
 	}
 	aggregate := liveTurn(1, 0, 5)

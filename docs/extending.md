@@ -35,7 +35,7 @@ metric's `Bars` rank by project name and the report is anonymized.
 | [SQL against the schema](extending/query-your-data.md) | today | Any SQLite client against the documented `usage_record` table. |
 | JSON/CSV pipes | today | `report --format json\|csv` into your own tooling or BI. |
 | [In-tree parser (new data source)](extending/data-source.md) | today | One Go package under `internal/parser/`, with golden and fuzz tests; merge via PR. |
-| Out-of-tree Go plugin API (library import, dynamically loaded) | planned | A public API for connectors, metrics and rules, loaded without a rebuild; see [Custom metrics](#custom-metrics-whats-shipped-vs-roadmap) and [`ROADMAP.md`](../ROADMAP.md). |
+| Out-of-tree Go plugin API (library import, dynamically loaded) | deferred | Not a v1 contract and not scheduled: the exec protocols are the extension boundary. See [compatibility.md](compatibility.md). |
 
 Two more pages exist for reading rather than writing:
 [what each source's log carries](extending/source-fields.md), the field-by-field audit behind
@@ -146,10 +146,9 @@ Custom metrics ship **two ways today**: the in-tree, one-file-per-metric
 in `analyze` and the local dashboard. Thresholds *on* those metrics ship as
 [rule plugins](extending/rule-plugin.md), out-of-tree for the same reason.
 
-What remains roadmap is a *dynamically loaded, in-process Go API* — the `plugin/metric/` and
-`plugin/rule/` tree sketched in [`CONTRIBUTING.md`](../CONTRIBUTING.md): a metric or rule as a
-linked Go unit that a running `assaio-agent` (or the team server) picks up without a rebuild and
-without a subprocess, arriving toward v1.0 (see the [roadmap](../ROADMAP.md)). The exec
-protocol's wire envelope is versioned but pre-1.0 unstable; if you have a metric in mind that
-needs domain data the envelope (or `Input`) does not yet carry, open an issue and describe it —
-that is exactly what shapes both before the interfaces are frozen.
+A *dynamically loaded, in-process Go API* — the `plugin/metric/` and `plugin/rule/` tree
+sketched in [`CONTRIBUTING.md`](../CONTRIBUTING.md) — is **deferred and is not a v1 contract**;
+see [compatibility.md](compatibility.md) for why and for what would change that. The exec
+protocols are the extension boundary. Their wire envelope is versioned but pre-1.0 unstable; if
+you have a metric in mind that needs domain data the envelope (or `Input`) does not yet carry,
+open an issue and describe it — that is exactly what shapes it before the contract freezes.

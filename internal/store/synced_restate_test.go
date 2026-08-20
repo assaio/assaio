@@ -58,17 +58,17 @@ func TestRestateFillsAMissingModelOnly(t *testing.T) {
 	ctx := context.Background()
 	st := openTempStore(t)
 
-	if _, err := st.InsertLocal(ctx, []usage.Record{syncedTurn(10, 3, "")}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{syncedTurn(10, 3, "")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.InsertLocal(ctx, []usage.Record{syncedTurn(10, 3, "claude-opus-5")}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{syncedTurn(10, 3, "claude-opus-5")}); err != nil {
 		t.Fatal(err)
 	}
 	if got := storedModel(t, st); got != "claude-opus-5" {
 		t.Fatalf("model = %q, want the name the later read supplied", got)
 	}
 
-	if _, err := st.InsertLocal(ctx, []usage.Record{syncedTurn(10, 3, "something-else")}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{syncedTurn(10, 3, "something-else")}); err != nil {
 		t.Fatal(err)
 	}
 	if got := storedModel(t, st); got != "claude-opus-5" {

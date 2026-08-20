@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -96,7 +97,8 @@ func renderSurvival(cmd *cobra.Command, res *survival.Result, since string, skip
 	cmd.Println()
 	cmd.Printf("  AI lines (assaio):   %d\n", res.AILines)
 	cmd.Printf("  Lines added (git):   %d\n", res.GitAdded)
-	cmd.Printf("  Surviving in HEAD:   %d  (%s)\n\n", res.Surviving, rate)
+	cmd.Printf("  Surviving in HEAD:   %d  (%s)\n", res.Surviving, rate)
+	cmd.Printf("%s\n\n", survivalAgeLine(res, time.Now()))
 	cmd.Println("  Directional: assaio counts AI lines but cannot tell which git lines were AI-written,")
 	cmd.Println("  so this is repo-wide survival of the window's commits shown beside your AI usage -- a")
 	cmd.Println("  correlation to read, not a per-line AI-survival number. File categories come from a")
@@ -105,6 +107,29 @@ func renderSurvival(cmd *cobra.Command, res *survival.Result, since string, skip
 	cmd.Println("  the added and the surviving figure rather than inflating either.")
 	cmd.Println("  Age-matched bug/quality impact and team-wide DORA signals are the server stage.")
 	return nil
+}
+
+// survivalAgeLine states how old the commits behind the rate are, because the rate is monotonic
+// in that age: the same repository reads near 100% over a week and far lower over a year, so a
+// figure whose age is unstated invites a comparison between two windows that measured different
+// things (B179). A window whose commits carry no time says so rather than inventing an age.
+func survivalAgeLine(res *survival.Result, now time.Time) string {
+	const wrap = "\n  "
+	head := "  Age of what was measured:"
+	median, ok := res.MedianCommitAgeDays(now)
+	if !ok {
+		return head + " unknown -- no commit in this window carries a time." + wrap +
+			"Survival rises the younger the commits are, so a rate without an age is not comparable" + wrap +
+			"to another window's."
+	}
+	line := head + " median commit is " + strconv.Itoa(median) + " day(s) old"
+	if span, spanOK := res.AgeSpanDays(); spanOK {
+		line += ", spanning " + strconv.Itoa(span) + " day(s)"
+	}
+	return line + "." + wrap +
+		"Survival is monotonic in commit age -- a line written yesterday has had no time to be" + wrap +
+		"rewritten -- so this rate is comparable only against a window of about the same age, never" + wrap +
+		"against the same repository read over a longer --since."
 }
 
 // categoryLine renders the window's changed files per category, naming only the categories

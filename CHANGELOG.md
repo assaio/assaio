@@ -48,6 +48,30 @@ Discussion.
   the roadmap calls the most likely way this project starts lying. The count and its direction
   are reported without a verdict.
 
+### Added
+
+- **`docs/compatibility.md`: one answer to what v1.0 freezes.** The roadmap said the SQLite
+  schema would deliberately not be frozen in one section and listed freezing it in another, the
+  release guide promised a stable schema and SDK, and the extension docs promised an in-process
+  Go API "arriving toward v1.0". Every existing consistency check passed the whole time, because
+  each file was internally consistent. The policy now lives in one published page the others
+  link to: the exec protocols, the observation and signal contracts, the recommendation record,
+  the sync protocol and the machine-readable outputs freeze; the SQLite schema stays an
+  implementation detail with migration, export and backup guarantees; the in-process Go API is
+  deferred and is not a v1 contract. Two tests hold it — one rejects a retired promise
+  reappearing in any published file, one fails if a file stops linking to the policy.
+- **`survival` states the age of what it measured.** The rate is monotonic in commit age -- this
+  repository reads 99% over `--since 7d` at a median commit age of 3 days and 92% over `365d` at
+  13 days -- so a figure printed without its age invited a comparison between two windows that
+  measured different things. Every run now names the median commit age and the span, and a
+  window whose commits carry no date says so rather than being given one.
+- **`backfill` reports how many stored rows a re-read moved *down*.** Assigned columns exist so
+  a corrected attribution rule can reach history, which leaves the store unable to tell a fix
+  landing from a parser regression erasing evidence. The count is printed with that ambiguity
+  stated. On its first run against the maintainer's store it found six rows and a real defect
+  behind them, now tracked as `B186`: a sub-agent transcript and its parent both carry the same
+  assistant message id and see different amounts of it, so the stored tool-call count oscillates.
+
 ### Fixed
 
 - **`recovery` compared the aftermath of a failure against a baseline containing it.** The
@@ -63,6 +87,23 @@ Discussion.
   the week-over-week trend applied to the recent side alone, so output falling from 201,347
   lines to zero was reported as unreadable rather than as the direction it is. It now applies to
   the larger side.
+- **A parser fix could not reach `ts`, `project`, `entrypoint` or `git_branch`.** Those columns
+  were stamped by the first read and correctable by nothing, so a fix to any of them -- including
+  the one that decides which day a record counts toward -- could not reach a single stored row,
+  and no canary looked at them (`B116`). A re-read of the same file now corrects all four, on
+  the rule that already decided `granularity`. The three text columns overwrite only when the
+  re-read has an answer, because clearing a correctly captured name is not correcting it.
+- **A step's `kind` could not be corrected at all.** `restateStepSQL` did not touch it, so no
+  path including `backfill --full` could change a stored classification: under the default
+  30-day horizon a wrong one aged out, under `trace.horizon_days: 0` it was permanent (`B183`).
+- **Every GitHub Actions reference is pinned to a commit SHA, as `SECURITY.md` always claimed.**
+  Five jobs across two workflows used `actions/checkout@v4` -- a mutable tag -- while the policy
+  said otherwise. A test now holds the claim to the workflows instead of review.
+- **The supported build toolchain is Go 1.26.6 or newer, and `make vuln` is clean.** The
+  documented floor was 1.25, on which `govulncheck` reports six reachable standard-library
+  advisories; `go.mod` now pins the toolchain and the indirect `golang.org/x/text` is on
+  v0.39.0, which clears the last (unreachable) module advisory. The scan reports no
+  vulnerabilities at all.
 
 ### Breaking
 

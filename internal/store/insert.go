@@ -2,6 +2,8 @@ package store
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/assaio/assaio/internal/usage"
@@ -33,7 +35,10 @@ const restateSignalsSQL = `
 // member's push must never restate a row another member already wrote. Reading a local file
 // the store owns is a different contract -- see InsertLocal.
 func (s *Store) Insert(ctx context.Context, recs []usage.Record) (int, error) {
-	return s.insertWith(ctx, recs, restateSignalsSQL, signalsRestateArgs)
+	// restateSignalsSQL only ever fills columns that are still zero, so this path cannot lower
+	// a figure and has nothing to watch.
+	inserted, _, err := s.insertWith(ctx, recs, restateSignalsSQL, signalsRestateArgs, "")
+	return inserted, err
 }
 
 // signalsRestateArgs binds r to restateSignalsSQL's placeholders.
@@ -45,18 +50,30 @@ func signalsRestateArgs(r *usage.Record) []any {
 }
 
 // insertWith inserts recs idempotently and hands every skipped duplicate to restateSQL,
-// which decides what a re-read is allowed to correct on a row that already exists.
+// which decides what a re-read is allowed to correct on a row that already exists. lowerSQL is
+// the watch on that correction: assigned columns let a re-read move a figure *down*, which is
+// the point -- a corrected rule has to reach history -- and also the one way a parser
+// regression erases evidence with nothing to show for it. Empty on the paths that cannot lower
+// anything.
 func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL string,
-	restateArgs func(*usage.Record) []any,
-) (int, error) {
+	restateArgs func(*usage.Record) []any, lowerSQL string,
+) (inserted, lowered int, err error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	defer func() { _ = tx.Rollback() }()
 	restate, err := tx.PrepareContext(ctx, restateSQL)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
+	}
+	var lower *sql.Stmt
+	if lowerSQL != "" {
+		lower, err = tx.PrepareContext(ctx, lowerSQL)
+		if err != nil {
+			return 0, 0, err
+		}
+		defer func() { _ = lower.Close() }()
 	}
 	defer func() { _ = restate.Close() }()
 	stmt, err := tx.PrepareContext(ctx, `
@@ -72,10 +89,9 @@ func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL 
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(tool, dedupe_key) DO NOTHING`)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	defer func() { _ = stmt.Close() }()
-	inserted := 0
 	for i := range recs {
 		r := &recs[i]
 		res, err := stmt.ExecContext(ctx, r.Tool, r.SessionID, r.Timestamp.UTC().Format(time.RFC3339),
@@ -87,19 +103,42 @@ func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL 
 			r.ToolErrors, r.Sidechain, r.Skill, r.Agent,
 			r.CacheWrite1hTokens, r.CacheMissReason)
 		if err != nil {
-			return inserted, err
+			return inserted, lowered, err
 		}
 		n, _ := res.RowsAffected()
 		if n > 0 {
 			inserted++
 			continue
 		}
+		if lower != nil {
+			down, err := wouldLower(ctx, lower, r)
+			if err != nil {
+				return inserted, lowered, err
+			}
+			if down {
+				lowered++
+			}
+		}
 		if _, err := restate.ExecContext(ctx, restateArgs(r)...); err != nil {
-			return inserted, err
+			return inserted, lowered, err
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		return inserted, err
+		return inserted, lowered, err
 	}
-	return inserted, nil
+	return inserted, lowered, nil
+}
+
+// wouldLower reports whether restating r on its stored row moves any assigned activity figure
+// down. Asked before the update, because afterwards the old figure is gone.
+func wouldLower(ctx context.Context, stmt *sql.Stmt, r *usage.Record) (bool, error) {
+	var one int
+	err := stmt.QueryRowContext(ctx, lowerArgs(r)...).Scan(&one)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return false, nil
+	case err != nil:
+		return false, err
+	}
+	return true, nil
 }

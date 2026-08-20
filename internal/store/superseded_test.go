@@ -33,7 +33,7 @@ func TestSupersededAggregatesFindsOnlyCoveredOnes(t *testing.T) {
 			DedupeKey: "msg_1", Granularity: "turn", InputTokens: 1, OutputTokens: 1,
 		},
 	}
-	if _, err := st.InsertLocal(ctx, recs); err != nil {
+	if _, _, err := st.InsertLocal(ctx, recs); err != nil {
 		t.Fatal(err)
 	}
 
@@ -70,7 +70,7 @@ func TestSupersededAggregatesFindsOnlyCoveredOnes(t *testing.T) {
 func TestSupersededAggregatesWithNothingCovered(t *testing.T) {
 	ctx := context.Background()
 	st := openTempStore(t)
-	if _, err := st.InsertLocal(ctx, []usage.Record{aggregateRow("agent:x")}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{aggregateRow("agent:x")}); err != nil {
 		t.Fatal(err)
 	}
 	got, err := st.SupersededAggregates(ctx, "claude-code", nil)

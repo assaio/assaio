@@ -30,7 +30,14 @@ Out of scope: third-party AI coding tools whose data assaio ingests.
 
 ## Supply chain
 
-CI Actions are pinned by commit SHA, Dependabot keeps Go modules and Actions current,
-and `govulncheck` runs on every PR. Tagged releases carry GitHub build provenance
-attestations for their artifacts; verify with
+CI Actions are pinned by commit SHA — every one of them, held there by a test in
+`internal/docs` rather than by review, because for several releases the policy said so and
+two workflows did not. Dependabot keeps Go modules and Actions current, and `govulncheck`
+runs on every PR.
+
+The supported build toolchain is **Go 1.26.6 or newer**, pinned in `go.mod` as the toolchain
+floor and in the CI and release workflows. 1.26.5 and earlier expose six standard-library
+advisories this code reaches; `make vuln` is the check and it fails on them.
+
+Tagged releases carry GitHub build provenance attestations for their artifacts; verify with
 `gh attestation verify <artifact> -o assaio`.

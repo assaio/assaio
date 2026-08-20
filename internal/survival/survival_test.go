@@ -199,3 +199,48 @@ func TestAnalyzeReportsNoRateWithoutAddedLines(t *testing.T) {
 		t.Fatalf("SurvivalRate = %v, want -1 for a window that added nothing", res.SurvivalRate)
 	}
 }
+
+// TestTallyDatesTheWindow is B179's other half: the rate is only comparable against a window of
+// the same age, so the window has to know its own.
+func TestTallyDatesTheWindow(t *testing.T) {
+	base := time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC)
+	commits := []event.Event{
+		commitAt(base.Add(48*time.Hour), "c3"),
+		commitAt(base, "c1"),
+		commitAt(base.Add(24*time.Hour), "c2"),
+	}
+	var r Result
+	r.tally(commits)
+
+	if !r.OldestCommit.Equal(base) || !r.NewestCommit.Equal(base.Add(48*time.Hour)) {
+		t.Fatalf("bounds = %v..%v, want %v..%v", r.OldestCommit, r.NewestCommit, base, base.Add(48*time.Hour))
+	}
+	if !r.MedianCommit.Equal(base.Add(24 * time.Hour)) {
+		t.Fatalf("MedianCommit = %v, want the middle commit regardless of input order", r.MedianCommit)
+	}
+	if days, ok := r.MedianCommitAgeDays(base.Add(10 * 24 * time.Hour)); !ok || days != 9 {
+		t.Fatalf("MedianCommitAgeDays = %d, %v; want 9, true", days, ok)
+	}
+	if days, ok := r.AgeSpanDays(); !ok || days != 2 {
+		t.Fatalf("AgeSpanDays = %d, %v; want 2, true", days, ok)
+	}
+}
+
+// TestTallyLeavesUndatedCommitsWithoutAnAge holds the no-fabrication rule: an observation with
+// no time has no age, and defaulting it to the zero time would date the window to year one.
+func TestTallyLeavesUndatedCommitsWithoutAnAge(t *testing.T) {
+	var r Result
+	r.tally([]event.Event{{ID: "c1", Type: event.TypeCommit, Payload: event.Commit{LinesAdded: 10}}})
+
+	if _, ok := r.MedianCommitAgeDays(time.Now()); ok {
+		t.Fatal("an undated commit produced an age")
+	}
+	if r.Commits != 1 {
+		t.Fatalf("Commits = %d, want the undated commit still counted", r.Commits)
+	}
+}
+
+// commitAt builds a dated commit observation for the tests above.
+func commitAt(at time.Time, id string) event.Event {
+	return event.Event{ID: id, Type: event.TypeCommit, OccurredAt: at, Payload: event.Commit{LinesAdded: 10}}
+}

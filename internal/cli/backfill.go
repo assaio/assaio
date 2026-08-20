@@ -65,8 +65,9 @@ func runBackfill(cmd *cobra.Command, opts ingest.Options) error {
 }
 
 func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
-	pruned := false
+	pruned, lowered := false, 0
 	for _, r := range results {
+		lowered += r.Lowered
 		cmd.Printf("%-12s  files=%d", r.Tool, r.Files)
 		if r.Unchanged != 0 {
 			cmd.Printf("  unchanged=%d", r.Unchanged)
@@ -82,6 +83,9 @@ func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
 		if r.Skipped != 0 {
 			cmd.Printf("  skipped=%d", r.Skipped)
 		}
+		if r.Lowered != 0 {
+			cmd.Printf("  restated-down=%d", r.Lowered)
+		}
 		if r.Failed != 0 {
 			cmd.Printf("  failed=%d", r.Failed)
 		}
@@ -90,5 +94,11 @@ func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
 	// Deleting rows frees pages inside the file without shrinking it.
 	if pruned {
 		cmd.Println("pruned steps free pages inside the store without shrinking it — run 'assaio-agent compact' to reclaim them")
+	}
+	if lowered > 0 {
+		cmd.Printf("restated-down: %d stored row(s) had a figure lowered by this re-read.\n", lowered)
+		cmd.Println("  That is what a corrected attribution rule looks like from here, and also what a parser")
+		cmd.Println("  regression looks like. If this build did not change how a signal is counted, the drop is")
+		cmd.Println("  the thing to explain — the store cannot tell the two apart, which is why it says so.")
 	}
 }

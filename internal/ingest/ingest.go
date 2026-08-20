@@ -33,6 +33,11 @@ type Result struct {
 	// deletion nobody counts is the silent loss the whole skip-and-count policy exists against,
 	// and this one is assaio deleting the user's history on its own initiative.
 	PrunedSteps int64
+	// Lowered is how many stored rows this run restated *downward*. Assigned columns exist so a
+	// corrected attribution rule can reach history, which means the store cannot tell a fix
+	// landing from a parser regression erasing evidence -- so the count is reported rather than
+	// left to be inferred from a figure that quietly shrank (B116).
+	Lowered int
 	// horizon is the oldest step this run keeps; steps older are never inserted. Unexported:
 	// it is an input to the pass, not part of what the pass reports.
 	horizon time.Time

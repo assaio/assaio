@@ -96,7 +96,7 @@ func TestRestatingAWindowDoesNotDoubleIt(t *testing.T) {
 	recs := everyTraceRecords(t)
 	st := storeWith(t, recs)
 	once := calibration.FromRows(rowsOf(t, st))
-	if _, err := st.InsertLocal(context.Background(), recs); err != nil {
+	if _, _, err := st.InsertLocal(context.Background(), recs); err != nil {
 		t.Fatal(err)
 	}
 	twice := calibration.FromRows(rowsOf(t, st))
@@ -134,7 +134,7 @@ func storeWith(t *testing.T, recs []usage.Record) *store.Store {
 	}
 	t.Cleanup(func() { _ = st.Close() })
 	if len(recs) > 0 {
-		if _, err := st.InsertLocal(context.Background(), recs); err != nil {
+		if _, _, err := st.InsertLocal(context.Background(), recs); err != nil {
 			t.Fatal(err)
 		}
 	}

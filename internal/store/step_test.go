@@ -324,3 +324,29 @@ func TestTwoTimelinesMayShareADedupeKey(t *testing.T) {
 		t.Fatalf("the fork's row is missing entirely: %v", err)
 	}
 }
+
+// TestRestateCorrectsAStepKind is B183: kind is assaio's own classification of a tool call, so
+// a build that learns to tell an edit from a read has to be able to say so about calls already
+// stored. Left out of the restate it was the one column no path -- `backfill --full` included --
+// could reach, permanent under `trace.horizon_days: 0`.
+func TestRestateCorrectsAStepKind(t *testing.T) {
+	ctx := context.Background()
+	s := stepStore(t)
+	at := time.Now().UTC()
+
+	if _, _, err := s.InsertSteps(ctx, []usage.Step{step("a", 1, usage.StepRead, at)}); err != nil {
+		t.Fatalf("InsertSteps: %v", err)
+	}
+	if _, _, err := s.InsertSteps(ctx, []usage.Step{step("a", 1, usage.StepEdit, at)}); err != nil {
+		t.Fatalf("restate: %v", err)
+	}
+
+	var kind string
+	row := s.db.QueryRowContext(ctx, `SELECT kind FROM session_step WHERE dedupe_key = 'a'`)
+	if err := row.Scan(&kind); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if kind != usage.StepEdit {
+		t.Fatalf("kind = %q, want the re-read's %q", kind, usage.StepEdit)
+	}
+}

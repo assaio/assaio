@@ -20,8 +20,15 @@ const insertStepSQL = `
 // A rule assaio wrote is a rule assaio can get wrong, and MAX or a fill-only CASE pins the old
 // answer on every stored row forever (B116). Ingest re-reads whole files, and each rule is
 // monotone in the prefix read, so a half-written session still restates upward.
+//
+// kind joined them in v0.24 (B183). It is the classification assaio puts on a tool call -- read,
+// search, command, write -- so a build that learns to tell two of them apart has to be able to
+// say so about calls already stored. Left out of the restate it was the one column no path,
+// `backfill --full` included, could reach: under the default 30-day horizon a wrong
+// classification ages out, and under `trace.horizon_days: 0` it was permanent.
 const restateStepSQL = `
         UPDATE session_step SET
+            kind = ?,
             outcome = ?,
             target_ref = ?,
             tokens = ?,
@@ -77,7 +84,7 @@ func (s *Store) InsertSteps(ctx context.Context, steps []usage.Step) (inserted, 
 			inserted++
 			continue
 		}
-		if _, err := upd.ExecContext(ctx, st.Outcome, st.TargetRef, st.Tokens, st.Ordinal,
+		if _, err := upd.ExecContext(ctx, st.Kind, st.Outcome, st.TargetRef, st.Tokens, st.Ordinal,
 			st.Tool, st.Timeline, st.DedupeKey); err != nil {
 			return 0, 0, err
 		}

@@ -112,12 +112,12 @@ func TestRestateLowersReworkFromACorrectedRule(t *testing.T) {
 	st, ctx := newStore(t), context.Background()
 	inflated := restateRecord(1, 1, "")
 	inflated.ReworkLines = 40
-	if _, err := st.InsertLocal(ctx, []usage.Record{inflated}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{inflated}); err != nil {
 		t.Fatal(err)
 	}
 	corrected := restateRecord(1, 1, "")
 	corrected.ReworkLines = 12
-	if _, err := st.InsertLocal(ctx, []usage.Record{corrected}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{corrected}); err != nil {
 		t.Fatal(err)
 	}
 	rows, err := st.Usage(ctx, time.Time{})
@@ -135,12 +135,12 @@ func TestRestateStillRaisesActivityFromALaterRead(t *testing.T) {
 	st, ctx := newStore(t), context.Background()
 	partial := restateRecord(1, 0, "")
 	partial.LinesAdded = 5
-	if _, err := st.InsertLocal(ctx, []usage.Record{partial}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{partial}); err != nil {
 		t.Fatal(err)
 	}
 	complete := restateRecord(3, 2, "")
 	complete.LinesAdded = 21
-	if _, err := st.InsertLocal(ctx, []usage.Record{complete}); err != nil {
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{complete}); err != nil {
 		t.Fatal(err)
 	}
 	rows, _ := st.Usage(ctx, time.Time{})
