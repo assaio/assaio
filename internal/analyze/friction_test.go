@@ -50,29 +50,34 @@ func TestFrictionCarriesItsFailureCaptureCoverage(t *testing.T) {
 	}
 }
 
-// TestFrictionSmoothOnOrdinaryFailureRate asserts occasional failures -- an agent probing
-// and adapting -- do not read as systematic friction.
-func TestFrictionSmoothOnOrdinaryFailureRate(t *testing.T) {
-	got := mustGet(t, frictionName).Analyze(frictionInput(100, 8, 2))
+// TestFrictionReportsTheRateWithoutGradingIt is B177's regression: an 8% error rate and a 40%
+// one both get the same read, because nothing published says which of them is a problem. What
+// separates them is the figure, which is what a reader acts on.
+func TestFrictionReportsTheRateWithoutGradingIt(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		errs int64
+		rate string
+	}{
+		{"ordinary probing", 8, "8.0%"},
+		{"most calls failing", 40, "40.0%"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := mustGet(t, frictionName).Analyze(frictionInput(100, tc.errs, 2))
 
-	if got.Read.Label != "SMOOTH" {
-		t.Fatalf("Read = %q, want SMOOTH at an 8%% error rate", got.Read.Label)
-	}
-	if !strings.Contains(figureValues(got.Figures), "8.0%") {
-		t.Fatalf("Figures = %q, want the 8.0%% error rate", figureValues(got.Figures))
-	}
-}
-
-// TestFrictionFlagsHighErrorRate asserts a window where a large share of calls fails is
-// surfaced, since every failed call is paid for twice.
-func TestFrictionFlagsHighErrorRate(t *testing.T) {
-	got := mustGet(t, frictionName).Analyze(frictionInput(100, 40, 0))
-
-	if got.Read.Label != "WATCH" {
-		t.Fatalf("Read = %q, want WATCH at a 40%% error rate", got.Read.Label)
-	}
-	if !strings.Contains(got.Takeaway, "keeps hitting") {
-		t.Fatalf("Takeaway = %q, want the systematic-friction message", got.Takeaway)
+			if got.Read != reportedRead {
+				t.Fatalf("Read = %+v, want the descriptive read at a %s error rate", got.Read, tc.rate)
+			}
+			if got.Purity != neutralPurity {
+				t.Fatalf("Purity = %v, want the neutral gauge: a gauge is a verdict rendering", got.Purity)
+			}
+			if !strings.Contains(figureValues(got.Figures), tc.rate) {
+				t.Fatalf("Figures = %q, want the %s error rate", figureValues(got.Figures), tc.rate)
+			}
+			if !strings.Contains(strings.Join(got.Caveats, " "), "No verdict on purpose") {
+				t.Fatalf("Caveats = %q, want the missing-line caveat", got.Caveats)
+			}
+		})
 	}
 }
 
@@ -84,9 +89,6 @@ func TestFrictionSeparatesErrorsFromRejections(t *testing.T) {
 	values := figureValues(got.Figures)
 	if !strings.Contains(values, "5.0%") || !strings.Contains(values, "25.0%") {
 		t.Fatalf("Figures = %q, want the error and rejection rates reported separately", values)
-	}
-	if got.Read.Label != "SMOOTH" {
-		t.Fatalf("Read = %q: the verdict tracks errors, not human rejections", got.Read.Label)
 	}
 }
 

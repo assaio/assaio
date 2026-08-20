@@ -21,6 +21,49 @@ Discussion.
 
 ## [Unreleased]
 
+### Changed
+
+- **Thirteen metrics stopped publishing a verdict they could not source.** `friction`,
+  `rework`, `turn-efficiency`, `context`, `explore-produce`, `cache-hygiene`, `model-fit`,
+  `model-right-sizing`, `concentration`, `skill-economics`, `recovery`, `rhythm` and
+  `throughput` each decided good-versus-watch on a number picked once — a 15% error rate, a 20%
+  compaction rate, a 1.5× recovery multiple — with no published definition behind it and no
+  derivation from the window's own distribution. Rendered in colour, a number like that is read
+  afterwards as knowledge. Every figure those metrics computed is unchanged and still printed;
+  what is gone is the colour, the gauge and the promotion into "worth a week's attention", and
+  each now carries a caveat naming the authority it would need. `burn-anomaly` and `edit-loops`
+  are what a sourced line looks like here — both derive theirs from the window's own median and
+  MAD at the conventional 3.5 cutoff — and `adoption`, `coverage` and `subscription-fit` keep
+  verdicts resting on a definition, assaio's own confidence model, and your configured plan
+  price. On the maintainer's corpus this moves a 90-day window from 7 graded reads to 5.
+  `B185` tracks the line that would earn them back: your own earlier windows.
+- **`rhythm` no longer judges when the work happened, and prints the band it counts against.**
+  On a local store every session is one person's, so "off-hours: 31% [WATCH]" was a workload
+  judgement about an individual, promotable to the top of the dashboard — close enough to the
+  refusals that it should never have been a verdict. The shares are still reported, and the
+  8:00–18:00 weekday band they are measured against is now on the surface instead of in the
+  source, so a reader can disagree with it.
+- **`throughput` no longer reads more AI lines as good news.** A rising line count is an output
+  measure; colouring it favourably and raising the gauge with it promoted output to value, which
+  the roadmap calls the most likely way this project starts lying. The count and its direction
+  are reported without a verdict.
+
+### Fixed
+
+- **`recovery` compared the aftermath of a failure against a baseline containing it.** The
+  denominator counted every assistant turn in the window, including the turns following a
+  failure, so the ratio was compressed toward 1.0 — toward `CONTAINED`, a bias in the direction
+  that flatters, by exactly the share of the window that follows a failure. The baseline now
+  excludes the aftermath, and a window with no turns outside one reports no ratio rather than
+  comparing the aftermath with itself. Measured on the maintainer's corpus: 1.02× → 1.03×, where
+  the aftermath is 9,633 of 90,172 turns; the bias grows with that share. The per-step and
+  three-step figures quoted in the code and in `explain recovery` were re-measured against the
+  corrected baseline (1.06×, 1.37×, 1.04×).
+- **A collapse in AI-line output read as "too few lines to call".** The volume floor guarding
+  the week-over-week trend applied to the recent side alone, so output falling from 201,347
+  lines to zero was reported as unreadable rather than as the direction it is. It now applies to
+  the larger side.
+
 ### Breaking
 
 - **`report --format json|csv` now emits a member pseudonym, not the synced name.** On a

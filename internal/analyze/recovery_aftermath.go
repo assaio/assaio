@@ -25,10 +25,10 @@ const (
 //
 // Turns and Tokens count assistant steps only, and so do AfterTurns and AfterTokens. That is the
 // whole correctness of this metric: measured over *all* steps, the aftermath of a failure reads
-// 1.06x the window's average step over this window and 1.35x over a three-step one, but only
+// 1.06x the window's average step over this window and 1.37x over a three-step one, but only
 // because the steps following a failure are more heavily assistant turns than the window is
 // (49.2% and 62.2% against 47.7%) while a tool call carries no tokens at all. That ratio reports
-// the composition of the sample. Turn against turn, the same corpus reads 1.02x.
+// the composition of the sample. Turn against turn, the same corpus reads 1.03x.
 type aftermath struct {
 	Sequences int
 	// Open is how many sequences were left out of Abandoned for still running.
@@ -112,16 +112,27 @@ func failedOutcome(outcome string) bool {
 	return outcome == usage.OutcomeError || outcome == usage.OutcomeDenied
 }
 
-// TokensPerTurn is the window's own baseline: what an assistant turn costs anywhere in it.
-func (a *aftermath) TokensPerTurn() float64 { return perUnit(a.Tokens, a.Turns) }
+// ElsewhereTurns and ElsewhereTokens are the window with the aftermath taken out. The baseline
+// has to exclude what it is compared against: counting the aftermath inside it pulls the ratio
+// toward 1.0, which is toward CONTAINED -- a bias in the direction that flatters (B175).
+func (a *aftermath) ElsewhereTurns() int64  { return a.Turns - a.AfterTurns }
+func (a *aftermath) ElsewhereTokens() int64 { return a.Tokens - a.AfterTokens }
+
+// TokensPerTurnElsewhere is the window's own baseline: what an assistant turn costs anywhere
+// else in it, outside the aftermath of a failure.
+func (a *aftermath) TokensPerTurnElsewhere() float64 {
+	return perUnit(a.ElsewhereTokens(), a.ElsewhereTurns())
+}
 
 // TokensPerTurnAfter is what an assistant turn costs inside the aftermath of a failure.
 func (a *aftermath) TokensPerTurnAfter() float64 { return perUnit(a.AfterTokens, a.AfterTurns) }
 
-// CostRatio is the aftermath's cost against the window's own, and whether both sides had turns to
-// divide by. 1.0 means a failure changed nothing about what the next turns cost.
+// CostRatio is the aftermath's cost against what a turn costs elsewhere in the window, and
+// whether both sides had turns to divide by. 1.0 means a failure changed nothing about what the
+// next turns cost. A window whose every turn follows a failure has no elsewhere to compare
+// against and reports no ratio rather than comparing the aftermath with itself.
 func (a *aftermath) CostRatio() (ratio float64, ok bool) {
-	base, after := a.TokensPerTurn(), a.TokensPerTurnAfter()
+	base, after := a.TokensPerTurnElsewhere(), a.TokensPerTurnAfter()
 	if base <= 0 || a.AfterTurns == 0 {
 		return 0, false
 	}

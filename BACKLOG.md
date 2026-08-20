@@ -911,37 +911,6 @@ file-size norm.
   has **no `--db` flag at all**, so an operator cannot see size, reclaimable space or retention
   for the store their whole team pushes into. `B173`'s answer probably decides this one's, since
   a central store inherits every member's growth rate at once.
-- [ ] **B175 · `recovery`'s baseline contains the aftermath it is compared against** — S · solo —
-  `CostRatio` is `TokensPerTurnAfter / TokensPerTurn`, and the denominator counts every assistant
-  step *including* the aftermath windows. The sentence says "what a turn costs anywhere **else**
-  here"; the type's own doc says "anywhere **in** it" and is the accurate one. The ratio is
-  compressed toward 1.0, which is toward `CONTAINED` — a false green, in the direction that
-  flatters. Fix is to exclude the aftermath steps from the baseline and restate the figure;
-  measure the move on the real corpus before and after, because the size of the bias is the
-  whole question.
-- [ ] **B176 · `recovery`'s good/bad line is a picked number published as knowledge** — S · solo —
-  `recoveryExpensiveRatio = 1.5` decides the read, the takeaway and the gauge, and
-  `en_explain_sequence.go` states it to a reader as fact. Its sibling built in the same release
-  refuses to invent one and says why, deriving its line from the window's own median and MAD
-  (`edit_loops.go`). Mitigating, and why this is not filed as a defect: the constant is a *ratio
-  against the window*, not an absolute threshold, so it is scale-free in a way the items below
-  are not.
-- [ ] **B177 · a family of invented watch ceilings decides good/bad** — M · solo —
-  `turn_efficiency` (0.25), `rework` (0.15), `friction` (0.15, plus a bare `/0.33`),
-  `model_right_sizing` (300, 0.4), `context` (0.2), `explore_produce` (0.05), `cache` (0.5),
-  `model_fit` (0.8), `concentration` (0.2), `skill_economics` (0.5). None is derived from the
-  window's distribution and none cites a published definition. `burn-anomaly` shows the
-  alternative: `zThreshold = 3.5`, correctly attributed as the conventional MAD cutoff. The work
-  is not "tune them" — it is deciding, per metric, whether the line can be derived from the
-  window, cited from somewhere, or should be withdrawn in favour of a figure with no verdict
-  attached. A threshold nobody can source is a verdict assaio is not entitled to.
-- [ ] **B178 · `rhythm` publishes a WATCH verdict about one person's working hours** — S · solo —
-  `8`, `18`, `0.25`, `90min`, `0.15`. On a local store every session is one person's, so
-  "off-hours: 31% … marathons: 22% [WATCH]" is a workload judgement about an individual,
-  promotable to the top of the dashboard. The caveat at `rhythm.go:86` is true of a team store
-  and false of the default one, and the `8–18` boundary is never printed. This is close to the
-  Refusals below without crossing them; the honest options are a verdict-free descriptive read,
-  or a boundary the reader sets.
 - [ ] **B179 · `survival` prints a rate that is not comparable to itself across windows** — S ·
   solo — survival is monotonic in commit age: `--since 7d` reads near 100% and `--since 365d`
   far lower, on the same repository, because a young commit has had no time to be rewritten.
@@ -949,15 +918,6 @@ file-size norm.
   arbitrary band. Either state the dependence beside the figure or report it per age bucket;
   `B18`'s age-matching is the fuller answer and this is the disclosure that should not wait for
   it.
-- [ ] **B180 · `throughput` reads growth in AI lines as a green verdict** — S · solo —
-  `readFor(ramping, "Ramping")` yields `Key: "good"` and `Purity` rises monotonically with the
-  line count, while `HowToRead` says "not a quality score". Colour, label and gauge all say more
-  lines is better. v0.22 made the claim legible — the read now states that it sits on the
-  **output** layer (ADR 0013) — and deliberately did not resolve whether a favourable verdict on
-  a rising line count should exist at all. `ROADMAP.md` calls promoting an output metric to an
-  outcome claim the most likely way this project starts lying, so the answer is probably a
-  neutral read with the trend as a figure, the shape `intent` already uses for a metric with no
-  unfavourable state.
 - [ ] **B181 · three files carry two responsibilities each** — S · solo —
   `internal/digest/compare.go` (259 lines) holds the diff and a comparability engine that never
   touches a `Mover`, and the package doc already names them as two → `comparability.go`.
@@ -977,6 +937,21 @@ file-size norm.
   ages out; under `trace.horizon_days: 0` it is permanent. The work is deciding whether the
   current parse is the authority on it — the same question `granularity` answered yes to — and
   adding the column if so.
+
+- [ ] **B185 · give the withdrawn verdicts a line derived from your own history** — L · both —
+  v0.24 withdrew the good/bad call from thirteen metrics because their thresholds were numbers
+  picked once (`B176`–`B178`, `B180`, and the same class in `reasoning-share` and
+  `session-taxonomy`). The figures stayed; what is gone is a colour this project could not
+  defend. The credible line is not a published constant — there is none for most of these — but
+  **the same store's earlier windows**: "your tool-error rate is 22%, against 9% over your own
+  prior 90 days" cites a source, derives from a distribution, and is the claim a reader can act
+  on. It needs per-metric history that assaio does not keep: today only the *current* window is
+  recomputed, and `digest` stores a bounded basis per run rather than a per-metric series.
+  So the work is (a) decide what a metric's own history is and what it costs to store — `B173`'s
+  size question, one table smaller — (b) restate it when a parser fix corrects the past, and (c)
+  a floor of history below which the comparison is withheld rather than made against two weeks.
+  Until it exists, `analyze` leads on the four metrics whose lines *are* derived or cited, and
+  that shortness is the honest state, not a gap to paper over.
 
 ## Refusals (will not build, regardless of demand)
 

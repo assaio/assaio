@@ -12,10 +12,8 @@ import (
 const (
 	reasoningName      = "reasoning-share"
 	reasoningTitle     = "Reasoning Share"
-	reasoningDescribe  = "How much generated output is extended-thinking (reasoning) tokens, among tools that report it -- flagging deep reasoning spent on shallow tasks."
-	reasoningHowToRead = "Reasoning tokens are billed as output. A high share means much of the model's work is internal deliberation, which can be overkill on routine tasks. Only some sources report it at all, so the coverage figure says how much of your output this even covers."
-	// reasoningWatchShare is the reasoning-of-output share above which the read flags heavy thinking.
-	reasoningWatchShare = 0.3
+	reasoningDescribe  = "How much generated output is extended-thinking (reasoning) tokens, among tools that report it."
+	reasoningHowToRead = "Reasoning tokens are billed as output. A high share means much of the model's work is internal deliberation, which can be overkill on routine tasks -- or exactly what a hard problem needed. Only some sources report it at all, so the coverage figure says how much of your output this even covers."
 )
 
 func init() { Register(reasoningValidator{}) }
@@ -61,8 +59,8 @@ func (reasoningValidator) Analyze(in Input) Result {
 
 	share := fracOf(reasoning, reportingOutput)
 
-	r.Read = readFor(share < reasoningWatchShare, "Lean")
-	r.Purity = clamp01(1 - share)
+	r.Read = reportedRead
+	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "reasoning share", Value: humanize.Percent(share), Note: "of reporting output"},
 		{Label: "reasoning tokens", Value: humanize.Count(reasoning)},
@@ -72,6 +70,7 @@ func (reasoningValidator) Analyze(in Input) Result {
 	r.Caveats = []string{
 		reasoningCoverageCaveat(),
 		"Reasoning is a subset of output (already billed there); this is a composition signal, not extra cost.",
+		unsourcedLine("a reasoning share of output", ownHistoryWouldSettleIt),
 	}
 	return r
 }
@@ -87,8 +86,6 @@ func reasoningCoverageCaveat() string {
 }
 
 func reasoningTakeaway(share float64) string {
-	if share >= reasoningWatchShare {
-		return "A large share of reported output is reasoning -- worth checking whether deep thinking is going to shallow tasks."
-	}
-	return "Reasoning is a modest share of reported output -- the thinking budget looks proportionate."
+	return humanize.Percent(share) + " of the output from sources that report it is extended thinking. " +
+		"A large share is worth checking against the work it went to -- deep reasoning on shallow tasks is real waste, and on hard ones it is the point."
 }

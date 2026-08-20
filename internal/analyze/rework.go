@@ -16,10 +16,7 @@ const (
 	reworkTitle    = "Rework & Rejection"
 	reworkDescribe = "Within-session code churn and human tool-call rejections -- a directional friction proxy."
 	// reworkHowToRead is Result.HowToRead for this validator -- see its doc comment.
-	reworkHowToRead = "Elevated rework or rejection flags friction worth a closer look at specific sessions, but the link between AI churn and real bugs is still contested, so treat it as a lead, not a verdict."
-	// reworkWatchCeiling is the rework-rate/rejection-rate threshold above which
-	// friction is flagged for a closer look.
-	reworkWatchCeiling = 0.15
+	reworkHowToRead = "Rework and rejection are a directional friction proxy: how much AI-added code was undone inside the same transcript, and how often a human declined a proposed call. The link between AI churn and real bugs is contested, and nothing published says where either rate becomes a problem, so these are two figures to compare against your own work -- not a grade."
 )
 
 func init() { Register(reworkValidator{}) }
@@ -52,14 +49,10 @@ func (reworkValidator) Analyze(in Input) Result {
 	rejectionKnown := f.Refusable > 0
 	rejectionRate := shareOf(f.Rejected, f.Refusable)
 	reworkKnown := reworkMeasurable(&churn)
-	elevated := (reworkKnown && churn.ReworkRate > reworkWatchCeiling) ||
-		(rejectionKnown && rejectionRate > reworkWatchCeiling)
+	complete := reworkKnown && rejectionKnown
 
-	r.Read = reworkRead(elevated, reworkKnown && rejectionKnown)
-	r.Purity = reworkPurity(churn.ReworkRate, reworkKnown, rejectionRate, rejectionKnown)
-	if r.Read == noDataRead {
-		r.Purity = neutralPurity
-	}
+	r.Read = reworkRead(complete)
+	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		reworkFigure(&churn),
 		{
@@ -68,7 +61,10 @@ func (reworkValidator) Analyze(in Input) Result {
 		},
 	}
 	r.Caveats = reworkCaveats(rejectionKnown, churn.ExceedsItsWhole(), churn.Rows < len(in.Usage))
-	r.Takeaway = reworkTakeaway(elevated, reworkKnown && rejectionKnown)
+	if complete {
+		r.Caveats = append(r.Caveats, unsourcedLine("a rework or rejection rate", ownHistoryWouldSettleIt))
+	}
+	r.Takeaway = reworkTakeaway(complete, churn.ReworkRate, reworkKnown, rejectionRate)
 	return r
 }
 
@@ -95,38 +91,16 @@ func reworkMeasurable(c *report.ChurnStat) bool {
 	return c.Rows > 0 && c.LinesAdded > 0 && !c.ExceedsItsWhole()
 }
 
-// reworkRead gives the three answers this pair of rates can support. A measured rate above its
-// ceiling is a finding and always shows. Everything measured and low is a clean bill. Anything
-// else -- a half nothing in the window could measure -- is withheld: a pair cannot be certified
-// low from one of its halves, and it cannot be flagged from a silence either. Flagging was the
-// old behaviour, so a Codex store, which records an undone line but never a declined call, read
-// "worth a closer look" on every window forever and the ordering promoted it.
-func reworkRead(elevated, complete bool) Read {
-	switch {
-	case elevated:
-		return readFor(false, "Low")
-	case complete:
-		return readFor(true, "Low")
-	default:
+// reworkRead separates having both rates from missing one. It grades neither: the 15% ceiling
+// that used to decide "elevated" applied one picked number to two different quantities (B177),
+// and a pair cannot be certified low from one of its halves either -- which is why a Codex
+// store, recording an undone line but never a declined call, once read "worth a closer look" on
+// every window forever and the ordering promoted it.
+func reworkRead(complete bool) Read {
+	if !complete {
 		return noDataRead
 	}
-}
-
-// reworkPurity averages the known rates only: folding an unmeasured one in as a zero credits the
-// window for friction nobody could observe.
-func reworkPurity(reworkRate float64, reworkKnown bool, rejectionRate float64, rejectionKnown bool) float64 {
-	var sum float64
-	known := 0
-	if reworkKnown {
-		sum, known = sum+reworkRate, known+1
-	}
-	if rejectionKnown {
-		sum, known = sum+rejectionRate, known+1
-	}
-	if known == 0 {
-		return neutralPurity
-	}
-	return clamp01(1 - sum/float64(known))
+	return reportedRead
 }
 
 func reworkCaveats(rejectionKnown, cutWindow, partialChurn bool) []string {
@@ -145,13 +119,14 @@ func reworkCaveats(rejectionKnown, cutWindow, partialChurn bool) []string {
 	return caveats
 }
 
-func reworkTakeaway(elevated, complete bool) string {
-	switch {
-	case elevated:
-		return "A measured friction rate is elevated -- worth a closer look."
-	case complete:
-		return "Rework and rejection are both low."
-	default:
-		return "One half of this pair could not be measured here, so the window is not certified low -- see the caveats for which."
+func reworkTakeaway(complete bool, reworkRate float64, reworkKnown bool, rejectionRate float64) string {
+	if !complete {
+		return "One half of this pair could not be measured here, so neither is read as the window's whole story -- see the caveats for which."
 	}
+	rework := "—"
+	if reworkKnown {
+		rework = humanize.Percent(reworkRate)
+	}
+	return "AI-added lines undone inside the same session: " + rework + "; proposed calls a human declined: " +
+		humanize.Percent(rejectionRate) + ". Both are directional proxies for friction, and neither has a published line that would make one of them a problem."
 }

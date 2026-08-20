@@ -69,12 +69,15 @@ func (taxonomyValidator) Analyze(in Input) Result {
 	editing := light + heavy
 	enough := total >= taxonomyMinSessions
 
+	// The label names the window's shape; the key stays neutral because there is no better or
+	// worse shape here. A conversational window is design and debugging, and an editing one is
+	// not thereby more productive -- a favorable colour said otherwise for eight releases.
 	if enough {
-		r.Read = readFor(true, taxonomyLabel(conv, editing, total))
+		r.Read = Read{Key: "neutral", Label: taxonomyLabel(conv, editing, total)}
 	} else {
 		r.Read = noDataRead
 	}
-	r.Purity = fracOf(editing, total)
+	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "conversational", Value: humanize.PercentOrDash(conv, total, 0), Note: "no file edits"},
 		{Label: "light-edit", Value: humanize.PercentOrDash(light, total, 0), Note: "1-" + strconv.Itoa(taxonomyLightMax) + " edits"},

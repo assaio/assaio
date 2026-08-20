@@ -15,9 +15,7 @@ const (
 	skillDescribe = "Which skills and sub-agents the tokens went to, and how much code each produced."
 	// skillHowToRead is Result.HowToRead for this validator -- see its doc comment.
 	skillHowToRead = "Shared skills and sub-agents are where a team's AI spend quietly concentrates. A skill burning a large share of the tokens is not a fault -- research and review legitimately read a lot without writing -- but it should be a deliberate choice rather than a surprise."
-	// skillConcentrationCeiling is the token share above which a single skill or sub-agent
-	// dominates the window enough to name.
-	skillConcentrationCeiling = 0.5
+
 	// skillMinTokens is the attributed-token floor below which the split is too thin to read.
 	skillMinTokens = 100_000
 	// skillMinEntries is the per-dimension floor for a concentration verdict: one label
@@ -71,10 +69,9 @@ func (skillValidator) Analyze(in Input) Result {
 	// Concentration needs something to concentrate against: with one label its share is
 	// 100% by construction, which is arithmetic, not a finding.
 	measurable := attributed >= skillMinTokens && comparable
-	spread := measurable && topShareOf <= skillConcentrationCeiling
 
-	r.Read = skillRead(measurable, spread)
-	r.Purity = skillPurity(topShareOf, measurable)
+	r.Read = skillRead(measurable)
+	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "skills seen", Value: strconv.Itoa(len(in.Skills))},
 		{Label: "sub-agent types", Value: strconv.Itoa(len(in.Agents))},
@@ -83,8 +80,11 @@ func (skillValidator) Analyze(in Input) Result {
 	}
 	r.Bars = attributionBars(in.Skills, in.Agents, skillTopN)
 	r.BarsPseudonym = PseudonymSkill
-	r.Takeaway = skillTakeaway(measurable, spread)
+	r.Takeaway = skillTakeaway(measurable, topShareOf)
 	r.Caveats = append(r.Caveats, skillCoverageCaveat())
+	if measurable {
+		r.Caveats = append(r.Caveats, unsourcedLine("a single skill's share of attributed spend", ownHistoryWouldSettleIt))
+	}
 	return r
 }
 
@@ -118,20 +118,11 @@ func skillCoverageCaveat() string {
 
 // skillRead reports the neutral no-verdict Read while the window cannot support a
 // concentration verdict, rather than one earned from nearly nothing or from a single label.
-func skillRead(measurable, spread bool) Read {
+func skillRead(measurable bool) Read {
 	if !measurable {
 		return noDataRead
 	}
-	return readFor(spread, "Spread")
-}
-
-// skillPurity falls as one skill or sub-agent takes more of the attributed tokens; a window
-// that cannot support the verdict yields the neutral 0.5 used for "not enough evidence yet".
-func skillPurity(topShare float64, measurable bool) float64 {
-	if !measurable {
-		return 0.5
-	}
-	return clamp01(1 - topShare)
+	return reportedRead
 }
 
 // attributionEmptyTakeaway distinguishes "nothing ran" from "what ran carried no labels",
@@ -143,13 +134,10 @@ func attributionEmptyTakeaway(usageRows int) string {
 	return "No usage in this window carried a skill or sub-agent label."
 }
 
-func skillTakeaway(measurable, spread bool) string {
-	switch {
-	case !measurable:
-		return "Not enough attributed usage this window to say whether spend concentrates: that needs meaningful volume and more than one skill or sub-agent to compare."
-	case spread:
-		return "Attributed spend is spread across skills and sub-agents rather than concentrated in one."
-	default:
-		return "One skill or sub-agent takes most of the attributed tokens -- worth confirming that is deliberate."
+func skillTakeaway(measurable bool, topShare float64) string {
+	if !measurable {
+		return "Not enough attributed usage this window to read how spend distributes: that needs meaningful volume and more than one skill or sub-agent to compare."
 	}
+	return "The largest single skill or sub-agent takes " + humanize.PercentAt(topShare, 0) +
+		" of the attributed tokens. Concentration is worth confirming is deliberate; it is not by itself a problem, and nothing published says at what share it becomes one."
 }

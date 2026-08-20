@@ -17,9 +17,7 @@ const (
 	turnEffHowToRead = "These are prompting-efficiency signals, not quality. A session that lands an edit in a turn or two is efficient; a long session can be deliberate, careful work. Task size is invisible here, so read it directionally, never as a per-person score."
 	// turnEffOneShotMax is the turn count at or below which a code-producing session is one-shot.
 	turnEffOneShotMax = 2
-	// turnEffGoodOneShot is the one-shot rate above which prompting reads as efficient.
-	turnEffGoodOneShot = 0.25
-	// turnEffMinCodeSessions is the floor below which the one-shot rate is too thin to judge.
+	// turnEffMinCodeSessions is the floor below which the one-shot rate is too thin to read.
 	turnEffMinCodeSessions = 5
 )
 
@@ -70,18 +68,21 @@ func (turnEffValidator) Analyze(in Input) Result {
 	sort.Float64s(codeTurns)
 
 	if enough {
-		r.Read = readFor(oneShotRate >= turnEffGoodOneShot, "Efficient")
+		r.Read = reportedRead
 	} else {
 		r.Read = noDataRead
 	}
-	r.Purity = clamp01(oneShotRate)
+	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "one-shot rate", Value: humanize.Percent(oneShotRate), Note: "code sessions in <=" + strconv.Itoa(turnEffOneShotMax) + " turns"},
 		{Label: "median turns", Value: strconv.FormatFloat(medianAt50(codeTurns), 'f', 0, 64), Note: "per code session"},
 		{Label: "output/turn", Value: medianOutputPerTurn(outPerTurn), Note: "median tokens"},
 	}
-	r.Takeaway = turnEffTakeaway(enough, oneShotRate)
+	r.Takeaway = turnEffTakeaway(enough, oneShotRate, medianAt50(codeTurns))
 	r.Caveats = []string{"Task size is invisible in logs, so a low one-shot rate can mean hard problems, not weak prompting -- directional only."}
+	if enough {
+		r.Caveats = append(r.Caveats, unsourcedLine("a one-shot rate", ownHistoryWouldSettleIt))
+	}
 	return r
 }
 
@@ -103,13 +104,11 @@ func medianOutputPerTurn(outPerTurn []float64) string {
 	return humanize.Count(int64(medianAt50(outPerTurn)))
 }
 
-func turnEffTakeaway(enough bool, oneShotRate float64) string {
-	switch {
-	case !enough:
-		return "Too few code-producing sessions this window to judge prompting efficiency."
-	case oneShotRate >= turnEffGoodOneShot:
-		return "A healthy share of code sessions land in one or two turns."
-	default:
-		return "Most code sessions take several turns -- could be hard problems, or room to prompt more precisely."
+func turnEffTakeaway(enough bool, oneShotRate, medianTurns float64) string {
+	if !enough {
+		return "Too few code-producing sessions this window to read a one-shot rate."
 	}
+	return humanize.Percent(oneShotRate) + " of code-producing sessions landed in " +
+		strconv.Itoa(turnEffOneShotMax) + " turns or fewer, and the median took " +
+		strconv.FormatFloat(medianTurns, 'f', 0, 64) + ". Whether that is efficient prompting or harder work is not something a log can tell apart, so no rate here is graded."
 }

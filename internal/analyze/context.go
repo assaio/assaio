@@ -1,6 +1,7 @@
 package analyze
 
 import (
+	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/layer"
 	"github.com/assaio/assaio/internal/report"
 )
@@ -11,12 +12,9 @@ const (
 	contextDescribe = "Conversation depth, peak context size, active time, and how often sessions hit compaction."
 	// contextHowToRead is Result.HowToRead for this validator -- see its doc comment.
 	contextHowToRead = "Frequent compaction means sessions are outgrowing their context window mid-task -- worth trying shorter, more focused sessions rather than reading it as a quality problem."
-	// contextWatchCeiling is the compaction-rate threshold above which sessions are
-	// running out of context often enough to flag.
-	contextWatchCeiling = 0.2
-	// contextMinSessionsForHealthy is the minimum session count before a favorable Healthy
-	// read is trustworthy: one session with zero compactions is a single data point, not
-	// evidence of healthy context sizing. Matches adoption's session floor.
+	// contextMinSessionsForHealthy is the minimum session count before the compaction rate is
+	// worth printing at all: one session with zero compactions is a single data point, not a
+	// rate. Matches adoption's session floor.
 	contextMinSessionsForHealthy = 3
 )
 
@@ -52,36 +50,34 @@ func (contextValidator) Analyze(in Input) Result {
 		r.Caveats = []string{contextCoverageCaveat(&stats)}
 		return r
 	}
-	compactionOK := stats.CompactionRate <= contextWatchCeiling
 	sufficientSample := stats.Compacting >= contextMinSessionsForHealthy
-	healthy := compactionOK && sufficientSample
 
-	r.Read = readFor(healthy, "Healthy")
-	r.Purity = contextPurity(stats.CompactionRate, sufficientSample)
-	r.Takeaway = contextTakeaway(healthy, compactionOK, sufficientSample)
+	r.Read = contextRead(sufficientSample)
+	r.Purity = neutralPurity
+	r.Takeaway = contextTakeaway(sufficientSample, stats.CompactionRate)
 	if narrowestBasis(&stats) < stats.Count {
 		r.Caveats = []string{contextCoverageCaveat(&stats)}
+	}
+	if sufficientSample {
+		r.Caveats = append(r.Caveats, unsourcedLine("a compaction rate", ownHistoryWouldSettleIt))
 	}
 	return r
 }
 
-func contextTakeaway(healthy, compactionOK, sufficientSample bool) string {
-	switch {
-	case healthy:
-		return "Sessions rarely hit context compaction -- context sizing looks fine."
-	case compactionOK && !sufficientSample:
-		return "Compaction is rare so far, but too few sessions this window to call context health confidently."
-	default:
-		return "Sessions hit context compaction often -- consider shorter sessions or more aggressive summarization."
+// contextRead reports the compaction rate without grading it. The 20% ceiling that used to
+// decide "healthy" was a number picked once (B177), and compaction is a property of task size
+// against a model's context window as much as of how anyone works.
+func contextRead(sufficientSample bool) Read {
+	if !sufficientSample {
+		return noDataRead
 	}
+	return reportedRead
 }
 
-// contextPurity is high when compaction is rare, but only once there are enough sessions
-// to trust the rate; too small a sample yields the neutral 0.5 the other validators use
-// for "not enough evidence yet" rather than a confident gauge off a single session.
-func contextPurity(compactionRate float64, sufficientSample bool) float64 {
+func contextTakeaway(sufficientSample bool, compactionRate float64) string {
 	if !sufficientSample {
-		return 0.5
+		return "Too few sessions with compaction capture this window to read a compaction rate."
 	}
-	return clamp01(1 - compactionRate)
+	return humanize.Percent(compactionRate) + " of the sessions that record it hit context compaction. " +
+		"A high rate points at sessions outgrowing their context window mid-task, which shorter, more focused sessions address -- it is not a quality problem, and nothing published says where it becomes one."
 }

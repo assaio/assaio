@@ -146,14 +146,28 @@ func TestBuildDrillsIntoTopProjectByLines(t *testing.T) {
 // between the two scopes.
 func TestBuildDrillVerdictsAreScopedToProjectRows(t *testing.T) {
 	d := Build(fixtureInput(), "last 30 days", false, nil, nil)
-	top := findVerdict(d.Verdicts, "model-fit")
-	drill := findVerdict(d.Drill.Verdicts, "model-fit")
-	if top.Read.Key != "watch" {
-		t.Fatalf("top-level model-fit Read = %+v, want watch (web's opus usage dominates tokens)", top.Read)
+	topVerdict, drillVerdict := findVerdict(d.Verdicts, "model-fit"), findVerdict(d.Drill.Verdicts, "model-fit")
+	top := premiumShare(t, &topVerdict)
+	drill := premiumShare(t, &drillVerdict)
+	if top == drill {
+		t.Fatalf("premium share is %q in both scopes; the drill sliced the top-level verdict instead of re-analyzing api's rows", top)
 	}
-	if drill.Read.Key != "good" {
-		t.Fatalf("drill model-fit Read = %+v, want good (api's rows are entirely the cheaper model)", drill.Read)
+	if drill != "0.0%" {
+		t.Fatalf("drill premium share = %q, want 0.0%%: api's rows are entirely the cheaper model", drill)
 	}
+}
+
+// premiumShare pulls model-fit's premium-tier figure, which is what differs between the whole
+// window and one project's rows now that the read itself grades nothing.
+func premiumShare(t *testing.T, v *analyze.Result) string {
+	t.Helper()
+	for _, f := range v.Figures {
+		if strings.HasPrefix(f.Label, "premium") {
+			return f.Value
+		}
+	}
+	t.Fatalf("model-fit rendered no premium-tier figure: %+v", v.Figures)
+	return ""
 }
 
 func TestBuildAnonymizesThroughputBarsAndDrillName(t *testing.T) {

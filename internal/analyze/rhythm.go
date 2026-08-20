@@ -16,21 +16,16 @@ const (
 	rhythmTitle    = "Work Rhythm"
 	rhythmDescribe = "When AI sessions run -- the off-hours and weekend share -- and how long the longest focused sessions last."
 	// rhythmHowToRead is Result.HowToRead for this validator -- see its doc comment.
-	rhythmHowToRead = "A signal about when the work happens, read across the whole window rather than attributed to an individual: a high off-hours share or frequent marathon sessions is a question about how work is scheduled, not a verdict on anyone's effort."
-	// rhythmDayStart and rhythmDayEnd bound ordinary working hours; a session starting
-	// outside them, or on a weekend, counts as off-hours.
+	rhythmHowToRead = "When the work happened, described and not graded. On a local store every session is one person's, so a verdict here would be a workload judgement about an individual -- which assaio does not make. The bands are printed so a reader who knows the schedule can draw their own conclusion."
+	// rhythmDayStart and rhythmDayEnd bound the band this metric calls ordinary hours; a
+	// session starting outside them, or on a weekend, is counted off-hours. They are assaio's
+	// own boundary and nobody's contract, which is why every surface prints them (B178).
 	rhythmDayStart = 8
 	rhythmDayEnd   = 18
-	// rhythmOffHoursCeiling is the off-hours session share above which the rhythm reads
-	// as strained rather than steady.
-	rhythmOffHoursCeiling = 0.25
 	// rhythmMarathonMinutes is the focused-work length at which a session counts as a
 	// marathon -- long enough that both context and attention degrade.
 	rhythmMarathonMinutes = 90
-	// rhythmMarathonCeiling is the marathon share above which sessions read as running
-	// too long too often.
-	rhythmMarathonCeiling = 0.15
-	// rhythmMinSessions is the floor below which timing shares are too thin to call: two
+	// rhythmMinSessions is the floor below which timing shares are too thin to describe: two
 	// evening sessions are a coincidence, not a pattern.
 	rhythmMinSessions = 5
 )
@@ -70,23 +65,21 @@ func (rhythmValidator) Analyze(in Input) Result {
 	// Both halves need the floor, not just the window: a marathon share read off two timed
 	// sessions is the same coin flip as an off-hours share read off two.
 	sufficient := len(timed) >= rhythmMinSessions && len(paced) >= rhythmMinSessions
-	calm := p.OffHoursShare <= rhythmOffHoursCeiling && p.MarathonShare <= rhythmMarathonCeiling
-	steady := calm && sufficient
 
-	r.Read = rhythmRead(sufficient, steady)
-	r.Purity = rhythmPurity(p, sufficient)
+	r.Read = rhythmRead(sufficient)
+	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "sessions timed", Value: humanize.Int(int64(len(timed)))},
-		{Label: "off-hours", Value: humanize.PercentAt(p.OffHoursShare, 0), Note: humanize.PercentAt(p.WeekendShare, 0) + " on weekends"},
+		{Label: "off-hours", Value: humanize.PercentAt(p.OffHoursShare, 0), Note: humanize.PercentAt(p.WeekendShare, 0) + " on weekends, outside " + rhythmDayBand()},
 		basisFigure("longest sessions", minutesLabel(p.P95ActiveMinutes)+" p95", "focused work", len(paced)),
-		basisFigure("marathons", humanize.PercentAt(p.MarathonShare, 0), "over "+strconv.Itoa(rhythmMarathonMinutes)+" min focused", len(paced)),
+		basisFigure("marathons", humanize.PercentAt(p.MarathonShare, 0), "over "+strconv.Itoa(rhythmMarathonMinutes)+" min focused, assaio's own line", len(paced)),
 	}
 	r.Bars = rhythmBands(p.Bands)
-	r.Takeaway = rhythmTakeaway(steady, sufficient, len(paced))
+	r.Takeaway = rhythmTakeaway(sufficient, len(paced), p)
 	r.Caveats = append(
 		r.Caveats,
-		"Prov.: hours are read in this machine's local timezone; sessions recorded in another zone land in the wrong band.",
-		"Aggregate workload signal -- not an input to evaluating an individual.",
+		"Prov.: hours are read in this machine's local timezone; sessions recorded in another zone land in the wrong band. \"Ordinary hours\" here means "+rhythmDayBand()+" on a weekday, which is assaio's own band and not a claim about anyone's contract.",
+		"No verdict on purpose: on a local store every session is one person's, so a good/bad call about when they ran would be a workload judgement about an individual -- the thing this project refuses to make (B178).",
 	)
 	if len(paced) < len(timed) {
 		r.Caveats = append(r.Caveats, rhythmCoverageCaveat(len(paced), len(timed)))
@@ -103,37 +96,33 @@ func rhythmCoverageCaveat(paced, timed int) string {
 	)
 }
 
-// rhythmRead reports the neutral no-verdict Read while too few timed sessions exist to
-// call a pattern, rather than the alarming WATCH a plain readFor would hand a window whose
-// every measured share is perfect.
-func rhythmRead(sufficient, steady bool) Read {
+// rhythmDayBand renders the hours this metric treats as ordinary, so the boundary a reader is
+// being measured against is on the surface rather than in the source.
+func rhythmDayBand() string {
+	return strconv.Itoa(rhythmDayStart) + ":00-" + strconv.Itoa(rhythmDayEnd) + ":00"
+}
+
+// rhythmRead never judges. Off-hours work is a scheduling fact whose meaning belongs to whoever
+// knows the schedule -- a timezone assaio read wrong, an on-call week, a preference -- and on a
+// local store the subject of any verdict here is one named person.
+func rhythmRead(sufficient bool) Read {
 	if !sufficient {
 		return noDataRead
 	}
-	return readFor(steady, "Steady")
+	return reportedRead
 }
 
-// rhythmPurity is high when work sits inside ordinary hours and sessions stay a sane
-// length; too small a sample yields the neutral 0.5 the other validators use for
-// "not enough evidence yet".
-func rhythmPurity(p rhythmProfile, sufficient bool) float64 {
-	if !sufficient {
-		return 0.5
-	}
-	return clamp01(1 - (p.OffHoursShare+p.MarathonShare)/2)
-}
-
-// rhythmTakeaway makes no workload judgement below the session floor: it prints verbatim
-// beside a Read that withholds its verdict there.
-func rhythmTakeaway(steady, sufficient bool, paced int) string {
+// rhythmTakeaway describes and stops. Below the session floor it says the shares are too thin
+// to describe at all, which is a different statement from declining to grade them.
+func rhythmTakeaway(sufficient bool, paced int, p rhythmProfile) string {
 	switch {
 	case paced == 0:
-		return "No source in this window records focused minutes, so how long sessions run cannot be read -- the timing shares above are shown without a verdict."
+		return "No source in this window records focused minutes, so how long sessions run cannot be read; the timing shares above stand on their own."
 	case !sufficient:
-		return "Too few sessions this window to call the rhythm -- the shares above are shown without a verdict."
-	case steady:
-		return "Sessions sit inside ordinary hours and stay a reasonable length."
+		return "Too few sessions this window to read a timing pattern -- the shares above are shown as they are."
 	default:
-		return "A large share of sessions runs off-hours or very long -- worth looking at how the work is scheduled."
+		return humanize.PercentAt(p.OffHoursShare, 0) + " of sessions started outside " + rhythmDayBand() +
+			" or on a weekend, and " + humanize.PercentAt(p.MarathonShare, 0) + " ran over " +
+			strconv.Itoa(rhythmMarathonMinutes) + " focused minutes. What that means about how the work is scheduled is not something a session log knows."
 	}
 }

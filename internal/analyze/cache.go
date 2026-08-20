@@ -12,8 +12,6 @@ const (
 	cacheTitle     = "Cache Hygiene"
 	cacheDescribe  = "Prompt-cache reuse: how much billed input was served from cache vs re-sent, which lifetime the writes bought, and why a miss happened."
 	cacheHowToRead = "High cache reuse means repeated context is served cheaply from cache instead of re-billed as fresh input. It is a cost signal, not a quality one -- a big one-shot task legitimately shows low reuse. Where a source states it, the lifetime a write bought and the vendor's own reason for a miss say which of those two a low share is."
-	// cacheGoodReuse is the cache-read share above which reuse reads as healthy.
-	cacheGoodReuse = 0.5
 )
 
 func init() { Register(cacheValidator{}) }
@@ -38,10 +36,9 @@ func (cacheValidator) Analyze(in Input) Result {
 
 	r.restsOn(activeDays(&in), "active days")
 	reuse := t.CacheEfficiency // CacheRead / (CacheRead + Input)
-	healthy := reuse >= cacheGoodReuse
 
-	r.Read = readFor(healthy, "Efficient")
-	r.Purity = clamp01(reuse)
+	r.Read = reportedRead
+	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "cache-read share", Value: humanize.Percent(reuse), Note: "of billed input"},
 		{Label: "cache reads", Value: humanize.Count(t.CacheRead)},
@@ -49,9 +46,10 @@ func (cacheValidator) Analyze(in Input) Result {
 		longTierFigure(&in),
 		missCauseFigure(&in),
 	}
-	r.Takeaway = cacheTakeaway(healthy, t.CacheRead, t.CacheWrite)
+	r.Takeaway = cacheTakeaway(reuse, t.CacheRead, t.CacheWrite)
 	r.Caveats = []string{
 		"High reuse is cheaper, not better work -- a large one-shot task legitimately shows low reuse.",
+		unsourcedLine("a cache-read share", "A per-model break-even, once assaio prices what each write bought against what it saved,"),
 		"Reuse is measured at day grain, so a write and a read on the same day count together whatever the gap between them was.",
 	}
 	if !answersCacheDetail(&in) {
@@ -122,15 +120,12 @@ func answersCacheDetail(in *Input) bool {
 		len(report.UsageAnswering(in.Usage, parser.SignalCacheMissReason)) > 0
 }
 
-func cacheTakeaway(healthy bool, read, write int64) string {
-	switch {
-	case healthy:
-		return "Most repeated context is served from cache, keeping input cost down."
-	case write > 0 && read < write:
-		return "Cache is written more than it is reused -- short or churning sessions may be paying to cache context that is never read back."
-	default:
-		return "Little input is served from cache this window -- expected for one-shot or exploratory work."
+func cacheTakeaway(reuse float64, read, write int64) string {
+	head := humanize.Percent(reuse) + " of billed input was served from cache. "
+	if write > 0 && read < write {
+		return head + "Cache is written more than it is reused, which is what short or churning sessions look like -- context paid for and never read back. Whether that is worth changing depends on the work: a large one-shot task legitimately reuses nothing."
 	}
+	return head + "A high share is cheaper input, not better work, and a low one is what one-shot or exploratory work looks like -- so this is a cost figure to watch over time, not a grade."
 }
 
 // cacheWriteNote flags cache writes that outweigh reads: paying to cache context that is

@@ -14,9 +14,6 @@ const (
 	frictionDescribe = "How often tool calls fail outright, beside how often a human declines one."
 	// frictionHowToRead is Result.HowToRead for this validator -- see its doc comment.
 	frictionHowToRead = "Some failure is normal -- an agent probes, a command exits non-zero, it adapts. A rising error rate is the useful signal: it usually means a broken command, a missing dependency, or a permission the agent keeps hitting, and every retry is paid for twice."
-	// frictionWatchCeiling is the tool-error rate above which failures stop looking like
-	// ordinary probing.
-	frictionWatchCeiling = 0.15
 	// frictionMinCalls is the tool-call floor below which a rate is too thin to call.
 	frictionMinCalls = 30
 )
@@ -44,11 +41,9 @@ func (frictionValidator) Analyze(in Input) Result {
 	r.covering(f.Coverage())
 	r.missingCaptureWhen(f.FailureCapable > 0)
 	sufficient := f.Observed >= frictionMinCalls && f.Coherent()
-	lowErrors := f.ErrorRate() <= frictionWatchCeiling
-	smooth := sufficient && lowErrors
 
-	r.Read = frictionRead(sufficient, smooth)
-	r.Purity = frictionPurity(f, sufficient)
+	r.Read = frictionRead(sufficient)
+	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "calls with failure capture", Value: humanize.Int(f.Observed), Note: "of " + humanize.Int(f.Calls) + " tool calls"},
 		frictionRateFigure("error rate", f.Errors, f),
@@ -57,8 +52,11 @@ func (frictionValidator) Analyze(in Input) Result {
 		// failure capture existed still contributes here, since the two are captured apart.
 		{Label: "rejection rate", Value: humanize.PercentOrDash(f.Rejected, f.Refusable, 1), Note: humanize.Int(f.Rejected) + " declined by a human, of calls that record one"},
 	}
-	r.Takeaway = frictionTakeaway(sufficient, smooth, f)
+	r.Takeaway = frictionTakeaway(sufficient, f)
 	r.Caveats = append(r.Caveats, frictionCoverageCaveat(f))
+	if sufficient {
+		r.Caveats = append(r.Caveats, unsourcedLine("a tool-error rate", ownHistoryWouldSettleIt))
+	}
 	return r
 }
 
@@ -129,22 +127,15 @@ func (f friction) Coverage() float64 { return shareOf(f.Observed, f.Calls) }
 // there were none.
 func (f friction) ErrorRate() float64 { return shareOf(f.Errors, f.Observed) }
 
-// frictionRead reports the neutral no-verdict Read while too few calls exist to trust a
-// rate, rather than a favorable one earned from a handful of calls.
-func frictionRead(sufficient, smooth bool) Read {
+// frictionRead reports the rate and does not judge it: no published definition says where an
+// agent's tool-error rate stops being ordinary probing, and the 15% ceiling that used to decide
+// this was a number picked once (B177). Too few calls to read a rate at all stays a separate
+// state from having one and declining to grade it.
+func frictionRead(sufficient bool) Read {
 	if !sufficient {
 		return noDataRead
 	}
-	return readFor(smooth, "Smooth")
-}
-
-// frictionPurity falls as the error rate rises, reaching zero at the point where a third of
-// calls fail; too thin a sample yields the neutral 0.5 used for "not enough evidence yet".
-func frictionPurity(f friction, sufficient bool) float64 {
-	if !sufficient {
-		return 0.5
-	}
-	return clamp01(1 - f.ErrorRate()/0.33)
+	return reportedRead
 }
 
 // frictionRateFigure renders the error share against the failure-observed calls, "—" when
@@ -164,7 +155,7 @@ func frictionCoverageCaveat(f friction) string {
 	return "Prov.: " + humanize.Percent(f.Coverage()) + " of tool calls record whether they failed, and only for sessions ingested by a build that captures it -- run `backfill` after upgrading. A source that marks only some outcomes is excluded from these rates rather than counted as successes; `assaio-agent signals coverage` says which does what."
 }
 
-func frictionTakeaway(sufficient, smooth bool, f friction) string {
+func frictionTakeaway(sufficient bool, f friction) string {
 	switch {
 	case f.Observed == 0 && f.FailureCapable > 0:
 		return "Tool calls ran here from a source that records failures, but none carry a failure state: they were read by a build that did not capture it -- `backfill` re-reads them."
@@ -174,9 +165,9 @@ func frictionTakeaway(sufficient, smooth bool, f friction) string {
 		return "Recorded failures outnumber the calls counted for this window, so no failure rate can be read from it."
 	case !sufficient:
 		return "Too few tool calls with failure capture this window to read a failure rate."
-	case smooth:
-		return "Tool calls mostly succeed -- no systematic friction in this window."
 	default:
-		return "A large share of tool calls fails -- worth finding the command or permission the agent keeps hitting."
+		return humanize.Percent(f.ErrorRate()) + " of the tool calls that record an outcome came back an error, and " +
+			humanize.Percent(shareOf(f.Rejected, f.Refusable)) + " of the ones a human can stop were declined. " +
+			"Whether that is ordinary probing or a command the agent keeps hitting is a question about this work, not about the rate."
 	}
 }

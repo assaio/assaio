@@ -55,8 +55,8 @@ func TestModelFitPartiallyUnknownStillReadsKnownTiersHonestly(t *testing.T) {
 	v, _ := Get(modelFitName)
 	got := v.Analyze(in)
 
-	if got.Read.Label != "HEALTHY" {
-		t.Fatalf("Read = %+v, want HEALTHY: unpriced share is only 200/2000=10%%, well under the watch ceiling", got.Read)
+	if got.Read != reportedRead {
+		t.Fatalf("Read = %+v, want the split reported: unpriced share is only 200/2000=10%%, well under the ceiling that withholds it", got.Read)
 	}
 	joined := figureValues(got.Figures)
 	if !strings.Contains(joined, "10.0%") {

@@ -15,9 +15,6 @@ const (
 	modelFitDescribe = "Premium vs. cheaper model token share, lines-per-token contrast, and real sub-agent delegation share."
 	// modelFitHowToRead is Result.HowToRead for this validator -- see its doc comment.
 	modelFitHowToRead = "High premium-model share isn't wrong, but routine edits and boilerplate are often just as good on cheaper models -- a place to trim spend without losing output."
-	// modelFitWatchCeiling is the premium-token-share threshold above which the model
-	// mix is flagged for a closer look.
-	modelFitWatchCeiling = 0.8
 	// modelFitUnknownWatchCeiling is the unpriced-token-share threshold above which the
 	// premium/cheaper split can no longer be read with confidence -- most of the window
 	// is invisible to pricing, so a favorable read would be unearned.
@@ -53,10 +50,9 @@ func (modelFitValidator) Analyze(in Input) Result {
 	if known > 0 {
 		premiumShare = float64(premiumTokens) / float64(known)
 	}
-	watch := unpriceable || premiumShare > modelFitWatchCeiling
 
-	r.Read = readFor(!watch, "Healthy")
-	r.Purity = modelFitPurity(premiumShare, known > 0)
+	r.Read = modelFitRead(unpriceable, known > 0)
+	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: premiumTierLabel(), Value: humanize.PercentOrDash(premiumTokens, total, 1), Note: linesPerMTok(premiumLines, premiumTokens) + " lines/1M tok"},
 		{Label: cheaperTierLabel(), Value: humanize.PercentOrDash(cheaperTokens, total, 1), Note: linesPerMTok(cheaperLines, cheaperTokens) + " lines/1M tok"},
@@ -77,28 +73,34 @@ func (modelFitValidator) Analyze(in Input) Result {
 		r.Figures = append(r.Figures, savingsFigure(s))
 		r.Caveats = append(r.Caveats, savingsCaveat(s))
 	}
-	r.Takeaway = modelFitTakeaway(watch, unpriceable)
+	if !unpriceable && known > 0 {
+		r.Caveats = append(r.Caveats, unsourcedLine("a premium-token share", ownHistoryWouldSettleIt))
+	}
+	r.Takeaway = modelFitTakeaway(unpriceable, known > 0, premiumShare)
 	return r
 }
 
-// modelFitPurity scores the premium/cheaper mix 0..1, honestly: known is false when
-// every token this window is on an unpriced model, so there is no tier signal at all to
-// score -- neutral 0.5, never a confident 1 computed from an empty split.
-func modelFitPurity(premiumShare float64, known bool) float64 {
-	if !known {
-		return 0.5
+// modelFitRead keeps the one judgement this metric can defend and drops the one it cannot.
+// Too much of the window on models the price table does not know is a statement about the
+// evidence, so it stays a withheld read; the premium/cheaper mix itself is reported and not
+// graded, since the 80% ceiling that used to flag it was a number picked once (B177) and
+// running everything on the strong model is a choice, not a defect.
+func modelFitRead(unpriceable, known bool) Read {
+	if unpriceable || !known {
+		return noDataRead
 	}
-	return clamp01(1 - premiumShare)
+	return reportedRead
 }
 
-func modelFitTakeaway(watch, unpriceable bool) string {
+func modelFitTakeaway(unpriceable, known bool, premiumShare float64) string {
 	switch {
 	case unpriceable:
 		return "Most spend this window is on a model with no known price -- add it to the price table before trusting this read."
-	case watch:
-		return "Nearly all tokens run on premium models -- consider delegating routine work to cheaper models or sub-agents."
+	case !known:
+		return "No token in this window ran on a model the price table places in a tier, so there is no premium/cheaper split to read."
 	default:
-		return "Model mix looks balanced between premium and cheaper models."
+		return humanize.Percent(premiumShare) + " of the tokens that carry a tier ran on a premium model. " +
+			"Routine edits and boilerplate are often just as good on cheaper models, which is where a mix like this gets trimmed -- but running everything on the strong model is a choice, and nothing published says at what share it becomes the wrong one."
 	}
 }
 

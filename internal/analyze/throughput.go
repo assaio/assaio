@@ -12,13 +12,15 @@ const (
 	throughputTitle    = "Throughput"
 	throughputDescribe = "Total AI-added lines, lines per active day, top projects by lines, and the week-over-week trend."
 	// throughputHowToRead is Result.HowToRead for this validator -- see its doc comment.
-	throughputHowToRead = "Lines added is an output-volume signal, not a quality score -- read the trend alongside rework and model fit before deciding more code means more value."
+	throughputHowToRead = "Lines added is an output-volume signal and nothing more. More lines is not better work and fewer is not worse, so this reports the count and its direction and grades neither -- read it beside rework and model fit before deciding what a change in it means."
 	// throughputTopN caps the top-projects bars shown in the report.
 	throughputTopN = 5
-	// throughputMinLinesForRamping is the minimum recent-window AI-line count a positive
-	// trend requires before it can carry a favorable Ramping read -- a change from 1 to
-	// 2 lines is a 100% swing on a trivial sample, not a real ramp.
-	throughputMinLinesForRamping = 20
+	// throughputMinLinesForTrend is the line count either side of the comparison must reach
+	// before a week-over-week change is worth stating -- a change from 1 to 2 lines is a 100%
+	// swing on a trivial sample, not a direction. Either side, not the recent one: output
+	// collapsing from thousands of lines to none is exactly the direction worth reading, and
+	// requiring the recent side to be large would report it as unreadable.
+	throughputMinLinesForTrend = 20
 )
 
 func init() { Register(throughputValidator{}) }
@@ -55,12 +57,10 @@ func (throughputValidator) Analyze(in Input) Result {
 	r.restsOn(activeDays(&in), "active days")
 	inv := report.BuildInventory(in.Usage, in.Prices)
 	recent, prior, changePct, trendOK := weekOverWeek(in.Usage, in.Now, in.Recent)
-	growthSignal := trendOK && changePct > 0
-	sufficientVolume := recent >= throughputMinLinesForRamping
-	ramping := growthSignal && sufficientVolume
+	sufficientVolume := max(recent, prior) >= throughputMinLinesForTrend
 
-	r.Read = readFor(ramping, "Ramping")
-	r.Purity = trendPurity(changePct, trendOK)
+	r.Read = reportedRead
+	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "AI lines total", Value: humanize.Int(in.Totals.Lines)},
 		{Label: "lines/active-day", Value: perActiveDay(in.Totals.Lines, int64(inv.Days))},
@@ -68,18 +68,33 @@ func (throughputValidator) Analyze(in Input) Result {
 	}
 	r.Bars = topProjectBars(in.ByProject, throughputTopN)
 	r.BarsPseudonym = PseudonymProject
-	r.Takeaway = throughputTakeaway(ramping, growthSignal && !sufficientVolume)
+	r.Takeaway = throughputTakeaway(in.Totals.Lines, changePct, trendOK && sufficientVolume)
+	r.Caveats = append(r.Caveats,
+		"No verdict on purpose: a rising line count is an output measure, and promoting one to a claim about value is the most likely way this project starts lying (B180). The direction is here; what it is worth is not something a line count knows.")
 	return r
 }
 
-func throughputTakeaway(ramping, trendUpButTrivial bool) string {
+// throughputTakeaway states the count and its direction without colouring either. A trend read
+// off too few lines is reported as unreadable rather than as flat: those are different facts.
+func throughputTakeaway(lines int64, changePct float64, readable bool) string {
+	head := humanize.Int(lines) + " AI-added lines in this window. "
+	if !readable {
+		return head + "Too few recent lines to read a week-over-week direction from them."
+	}
+	return head + "Week over week the count is " + trendDirection(changePct) + "."
+}
+
+// trendDirection names the direction in words that carry no verdict: "up" and "down" describe a
+// count, where "ramping" and "cooling" would describe a team. changePct is a fraction
+// (recent-prior)/prior despite its name, so it is rendered as a share and never divided again.
+func trendDirection(changePct float64) string {
 	switch {
-	case ramping:
-		return "AI-line output is ramping up week over week."
-	case trendUpButTrivial:
-		return "AI-line output ticked up, but volume is too low this window to call it a ramp."
+	case changePct > 0:
+		return "up " + humanize.Percent(changePct)
+	case changePct < 0:
+		return "down " + humanize.Percent(-changePct)
 	default:
-		return "AI-line output is flat or down week over week."
+		return "unchanged"
 	}
 }
 

@@ -54,22 +54,29 @@ What it measures
   on a failure instead of getting past one.
 
 How to read it
-  The cost figure is a multiple of the window's own turn, so 1.0x means a failure changed
-  nothing about what came next. Above roughly 1.5x, recovery is where a real share of the
-  spend goes and the failures worth chasing are the repeated ones.
+  The cost figure is a multiple of what a turn costs elsewhere in the same window -- turns
+  that follow no failure -- so 1.0x means a failure changed nothing about what came next.
+  There is no published multiple at which recovery becomes a problem, and assaio does not
+  invent one: the figure is reported and the call is yours. The only non-arbitrary point on
+  the scale is 1.0, and with thousands of turns on each side a 3% difference clears any
+  noise test while meaning nothing anyone would act on.
+
+  The baseline excludes the aftermath it is compared against. Leaving it in pulls the ratio
+  toward 1.0 -- toward "nothing to see" -- by exactly the share of the window that follows a
+  failure, which is a bias in the direction that flatters.
 
   Read over turns, not steps, deliberately. A tool call carries no tokens, and the steps
   right after a failure are more heavily model turns than the window is -- 49.2% against
   47.7% over a ten-step window on the audited corpus, 62.2% over a three-step one. Per
-  step that reads 1.06x and 1.35x; per turn, 1.02x and 1.03x. The per-step number is the
+  step that reads 1.06x and 1.37x; per turn, 1.03x and 1.04x. The per-step number is the
   sample's composition, not a cost, and it is the number most likely to be recomputed
   wrongly from the same data.
 
 What to do about it
-  A high multiple points at a failure the agent could not resolve cheaply: a command that
-  never works, a permission it keeps hitting, a dependency that is not installed. The
-  sessions that stopped on a failure are a shortlist, not a verdict -- some stopped because
-  the work was finished.
+  A multiple well above 1.0 points at a failure the agent could not resolve cheaply: a
+  command that never works, a permission it keeps hitting, a dependency that is not
+  installed. The sessions that stopped on a failure are a shortlist, not a verdict -- some
+  stopped because the work was finished.
 
 Limits
   A failure the agent expected -- probing for a file, testing a guess -- is indistinguishable

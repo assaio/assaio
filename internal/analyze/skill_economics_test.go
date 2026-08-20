@@ -29,8 +29,8 @@ func TestSkillEconomicsFlagsOneSkillDominating(t *testing.T) {
 		}, nil,
 	))
 
-	if got.Read.Label != "WATCH" {
-		t.Fatalf("Read = %q, want WATCH when one skill takes 90%% of attributed tokens", got.Read.Label)
+	if got.Read != reportedRead {
+		t.Fatalf("Read = %+v, want the share reported: concentration is not by itself a fault", got.Read)
 	}
 	if !strings.Contains(figureValues(got.Figures), "90%") {
 		t.Fatalf("Figures = %q, want the 90%% largest-share figure", figureValues(got.Figures))
@@ -45,8 +45,8 @@ func TestSkillEconomicsFlagsOneSkillDominating(t *testing.T) {
 	}
 }
 
-// TestSkillEconomicsSpreadAcrossSkills asserts an even split reads as spread rather than
-// concentrated.
+// TestSkillEconomicsSpreadAcrossSkills asserts an even split gets the same descriptive read a
+// concentrated one does, with the share left to tell them apart (B177).
 func TestSkillEconomicsSpreadAcrossSkills(t *testing.T) {
 	got := mustGet(t, skillName).Analyze(skillInput(
 		[]store.AttributionRow{
@@ -56,8 +56,11 @@ func TestSkillEconomicsSpreadAcrossSkills(t *testing.T) {
 		}, nil,
 	))
 
-	if got.Read.Label != "SPREAD" {
-		t.Fatalf("Read = %q, want SPREAD for an even three-way split", got.Read.Label)
+	if got.Read != reportedRead {
+		t.Fatalf("Read = %+v, want the descriptive read for an even three-way split", got.Read)
+	}
+	if !strings.Contains(figureValues(got.Figures), "33%") {
+		t.Fatalf("Figures = %q, want the 33%% largest-share figure", figureValues(got.Figures))
 	}
 }
 

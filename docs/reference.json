@@ -704,14 +704,14 @@
     {
       "name": "reasoning-share",
       "title": "Reasoning Share",
-      "describe": "How much generated output is extended-thinking (reasoning) tokens, among tools that report it -- flagging deep reasoning spent on shallow tasks.",
+      "describe": "How much generated output is extended-thinking (reasoning) tokens, among tools that report it.",
       "layer": "activity",
       "scope": "project"
     },
     {
       "name": "recovery",
       "title": "Failure Recovery",
-      "describe": "What a failed call, a refusal or a lost context costs next: the turns that follow one, against what a turn costs anywhere in the window.",
+      "describe": "What a failed call, a refusal or a lost context costs next: the turns that follow one, against what a turn costs anywhere else in the window.",
       "layer": "activity",
       "scope": "project"
     },

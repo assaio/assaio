@@ -18,31 +18,28 @@ func concentrationInput(hungryTokens, hungryLines, leanTokens, leanLines int64) 
 	return BuildInput(usage, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
 }
 
-// TestConcentrationFlagsSpendNotConvertingToOutput covers the metric's whole point: a
-// project taking 80% of the tokens while writing 10% of the lines is the gap worth
-// flagging, not the concentration itself.
-func TestConcentrationFlagsSpendNotConvertingToOutput(t *testing.T) {
-	got := mustGet(t, concentrationName).Analyze(concentrationInput(8000, 10, 2000, 90))
-
-	if got.Read.Label != "WATCH" {
-		t.Fatalf("Read = %q, want WATCH for an 80%%-tokens / 10%%-lines project", got.Read.Label)
+// TestConcentrationReportsTheGapWithoutGradingIt covers the metric's whole point -- the gap
+// between a project's share of tokens and its share of lines -- and B177's correction to it: a
+// 70-point gap and a matched one get the same read, because lines are not value and no
+// published line says which gap is a fault. The figure is what separates them.
+func TestConcentrationReportsTheGapWithoutGradingIt(t *testing.T) {
+	wide := mustGet(t, concentrationName).Analyze(concentrationInput(8000, 10, 2000, 90))
+	if wide.Read != reportedRead {
+		t.Fatalf("Read = %+v, want the descriptive read for an 80%%-tokens / 10%%-lines project", wide.Read)
 	}
-	if !strings.Contains(figureValues(got.Figures), "70pp") {
-		t.Fatalf("Figures = %q, want the 70pp spend gap", figureValues(got.Figures))
+	if !strings.Contains(figureValues(wide.Figures), "70pp") {
+		t.Fatalf("Figures = %q, want the 70pp spend gap", figureValues(wide.Figures))
 	}
-	if !strings.Contains(got.Takeaway, "larger share of tokens") {
-		t.Fatalf("Takeaway = %q, want the spend-versus-output message", got.Takeaway)
+	if !strings.Contains(wide.Takeaway, "70%") {
+		t.Fatalf("Takeaway = %q, want the widest gap stated", wide.Takeaway)
 	}
-}
 
-// TestConcentrationAlignedWhenSpendTracksOutput asserts that heavy concentration alone is
-// not a fault: a project on most of the tokens that also wrote most of the lines reads as
-// aligned.
-func TestConcentrationAlignedWhenSpendTracksOutput(t *testing.T) {
-	got := mustGet(t, concentrationName).Analyze(concentrationInput(8000, 80, 2000, 20))
-
-	if got.Read.Label != "ALIGNED" {
-		t.Fatalf("Read = %q, want ALIGNED when token share matches line share", got.Read.Label)
+	tracking := mustGet(t, concentrationName).Analyze(concentrationInput(8000, 80, 2000, 20))
+	if tracking.Read != reportedRead {
+		t.Fatalf("Read = %+v, want the same descriptive read when token share matches line share", tracking.Read)
+	}
+	if tracking.Purity != neutralPurity {
+		t.Fatalf("Purity = %v, want the neutral gauge", tracking.Purity)
 	}
 }
 

@@ -87,16 +87,15 @@ func watchInput() Input {
 
 var allValidatorNames = []string{"adoption", "model-fit", "context", "throughput", "rework"}
 
+// gradingValidators are the ones whose line is derived from the window or cited from
+// somewhere, and which therefore still hold a good/watch verdict. Every other validator in
+// allValidatorNames reports its figure and refuses the call (see unsourced.go); which list a
+// validator belongs to is a decision, so it is written down here rather than discovered.
+var gradingValidators = map[string]string{"adoption": "STRONG"}
+
 func TestValidatorsFavorableRead(t *testing.T) {
-	want := map[string]string{
-		"adoption":   "STRONG",
-		"model-fit":  "HEALTHY",
-		"context":    "HEALTHY",
-		"throughput": "RAMPING",
-		"rework":     "LOW",
-	}
 	in := favorableInput()
-	for _, name := range allValidatorNames {
+	for name, wantRead := range gradingValidators {
 		v, ok := Get(name)
 		if !ok {
 			t.Fatalf("validator %q not registered", name)
@@ -106,7 +105,7 @@ func TestValidatorsFavorableRead(t *testing.T) {
 			t.Fatalf("%s: RenderResultText error: %v", name, err)
 		}
 		out := buf.String()
-		if wantRead := want[name]; !strings.Contains(out, "["+wantRead+"]") {
+		if !strings.Contains(out, "["+wantRead+"]") {
 			t.Fatalf("%s favorable output missing [%s]:\n%s", name, wantRead, out)
 		}
 		if !strings.Contains(out, "Takeaway:") {
@@ -117,7 +116,7 @@ func TestValidatorsFavorableRead(t *testing.T) {
 
 func TestValidatorsWatchRead(t *testing.T) {
 	in := watchInput()
-	for _, name := range allValidatorNames {
+	for name := range gradingValidators {
 		v, ok := Get(name)
 		if !ok {
 			t.Fatalf("validator %q not registered", name)
@@ -130,6 +129,34 @@ func TestValidatorsWatchRead(t *testing.T) {
 		if !strings.Contains(out, "[WATCH]") {
 			t.Fatalf("%s watch-scenario output missing [WATCH]:\n%s", name, out)
 		}
+	}
+}
+
+// TestUngradedValidatorsReadTheSameBothWays is the whole point of withdrawing an unsourced
+// line: the favorable and unfavorable fixtures are meant to be as far apart as the metric can
+// see, and a validator that gave up its verdict has to answer both the same way. A colour that
+// crept back would show up here rather than on someone's dashboard.
+func TestUngradedValidatorsReadTheSameBothWays(t *testing.T) {
+	favorable, watch := favorableInput(), watchInput()
+	for _, name := range allValidatorNames {
+		if _, grades := gradingValidators[name]; grades {
+			continue
+		}
+		t.Run(name, func(t *testing.T) {
+			v, ok := Get(name)
+			if !ok {
+				t.Fatalf("validator %q not registered", name)
+			}
+			for scenario, in := range map[string]Input{"favorable": favorable, "watch": watch} {
+				got := v.Analyze(in)
+				if got.Read.Key == "good" || got.Read.Key == "watch" {
+					t.Fatalf("%s on the %s fixture reads %+v, want no verdict: its line has no source", name, scenario, got.Read)
+				}
+				if got.Purity != neutralPurity {
+					t.Fatalf("%s on the %s fixture gauges %v, want the neutral gauge", name, scenario, got.Purity)
+				}
+			}
+		})
 	}
 }
 

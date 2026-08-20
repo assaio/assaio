@@ -12,14 +12,9 @@ import (
 const (
 	recoveryName     = "recovery"
 	recoveryTitle    = "Failure Recovery"
-	recoveryDescribe = "What a failed call, a refusal or a lost context costs next: the turns that follow one, against what a turn costs anywhere in the window."
+	recoveryDescribe = "What a failed call, a refusal or a lost context costs next: the turns that follow one, against what a turn costs anywhere else in the window."
 	// recoveryHowToRead is Result.HowToRead for this validator -- see its doc comment.
-	recoveryHowToRead = "Failure is normal; an agent probes and adapts. This asks whether recovering from one is expensive here -- whether the turns after a failure cost more than the window's own turns -- and names the sessions that stopped on one instead of getting past it."
-	// recoveryExpensiveRatio is where the aftermath of a failure stops being indistinguishable
-	// from ordinary work: half again the window's own cost per turn. A ratio against the window
-	// itself rather than an absolute figure, so it means the same thing on any machine -- the
-	// audited store reads 1.02x over this detector's window, nowhere near it.
-	recoveryExpensiveRatio = 1.5
+	recoveryHowToRead = "Failure is normal; an agent probes and adapts. This asks whether recovering from one is expensive here -- whether the turns after a failure cost more than the turns that do not follow one -- and names the sessions that stopped on one instead of getting past it."
 	// recoveryMinTurns is the turn floor below which the ratio is arithmetic rather than evidence.
 	recoveryMinTurns = 30
 )
@@ -53,11 +48,14 @@ func (v recoveryValidator) Analyze(in Input) Result {
 
 	ratio, rated := a.CostRatio()
 	enough := rated && a.AfterTurns >= recoveryMinTurns
-	r.Read = recoveryRead(enough, ratio)
-	r.Purity = recoveryPurity(enough, ratio)
+	r.Read = recoveryRead(enough)
+	r.Purity = neutralPurity
 	r.Figures = recoveryFigures(&a, ratio, rated)
 	r.Takeaway = recoveryTakeaway(enough, ratio, &a)
 	r.Caveats = append(r.Caveats, recoveryCannotDistinguish, recoveryCompositionCaveat)
+	if enough {
+		r.Caveats = append(r.Caveats, unsourcedLine("the cost of recovering from a failure", ownHistoryWouldSettleIt))
+	}
 	if a.Open > 0 {
 		r.Caveats = append(r.Caveats, recoveryOpenCaveat(&a))
 	}
@@ -98,29 +96,22 @@ func recoveryCostFigure(a *aftermath, ratio float64, rated bool) Figure {
 	}
 }
 
-// recoveryRead is favorable when recovering costs about what everything else does. An abandoned
-// session is not folded into this verdict: it is a handful of sessions to open, not a rate, and
-// letting it flip the read would make a window of 290 sessions look broken because one stopped.
-func recoveryRead(enough bool, ratio float64) Read {
+// recoveryRead reports the ratio and does not grade it. The 1.5x line that used to decide
+// "contained" was a number picked once (B177): the only non-arbitrary point on this scale is
+// 1.0, and with thousands of turns on each side a 3% difference clears any noise test while
+// meaning nothing anyone would act on. An abandoned session is not folded in either -- it is a
+// handful of sessions to open, not a rate.
+func recoveryRead(enough bool) Read {
 	if !enough {
 		return noDataRead
 	}
-	return readFor(ratio < recoveryExpensiveRatio, "Contained")
+	return reportedRead
 }
 
 // ratioLabel renders a multiple the way the heaviest-day figure does, at the two decimals this
-// metric turns on: 1.03 and 1.35 are the difference between a finding and an artifact.
+// metric turns on: 1.04 and 1.37 are the difference between a finding and an artifact.
 func ratioLabel(ratio float64) string {
 	return strconv.FormatFloat(ratio, 'f', 2, 64) + "\u00d7"
-}
-
-// recoveryPurity falls as the aftermath gets more expensive than the window, reaching zero at
-// twice the cost. Too few turns to judge yields the neutral 0.5.
-func recoveryPurity(enough bool, ratio float64) float64 {
-	if !enough {
-		return 0.5
-	}
-	return clamp01(1 - (ratio - 1))
 }
 
 func recoveryTakeaway(enough bool, ratio float64, a *aftermath) string {
@@ -129,10 +120,9 @@ func recoveryTakeaway(enough bool, ratio float64, a *aftermath) string {
 		return "Nothing failed, was declined, or lost its context in this scope, so there was no recovery to measure."
 	case !enough:
 		return "Too few turns follow a failure in this window to say what recovering from one costs."
-	case ratio >= recoveryExpensiveRatio:
-		return "Turns after a failure cost " + ratioLabel(ratio) + " what a turn costs anywhere else here -- recovery is where a real share of this window's spend goes." + recoveryAbandonedSentence(a)
 	default:
-		return "Recovering from a failure costs about what the rest of the work costs (" + ratioLabel(ratio) + "), so failures are not where this window's spend goes." + recoveryAbandonedSentence(a)
+		return "Turns following a failure cost " + ratioLabel(ratio) +
+			" what a turn that follows none costs here." + recoveryAbandonedSentence(a)
 	}
 }
 
@@ -151,7 +141,7 @@ const (
 	recoveryCannotDistinguish = cannotDistinguish + ": a failure the agent expected -- probing for a file, testing a guess -- from one that cost it the thread; a session that stopped because the work was done from one that gave up; or a compaction at a natural boundary from one that lost something needed. The last visible step is also only the last one *stored*: a session whose transcript was deleted or whose steps fell past the horizon can end anywhere."
 	// recoveryCompositionCaveat states the wrong answer, because the wrong answer is the tempting
 	// one and it was measured on the way here.
-	recoveryCompositionCaveat = "Read over turns, not steps, on purpose. A tool call carries no tokens, and the steps after a failure hold more assistant turns than the window does -- 49.2% against 47.7% inside this detector's ten-step window, 62.2% inside a three-step one. On the audited corpus that makes the per-step figure 1.06× where the per-turn figure is 1.02×, and at three steps 1.35× against 1.03×: the shorter the window, the more of it is the turn that answered the failure, and the more the per-step number measures the sample's composition rather than a cost."
+	recoveryCompositionCaveat = "Read over turns, not steps, on purpose. A tool call carries no tokens, and the steps after a failure hold more assistant turns than the window does -- 49.2% against 47.7% inside this detector's ten-step window, 62.2% inside a three-step one. On the audited corpus that makes the per-step figure 1.06× where the per-turn figure is 1.03×, and at three steps 1.37× against 1.04×: the shorter the window, the more of it is the turn that answered the failure, and the more the per-step number measures the sample's composition rather than a cost."
 )
 
 func recoveryOpenCaveat(a *aftermath) string {

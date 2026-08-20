@@ -51,29 +51,24 @@ func toolMixInput(reads, searches, commands, writes, other int64) Input {
 	return BuildInput([]store.UsageRow{row}, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
 }
 
-// TestExploreProduceBalancedWhenWritesFollowReads asserts a window that reads a lot but
-// still writes reads as balanced -- exploring is how an agent earns the right to write.
-func TestExploreProduceBalancedWhenWritesFollowReads(t *testing.T) {
-	got := mustGet(t, exploreName).Analyze(toolMixInput(60, 20, 30, 20, 10))
-
-	if got.Read.Label != "BALANCED" {
-		t.Fatalf("Read = %q, want BALANCED when writes accompany heavy reading", got.Read.Label)
+// TestExploreProduceReportsTheSplitWithoutGradingIt asserts the split is described and not
+// judged (B177): a window that writes freely and one that almost never writes get the same
+// read, and the reads-per-write ratio is what tells them apart.
+func TestExploreProduceReportsTheSplitWithoutGradingIt(t *testing.T) {
+	writing := mustGet(t, exploreName).Analyze(toolMixInput(60, 20, 30, 20, 10))
+	if writing.Read != reportedRead {
+		t.Fatalf("Read = %+v, want the descriptive read when writes accompany heavy reading", writing.Read)
 	}
-	if !strings.Contains(figureValues(got.Figures), "4.0×") {
-		t.Fatalf("Figures = %q, want 4.0× reads+searches per write", figureValues(got.Figures))
+	if !strings.Contains(figureValues(writing.Figures), "4.0×") {
+		t.Fatalf("Figures = %q, want 4.0× reads+searches per write", figureValues(writing.Figures))
 	}
-}
 
-// TestExploreProduceFlagsEndlessSearching asserts a window that explores heavily and almost
-// never writes is the case this metric exists to surface.
-func TestExploreProduceFlagsEndlessSearching(t *testing.T) {
-	got := mustGet(t, exploreName).Analyze(toolMixInput(300, 200, 50, 1, 10))
-
-	if got.Read.Label != "WATCH" {
-		t.Fatalf("Read = %q, want WATCH when almost nothing is written", got.Read.Label)
+	searching := mustGet(t, exploreName).Analyze(toolMixInput(300, 200, 50, 1, 10))
+	if searching.Read != reportedRead {
+		t.Fatalf("Read = %+v, want the same descriptive read when almost nothing is written", searching.Read)
 	}
-	if !strings.Contains(got.Takeaway, "stuck exploring") {
-		t.Fatalf("Takeaway = %q, want the stuck-exploring message", got.Takeaway)
+	if !strings.Contains(searching.Takeaway, "reads per write") {
+		t.Fatalf("Takeaway = %q, want the ratio stated rather than judged", searching.Takeaway)
 	}
 }
 
@@ -146,8 +141,10 @@ func TestExploreProduceIgnoresSourcesThatNameNoToolCalls(t *testing.T) {
 		t.Fatalf("signal coverage = %v, want the full reach: every call that could be named was",
 			got.Confidence.Signal)
 	}
-	if len(got.Caveats) != 0 {
-		t.Fatalf("Caveats = %q, want no coverage gap disclosed for a source that records no calls", got.Caveats)
+	for _, c := range got.Caveats {
+		if strings.Contains(c, "Prov.:") {
+			t.Fatalf("Caveats = %q, want no coverage gap disclosed for a source that records no calls", got.Caveats)
+		}
 	}
 }
 

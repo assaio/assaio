@@ -29,39 +29,44 @@ func rhythmInput(sessions []store.SessionRow) Input {
 	return BuildInput(nil, sessions, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
 }
 
-// TestRhythmSteadyOnOrdinaryHours asserts weekday sessions inside working hours, of a sane
-// length, read as steady.
-func TestRhythmSteadyOnOrdinaryHours(t *testing.T) {
+// TestRhythmNeverJudgesWhenTheWorkHappened is B178's regression: on a local store every
+// session is one person's, so mid-morning weekday work and midnight work get the same read.
+// The shares are reported; the judgement is refused.
+func TestRhythmNeverJudgesWhenTheWorkHappened(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		hour    int
+		minutes float64
+		share   string
+	}{
+		{"weekday mid-morning", 10, 30, "0%"},
+		{"every session at 23:00", 23, 30, "100%"},
+		{"every session a marathon", 10, rhythmMarathonMinutes + 30, "0%"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := mustGet(t, rhythmName).Analyze(rhythmInput(rhythmSessionsAt(6, tc.hour, tc.minutes)))
+
+			if got.Read != reportedRead {
+				t.Fatalf("Read = %+v, want the descriptive read: a verdict here judges one person's hours", got.Read)
+			}
+			if got.Purity != neutralPurity {
+				t.Fatalf("Purity = %v, want the neutral gauge", got.Purity)
+			}
+			if !strings.Contains(figureValues(got.Figures), tc.share) {
+				t.Fatalf("Figures = %q, want a %s off-hours share", figureValues(got.Figures), tc.share)
+			}
+		})
+	}
+}
+
+// TestRhythmPrintsItsOwnDayBand is the other half of B178: the boundary a reader is measured
+// against was never on the surface, so nobody could disagree with it.
+func TestRhythmPrintsItsOwnDayBand(t *testing.T) {
 	got := mustGet(t, rhythmName).Analyze(rhythmInput(rhythmSessionsAt(6, 10, 30)))
 
-	if got.Read.Label != "STEADY" {
-		t.Fatalf("Read = %q, want STEADY for weekday mid-morning sessions", got.Read.Label)
-	}
-	if !strings.Contains(figureValues(got.Figures), "0%") {
-		t.Fatalf("Figures = %q, want a 0%% off-hours share", figureValues(got.Figures))
-	}
-}
-
-// TestRhythmFlagsOffHoursWork asserts a window run entirely late at night reads as
-// strained, since off-hours share is what the metric exists to surface.
-func TestRhythmFlagsOffHoursWork(t *testing.T) {
-	got := mustGet(t, rhythmName).Analyze(rhythmInput(rhythmSessionsAt(6, 23, 30)))
-
-	if got.Read.Label != "WATCH" {
-		t.Fatalf("Read = %q, want WATCH for sessions starting at 23:00", got.Read.Label)
-	}
-	if !strings.Contains(figureValues(got.Figures), "100%") {
-		t.Fatalf("Figures = %q, want a 100%% off-hours share", figureValues(got.Figures))
-	}
-}
-
-// TestRhythmFlagsMarathonSessions asserts long focused stretches flag even when they run
-// inside ordinary working hours.
-func TestRhythmFlagsMarathonSessions(t *testing.T) {
-	got := mustGet(t, rhythmName).Analyze(rhythmInput(rhythmSessionsAt(6, 10, rhythmMarathonMinutes+30)))
-
-	if got.Read.Label != "WATCH" {
-		t.Fatalf("Read = %q, want WATCH when every session is a marathon", got.Read.Label)
+	rendered := figureValues(got.Figures) + " " + strings.Join(got.Caveats, " ") + " " + got.Takeaway
+	if !strings.Contains(rendered, "8:00-18:00") {
+		t.Fatalf("rendered result never states the ordinary-hours band it counts against:\n%s", rendered)
 	}
 }
 
@@ -117,8 +122,8 @@ func TestRhythmIgnoresUntimedSessions(t *testing.T) {
 	if !strings.Contains(figureValues(got.Figures), "5") {
 		t.Fatalf("Figures = %q, want only the 5 timed sessions counted", figureValues(got.Figures))
 	}
-	if got.Read.Label != "STEADY" {
-		t.Fatalf("Read = %q, want the untimed session not to invent night work", got.Read.Label)
+	if !strings.Contains(figureValues(got.Figures), "0%") {
+		t.Fatalf("Figures = %q, want the untimed session not to invent night work", figureValues(got.Figures))
 	}
 }
 

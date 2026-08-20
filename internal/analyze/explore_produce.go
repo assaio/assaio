@@ -14,9 +14,6 @@ const (
 	exploreDescribe = "What the tool calls were for: reading and searching the codebase versus writing code in it."
 	// exploreHowToRead is Result.HowToRead for this validator -- see its doc comment.
 	exploreHowToRead = "Exploring is how an agent earns the right to write, so a high read share is not waste -- unfamiliar or large codebases legitimately need more of it. What this flags is the extreme: a window that reads and searches endlessly and almost never writes."
-	// exploreWatchFloor is the produce share below which a window reads as searching far
-	// more than it writes.
-	exploreWatchFloor = 0.05
 	// exploreMinCalls is the classified-call floor below which the split is too thin to
 	// call: a handful of calls is not a working pattern.
 	exploreMinCalls = 50
@@ -56,11 +53,9 @@ func (exploreValidator) Analyze(in Input) Result {
 		return r
 	}
 	sufficient := m.Classified >= exploreMinCalls
-	producing := m.ProduceShare() >= exploreWatchFloor
-	balanced := sufficient && producing
 
-	r.Read = exploreRead(sufficient, balanced)
-	r.Purity = explorePurity(m, sufficient)
+	r.Read = exploreRead(sufficient)
+	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "classified calls", Value: humanize.Int(m.Classified)},
 		{Label: "produce share", Value: humanize.PercentAt(m.ProduceShare(), 0), Note: "writes, of classified calls"},
@@ -68,9 +63,12 @@ func (exploreValidator) Analyze(in Input) Result {
 		{Label: "reads per write", Value: exploreRatio(m.Reads+m.Searches, m.Writes)},
 	}
 	r.Bars = toolMixBars(m)
-	r.Takeaway = exploreTakeaway(sufficient, balanced)
+	r.Takeaway = exploreTakeaway(sufficient, m)
 	if m.Coverage() < 1 {
 		r.Caveats = append(r.Caveats, exploreCoverageCaveat(m))
+	}
+	if sufficient {
+		r.Caveats = append(r.Caveats, unsourcedLine("a produce share", ownHistoryWouldSettleIt))
 	}
 	return r
 }
@@ -83,22 +81,14 @@ func shareOf(n, total int64) float64 {
 	return float64(n) / float64(total)
 }
 
-// exploreRead reports the neutral no-verdict Read while too few classified calls exist to
-// read a pattern, rather than a favorable one earned from a handful of calls.
-func exploreRead(sufficient, balanced bool) Read {
+// exploreRead reports the split without grading it. The 5% produce floor that used to decide
+// "balanced" was a number picked once (B177), and how much reading a piece of work needs before
+// it writes is a property of the work.
+func exploreRead(sufficient bool) Read {
 	if !sufficient {
 		return noDataRead
 	}
-	return readFor(balanced, "Balanced")
-}
-
-// explorePurity rises with the produce share, saturating at a quarter of calls writing --
-// beyond that more writing says nothing further about whether exploration is proportionate.
-func explorePurity(m toolMix, sufficient bool) float64 {
-	if !sufficient {
-		return 0.5
-	}
-	return clamp01(m.ProduceShare() / 0.25)
+	return reportedRead
 }
 
 // exploreRatio renders how many reads and searches accompany each write, "—" when nothing
@@ -157,13 +147,11 @@ func exploreUnclassifiedTakeaway(callsRan bool) string {
 	return "No tool in this window records what its tool calls were for."
 }
 
-func exploreTakeaway(sufficient, balanced bool) string {
-	switch {
-	case !sufficient:
+func exploreTakeaway(sufficient bool, m toolMix) string {
+	if !sufficient {
 		return "Too few classified tool calls this window to read the explore-versus-produce split."
-	case balanced:
-		return "Exploration is feeding real writes, not running in circles."
-	default:
-		return "Almost all tool calls read or search and very few write -- worth checking whether the agent is stuck exploring."
 	}
+	return humanize.PercentAt(m.ProduceShare(), 0) + " of classified tool calls wrote something and " +
+		humanize.PercentAt(m.ExploreShare(), 0) + " read or searched, at " + exploreRatio(m.Reads+m.Searches, m.Writes) +
+		" reads per write. A high ratio is what an agent stuck exploring looks like and also what careful work on an unfamiliar codebase looks like; the log cannot tell them apart."
 }

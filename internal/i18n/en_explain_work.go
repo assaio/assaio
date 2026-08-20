@@ -55,9 +55,10 @@ How to read it
   Unfamiliar or large codebases legitimately need more of it.
 
 What to do about it
-  What this flags is the extreme: a window that reads and searches endlessly and almost
-  never writes. That usually means the agent cannot find what it needs -- poor structure,
-  missing conventions, or a task described too vaguely to act on.
+  The case worth opening is the extreme: a window that reads and searches endlessly and
+  almost never writes. That usually means the agent cannot find what it needs -- poor
+  structure, missing conventions, or a task described too vaguely to act on. assaio does not
+  say where that line is, because no published definition sets one.
 
 Limits
   Only tools that name their tool calls contribute; everything else is excluded rather
@@ -94,8 +95,10 @@ What it measures
   how often a human rejected a tool call.
 
 How to read it
-  Some churn is healthy iteration; that is what drafting looks like. Elevated rework flags
-  friction worth a closer look at specific sessions.
+  Some churn is healthy iteration; that is what drafting looks like. Nothing published says
+  where a rework or rejection rate becomes a problem, so assaio reports both and grades
+  neither -- a high one is worth a closer look at specific sessions, not a verdict on the
+  window.
 
 What to do about it
   Read it as a lead, not a verdict. Open a high-rework session and ask whether the agent
