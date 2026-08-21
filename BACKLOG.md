@@ -939,6 +939,33 @@ file-size norm.
   current parse is the authority on it — the same question `granularity` answered yes to — and
   adding the column if so.
 
+- [ ] **B187 · attribute usage to the MCP server that caused it** — M · both — Claude Code's own
+  `/usage` breaks recent consumption down by skill, sub-agent, plugin **and MCP server**; assaio
+  has the first two (`skill-economics`) and not the last. An MCP tool call is named
+  `mcp__<server>__<tool>` in the transcript, so the server is recoverable from the tool name
+  without any new source — the work is a vocabulary decision (is an MCP server a fourth
+  attribution dimension or a facet of the tool taxonomy?), a store column, and the same
+  minimum-volume rules the skill dimension already carries. Verified against Claude Code
+  2.1.238.
+
+- [ ] **B188 · say what `/usage` answers that assaio cannot** — S · solo — measured on the
+  maintainer's machine: no Claude Code transcript carries any plan-limit state (`rate_limit`,
+  `reset`, `quota`, `window` — zero matching fields across a session's records), so assaio
+  cannot report 5-hour or weekly plan consumption from local logs and will not pretend to.
+  `subscription-fit` compares an **API-equivalent estimate** against a configured plan price,
+  which answers "is the plan worth it" and not "how much of this week is left" — `/usage`
+  answers the second and is authoritative on it. The two are complementary and the published
+  surfaces should say so rather than leaving a reader to assume assaio replaces it.
+
+- [ ] **B189 · the history a vendor has already deleted is the differentiator** — S · solo —
+  Claude Code's `/insights` reads `~/.claude/projects/` over a 30-day window and at most 50
+  sessions per run, and summarizes them with Haiku, so two runs need not agree. Measured against
+  the same machine assaio reads: 178,254 records over 52 days, **22 of those days older than
+  the source still keeps**, deterministic and reproducible. That contrast — whole corpus versus
+  a sample, retained history versus the vendor's retention, computed figures versus an LLM
+  summary, five tools versus one — is the honest positioning, and none of it is currently said
+  anywhere. Belongs in README and on the site, with the numbers, and it needs no new code.
+
 - [ ] **B186 · one assistant message, two transcripts, two different counts** — M · solo — found
   by the downward-restatement canary `B116` asked for, on its first run against the maintainer's
   store. A Claude sub-agent's transcript and its parent session both carry the same assistant
