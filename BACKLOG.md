@@ -937,6 +937,17 @@ file-size norm.
   current parse is the authority on it — the same question `granularity` answered yes to — and
   adding the column if so.
 
+- [ ] **B190 · read the uncovered branches, not the coverage number** — M · solo — measured on
+  this build: `internal/parser` 47.7%, `internal/recommend` 60.6%, `internal/usage` 70.0%,
+  `internal/reconcile` 70.7%, `internal/config` 72.0%, `internal/vcs` 74.1%, `internal/cli`
+  75.8%. The number is not the finding and no gate is wanted (Goodhart, and
+  [ADR 0002](docs/adr/0002-code-standards-and-enforcement.md) says so): the work is to open the
+  uncovered branches in the packages that carry a *contract* rather than a rendering — the
+  shared parser limits, reconciliation's failure paths, CLI error paths, and the recommendation
+  families whose abstention rules are the whole point — and to give each one a test or a written
+  reason. `internal/layer` and `internal/trace` report no direct package coverage at all and are
+  exercised only through consumers, which is a different risk from a low percentage.
+
 - [ ] **B187 · attribute usage to the MCP server that caused it** — M · both — Claude Code's own
   `/usage` breaks recent consumption down by skill, sub-agent, plugin **and MCP server**; assaio
   has the first two (`skill-economics`) and not the last. An MCP tool call is named
