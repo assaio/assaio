@@ -24,13 +24,16 @@ func TestServeAddrDefaultsToLoopback(t *testing.T) {
 	}
 }
 
-// TestServeHelpDisclosesUnauthenticatedDashboard proves the MVP security boundary is
-// surfaced where an operator actually looks -- `serve --help` -- not just in the
-// package doc comment.
-func TestServeHelpDisclosesUnauthenticatedDashboard(t *testing.T) {
-	long := newServeCmd().Long
-	if !strings.Contains(strings.ToLower(long), "unauthenticated") {
-		t.Fatalf("serve --help text does not mention the dashboard is unauthenticated: %q", long)
+// TestServeHelpDisclosesTheIdentityBoundary proves the boundary is surfaced where an operator
+// actually looks -- `serve --help` -- and not only in the package doc. The dashboard is
+// authenticated as of v0.24; what remains weaker than it looks is a shared token, under which
+// any holder can push as anybody.
+func TestServeHelpDisclosesTheIdentityBoundary(t *testing.T) {
+	long := strings.ToLower(newServeCmd().Long)
+	for _, want := range []string{"no tls", "every route requires the bearer token", "push usage under any member name"} {
+		if !strings.Contains(long, want) {
+			t.Fatalf("serve --help does not mention %q: %q", want, long)
+		}
 	}
 }
 
@@ -63,7 +66,7 @@ func TestServeListensAndShutsDownGracefully(t *testing.T) {
 	var out bytes.Buffer
 	root.SetOut(&out)
 	root.SetErr(&out)
-	root.SetArgs([]string{"serve", "--addr", "127.0.0.1:0", "--token", "t", "--db", dbPath})
+	root.SetArgs([]string{"serve", "--addr", "127.0.0.1:0", "--token", "a-long-enough-test-token", "--db", dbPath})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
@@ -74,7 +77,7 @@ func TestServeListensAndShutsDownGracefully(t *testing.T) {
 	if !strings.Contains(out.String(), "listening on") {
 		t.Fatalf("stdout = %q, want a listening confirmation", out.String())
 	}
-	if !strings.Contains(strings.ToLower(out.String()), "unauthenticated") {
-		t.Fatalf("stdout = %q, want the startup security note to mention the dashboard is unauthenticated", out.String())
+	if !strings.Contains(strings.ToLower(out.String()), "client-asserted") {
+		t.Fatalf("stdout = %q, want the startup note to name the identity mode it is running in", out.String())
 	}
 }

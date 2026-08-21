@@ -295,8 +295,10 @@ place: `assaio-agent serve` runs a central collector and `assaio-agent sync` pus
 member's records to it, with a per-member team dashboard. It is the **networked exception**
 to everything above — the offline guarantee is about the local analysis, not this. You run
 the server on **your own infrastructure** and control what reaches it. It is an honest MVP:
-a shared bearer token, no TLS of its own (put a reverse proxy in front), meant for a
-trusted network — not yet production-hardened.
+no TLS of its own (put a reverse proxy in front), meant for a trusted network — not yet
+production-hardened. Every route requires a bearer token, the dashboard included, and
+configuring one secret per member makes the server decide who a request is rather than
+believing the name in its body.
 
 Each synced member is **pseudonymized by default** (a stable `member-xxxx` label); team
 views are aggregated by default. A per-member, real-name view is never silent — it is a

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestAuthorized(t *testing.T) {
+func TestAuthorizedReaderInSharedTokenMode(t *testing.T) {
 	tests := []struct {
 		name   string
 		header string
@@ -26,8 +26,9 @@ func TestAuthorized(t *testing.T) {
 			if tt.header != "" {
 				req.Header.Set("Authorization", tt.header)
 			}
-			if got := authorized(req, tt.token); got != tt.want {
-				t.Fatalf("authorized() = %v, want %v", got, tt.want)
+			s := New(nil, tt.token, nil)
+			if got := s.authorizedReader(req); got != tt.want {
+				t.Fatalf("authorizedReader() = %v, want %v", got, tt.want)
 			}
 		})
 	}

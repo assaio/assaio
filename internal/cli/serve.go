@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -28,14 +29,15 @@ func newServeCmd() *cobra.Command {
 pushed by teammates' 'assaio-agent sync' runs and serves it back as one aggregated,
 pseudonymized-by-default Assay dashboard.
 
-This is a shared-token, no-TLS MVP -- not production-hardened. Run it behind a reverse
-proxy on a network you trust; see internal/server's package doc for the exact boundary.
+This is a no-TLS MVP -- not production-hardened. Run it behind a reverse proxy on a network
+you trust; see internal/server's package doc for the exact boundary.
 
-SECURITY BOUNDARY (read before exposing beyond localhost): usage pushes require the
-shared --token, but the dashboard route (GET /) is UNAUTHENTICATED -- anyone who can
-reach this address can view the aggregated dashboard. --addr defaults to loopback
-(127.0.0.1) so the server is reachable only from this machine unless you deliberately
-choose a wider address.`,
+SECURITY BOUNDARY (read before exposing beyond localhost): there is no TLS -- put a reverse
+proxy in front of it. Every route requires the bearer token, the dashboard included. With a
+single shared --token any holder can push usage under any member name; configure
+server.members (one secret per member) and the server decides who a request is from the secret
+instead. --addr defaults to loopback (127.0.0.1) so the server is reachable only from this
+machine unless you deliberately choose a wider address.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runServe(cmd, &addr, &token, &dbPath)
@@ -54,6 +56,9 @@ func runServe(cmd *cobra.Command, addr, token, dbPath *string) error {
 	if *token == "" {
 		return errors.New("--token is required: refusing to run an open server (see AGENTS.md honesty rules)")
 	}
+	if len(*token) < server.MinTokenBytes {
+		return fmt.Errorf("--token must be at least %d characters: a secret short enough to guess is not one", server.MinTokenBytes)
+	}
 
 	resolvedDB, err := resolveServeDBPath(*dbPath)
 	if err != nil {
@@ -68,10 +73,26 @@ func runServe(cmd *cobra.Command, addr, token, dbPath *string) error {
 	}
 	defer func() { _ = st.Close() }()
 
-	srv := server.New(st, *token, server.BuildDashboard)
+	cfg, err := loadConfig(cmd)
+	if err != nil {
+		return err
+	}
+	members := server.Members(cfg.Server.Members)
+	if err := members.Validate(); err != nil {
+		return fmt.Errorf("server.members: %w", err)
+	}
+	srv := server.New(st, *token, server.BuildDashboard).
+		WithMembers(members).
+		WithRateLimit(cfg.Server.RateLimitPerMinute)
+
 	cmd.Printf("assaio team server listening on %s (db: %s)\n", *addr, resolvedDB)
-	cmd.Println("security note: shared-token MVP, no TLS -- run behind a reverse proxy or on a trusted network.")
-	cmd.Println("security note: the dashboard (GET /) is UNAUTHENTICATED -- anyone who can reach this address can view it.")
+	cmd.Printf("identity: %s\n", srv.Identity())
+	if srv.Identity() == server.ClientAsserted {
+		cmd.Println("  warning: any holder of the shared token can push usage under any member name.")
+		cmd.Println("  Configure server.members (one secret per member) to have the server decide who a request is.")
+	}
+	cmd.Println("security note: no TLS -- run behind a reverse proxy or on a trusted network.")
+	cmd.Println("Every route requires the bearer token, the dashboard included.")
 
 	// Ctrl-C (SIGINT) or a process manager's stop signal (SIGTERM) cancels ctx, which
 	// srv.Run treats as a graceful-shutdown request.

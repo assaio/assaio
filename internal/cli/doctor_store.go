@@ -35,6 +35,9 @@ func doctorStore(cmd *cobra.Command, home, dbPath string, since time.Time, windo
 	if size, sizeErr := st.Size(cmd.Context()); sizeErr == nil {
 		cmd.Printf("size:         %s\n", storeSizeLine(size))
 	}
+	if line := growthLine(cmd.Context(), st, time.Now()); line != "" {
+		cmd.Printf("growth:       %s\n", line)
+	}
 	if h, stepErr := st.Steps(cmd.Context()); stepErr == nil && h.Steps > 0 {
 		cmd.Printf("timeline:     %s\n", stepHorizonLine(h))
 		cmd.Printf("              %s\n", traceHorizonNote(traceHorizonDays))

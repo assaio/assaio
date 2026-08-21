@@ -25,7 +25,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/usage", s.handleUsage)
 	mux.HandleFunc("GET /{$}", s.handleDashboard)
 	mux.HandleFunc("GET /healthz", s.handleHealthz)
-	return logRequests(mux)
+	return s.limit(logRequests(mux))
 }
 
 // logRequests is the Server's minimal access log: method and path, to stderr. This MVP
@@ -71,7 +71,8 @@ type usagePushResult struct {
 // possible writer, so restating one on a re-push is that member correcting their own figure
 // and can never overwrite somebody else's.
 func (s *Server) handleUsage(w http.ResponseWriter, r *http.Request) {
-	if !authorized(r, s.token) {
+	presented, ok := bearer(r)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -88,6 +89,14 @@ func (s *Server) handleUsage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid member: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	// Whose rows these are is decided from the secret, not from the body, wherever the
+	// deployment configured per-member tokens. The dedupe-key prefix below has always assumed
+	// exactly one possible writer per row; until now nothing enforced it.
+	member, err := s.memberFor(presented, push.Member)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	for i := range push.Records {
 		if err := validateRecord(&push.Records[i]); err != nil {
 			http.Error(w, fmt.Sprintf("invalid record %d: %v", i, err), http.StatusBadRequest)
@@ -96,8 +105,8 @@ func (s *Server) handleUsage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for i := range push.Records {
-		push.Records[i].Member = push.Member
-		push.Records[i].DedupeKey = push.Member + ":" + push.Records[i].DedupeKey
+		push.Records[i].Member = member
+		push.Records[i].DedupeKey = member + ":" + push.Records[i].DedupeKey
 	}
 	inserted, err := s.store.InsertSynced(r.Context(), push.Records)
 	if err != nil {
@@ -109,11 +118,16 @@ func (s *Server) handleUsage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, usagePushResult{Inserted: inserted, Received: len(push.Records)})
 }
 
-// handleDashboard serves the aggregated Assay dashboard built fresh from the central
-// store on every request -- this MVP has no caching. GET / is unauthenticated (see
-// Server's doc comment), so its error path must never leak internal (DB/schema) detail
-// to what may be an untrusted caller.
+// handleDashboard serves the aggregated Assay dashboard built fresh from the central store on
+// every request -- this MVP has no caching. It requires a bearer token as of v0.24: the page
+// carries a whole team's usage, and leaving the one route that renders it open while guarding
+// the route that writes it protected the wrong direction. The error path still leaks no
+// internal detail, because a caller holding a token is not thereby trusted with a schema.
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
+	if !s.authorizedReader(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	data, err := s.buildDashboard(r.Context(), s.store)
 	if err != nil {
 		log.Printf("build dashboard: %v", err)

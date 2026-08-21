@@ -157,9 +157,7 @@ func TestHealthzReturnsOK(t *testing.T) {
 
 func TestDashboardHandlerReturnsHTML(t *testing.T) {
 	s, _ := newTestServer(t)
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
-	rec := httptest.NewRecorder()
-	s.Handler().ServeHTTP(rec, req)
+	rec := doDashboardGet(s, testToken)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
@@ -187,9 +185,7 @@ func TestDashboardHandlerIncludesTeamSectionWithMembers(t *testing.T) {
 		t.Fatalf("status A=%d B=%d, want both 200", rrA.Code, rrB.Code)
 	}
 
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
-	rec := httptest.NewRecorder()
-	s.Handler().ServeHTTP(rec, req)
+	rec := doDashboardGet(s, testToken)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
@@ -202,14 +198,32 @@ func TestDashboardHandlerIncludesTeamSectionWithMembers(t *testing.T) {
 	}
 }
 
-func TestDashboardHandlerNoAuthRequired(t *testing.T) {
+// TestDashboardRequiresAToken is the v0.24 correction: the page carries a whole team's usage,
+// and leaving the one route that renders it open while guarding the route that writes it
+// protected the wrong direction.
+func TestDashboardRequiresAToken(t *testing.T) {
 	s, _ := newTestServer(t)
+	if code := doDashboardGet(s, "").Code; code != http.StatusUnauthorized {
+		t.Fatalf("GET / without a token = %d, want 401", code)
+	}
+	if code := doDashboardGet(s, "wrong-token").Code; code != http.StatusUnauthorized {
+		t.Fatalf("GET / with the wrong token = %d, want 401", code)
+	}
+	if code := doDashboardGet(s, testToken).Code; code != http.StatusOK {
+		t.Fatalf("GET / with the token = %d, want 200", code)
+	}
+}
+
+// doDashboardGet reads the dashboard with the given bearer token; an empty token sends no
+// Authorization header at all.
+func doDashboardGet(s *Server, token string) *httptest.ResponseRecorder {
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 	rec := httptest.NewRecorder()
 	s.Handler().ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("GET / without a token = %d, want 200 (dashboard viewing is not gated in this MVP)", rec.Code)
-	}
+	return rec
 }
 
 // TestHandleUsageInsertFailureReturnsGenericError forces Insert to fail (by closing the
@@ -239,10 +253,7 @@ func TestDashboardHandlerBuildFailureReturnsGenericError(t *testing.T) {
 	if err := st.Close(); err != nil {
 		t.Fatal(err)
 	}
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
-	rec := httptest.NewRecorder()
-
-	s.Handler().ServeHTTP(rec, req)
+	rec := doDashboardGet(s, testToken)
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500", rec.Code)
 	}

@@ -86,7 +86,18 @@ type Server struct {
 	Addr string `koanf:"addr"`
 	// Token is the shared bearer secret clients must present. Override with
 	// ASSAIO_SERVER_TOKEN rather than committing a real token to a config file.
+	// It is the weaker of the two identity modes: any holder can push as any member. Prefer
+	// Members below, which decides who a request is from the secret rather than from its body.
 	Token string `koanf:"token"`
+	// Members maps a member name to that member's own bearer secret. Setting it puts the
+	// server in server-derived identity mode, where a member cannot write another member's
+	// rows. A secret belongs in an environment variable or a file mode 0600, not in a config
+	// committed to a repository.
+	Members map[string]string `koanf:"members"`
+	// RateLimitPerMinute bounds how many requests one secret may make per minute. 0 uses the
+	// built-in default; a negative value disables the limit, which is a deliberate choice a
+	// deployment behind its own gateway may make.
+	RateLimitPerMinute int `koanf:"rate_limit_per_minute"`
 }
 
 // Sync holds `assaio-agent sync` defaults; explicit flags still take precedence.

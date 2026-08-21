@@ -905,13 +905,11 @@ file-size norm.
   horizon: a usage record is the only thing a re-import can rebuild *and* the only thing a report
   reads, so a retention rule has to answer what a five-year cost trend is worth against a store
   nobody can carry. Deciding that is the work; the size is not in dispute.
-- [ ] **B174 · the team server has no retention, no size reporting and no reachable `doctor`** —
-  M · team — `internal/server/handlers.go` is the whole write path; there is no `Prune`, `Vacuum`,
-  `Size` or horizon anywhere under `internal/server/` or in `internal/cli/serve.go`. `compact`
-  takes `--db` but only reclaims free pages, and nothing server-side ever creates any. `doctor`
-  has **no `--db` flag at all**, so an operator cannot see size, reclaimable space or retention
-  for the store their whole team pushes into. `B173`'s answer probably decides this one's, since
-  a central store inherits every member's growth rate at once.
+  **v0.24 made it visible without deciding it**: `doctor` projects the store's own measured
+  growth (3.2 MB/day → 1.1 GB/year on the maintainer's store) and takes `--db`, so the central
+  store an operator cannot walk over to is diagnosable. What remains is the decision this item
+  is named for -- what to keep, at what resolution, for how long -- which is a policy, not a
+  line of SQL.
 - [ ] **B179 · `survival` prints a rate that is not comparable to itself across windows** — S ·
   solo — survival is monotonic in commit age: `--since 7d` reads near 100% and `--since 365d`
   far lower, on the same repository, because a young commit has had no time to be rewritten.

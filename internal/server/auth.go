@@ -1,7 +1,6 @@
 package server
 
 import (
-	"crypto/subtle"
 	"net/http"
 	"strings"
 )
@@ -9,18 +8,32 @@ import (
 // bearerPrefix precedes the token in a request's Authorization header.
 const bearerPrefix = "Bearer "
 
-// authorized reports whether r carries exactly the expected bearer token, compared in
-// constant time so response timing can't leak how many prefix bytes matched. A
-// misconfigured empty server token always denies -- it must never be treated as "no
-// auth required".
-func authorized(r *http.Request, token string) bool {
-	if token == "" {
-		return false
-	}
+// bearer extracts the presented token, reporting whether the header carried one at all. The
+// two answers are kept apart from whether it is *correct*: a missing header and a wrong secret
+// are the same response to a client and different lines in a log.
+func bearer(r *http.Request) (string, bool) {
 	h := r.Header.Get("Authorization")
 	if !strings.HasPrefix(h, bearerPrefix) {
+		return "", false
+	}
+	return strings.TrimPrefix(h, bearerPrefix), true
+}
+
+// authorizedReader reports whether r may read team-wide data. Any configured secret grants a
+// read: this server has no roles yet, and inventing one here would be a contract the rest of
+// the product does not carry. What it does not do any more is grant a read to nobody at all.
+func (s *Server) authorizedReader(r *http.Request) bool {
+	presented, present := bearer(r)
+	if !present {
 		return false
 	}
-	got := strings.TrimPrefix(h, bearerPrefix)
-	return subtle.ConstantTimeCompare([]byte(got), []byte(token)) == 1
+	if s.members.Mode() == ClientAsserted {
+		return constantTimeEqual(presented, s.token)
+	}
+	for _, token := range s.members {
+		if constantTimeEqual(presented, token) {
+			return true
+		}
+	}
+	return false
 }

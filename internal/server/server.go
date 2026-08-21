@@ -4,11 +4,10 @@
 // backbone -- see ROADMAP.md for the fuller org-analytics server this is a foundation
 // for.
 //
-// SECURITY (MVP boundary, read before deploying): auth is a single shared bearer token
-// compared against every write request; there is no TLS and no per-member access
-// control. This is intentionally not production-hardened -- it is meant to run behind a
-// reverse proxy on a trusted network, not be exposed directly to the open internet. See
-// Server's doc comment for the exact boundary.
+// SECURITY (MVP boundary, read before deploying): there is no TLS, so run this behind a reverse
+// proxy on a trusted network rather than exposing it directly. Every route requires a bearer
+// token, including the dashboard. Member identity is server-derived when per-member tokens are
+// configured and client-asserted otherwise. See Server's doc comment for the exact boundary.
 package server
 
 import (
@@ -43,24 +42,45 @@ const idleTimeout = 120 * time.Second
 // Server serves the team-server MVP: usage ingestion and the aggregated dashboard, both
 // backed by one central *store.Store.
 //
-// SECURITY (MVP boundary): the token is one shared secret compared to every write
-// request (constant-time, see auth.go); there is no TLS and no per-member access
-// control -- anyone holding the token can push usage as any member and anyone can read
-// the aggregated dashboard. Run this behind a reverse proxy that terminates TLS, on a
-// network you trust; do not expose it directly to the open internet.
+// SECURITY (MVP boundary): there is no TLS -- run this behind a reverse proxy that terminates
+// it, on a network you trust. Reads are authenticated as of v0.24, and identity has two modes:
+// with per-member tokens (WithMembers) the member is derived from the presented secret and
+// cannot be asserted by the client; with a single shared token, any holder can still push as
+// any member, which is what the operator diagnostics say out loud.
 type Server struct {
 	store          *store.Store
 	token          string
+	members        Members
+	rate           *rateLimiter
 	buildDashboard DashboardBuilder
 }
 
-// New builds a Server. token is the single shared secret every write client must
-// present; New does not validate it -- refusing to start with an empty token is the
-// caller's job (see internal/cli/serve.go), so this package stays reusable without
-// baking in a CLI-shaped policy.
+// New builds a Server in shared-token mode: one secret for everyone, and the member name is
+// whatever the client asserts. New does not validate the token -- refusing to start without one
+// is the caller's job (see internal/cli/serve.go), so this package stays reusable without baking
+// in a CLI-shaped policy.
 func New(st *store.Store, token string, build DashboardBuilder) *Server {
-	return &Server{store: st, token: token, buildDashboard: build}
+	return &Server{store: st, token: token, buildDashboard: build, rate: newRateLimiter(0)}
 }
+
+// WithRateLimit sets how many requests one secret may make per minute. A negative value
+// disables the limit for a deployment that bounds traffic somewhere else.
+func (s *Server) WithRateLimit(perMinute int) *Server {
+	s.rate = newRateLimiter(perMinute)
+	return s
+}
+
+// WithMembers puts the server in server-derived identity mode: the member is whoever holds the
+// secret, decided from the presented token and never read from the request body. Validate the
+// set first; an invalid one is a configuration error the caller reports, not a runtime surprise.
+func (s *Server) WithMembers(m Members) *Server {
+	s.members = m
+	return s
+}
+
+// Identity reports how this server decides who a request is, for the operator diagnostics that
+// have to be able to say which of the two it is running in.
+func (s *Server) Identity() Identity { return s.members.Mode() }
 
 // Run listens on addr until ctx is canceled, then shuts down gracefully, waiting up to
 // shutdownGrace for in-flight requests before returning.

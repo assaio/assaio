@@ -1021,6 +1021,12 @@
       "hidden": false,
       "flags": [
         {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
           "name": "strict",
           "type": "bool",
           "default": "false",
@@ -1714,6 +1720,18 @@
       "key": "server.addr",
       "env": "ASSAIO_SERVER_ADDR",
       "type": "string",
+      "default": ""
+    },
+    {
+      "key": "server.members",
+      "env": "ASSAIO_SERVER_MEMBERS",
+      "type": "map",
+      "default": ""
+    },
+    {
+      "key": "server.rate_limit_per_minute",
+      "env": "ASSAIO_SERVER_RATE_LIMIT_PER_MINUTE",
+      "type": "int",
       "default": ""
     },
     {

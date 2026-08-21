@@ -50,7 +50,10 @@ reach it.`,
 
 			cmd.Printf("plugins:      %s\n", pluginCountLabel(cfg.Plugins))
 
-			dbPath, err := paths.DBPath()
+			// --db is what lets an operator diagnose the store their whole team pushes into
+			// (B174): size, reclaimable space, growth and retention were readable for a local
+			// store and for no other, which is the one an operator cannot walk over to.
+			dbPath, err := resolveDBPath(cmd)
 			if err != nil {
 				return err
 			}
@@ -87,6 +90,7 @@ reach it.`,
 			return nil
 		},
 	}
+	addDBFlag(c)
 	c.Flags().BoolVar(&strict, "strict", false, "exit non-zero on suspected format drift or a configured source with no inputs")
 	return c
 }

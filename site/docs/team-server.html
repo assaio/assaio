@@ -129,11 +129,24 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
 <p><code>assaio-agent serve</code> runs a self-hosted team server: teammates' <code>assaio-agent sync</code> runs
 push their local usage to it over HTTP, and it serves back one aggregated,
 pseudonymized-by-default Assay dashboard for the whole team at <code>GET /</code>
-(<code>internal/server</code>). This is an MVP — a single shared bearer token gates the <em>write</em>
-endpoint (<code>POST /v1/usage</code>) only, there is no TLS, and <strong>the served dashboard itself has
-no auth at all</strong> in this version — anyone who can reach the port sees it; run <code>serve</code>
-behind a reverse proxy on a trusted network, not exposed to the open internet (see
-<code>internal/server</code>'s package doc and the security note <code>serve</code> prints on startup).</p>
+(<code>internal/server</code>). This is still an MVP — there is no TLS, so run <code>serve</code> behind a reverse
+proxy on a trusted network rather than exposing it to the open internet.</p>
+<p><strong>Every route requires the bearer token, the dashboard included</strong> (since v0.24; it was open
+before, which protected the wrong direction — the page carries a whole team's usage).</p>
+<p>Identity has two modes and <code>serve</code> prints which one it started in:</p>
+<ul>
+<li><strong>Server-derived</strong> — set <code>server.members</code> to one secret per member. The member is whoever
+holds the secret, and the name in the request body is ignored. Prefer this: the dedupe-key
+prefix that keeps two members' rows apart has always assumed exactly one possible writer per
+row, and this is what enforces it.</li>
+<li><strong>Client-asserted</strong> — a single shared <code>server.token</code>. It still works, and any holder can push
+usage under any member name. <code>serve</code> says so at startup.</li>
+</ul>
+<p>Requests are rate limited per secret (<code>server.rate_limit_per_minute</code>, default 120; a negative
+value disables it for a deployment that bounds traffic elsewhere), keyed by secret rather than
+by address so one member's runaway loop cannot lock out their colleagues.</p>
+<p>Point <code>assaio-agent doctor --db &lt;central store&gt;</code> at the server's database to see its size,
+reclaimable space, measured growth and projected year.</p>
 <p>The extension mechanism does not change at that boundary. <code>server.BuildDashboard</code>
 (<code>internal/server/dashboard.go</code>) calls the exact same <code>dashboard.Build</code> the local
 <code>assaio-agent dashboard</code> command calls, over the exact same process-wide
@@ -144,8 +157,9 @@ shows up on the team server's dashboard automatically: same faceplate cell, same
 entry, same anonymization rules, with nothing to configure on the server side. The
 deliberate exception is <strong>exec plugins</strong>: <code>serve</code> executes neither <a href="https://assaio.dev/docs/metric-plugin">metric
 plugins</a> nor <a href="https://assaio.dev/docs/rule-plugin">rule
-plugins</a>, because its dashboard endpoint is
-unauthenticated and rebuilt per request — they are local-CLI surfaces (<code>analyze</code>,
+plugins</a>, because its dashboard endpoint is rebuilt per request and a
+subprocess per view is a denial-of-service surface the server has no budget for — they are
+local-CLI surfaces (<code>analyze</code>,
 <code>dashboard</code>, <code>metrics verify</code>, and <code>check</code> for rules; see <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0004-exec-metric-plugin-protocol.md">ADR
 0004</a> and <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0005-exec-rule-plugin-protocol.md">ADR
 0005</a>). The one

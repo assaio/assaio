@@ -50,6 +50,23 @@ Discussion.
 
 ### Added
 
+- **The team server authenticates reads, and can derive who a member is from their token.**
+  `GET /` rendered a whole team's usage to anyone who could reach the address while the write
+  route was guarded — protecting the wrong direction. Every route needs the bearer token now.
+  And `server.members` (one secret per member) puts the server in server-derived identity mode,
+  where the member is whoever holds the secret and the name in the request body is ignored: the
+  dedupe-key prefix has always assumed each row has exactly one possible writer, and until now
+  nothing enforced it. The single-shared-token mode still works and `serve` prints, at startup,
+  which of the two it is running in and what the weaker one does not protect. Requests are rate
+  limited per secret (`server.rate_limit_per_minute`, default 120, negative disables), keyed by
+  secret rather than by address so one member's runaway loop cannot lock out their colleagues.
+  A token shorter than 16 characters is refused.
+- **`doctor --db` and a storage-growth projection.** An operator could diagnose a local store
+  and no other — including the central one their whole team pushes into, which is the one they
+  cannot walk over to (`B174`). `doctor` now takes `--db`, and every store reports its own
+  measured growth: 170.1 MB over 54 days = 3.2 MB/day, projecting to 1.1 GB/year on the
+  maintainer's own store. It is labelled a projection rather than a measurement, and a store
+  younger than a week says why it will not project at all.
 - **`runtime inspect` (experimental): read what a self-hosted deployment already publishes.**
   A snapshot of a vLLM server's and an NVIDIA DCGM exporter's own metrics endpoints, by URL or
   from a saved file, reporting availability, the metric families found, current gauges with

@@ -95,13 +95,20 @@ trace:
 # pushed by `assaio-agent sync` from every teammate's machine and serves it back as one
 # aggregated, pseudonymized-by-default Assay dashboard. This is the one non-offline
 # exception in assaio -- you run and control this server yourself, on your own network.
-# MVP security model: a single shared bearer token, no TLS (put a reverse proxy in front
-# for TLS; see internal/server's package doc). Not production-hardened.
+# Security model: every route requires a bearer token, the dashboard included. There is no
+# TLS -- put a reverse proxy in front (see internal/server's package doc). Not
+# production-hardened.
 # server:
 #   addr: 127.0.0.1:8787      # listen address (loopback by default; widen deliberately);
 #                              # override with ASSAIO_SERVER_ADDR
-#   token: ""                 # required to start `serve`; override with
-#                              # ASSAIO_SERVER_TOKEN -- do not commit a real token here
+#   token: ""                 # required to start `serve`, at least 16 characters; override
+#                              # with ASSAIO_SERVER_TOKEN -- do not commit a real token here.
+#                              # With only this set, any holder can push under any member
+#                              # name: prefer members: below.
+#   members:                  # one secret per member -> the server decides who a request is
+#     alice: ""               # from the token, and ignores the name in the request body.
+#     bob: ""                 # Keep the real secrets out of a committed file.
+#   rate_limit_per_minute: 120 # per secret, not per address; a negative value disables it
 
 # Sync (`assaio-agent sync`): pushes this machine's local usage to a team server.
 # member identifies the sender on the server. By default sync derives a stable
