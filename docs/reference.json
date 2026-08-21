@@ -1201,6 +1201,31 @@
       "flags": []
     },
     {
+      "path": "recommend",
+      "short": "Experiments this window's evidence supports, each with its rollback and follow-up",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "default": "text",
+          "usage": "output format: text|json"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        }
+      ]
+    },
+    {
       "path": "reconcile",
       "short": "Compare a vendor's own billing export against assaio's estimate, offline",
       "hidden": false,

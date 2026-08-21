@@ -88,3 +88,6 @@ all in the shipping PR.
 - [ADR 0014](adr/0014-public-artifact-rules.md) — what a **publicly postable** artifact may
   say: no figure originates in the renderer, redaction is structural rather than a flag, and
   every frame carries its own limits because a shared image outlives its caption.
+- [ADR 0015](adr/0015-structured-recommendations.md) — advice is a **typed record**, not a
+  sentence: evidence, risk, rollback, review window and the follow-up figure are required, the
+  rendered text projects the record, and a thin window abstains rather than suggesting.

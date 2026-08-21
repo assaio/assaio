@@ -50,6 +50,17 @@ Discussion.
 
 ### Added
 
+- **`recommend`: advice as a typed record, not a sentence.** A `Takeaway string` can explain a
+  result; it cannot say what an action requires, what it risks, how to undo it, when to look
+  again, or which figure would show whether it worked — so nothing assaio suggested could ever
+  be checked afterwards. The new command derives the few experiments a window's evidence
+  supports, each carrying all of those (ADR 0015). Rendered text projects the record and adds
+  nothing to it, a record missing a required field is dropped rather than printed with a
+  caveat, and **abstention is the default**: a thin window, a low-confidence verdict or a metric
+  missing a declared input produces nothing, with the empty output saying it is an abstention
+  rather than a clean bill. No effect is ever a predicted number. Three families ship, and the
+  first two are about assaio's own evidence — an engine that recommends changing how someone
+  works while its own cost basis is missing a fifth of the window has the order backwards.
 - **README and the site say what the built-in stats cannot do, instead of a claim that stopped
   being true.** The opening said vendor dashboards count "spend, never output"; Claude Code
   analytics has reported accepted lines and cost per commit, Copilot has reported code

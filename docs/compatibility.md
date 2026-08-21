@@ -18,6 +18,7 @@ compatibility test, and a written deprecation path; after it, a breaking change 
 | Exec plugin protocols — parser, metric, rule | [extending.md](extending.md), ADR [0003](adr/0003-exec-plugin-protocol.md) / [0004](adr/0004-exec-metric-plugin-protocol.md) / [0005](adr/0005-exec-rule-plugin-protocol.md) |
 | The observation envelope and its payload types | ADR [0007](adr/0007-canonical-event-contract.md) |
 | Signal ids and what a zero means for each | ADR [0008](adr/0008-signal-catalog.md), `assaio-agent signals` |
+| The recommendation record and its lifecycle | ADR [0015](adr/0015-structured-recommendations.md) |
 | The team sync protocol | [extending/team-server.md](extending/team-server.md) |
 | Machine-readable output — `analyze --format json`, `report --format json\|csv`, `docs export` | `docs/reference.json` |
 
