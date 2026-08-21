@@ -231,5 +231,5 @@ for the hardening path (per-member auth, retention, resumable sync).
   dashboard. This is the live picture.
 - **Survival** runs locally and prints its result; it is **not** pushed to the server yet.
   Server-side survival — correlating synced usage against git and issue trackers across the
-  whole team — is the roadmap's "Outcome & quality" stage, and the future managed cloud.
+  whole team — is the roadmap's outcomes milestone, and the managed cloud after it.
 ```

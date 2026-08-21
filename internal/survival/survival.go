@@ -3,7 +3,7 @@
 // lines to AI (assaio stores counts, not code), so it reports repo-wide survival of the
 // window's commits beside the AI lines the store recorded, a correlation to read rather
 // than a per-line AI-survival number. It is the local stepping stone toward the
-// server-stage git/issue correlation (BACKLOG B18, ROADMAP "Outcome & quality").
+// git/issue correlation of the outcomes milestone (BACKLOG B18, ROADMAP.md).
 //
 // The git reading itself is internal/vcs's: this package consumes commit observations and
 // blames the working tree, so what a commit changed and what survived are one dataset.

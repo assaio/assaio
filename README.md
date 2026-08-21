@@ -391,19 +391,26 @@ Go API, so they survive core refactors. An in-process Go API is still ahead; see
 ## Status and roadmap
 
 `assaio` is pre-1.0 and already reaches well past an offline token reporter: five parsers,
-twenty-one metric validators that each carry a confidence envelope and state which
-measurement layer they sit on, format-drift canaries, a
-published source-depth matrix, offline reconciliation against a vendor's own export, the
-offline **Assay** dashboard, and a self-hosted team-server MVP.
-[FEATURES.md](FEATURES.md) is the maintained inventory, with the release each capability
-arrived in.
+twenty-one metric validators that each carry a confidence envelope and state which measurement
+layer they sit on, format-drift canaries, a published source-depth matrix, offline
+reconciliation against a vendor's own export, the offline **Assay** dashboard, structured
+recommendations, and a self-hosted team-server MVP. [FEATURES.md](FEATURES.md) is the
+maintained inventory, with the release each capability arrived in.
 
 What it still can't do is connect a session to the change it produced — whether AI-written
 code reached a pull request, passed review and CI, **survived** in `main`, or **caused
-bugs**. That needs correlating usage with git and pull-request history, and it is the next
-milestone, not a shipped feature. [ROADMAP.md](ROADMAP.md) is that direction as a
-feedback-driven plan, never a committed schedule; [BACKLOG.md](BACKLOG.md) is the ranked
-pool behind it.
+bugs**. That needs correlating usage with git and pull-request history, and it is a
+milestone, not a shipped feature.
+
+Two other things are honestly incomplete and said so on purpose. The team server is an MVP:
+authenticated, rate limited and diagnosable as of v0.24, and still without RBAC, TLS of its
+own, resumable sync, retention or a tested restore drill. And `runtime inspect` is an
+experiment behind a demand gate — if no self-hosted user finds a recurring decision it
+answers, it is removed rather than kept.
+
+[ROADMAP.md](ROADMAP.md) is the direction, ordered, with each milestone's exit criteria and the
+gates that have **not** been met; [docs/compatibility.md](docs/compatibility.md) is what v1.0
+freezes; [BACKLOG.md](BACKLOG.md) is the ranked pool behind both.
 
 The core is Apache-2.0 and stays that way; a hosted or enterprise offering may fund
 development later.

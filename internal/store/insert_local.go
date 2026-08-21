@@ -40,7 +40,8 @@ import (
 // assaio can get wrong. v0.13 learned this on rework_lines and moved that one column; v0.14
 // found the same shape one layer up, in which *lines* the rules are applied to, and corrected
 // four more counts downward. MAX would have pinned every stored row at the inflated figure
-// forever, which is the failure ROADMAP's "a correction can reach history" names.
+// forever, which is the failure ROADMAP.md's "a correction reaches history" names as a v1.0
+// condition.
 //
 // Assignment is safe for a session still being written for the same reason it was for rework:
 // each rule is monotone in the prefix read. A longer transcript never yields fewer edits,
