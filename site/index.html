@@ -232,6 +232,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
   </span>
   <nav class="mnav">
     <a href="#answers">Answers</a>
+    <a href="#builtins">vs built-ins</a>
     <a href="#honest">Honest scope</a>
     <a href="#sources">Sources</a>
     <a href="#adapt">Extend</a>
@@ -250,11 +251,12 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
       <h1>Is it <em>delivering?</em></h1>
       <p class="lede">
         Teams pour real money into AI coding tools and cannot answer the one question that
-        matters. Vendor dashboards count tokens and dollars — spend, never output — one silo
-        per tool. <strong>assaio</strong> reads the session logs already on your machine and
-        weighs what AI produced against the tokens it burned, per project: effectiveness,
-        model fit, context health, adoption. Claude Code, Codex, Gemini CLI, Copilot CLI and
-        Cline in one picture. No account, no upload, no network.
+        matters. Every vendor ships stats for its own tool over its own retention window;
+        nothing joins them, keeps them, or corrects them when a reading turns out to be wrong.
+        <strong>assaio</strong> reads the session logs already on your machine and weighs what
+        AI produced against the tokens it burned, per project: effectiveness, model fit,
+        context health, adoption. Claude Code, Codex, Gemini CLI, Copilot CLI and Cline in one
+        picture, computed the same way twice. No account, no upload, no network.
       </p>
       <div class="getin">
         <span class="il">Install · macOS &amp; Linux</span>
@@ -344,6 +346,39 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         </div>
       </div>
       <p class="more"><span data-claim="validators.count">Twenty-one</span> reads in all, each one file in the codebase, each printing a directional verdict with its caveat rather than a bare score — and each able to be recomputed over just the sessions you labelled a given kind of work, so <code>$</code>/100 lines on bugfixes stops being averaged in with greenfield features.</p>
+    </div>
+  </section>
+
+  <!-- BESIDE THE BUILT-INS ───────────────────────────────────────────────── -->
+  <section class="sec" id="builtins">
+    <div class="wrap">
+      <div class="sec-head"><h2>Beside the stats your tools already ship</h2><p class="eyebrow">what they cannot do</p></div>
+      <p class="intro">
+        Your assistant already has numbers. Claude Code ships <code>/usage</code> for plan
+        consumption and <code>/insights</code> for a local 30-day report; Copilot and Claude
+        Code analytics publish adoption, accepted lines and cost per commit. They are good, and
+        for one vendor over the last few weeks they are often enough. These are the questions
+        they structurally cannot answer — measured against one real machine, a store of 178,254
+        records over 52 days.
+      </p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th></th><th>a built-in local report</th><th>assaio</th></tr></thead>
+          <tbody>
+            <tr><td>how far back</td><td>30 days, and only what the tool still keeps</td><td><span class="g">everything ingested — 22 of those 52 days are older than the source's own retention</span></td></tr>
+            <tr><td>how much of it</td><td>a capped sample of sessions per run</td><td>every session in the store</td></tr>
+            <tr><td>how it is produced</td><td>a model summarizes the sessions</td><td><span class="g">computed from the records — same window, same number</span></td></tr>
+            <tr><td>which tools</td><td>one vendor</td><td><span data-claim="sources.count">five</span>, normalized onto one cost basis</td></tr>
+            <tr><td>what moved</td><td>a snapshot</td><td><code>digest</code>, which also says when two runs are not comparable</td></tr>
+            <tr><td>when it was wrong</td><td>nothing restates a past report</td><td>a parser fix reaches stored history, and a re-read that lowers a figure is counted</td></tr>
+            <tr><td>a team</td><td>not aggregated</td><td>self-hosted <code>serve</code> + <code>sync</code>, pseudonymous, nothing ranked per person</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="caveats">
+        <li>The one it does better: <code>/usage</code> reads your <strong>plan</strong> consumption from the API — the rolling and weekly percentages. No local transcript carries that, so assaio cannot report it and does not try. <code>subscription-fit</code> answers the neighbouring question — whether the plan beats the API-equivalent estimate of what you ran.</li>
+        <li>Retention is the difference that compounds: a report bounded by the tool's own log retention can never look further back than the tool does. assaio's store outlives it, and <code>doctor</code> prints how many days it holds that the source has already deleted.</li>
+      </ul>
     </div>
   </section>
 

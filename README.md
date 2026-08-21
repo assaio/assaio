@@ -19,16 +19,46 @@ AI-engineering analytics platform.**
 
 ---
 
-Vendor dashboards count tokens and dollars — spend, never output — and each is a per-vendor
-silo with weeks-long retention that never adds up across the tools your engineers really
-use. `assaio` reads the session logs already sitting on your machine and puts AI output
-*over* its cost: per project, how much code AI produced, how efficiently (**`$` per 100 AI
-lines** — the headline), and with how much friction. No account, no upload, about 60 seconds.
-Cost is the denominator now, not the headline.
+Your coding assistant already ships stats. Claude Code has
+[`/usage`](https://support.claude.com/en/articles/14552983-models-usage-and-limits-in-claude-code)
+for plan consumption and `/insights` for a local 30-day report; GitHub
+[Copilot](https://docs.github.com/en/copilot/concepts/copilot-usage-metrics) and
+[Claude Code analytics](https://support.claude.com/en/articles/12157520-claude-code-usage-analytics)
+publish adoption, accepted lines and cost per commit. They are good, and for one vendor over
+the last few weeks they are often enough.
+
+`assaio` is for the questions they structurally cannot answer — see
+[the comparison](#what-the-built-in-stats-cannot-do) below. It reads the session logs already
+on your machine, across Claude Code, Codex, Gemini CLI, Copilot CLI and Cline, and keeps them
+after the tools delete their own. Every figure is computed, not summarized: same window, same
+answer, with its provenance, its coverage and its error bars attached. No account, no upload,
+about 60 seconds.
 
 <p align="center">
   <img src="docs/assets/report-by-project.svg" alt="assaio-agent effectiveness --by project: AI lines produced, edits, rejections, cost, and $ per 100 AI lines for each project" width="720">
 </p>
+
+## What the built-in stats cannot do
+
+Measured against one real machine — a Claude Max user's own store, 178,254 records over 52
+days — beside what Claude Code 2.1.238 ships:
+
+| | Built-in `/insights` | `assaio` |
+|---|---|---|
+| **How far back** | 30 days, and only what the tool still keeps | Everything ever ingested. On that machine **22 days are older than Claude Code's own retention** — they exist nowhere else now |
+| **How much** | At most 50 sessions per run | Every session: 6,300 transcripts on that store |
+| **How** | An LLM summarizes the sessions, so two runs need not agree | Computed from the records. Same window, same number, every time |
+| **Which tools** | Claude Code | Claude Code, Codex CLI, Gemini CLI, Copilot CLI, Cline — normalized, one cost basis |
+| **What moved** | A snapshot | `digest` reports the delta since last run, and says when two runs are not comparable |
+| **When it was wrong** | Nothing restates a past report | A parser fix reaches stored history, and a re-read that *lowers* a figure is counted and reported |
+| **A team** | Not aggregated | `serve` + `sync`, pseudonymous by default, nothing ranked per person |
+| **Where the line is** | "Friction", "satisfaction" as scores | A verdict only where its line is derived from your data, cited, or set by you. Thirteen metrics report their figure and refuse the grade |
+
+**And what it cannot do that `/usage` can.** Claude Code's `/usage` reads your plan consumption
+from the API — the 5-hour and weekly percentages, and your extra-usage balance. No local
+transcript carries any of that (verified: zero limit-shaped fields), so `assaio` cannot report
+it and does not try. `subscription-fit` answers a different question — whether the plan beats
+the API-equivalent estimate of what you ran — and the two are worth reading together.
 
 ## Privacy first
 

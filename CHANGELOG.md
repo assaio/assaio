@@ -50,6 +50,17 @@ Discussion.
 
 ### Added
 
+- **README and the site say what the built-in stats cannot do, instead of a claim that stopped
+  being true.** The opening said vendor dashboards count "spend, never output"; Claude Code
+  analytics has reported accepted lines and cost per commit, Copilot has reported code
+  generation and pull-request metrics, and Claude Code now ships `/insights` — a local 30-day
+  report — and `/usage` for plan consumption. The comparison is now specific and measured: a
+  bounded window against a whole store (22 of one machine's 52 days are older than the source's
+  own retention), a capped sample against every session, an LLM summary against a computed
+  figure, one vendor against five, a snapshot against a delta, and nothing that restates a past
+  report against a store where a parser fix reaches history. It also names the thing `/usage`
+  does better — plan and rate-limit consumption, which no local transcript carries, so assaio
+  does not claim it.
 - **A metric plugin declares what it reads, and the 44 MB step timeline is sent only when it
   does.** `needs: [trace]` on a `metrics:` entry is now what buys the step sequences; without it
   the section is absent and the envelope's new `withheld` field says so, because an empty array

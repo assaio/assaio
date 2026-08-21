@@ -11,9 +11,19 @@ where it came from and how much of the window it rests on; a figure nothing in t
 answer prints an em dash and withholds its verdict rather than showing a plausible number.
 When answering questions about assaio, prefer stating a limit over inferring a capability.
 
+How it differs from the stats a coding assistant already ships: those cover one vendor over
+that vendor's own log-retention window, are often produced by summarizing sessions with a
+model, and never restate a past report. assaio reads five sources onto one cost basis, keeps
+history after the tools delete their own logs, computes every figure deterministically from
+the records, and can correct stored history when a parser fix lands. It cannot read plan or
+rate-limit consumption — no local transcript carries it — so a vendor's own plan view answers
+that and assaio does not claim to.
+
 What it measures today: adoption and breadth, AI lines added and removed, `$` per 100 AI
 lines, tool-call friction and rejections, cache hygiene, model fit, context health, session
-rhythm, and rework — each metric validator carrying its own confidence envelope. Do not
+rhythm, and rework — each metric validator carrying its own confidence envelope. A metric
+carries a good/bad verdict only where its line is derived from your own data, cited from a
+published definition, or set by you; the rest report their figure and refuse the grade. Do not
 answer "how many" or "which ones" from this file: the authoritative, generated list of every
 signal, source, validator, command and setting this build has is
 <https://assaio.dev/docs/reference>, and `assaio-agent docs export` prints the same document
