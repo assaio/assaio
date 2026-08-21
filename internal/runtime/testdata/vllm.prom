@@ -1,0 +1,42 @@
+# HELP vllm:num_requests_running Number of requests currently running on GPU.
+# TYPE vllm:num_requests_running gauge
+vllm:num_requests_running{model_name="meta-llama/Llama-3.1-8B-Instruct"} 6.0
+# HELP vllm:num_requests_waiting Number of requests waiting to be processed.
+# TYPE vllm:num_requests_waiting gauge
+vllm:num_requests_waiting{model_name="meta-llama/Llama-3.1-8B-Instruct"} 14.0
+# HELP vllm:gpu_cache_usage_perc GPU KV-cache usage. 1 means 100 percent usage.
+# TYPE vllm:gpu_cache_usage_perc gauge
+vllm:gpu_cache_usage_perc{model_name="meta-llama/Llama-3.1-8B-Instruct"} 0.9412
+# HELP vllm:gpu_prefix_cache_hits GPU prefix cache block hits.
+# TYPE vllm:gpu_prefix_cache_hits counter
+vllm:gpu_prefix_cache_hits_total{model_name="meta-llama/Llama-3.1-8B-Instruct"} 918233.0
+# HELP vllm:gpu_prefix_cache_queries GPU prefix cache block queries.
+# TYPE vllm:gpu_prefix_cache_queries counter
+vllm:gpu_prefix_cache_queries_total{model_name="meta-llama/Llama-3.1-8B-Instruct"} 1204551.0
+# HELP vllm:prompt_tokens Number of prefill tokens processed.
+# TYPE vllm:prompt_tokens counter
+vllm:prompt_tokens_total{model_name="meta-llama/Llama-3.1-8B-Instruct"} 48211904.0
+# HELP vllm:generation_tokens Number of generation tokens processed.
+# TYPE vllm:generation_tokens counter
+vllm:generation_tokens_total{model_name="meta-llama/Llama-3.1-8B-Instruct"} 6120448.0
+# HELP vllm:request_success Count of successfully processed requests.
+# TYPE vllm:request_success counter
+vllm:request_success_total{finished_reason="stop",model_name="meta-llama/Llama-3.1-8B-Instruct"} 20194.0
+vllm:request_success_total{finished_reason="length",model_name="meta-llama/Llama-3.1-8B-Instruct"} 611.0
+vllm:request_success_total{finished_reason="abort",model_name="meta-llama/Llama-3.1-8B-Instruct"} 37.0
+# HELP vllm:time_to_first_token_seconds Histogram of time to first token in seconds.
+# TYPE vllm:time_to_first_token_seconds histogram
+vllm:time_to_first_token_seconds_bucket{le="0.1",model_name="meta-llama/Llama-3.1-8B-Instruct"} 4210.0
+vllm:time_to_first_token_seconds_bucket{le="0.5",model_name="meta-llama/Llama-3.1-8B-Instruct"} 17882.0
+vllm:time_to_first_token_seconds_bucket{le="+Inf",model_name="meta-llama/Llama-3.1-8B-Instruct"} 20842.0
+vllm:time_to_first_token_seconds_sum{model_name="meta-llama/Llama-3.1-8B-Instruct"} 7714.29
+vllm:time_to_first_token_seconds_count{model_name="meta-llama/Llama-3.1-8B-Instruct"} 20842.0
+# HELP vllm:time_per_output_token_seconds Histogram of time per output token in seconds.
+# TYPE vllm:time_per_output_token_seconds histogram
+vllm:time_per_output_token_seconds_bucket{le="0.01",model_name="meta-llama/Llama-3.1-8B-Instruct"} 3901221.0
+vllm:time_per_output_token_seconds_bucket{le="+Inf",model_name="meta-llama/Llama-3.1-8B-Instruct"} 6120448.0
+vllm:time_per_output_token_seconds_sum{model_name="meta-llama/Llama-3.1-8B-Instruct"} 91806.7
+vllm:time_per_output_token_seconds_count{model_name="meta-llama/Llama-3.1-8B-Instruct"} 6120448.0
+# HELP vllm:num_preemptions Cumulative number of preemptions from the engine.
+# TYPE vllm:num_preemptions counter
+vllm:num_preemptions_total{model_name="meta-llama/Llama-3.1-8B-Instruct"} 148.0

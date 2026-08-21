@@ -50,6 +50,20 @@ Discussion.
 
 ### Added
 
+- **`runtime inspect` (experimental): read what a self-hosted deployment already publishes.**
+  A snapshot of a vLLM server's and an NVIDIA DCGM exporter's own metrics endpoints, by URL or
+  from a saved file, reporting availability, the metric families found, current gauges with
+  their units and the source of each unit, and what is **unavailable — which is never rendered
+  as zero**. Read-only and storage-free by construction: no time series, no self-hosted cost
+  estimate, no GPU advice, nothing written to the data directory, and a test that asserts it. A
+  counter is never presented as a rate and a histogram reports only its observation count,
+  because one snapshot can produce neither. Network reads are bounded by flags rather than
+  hidden defaults — timeout, response size and redirect depth — and the request is a plain GET
+  with no header, body or credential. A hosted vendor's accelerators stay `unknown`: no local
+  signal reveals them, and assaio does not estimate them. **This is a feasibility slice behind
+  an explicit demand gate and may be removed**; its fixtures are constructed from vendor
+  documentation rather than captured from a running deployment, which
+  `internal/runtime/testdata/README.md` says plainly.
 - **`recommend`: advice as a typed record, not a sentence.** A `Takeaway string` can explain a
   result; it cannot say what an action requires, what it risks, how to undo it, when to look
   again, or which figure would show whether it worked — so nothing assaio suggested could ever

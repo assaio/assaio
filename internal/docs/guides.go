@@ -44,6 +44,7 @@ var order = []string{
 	"docs/extending/query-your-data.md",
 	"docs/extending/team-server.md",
 	"docs/extending/source-fields.md",
+	"docs/runtime-inspect.md",
 	"docs/automation.md",
 	"docs/reconcile.md",
 	"docs/format-resilience.md",

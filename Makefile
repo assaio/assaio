@@ -19,6 +19,7 @@ fuzz:
 	go test ./internal/reconcile/ -fuzz '^FuzzReadCSV$$' -fuzztime $(FUZZTIME)
 	go test ./internal/plugin/ -fuzz '^FuzzMetricResult$$' -fuzztime $(FUZZTIME)
 	go test ./internal/plugin/ -fuzz '^FuzzRuleAlerts$$' -fuzztime $(FUZZTIME)
+	go test ./internal/runtime/openmetrics/ -fuzz '^FuzzParse$$' -fuzztime $(FUZZTIME)
 lint:
 	gofmt -l .
 	go vet ./...

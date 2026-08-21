@@ -1300,6 +1300,67 @@
       ]
     },
     {
+      "path": "runtime",
+      "short": "Read a self-hosted inference deployment's own telemetry (experimental)",
+      "hidden": false,
+      "flags": []
+    },
+    {
+      "path": "runtime inspect",
+      "short": "Snapshot vLLM and NVIDIA DCGM metric endpoints, and report what they do and do not expose",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "dcgm-file",
+          "type": "string",
+          "default": "",
+          "usage": "a saved DCGM exposition to read instead of an endpoint"
+        },
+        {
+          "name": "dcgm-url",
+          "type": "string",
+          "default": "",
+          "usage": "DCGM exporter metrics endpoint, e.g. http://127.0.0.1:9400/metrics"
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "default": "text",
+          "usage": "output format: text|json"
+        },
+        {
+          "name": "max-bytes",
+          "type": "int64",
+          "default": "8388608",
+          "usage": "bound on one response body"
+        },
+        {
+          "name": "max-redirects",
+          "type": "int",
+          "default": "2",
+          "usage": "how far a redirect chain may lead; 0 forbids redirects"
+        },
+        {
+          "name": "timeout",
+          "type": "duration",
+          "default": "5s",
+          "usage": "bound on one endpoint read"
+        },
+        {
+          "name": "vllm-file",
+          "type": "string",
+          "default": "",
+          "usage": "a saved vLLM exposition to read instead of an endpoint"
+        },
+        {
+          "name": "vllm-url",
+          "type": "string",
+          "default": "",
+          "usage": "vLLM metrics endpoint, e.g. http://127.0.0.1:8000/metrics"
+        }
+      ]
+    },
+    {
       "path": "serve",
       "short": "Run the team server: collect pushed usage and serve the aggregated dashboard",
       "hidden": false,
