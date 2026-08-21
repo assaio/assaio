@@ -242,6 +242,15 @@ does not ship.
   would have to replace; (3) capability lives on `parser.Answers`, and a collector is not a
   parser — the registry has to move out of `internal/parser` or learn about non-parser
   sources before the first `vcs.*` signal is declared.
+  **v0.24 took the first step and deliberately not the whole one**: `analyze.Capability` is the
+  closed vocabulary of what an analyzer reads, `Needs` is how a validator declares it, and the
+  runner records what a window could not supply (`Result.Withheld`) instead of leaving each
+  validator to invent a sentence about an empty field. Four validators declare; the rest declare
+  nothing and are held to nothing, which is the property that makes this migratable. What is
+  still open is the part this item is named for: `Input` still carries the store row types, and
+  retiring them is still a breaking change to the metric-plugin wire. The capability set is now
+  the seam that change would move through — and it already earns its keep on the wire, where
+  `needs:` gates the 44 MB step timeline.
 - [ ] **B103 · commit observations that outlive one pass** — M · both — the half of `B91`
   deliberately not shipped: a configured repository list (rather than one `--repo` at a time),
   a keyed pseudonymous commit digest for the syncable case, and durable storage. Each waits
@@ -616,14 +625,6 @@ that item (`B60`) rather than becoming a new one.
   misfiled today. What is unmeasured is whether an orphan is *discovered* at all once the parent
   directory holds no session file, and whether the 45-day floor observed here is the cleanup's real
   behaviour or an artifact of when it last ran.
-- [ ] **B168 · a metric plugin that can say what it needs** — S/M · both — the step sequence
-  reaches a metric plugin because the alternative was an extension surface that could not write the
-  detectors the core just gained (`B155`). The cost is that it is sent unconditionally: 339,000
-  steps encode to about 44MB, paid by a plugin that only reads `byModel`. The handshake cannot
-  carry the answer, because the core writes stdin before reading the plugin's first line, so this
-  needs either a declaration in config (opt-in per plugin, with the failure mode that a plugin
-  reading an empty trace reports "no sequences" over a full store) or a protocol version where the
-  core asks first. Raised by the measurement, not by a complaint: no plugin exists yet that pays it.
 - [ ] **B165 · OpenCode and Kilo Code: one parser, two tools** — M · both — OpenCode keeps a
   relational store at `~/.local/share/opencode/opencode.db` whose `session` table carries
   `cost`, a five-way token split and `directory`, with per-message cost/tokens beside it

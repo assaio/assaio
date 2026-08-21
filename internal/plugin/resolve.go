@@ -5,14 +5,21 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/config"
 )
 
 // Resolve validates a config.PluginConfig and turns it into a Config ready for Run:
 // the command is resolved to an absolute path via exec.LookPath when it is not already
 // one. Validation happens here so every caller path (ingest, verify) enforces it.
-func Resolve(pc config.PluginConfig) (Config, error) {
-	if err := pc.Validate(); err != nil {
+func Resolve(pc config.PluginConfig) (Config, error) { return resolve(pc, pc.Validate) }
+
+// ResolveMetric is Resolve for an entry under `metrics:`, the one kind that may declare the
+// inputs it reads.
+func ResolveMetric(pc config.PluginConfig) (Config, error) { return resolve(pc, pc.ValidateMetric) }
+
+func resolve(pc config.PluginConfig, validate func() error) (Config, error) {
+	if err := validate(); err != nil {
 		return Config{}, fmt.Errorf("plugin %q: %w", pc.Name, err)
 	}
 	timeout, err := pc.TimeoutOrDefault()
@@ -29,5 +36,9 @@ func Resolve(pc config.PluginConfig) (Config, error) {
 		command = resolved
 	}
 
-	return Config{Name: pc.Name, Command: command, Timeout: timeout}, nil
+	needs := make([]analyze.Capability, len(pc.Needs))
+	for i, n := range pc.Needs {
+		needs[i] = analyze.Capability(n)
+	}
+	return Config{Name: pc.Name, Command: command, Timeout: timeout, Needs: needs}, nil
 }

@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"time"
 
+	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/usage"
 )
 
@@ -33,6 +35,19 @@ type Config struct {
 	Name    string
 	Command string
 	Timeout time.Duration
+	// Needs is the metric plugin's declared inputs, from its `needs:` config key. Empty means
+	// it declared nothing, which grants everything cheap and withholds the one payload that is
+	// not: see needsTrace.
+	Needs []analyze.Capability
+}
+
+// needsTrace reports whether this plugin asked for the step timeline. Everything else in the
+// envelope costs kilobytes and is sent unasked; the timeline was measured at ~44 MB on a real
+// store (B168), which is enough latency, memory and disclosure to be worth declaring. A plugin
+// that wants it says so in config -- the same place its command and timeout are already
+// trusted from.
+func (c Config) needsTrace() bool {
+	return slices.Contains(c.Needs, analyze.CapTrace)
 }
 
 // Stats summarizes one plugin run: records accepted and lines skipped for failing a

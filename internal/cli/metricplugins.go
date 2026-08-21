@@ -86,7 +86,7 @@ func runMetricPlugins(ctx context.Context, cfgs []config.PluginConfig, in *analy
 }
 
 func runOneMetricPlugin(ctx context.Context, pc config.PluginConfig, in *analyze.Input) (analyze.Result, error) {
-	resolved, err := plugin.Resolve(pc)
+	resolved, err := plugin.ResolveMetric(pc)
 	if err != nil {
 		return analyze.Result{}, fmt.Errorf("metric plugin %s: %w", pc.Name, err)
 	}

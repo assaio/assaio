@@ -65,7 +65,7 @@ func runMetricsVerify(cmd *cobra.Command, name, since string) error {
 	if !ok {
 		return fmt.Errorf("no metric plugin named %q in config", name)
 	}
-	resolved, err := plugin.Resolve(pc)
+	resolved, err := plugin.ResolveMetric(pc)
 	if err != nil {
 		return err
 	}

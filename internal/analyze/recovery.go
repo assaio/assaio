@@ -29,6 +29,11 @@ func (recoveryValidator) Title() string      { return recoveryTitle }
 func (recoveryValidator) Describe() string   { return recoveryDescribe }
 func (recoveryValidator) Layer() layer.Layer { return layer.Activity } // what a turn costs after a failed one
 
+// Needs declares the step sequences this metric reads. A store ingested before the timeline
+// existed carries none, which `backfill` repairs -- and which is a different fact from a window
+// in which nothing failed.
+func (recoveryValidator) Needs() []Capability { return []Capability{CapTrace} }
+
 // TraceScope declares the population: a person's own sessions. A sub-agent cannot abandon a run
 // on its own account -- it returns to whoever launched it -- and an SDK caller's one-shot has no
 // aftermath to measure.

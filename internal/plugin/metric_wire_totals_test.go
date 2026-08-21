@@ -29,7 +29,7 @@ func TestMetricWireCarriesTheSameWindow(t *testing.T) {
 		},
 	}
 	in := analyze.BuildInput(rows, nil, pricing.Table{}, time.Now(), 7*24*time.Hour, analyze.Delegation{})
-	wire := buildMetricInput(&in)
+	wire := buildMetricInput(&in, tracingPlugin())
 
 	var got struct{ in, out, cacheRead, cacheWrite, cacheWrite1h, reasoning, added, removed, rework, edits, calls int64 }
 	for i := range wire.Usage {

@@ -16,7 +16,8 @@ import (
 
 func (mi *metricInput) marshal() ([]byte, error) { return json.Marshal(mi) }
 
-func buildMetricInput(in *analyze.Input) metricInput {
+func buildMetricInput(in *analyze.Input, cfg Config) metricInput {
+	trace, withheld := traceSection(in, cfg)
 	return metricInput{
 		Version:    metricInputVersion,
 		Now:        in.Now,
@@ -40,9 +41,20 @@ func buildMetricInput(in *analyze.Input) metricInput {
 		Agents:          attributionWire(in.Agents),
 		TurnSizing:      turnSizingWire(in.TurnSizing),
 		CacheMisses:     cacheMissWire(in.CacheMisses),
-		Trace:           traceWire(&in.Trace),
+		Trace:           trace,
+		Withheld:        withheld,
 		HistoryStart:    in.HistoryStart,
 	}
+}
+
+// traceSection decides whether this run carries the step timeline, and names it as withheld
+// when it does not. Naming it is the whole point: an empty array a plugin cannot distinguish
+// from a window with no sequences is the fabricated zero every other boundary here refuses.
+func traceSection(in *analyze.Input, cfg Config) (timelines []metricTimeline, withheld []analyze.Capability) {
+	if cfg.needsTrace() {
+		return traceWire(&in.Trace), nil
+	}
+	return nil, []analyze.Capability{analyze.CapTrace}
 }
 
 // answersWire declares what every tool in this window can record. Only the tools actually

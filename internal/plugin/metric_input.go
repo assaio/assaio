@@ -1,6 +1,10 @@
 package plugin
 
-import "time"
+import (
+	"time"
+
+	"github.com/assaio/assaio/internal/analyze"
+)
 
 // metricInputVersion is the stdin envelope's protocol version, carried in the
 // assaio_metric_input key.
@@ -69,6 +73,11 @@ type metricInput struct {
 	// Empty on a store with no step history, and for every source with no step reading: absent,
 	// not a session that did nothing.
 	Trace []metricTimeline `json:"trace"`
+	// Withheld names the capabilities this envelope does not carry because the plugin did not
+	// declare them in its `needs:` config. An empty section is otherwise indistinguishable from
+	// a window that holds none, and a plugin that divides by it would be reporting a zero
+	// nobody measured.
+	Withheld []analyze.Capability `json:"withheld,omitempty"`
 	// HistoryStart is the earliest observation the store holds, ignoring this window. It is what
 	// makes a trend's own horizon knowable: a comparison against an earlier span means nothing when
 	// the store's history began inside it, and a source that deletes its transcripts makes that the

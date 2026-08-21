@@ -35,6 +35,10 @@ func (skillValidator) Title() string      { return skillTitle }
 func (skillValidator) Describe() string   { return skillDescribe }
 func (skillValidator) Layer() layer.Layer { return layer.Activity } // how the attributed tokens spread across skills
 
+// Needs declares the one input this metric reads that the caller loads separately: without
+// per-skill and per-sub-agent totals there is nothing here to divide.
+func (skillValidator) Needs() []Capability { return []Capability{CapAttribution} }
+
 // WindowScoped: store.Attribution pools skills and sub-agents across every project.
 func (skillValidator) WindowScoped() {}
 

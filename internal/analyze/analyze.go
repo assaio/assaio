@@ -158,6 +158,11 @@ type Result struct {
 	// by a name a person chose -- the dashboard applies the rule generically.
 	BarsPseudonym string `json:"barsPseudonym,omitempty"`
 	Takeaway      string `json:"takeaway"`
+	// Withheld is the declared inputs (see Needs) this window could not supply. Empty for a
+	// validator that declared nothing, which is most of them while the migration is in
+	// progress. It is the difference a reader acts on between a metric that measured its
+	// subject and found nothing and one that was never handed the evidence to look at.
+	Withheld []Capability `json:"withheld,omitempty"`
 	// Caveats are honesty notes (directional, contested, or server-stage-only signals);
 	// optional.
 	Caveats []string `json:"caveats,omitempty"`

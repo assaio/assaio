@@ -50,6 +50,20 @@ Discussion.
 
 ### Added
 
+- **A metric plugin declares what it reads, and the 44 MB step timeline is sent only when it
+  does.** `needs: [trace]` on a `metrics:` entry is now what buys the step sequences; without it
+  the section is absent and the envelope's new `withheld` field says so, because an empty array
+  a plugin cannot tell apart from a window with no sequences is exactly the fabricated zero this
+  protocol refuses. Everything else in the envelope costs kilobytes and is still sent unasked.
+  An unknown capability name is rejected at the config boundary, and `needs:` on a parser or
+  rule entry is an error rather than a key that is silently ignored.
+- **Validators can declare the evidence they read.** `analyze.Capability` is the closed
+  vocabulary — usage, sessions, trace, attribution, turn-sizing, cache-misses, prices — and a
+  validator that implements `Needs` gets its missing inputs recorded on the result and disclosed
+  as a caveat, so a reader can tell a metric that measured its subject and found nothing from
+  one that was never handed the evidence. Four validators declare so far; a validator that
+  declares nothing is held to nothing and behaves exactly as before, which is what makes this
+  migratable one family at a time rather than a flag day (`B102`).
 - **`docs/compatibility.md`: one answer to what v1.0 freezes.** The roadmap said the SQLite
   schema would deliberately not be frozen in one section and listed freezing it in another, the
   release guide promised a stable schema and SDK, and the extension docs promised an in-process

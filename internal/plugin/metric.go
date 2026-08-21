@@ -59,7 +59,7 @@ func VerifyMetric(ctx context.Context, cfg Config, in *analyze.Input) (analyze.R
 }
 
 func runMetric(ctx context.Context, cfg Config, in *analyze.Input) (analyze.Result, []string, error) {
-	envelope := buildMetricInput(in)
+	envelope := buildMetricInput(in, cfg)
 	stdin, err := envelope.marshal()
 	if err != nil {
 		return analyze.Result{}, nil, fmt.Errorf("metric plugin %s: encoding input: %w", cfg.Name, err)
@@ -69,6 +69,11 @@ func runMetric(ctx context.Context, cfg Config, in *analyze.Input) (analyze.Resu
 		return analyze.Result{}, nil, err
 	}
 	res, violations, err := parseMetricResult(doc, cfg.Name)
+	if err == nil {
+		// What the core kept out of the envelope travels onto the verdict, so a plugin's
+		// result discloses the same missing input a built-in's would (see analyze.Result.Withheld).
+		res.Withheld = envelope.Withheld
+	}
 	if err != nil {
 		return analyze.Result{}, violations, fmt.Errorf("metric plugin %s: %w%s", cfg.Name, err, violationSuffix(violations))
 	}

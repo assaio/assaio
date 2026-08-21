@@ -102,7 +102,7 @@ func TestTheProbeInputIsComplete(t *testing.T) {
 // where nothing is zero.
 func TestEveryMappedWireFieldIsActuallyFilled(t *testing.T) {
 	in := fullInput()
-	got := reflect.ValueOf(buildMetricInput(&in))
+	got := reflect.ValueOf(buildMetricInput(&in, tracingPlugin()))
 	inputFields := reflect.TypeOf(analyze.Input{})
 	for i := range got.NumField() {
 		name := got.Type().Field(i).Name
@@ -130,7 +130,7 @@ func TestBuildMetricInputMapsTheWindowAggregates(t *testing.T) {
 		CacheMisses:     []store.CacheMissRow{{Tool: "claude-code", Reason: "ttl_expired", Turns: 41}},
 	}
 
-	got := buildMetricInput(&in)
+	got := buildMetricInput(&in, tracingPlugin())
 
 	if !got.WindowStart.Equal(start) {
 		t.Errorf("windowStart = %v, want %v", got.WindowStart, start)
@@ -155,7 +155,7 @@ func TestBuildMetricInputMapsTheWindowAggregates(t *testing.T) {
 // An empty window must reach the plugin as an empty list rather than a null, so a plugin
 // that ranges over it reads "nothing was attributed" instead of failing to decode.
 func TestWindowAggregatesMarshalAsListsWhenEmpty(t *testing.T) {
-	envelope := buildMetricInput(&analyze.Input{})
+	envelope := buildMetricInput(&analyze.Input{}, tracingPlugin())
 	out, err := envelope.marshal()
 	if err != nil {
 		t.Fatalf("marshal: %v", err)

@@ -29,6 +29,9 @@ func (editLoopsValidator) Title() string      { return editLoopsTitle }
 func (editLoopsValidator) Describe() string   { return editLoopsDescribe }
 func (editLoopsValidator) Layer() layer.Layer { return layer.Activity } // how often an edit returns to a file
 
+// Needs declares the step sequences this metric reads.
+func (editLoopsValidator) Needs() []Capability { return []Capability{CapTrace} }
+
 // TraceScope declares the population: a person's own sessions. Sub-agent sequences are a
 // different animal and read differently -- 15.5% against 25.0% on the audited store -- and an
 // SDK caller's one-shot run has no repeat behaviour to measure at all.

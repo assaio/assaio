@@ -30,7 +30,7 @@ func metricTestInput() analyze.Input {
 
 func roundTrip(t *testing.T, in *analyze.Input) map[string]any {
 	t.Helper()
-	envelope := buildMetricInput(in)
+	envelope := buildMetricInput(in, tracingPlugin())
 	raw, err := envelope.marshal()
 	if err != nil {
 		t.Fatalf("marshal() err = %v", err)

@@ -78,6 +78,7 @@ type Confidence struct {
 func Evaluate(v Validator, in *Input) Result {
 	r := v.Analyze(*in)
 	r.Layer = v.Layer()
+	withheldFor(&r, Missing(v, in))
 	Stamp(&r, in)
 	if _, trending := v.(Trending); trending {
 		stampHorizon(&r, in)

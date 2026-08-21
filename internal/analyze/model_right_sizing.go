@@ -32,6 +32,10 @@ func (rightSizeValidator) Title() string      { return rightSizeTitle }
 func (rightSizeValidator) Describe() string   { return rightSizeDescribe }
 func (rightSizeValidator) Layer() layer.Layer { return layer.Activity } // premium turns whose output tokens were small
 
+// Needs declares the per-model turn counts this metric reads at a grain the daily usage
+// aggregate hides, and the price table that decides which model is the premium one.
+func (rightSizeValidator) Needs() []Capability { return []Capability{CapTurnSizing, CapPrices} }
+
 // WindowScoped: TurnSizing is per-model across the window, with no project dimension.
 func (rightSizeValidator) WindowScoped() {}
 

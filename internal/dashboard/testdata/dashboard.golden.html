@@ -566,7 +566,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   <span class="cell__label">07 · Repeat Edits</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
-    
+    <span class="prov">Prov.</span>
   </div>
   <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
@@ -611,7 +611,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   <span class="cell__label">12 · Model Right-Sizing</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
-    
+    <span class="prov">Prov.</span>
   </div>
   <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
@@ -629,7 +629,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   <span class="cell__label">14 · Failure Recovery</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
-    
+    <span class="prov">Prov.</span>
   </div>
   <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
@@ -1087,7 +1087,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="entry__label">Repeat Edits</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
-      
+      <span class="prov">Prov.</span>
     </div>
     <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
@@ -1095,7 +1095,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <p class="entry__howto">Going back to a file after running something is how work gets done — write, run, fix. The rate is a baseline, not a fault, which is why the finding is the session that sits far outside this window&#39;s own, not the rate itself.</p>
     
     
-    
+    <p class="entry__caveat">Withheld input: this metric declares that it reads trace, and this window carries none of it. Whatever is above rests on less than the metric asks for.</p>
     <p class="entry__conf entry__conf--insufficient">Confidence — insufficient — 0 sessions</p>
     <p class="entry__takeaway">No step sequence is stored for this window. Sequences are read from the tool&#39;s own transcripts by `backfill`, kept for `trace.horizon_days`, and only Claude Code records them today; a store filled by `sync` holds none at all, because the team-server contract carries usage records and not sequences (ADR 0012).</p>
   </div>
@@ -1273,7 +1273,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="entry__label">Model Right-Sizing</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
-      
+      <span class="prov">Prov.</span>
     </div>
     <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
@@ -1281,7 +1281,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <p class="entry__howto">A premium-model turn that emits only a handful of output tokens is often boilerplate or a quick answer a cheaper model handles as well. On a flat plan this is about speed and rate limits, not dollars. Task difficulty is invisible, so this is a prompt to look at a few, never a verdict.</p>
     
     
-    
+    <p class="entry__caveat">Withheld input: this metric declares that it reads turn-sizing, and this window carries none of it. Whatever is above rests on less than the metric asks for.</p>
     <p class="entry__conf entry__conf--insufficient">Confidence — insufficient — 0 premium-model turns</p>
     <p class="entry__takeaway">No premium-model turns in this window.</p>
   </div>
@@ -1335,7 +1335,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="entry__label">Failure Recovery</span>
     <div class="cell__read-row">
       <span class="entry__read entry__read--neutral">—</span>
-      
+      <span class="prov">Prov.</span>
     </div>
     <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
@@ -1343,7 +1343,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <p class="entry__howto">Failure is normal; an agent probes and adapts. This asks whether recovering from one is expensive here — whether the turns after a failure cost more than the turns that do not follow one — and names the sessions that stopped on one instead of getting past it.</p>
     
     
-    
+    <p class="entry__caveat">Withheld input: this metric declares that it reads trace, and this window carries none of it. Whatever is above rests on less than the metric asks for.</p>
     <p class="entry__conf entry__conf--insufficient">Confidence — insufficient — 0 sessions</p>
     <p class="entry__takeaway">No step sequence is stored for this window. Sequences are read from the tool&#39;s own transcripts by `backfill`, kept for `trace.horizon_days`, and only Claude Code records them today; a store filled by `sync` holds none at all, because the team-server contract carries usage records and not sequences (ADR 0012).</p>
   </div>
@@ -1553,7 +1553,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       
     </div>
     
-    <p class="entry__caveat">Prov.: turns are labeled with a skill or sub-agent by claude-code; usage from other sources is absent from this split, not zero.</p>
+    <p class="entry__caveat">Prov.: turns are labeled with a skill or sub-agent by claude-code; usage from other sources is absent from this split, not zero.</p><p class="entry__caveat">Withheld input: this metric declares that it reads attribution, and this window carries none of it. Whatever is above rests on less than the metric asks for.</p>
     <p class="entry__conf entry__conf--insufficient">Confidence — insufficient — nothing in this window can answer it</p>
     <p class="entry__takeaway">No usage in this window carried a skill or sub-agent label.</p>
   </div>
@@ -1765,7 +1765,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   <span class="cell__label">07 · Repeat Edits</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
-    
+    <span class="prov">Prov.</span>
   </div>
   <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
@@ -1819,7 +1819,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   <span class="cell__label">13 · Failure Recovery</span>
   <div class="cell__read-row">
     <span class="cell__read cell__read--neutral">—</span>
-    
+    <span class="prov">Prov.</span>
   </div>
   <div class="gauge"><span class="gauge__fill" style="--fill:50.0%"></span></div>
 </div>
