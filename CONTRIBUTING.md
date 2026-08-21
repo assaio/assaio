@@ -33,11 +33,16 @@ nothing** — and that promise constrains code too (see "Honesty rules" below).
   same one-unit-one-file law when it lands.
 - Small functions, intention-revealing names, obvious control flow.
 
-**Self-explaining, not commented.**
-- The code is the documentation. Names and structure carry the meaning.
-- Comment **only** to state a constraint the code cannot express, and keep it to a
-  single line. Do not write comments that narrate what the code does, justify a change,
-  or record where code came from. Such comments are noise the moment the PR merges.
+**Self-explaining, and documented where it cannot be.**
+- The code is the documentation for *what it does*. Names and structure carry that.
+- Comment to carry what the code cannot: a contract, an invariant, a boundary, or the
+  reason a wrong-looking thing is right — a threshold's source, a unit, why `MAX` and not
+  assignment, what a zero would mean here. Take the space that needs; several of this
+  codebase's most valuable comments are a paragraph, and they are why a reader can trust a
+  figure.
+- Do **not** narrate. No comment that says what the next line does, justifies a change, or
+  records where code came from — that is noise the moment the PR merges. A useful test: if
+  the comment would still be true after the code under it changed, it is probably narration.
 
 **SOLID and layered.**
 - Program to interfaces. Dependencies point inward: the `internal/` core never imports

@@ -41,14 +41,20 @@ Write as a senior engineer would: minimal, SOLID, clean. The bar is high.
 - Table-driven tests; golden files for parsers (real captured samples).
 
 **Never:**
-- Long or narrative comments. Comment only to state a constraint the code cannot show,
-  and keep it to one line. No "what the next line does", no "why my change is correct",
-  no attribution notes.
+- Narrative comments. No "what the next line does", no "why my change is correct", no
+  attribution notes, no commentary on the change rather than on the code.
 - Speculative abstraction or config for a need that does not exist yet (YAGNI).
 - Dead code, commented-out code, or TODO dumps left in place.
 - Reach into another plugin's internals. Plugins talk to the core only.
 - Blend session-level (hook) data with daily vendor-aggregate data without tagging
   provenance and confidence.
+
+**Comment to carry what the code cannot**, and take the space it needs: a contract, an
+invariant, a boundary, or the reason a wrong-looking thing is right — a threshold's source, a
+unit, why `MAX` and not assignment, what a zero here would mean. Those are frequently more than
+one line, and the length is not the problem; this codebase is full of them and they are why a
+reader can trust a figure. What is forbidden is narration, not documentation. A useful test: if
+a comment would still be true after the code under it changed, it is probably narration.
 
 ## Code standards (enforced + human-reviewed)
 
@@ -75,7 +81,8 @@ is deliberate (see `docs/adr/0002-code-standards-and-enforcement.md`).
 - File size (~200 lines) and single-responsibility: split a file that grows past the
   budget or starts doing two things. Deliberately no `funlen`/`lll`.
 - Cyclomatic and cognitive complexity: kept low by review, not by `gocyclo`/`gocognit`.
-- Self-explaining code and one-line constraint-only comments (see philosophy above);
+- Self-explaining code, and comments that document a contract rather than narrate a change
+  (see philosophy above);
   deliberately no `goconst`.
 - Coverage is reported in CI, never gated on a number (Goodhart). Reviewers look at the
   uncovered branches, not the percentage; weak packages get attention in review.
