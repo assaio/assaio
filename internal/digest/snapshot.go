@@ -17,7 +17,14 @@ import (
 
 // SnapshotVersion guards the stored payload. A digest that cannot read the previous
 // snapshot reports a first run rather than comparing against a shape it misunderstands.
-const SnapshotVersion = 1
+//
+// Bumped to 2 in v0.24 for a reason the payload's *shape* does not show: fourteen validators
+// stopped emitting a good/bad read, so a stored `good` and a fresh `neutral` for the same
+// metric are the binary changing its mind, not the work changing. comparabilityCaveats compares
+// ParsedBy -- the ingesting build -- which does not move when the analyzing binary is upgraded,
+// so nothing else would have caught it and the first digest after upgrading would have reported
+// fourteen verdict movements as findings.
+const SnapshotVersion = 2
 
 // Snapshot is what one digest recorded: the totals, the per-dimension weights it ranks
 // movers by, and each validator's verdict. Deliberately no prose and no sample rows -- a

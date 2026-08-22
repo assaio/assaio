@@ -1,7 +1,10 @@
 package server
 
 import (
+	"context"
 	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -69,5 +72,39 @@ func TestServerRefusesPastTheLimit(t *testing.T) {
 	}
 	if last != http.StatusTooManyRequests {
 		t.Fatalf("status after five requests against a budget of two = %d, want 429", last)
+	}
+}
+
+// TestAnUnknownSecretCannotBuyAFreshBudget is the bypass the first cut shipped: keying on the
+// presented string handed a caller varying its header a new window per request, which is not a
+// rate limit, and grew the window map by one entry per header under the same mutex.
+func TestAnUnknownSecretCannotBuyAFreshBudget(t *testing.T) {
+	s, _ := newTestServer(t)
+	s = s.WithRateLimit(2)
+	var last int
+	for i := range 6 {
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
+		req.Header.Set("Authorization", "Bearer guess-"+strconv.Itoa(i))
+		rec := httptest.NewRecorder()
+		s.Handler().ServeHTTP(rec, req)
+		last = rec.Code
+	}
+	if last != http.StatusTooManyRequests {
+		t.Fatalf("six requests with six different unknown secrets ended in %d, want 429", last)
+	}
+}
+
+// TestHealthzIsNeverRateLimited: it is what an orchestrator polls, and a liveness probe that
+// fails because of unrelated traffic restarts a healthy server.
+func TestHealthzIsNeverRateLimited(t *testing.T) {
+	s, _ := newTestServer(t)
+	s = s.WithRateLimit(1)
+	for range 20 {
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/healthz", nil)
+		rec := httptest.NewRecorder()
+		s.Handler().ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("healthz = %d, want 200 on every probe", rec.Code)
+		}
 	}
 }

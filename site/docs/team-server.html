@@ -131,8 +131,10 @@ push their local usage to it over HTTP, and it serves back one aggregated,
 pseudonymized-by-default Assay dashboard for the whole team at <code>GET /</code>
 (<code>internal/server</code>). This is still an MVP — there is no TLS, so run <code>serve</code> behind a reverse
 proxy on a trusted network rather than exposing it to the open internet.</p>
-<p><strong>Every route requires the bearer token, the dashboard included</strong> (since v0.24; it was open
-before, which protected the wrong direction — the page carries a whole team's usage).</p>
+<p><strong>Every route but the <code>/healthz</code> probe requires the bearer token, the dashboard included</strong>
+(since v0.24; it was open before, which protected the wrong direction — the page carries a whole
+team's usage). <code>/healthz</code> reads nothing, is deliberately open for an orchestrator, and is exempt
+from the rate limit so unrelated traffic cannot fail a liveness probe.</p>
 <p>Identity has two modes and <code>serve</code> prints which one it started in:</p>
 <ul>
 <li><strong>Server-derived</strong> — set <code>server.members</code> to one secret per member. The member is whoever

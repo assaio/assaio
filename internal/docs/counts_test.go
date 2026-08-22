@@ -67,3 +67,28 @@ func TestElementTexts(t *testing.T) {
 		})
 	}
 }
+
+// TestNeedsIsPublishedOnlyWhereItWorks: plugins:, metrics: and rules: decode into one struct,
+// so reflection sees `needs` under all three while PluginConfig.Validate refuses it for two. A
+// reference that publishes a key the binary rejects gives a reader no way to tell which half is
+// wrong.
+func TestNeedsIsPublishedOnlyWhereItWorks(t *testing.T) {
+	keys := map[string]bool{}
+	for _, k := range configKeys() {
+		keys[k.Key] = true
+	}
+	if !keys["metrics[].needs"] {
+		t.Fatal("metrics[].needs is missing from the reference; it is the one list that accepts it")
+	}
+	for _, rejected := range []string{"plugins[].needs", "rules[].needs"} {
+		if keys[rejected] {
+			t.Errorf("%s is published, and the binary rejects it", rejected)
+		}
+	}
+	// The sibling fields must survive the filter.
+	for _, kept := range []string{"plugins[].name", "plugins[].command", "rules[].timeout"} {
+		if !keys[kept] {
+			t.Errorf("%s was dropped by the needs filter", kept)
+		}
+	}
+}

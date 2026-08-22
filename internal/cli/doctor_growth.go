@@ -14,13 +14,17 @@ import (
 // than about the year.
 const growthMinDays = 7
 
-// growthLine projects what this store costs to keep, from its own measured span rather than
-// from a rate somebody else's machine produced. A central store inherits every member's growth
-// at once, which is exactly the operator who cannot see it today (B173, B174).
+// growthLine reports what this store costs to keep, from its own measured span. A central store
+// inherits every member's growth at once, which is exactly the operator who could not see it
+// (B173, B174).
 //
-// It is a projection and says so: usage is not uniform, a horizon-bounded table stops growing
-// and an unbounded one does not, and a year of the same behaviour is an assumption rather than
-// a measurement.
+// Three things it deliberately does not do, each of which the first cut got wrong:
+// it measures *live* bytes rather than the file, because free pages are the normal state after
+// every step prune and counting them makes deleting history raise the projected year; it calls
+// the year an upper bound rather than an estimate, because the step timeline stops growing at
+// its horizon while the usage table does not, so a rate averaged over both over-states a year;
+// and it names the oldest observation, because a single archived row from an old session owns
+// the denominator and one such row moved this figure 13x on a real store.
 func growthLine(ctx context.Context, st *store.Store, now time.Time) string {
 	size, err := st.Size(ctx)
 	if err != nil {
@@ -32,13 +36,15 @@ func growthLine(ctx context.Context, st *store.Store, now time.Time) string {
 	}
 	days := now.Sub(oldest).Hours() / 24
 	if days < growthMinDays {
-		return fmt.Sprintf("this store holds %.0f day(s), too few to project a year from. "+
-			"Ask again after %d.", days, growthMinDays)
+		return fmt.Sprintf("this store spans %.0f day(s), too few to project from. Ask again after %d.",
+			days, growthMinDays)
 	}
-	perDay := float64(size.Bytes) / days
-	return fmt.Sprintf("%s over %.0f day(s) = %s/day, which projects to %s/year at this rate.\n"+
-		"              A projection, not a measurement: usage is not uniform, the step timeline stops\n"+
-		"              growing at its horizon and the usage table does not, and a year of the same\n"+
-		"              behaviour is the assumption doing the work here.",
-		humanize.Bytes(size.Bytes), days, humanize.Bytes(int64(perDay)), humanize.Bytes(int64(perDay*365)))
+	live := size.Bytes - size.Reclaimable
+	perDay := float64(live) / days
+	return fmt.Sprintf("%s live over %.0f day(s) since %s = %s/day.\n"+
+		"              At most %s/year, and likely less: that rate averages the step timeline, which\n"+
+		"              stops growing at its horizon, together with the usage table, which does not.\n"+
+		"              An upper bound, not an estimate -- and one old record sets the span it divides by.",
+		humanize.Bytes(live), days, oldest.UTC().Format("2006-01-02"),
+		humanize.Bytes(int64(perDay)), humanize.Bytes(int64(perDay*365)))
 }

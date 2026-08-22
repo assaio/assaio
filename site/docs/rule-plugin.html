@@ -262,7 +262,7 @@ $ echo $?
 <p><strong>Where it deliberately does not run:</strong> <code>analyze</code> (a per-validator report, and its
 <code>--format json</code> array is the metric-plugin contract — alerts would either reshape that
 public surface or print in text what JSON omits), the dashboard, and the team server
-(unauthenticated <code>GET /</code>, same reasoning as metric plugins). <code>check</code> is the gate, and the
+(<code>GET /</code> rebuilds per request, same reasoning as metric plugins). <code>check</code> is the gate, and the
 gate is where rules live. See <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0005-exec-rule-plugin-protocol.md">ADR 0005</a> for the
 full rationale.</p>
 <hr>

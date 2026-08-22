@@ -153,7 +153,7 @@ assaio-agent runtime inspect --vllm-file vllm.prom --dcgm-file dcgm.prom
 </code></pre>
 <p><code>--vllm-url</code> and <code>--vllm-file</code> are mutually exclusive, as are the DCGM pair: a live endpoint and
 a saved snapshot are two different claims about where a number came from. Either source may be
-used alone. <code>--format json</code> prints the same content as a stable document.</p>
+used alone. <code>--format json</code> prints the same content as a deterministic document -- the same input encodes the same way -- and not as a frozen contract while the demand gate is open.</p>
 <p>Bounds are flags, not hidden defaults: <code>--timeout</code> (5s), <code>--max-bytes</code> (8 MiB), <code>--max-redirects</code>
 (2; <code>0</code> forbids redirects entirely). The request is a plain GET with no header, body or
 credential — an inspection that could carry a secret would need a threat model this experiment

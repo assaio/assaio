@@ -276,7 +276,7 @@ else:
                      else &quot;A meaningful share of usage falls outside the working week.&quot;),
     }
 
-print(json.dumps({&quot;assaio_metric&quot;: 2, &quot;name&quot;: &quot;weekday-split&quot;}))
+print(json.dumps({&quot;assaio_metric&quot;: 3, &quot;name&quot;: &quot;weekday-split&quot;}))
 print(json.dumps(result))
 </code></pre>
 <p><code>name</code> is stamped by the core as <code>plugin:&lt;name&gt;</code> on arrival, so a plugin cannot shadow a
@@ -325,7 +325,7 @@ else:
         &quot;takeaway&quot;: &quot;Edit size is measurable in this window.&quot;,
     }
 
-print(json.dumps({&quot;assaio_metric&quot;: 2, &quot;name&quot;: &quot;edit-size&quot;}))
+print(json.dumps({&quot;assaio_metric&quot;: 3, &quot;name&quot;: &quot;edit-size&quot;}))
 print(json.dumps(result))
 </code></pre>
 <p>Both plugins are wired the same way:</p>

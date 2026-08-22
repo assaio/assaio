@@ -53,14 +53,18 @@ func (modelFitValidator) Analyze(in Input) Result {
 
 	r.Read = modelFitRead(unpriceable, known > 0)
 	r.Purity = neutralPurity
+	// Both shares divide by the tokens that carry a tier, which is what the takeaway says and
+	// what the split is a split *of*. Dividing by the window's whole token count instead put a
+	// third quantity in the denominator and made the two figures disagree with the sentence
+	// under them by exactly the unpriced share.
 	r.Figures = []Figure{
-		{Label: premiumTierLabel(), Value: humanize.PercentOrDash(premiumTokens, total, 1), Note: linesPerMTok(premiumLines, premiumTokens) + " lines/1M tok"},
-		{Label: cheaperTierLabel(), Value: humanize.PercentOrDash(cheaperTokens, total, 1), Note: linesPerMTok(cheaperLines, cheaperTokens) + " lines/1M tok"},
+		{Label: premiumTierLabel(), Value: humanize.PercentOrDash(premiumTokens, known, 1), Note: linesPerMTok(premiumLines, premiumTokens) + " lines/1M tok"},
+		{Label: cheaperTierLabel(), Value: humanize.PercentOrDash(cheaperTokens, known, 1), Note: linesPerMTok(cheaperLines, cheaperTokens) + " lines/1M tok"},
 	}
 	if otherTokens > 0 {
 		r.Figures = append(r.Figures, Figure{
 			Label: "unpriced (unknown model)", Value: humanize.PercentOrDash(otherTokens, total, 1),
-			Note: "excluded from the premium/cheaper split above",
+			Note: "of the whole window, and outside the denominator of the two shares above",
 		})
 	}
 	r.Figures = append(r.Figures, Figure{
@@ -148,8 +152,18 @@ func modelBars(models []ModelStat) []Bar {
 }
 
 // linesPerMTok renders AI lines per 1M tokens, "—" when tokens is zero.
+// linesPerMTokFloor is the token base below which the rate is an artifact of its denominator
+// rather than a property of the model. A tier that ran a few thousand tokens and happened to
+// catch a whole session's line credit reads in the millions of lines per million tokens, beside
+// a real figure in the hundreds -- an 830x contrast off 3.5K tokens on the maintainer's own
+// store, printed directly under a how-to-read suggesting the cheaper model is the bargain.
+const linesPerMTokFloor = 100_000
+
 func linesPerMTok(lines, tokens int64) string {
 	if tokens == 0 {
+		return "—"
+	}
+	if tokens < linesPerMTokFloor {
 		return "—"
 	}
 	return strconv.FormatFloat(float64(lines)*1_000_000/float64(tokens), 'f', 1, 64)

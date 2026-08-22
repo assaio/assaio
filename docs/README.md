@@ -31,8 +31,10 @@ Where everything lives, in one place.
 
 ## Project direction
 
-- [`ROADMAP.md`](../ROADMAP.md) — the narrative direction: what shipped in v0.1 and
-  the themes being explored next. Conceptual, not contractual.
+- [`ROADMAP.md`](../ROADMAP.md) — the ordered direction: each milestone's exit criteria, the
+  gates that have not been met, and what `v1.0` has to mean. Direction, not commitment.
+- [`compatibility.md`](compatibility.md) — what `v1.0` freezes, what it deliberately does not,
+  and what is deferred. The single answer the roadmap and the release guide link to.
 - [`BACKLOG.md`](../BACKLOG.md) — the ranked pool of concrete candidate items
   (`B01`–…): proposals and effort estimates, not commitments.
 - [`CHANGELOG.md`](../CHANGELOG.md) — what actually shipped, per release

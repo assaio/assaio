@@ -26,8 +26,14 @@ const insertStepSQL = `
 // say so about calls already stored. Left out of the restate it was the one column no path,
 // `backfill --full` included, could reach: under the default 30-day horizon a wrong
 // classification ages out, and under `trace.horizon_days: 0` it was permanent.
+//
+// ts is here for the same release's other half: usage_record.ts became correctable, and both
+// timestamps come from the same source line. Leaving this one pinned would move a usage row
+// into the day a timestamp fix says it belongs to and leave its steps in the old one -- and
+// PruneSteps reads this column, so the horizon would then cut the wrong steps.
 const restateStepSQL = `
         UPDATE session_step SET
+            ts = ?,
             kind = ?,
             outcome = ?,
             target_ref = ?,
@@ -84,7 +90,7 @@ func (s *Store) InsertSteps(ctx context.Context, steps []usage.Step) (inserted, 
 			inserted++
 			continue
 		}
-		if _, err := upd.ExecContext(ctx, st.Kind, st.Outcome, st.TargetRef, st.Tokens, st.Ordinal,
+		if _, err := upd.ExecContext(ctx, st.Timestamp.UTC().Format(time.RFC3339), st.Kind, st.Outcome, st.TargetRef, st.Tokens, st.Ordinal,
 			st.Tool, st.Timeline, st.DedupeKey); err != nil {
 			return 0, 0, err
 		}

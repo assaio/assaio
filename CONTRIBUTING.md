@@ -33,6 +33,10 @@ nothing** — and that promise constrains code too (see "Honesty rules" below).
   same one-unit-one-file law when it lands.
 - Small functions, intention-revealing names, obvious control flow.
 
+**Commit messages stay short.** A concrete Conventional-Commits subject, and a body only when
+the *why* is not obvious — a few lines. Reasoning belongs in a code comment, an ADR or the
+changelog entry; a long commit body is the one place nobody looks later.
+
 **Self-explaining, and documented where it cannot be.**
 - The code is the documentation for *what it does*. Names and structure carry that.
 - Comment to carry what the code cannot: a contract, an invariant, a boundary, or the

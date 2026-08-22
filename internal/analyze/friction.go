@@ -167,7 +167,7 @@ func frictionTakeaway(sufficient bool, f friction) string {
 		return "Too few tool calls with failure capture this window to read a failure rate."
 	default:
 		return humanize.Percent(f.ErrorRate()) + " of the tool calls that record an outcome came back an error, and " +
-			humanize.Percent(shareOf(f.Rejected, f.Refusable)) + " of the ones a human can stop were declined. " +
+			humanize.PercentOrDash(f.Rejected, f.Refusable, 0) + " of the ones a human can stop were declined. " +
 			"Whether that is ordinary probing or a command the agent keeps hitting is a question about this work, not about the rate."
 	}
 }

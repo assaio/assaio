@@ -157,7 +157,7 @@ writes one JSON envelope to the plugin's <strong>stdin</strong>, closes it, and 
 <code>analyze --format json</code> shapes; only the version keys stay snake_case, matching the
 parser protocol's <code>assaio_plugin</code>):</p>
 <pre><code class="language-json">{
-  &quot;assaio_metric_input&quot;: 2,
+  &quot;assaio_metric_input&quot;: 3,
   &quot;now&quot;: &quot;2026-07-17T10:00:00Z&quot;,
   &quot;recentDays&quot;: 7,
   &quot;usage&quot;:    [{&quot;day&quot;:&quot;2026-07-16&quot;,&quot;tool&quot;:&quot;claude-code&quot;,&quot;model&quot;:&quot;...&quot;,&quot;project&quot;:&quot;...&quot;,
@@ -245,7 +245,7 @@ reshapes it says so explicitly (see <code>RELEASING.md</code>).</p>
 <p><strong>stdout</strong> — a one-line handshake, then exactly <strong>one</strong> JSON <code>Result</code> document
 (pretty-printed is fine; anything after it is a violation):</p>
 <ol>
-<li><code>{&quot;assaio_metric&quot;: 2, &quot;name&quot;: &quot;&lt;name&gt;&quot;}</code> — version must be <code>1</code>, <code>name</code> must equal
+<li><code>{&quot;assaio_metric&quot;: 3, &quot;name&quot;: &quot;&lt;name&gt;&quot;}</code> — version must be <code>1</code>, <code>name</code> must equal
 the configured name.</li>
 <li>One <code>Result</code> in the same shape <code>analyze --format json</code> emits — see <a href="https://assaio.dev/docs/metric-validator#what-a-validator-returns-result">What a validator
 returns: Result</a>. The wire <code>name</code> field is ignored:
@@ -417,7 +417,7 @@ for row in inp[&quot;usage&quot;]:
     if date.fromisoformat(row[&quot;day&quot;]).weekday() &gt;= 5:
         weekend += tokens
 
-print(json.dumps({&quot;assaio_metric&quot;: 2, &quot;name&quot;: &quot;weekend-usage&quot;}))
+print(json.dumps({&quot;assaio_metric&quot;: 3, &quot;name&quot;: &quot;weekend-usage&quot;}))
 
 if total == 0:
     print(json.dumps({
@@ -463,7 +463,7 @@ weekend-usage     /path/to/assaio-metric-weekend  (timeout 30s)
 (without executing it), and <code>assaio-agent dashboard</code> gives it a faceplate cell and
 ledger entry like any built-in's.</p>
 <p><strong>Where it deliberately does not run:</strong> the <a href="https://assaio.dev/docs/team-server">team server</a>'s served
-dashboard (<code>GET /</code> is unauthenticated and rebuilds per request — spawning
+dashboard (<code>GET /</code> rebuilds per request — spawning
 config-declared subprocesses per request would be a denial-of-service vector), the
 dashboard's per-project drill-down (built-ins only), and <code>demo</code> (deterministic sample).
 It <em>does</em> run in <code>assaio-agent check</code> when you have configured <a href="https://assaio.dev/docs/rule-plugin">rule

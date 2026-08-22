@@ -247,10 +247,13 @@ The core analysis commands — `backfill`, `report`, `effectiveness`, `analyze`,
 at build time, so every report works fully offline; nothing is fetched, uploaded, or
 phoned home.
 
-The two **optional team commands are the exception**, and only run when you invoke them:
-`assaio-agent sync` uploads your usage records to a team server, and `assaio-agent serve`
-runs that server. Both talk only to infrastructure **you** stand up and point them at (see
-below). If you never run them, `assaio` never touches the network.
+Three **optional commands are the exception**, and only when you invoke them.
+`assaio-agent sync` uploads your usage records to a team server, and `assaio-agent serve` runs
+that server; both talk only to infrastructure **you** stand up and point them at (see below).
+`assaio-agent runtime inspect --vllm-url/--dcgm-url` reads a metrics endpoint **you name** —
+a plain GET with no header, body or credential, bounded by `--timeout`, `--max-bytes` and
+`--max-redirects`, storing nothing; `--vllm-file`/`--dcgm-file` read a saved snapshot and need
+no network at all. If you never run those three, `assaio` never touches the network.
 
 `assaio-agent share` is not an exception to this — it makes no request, and neither does the
 page it writes. It is the one command that **starts another program**: after writing the file

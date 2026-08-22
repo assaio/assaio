@@ -32,7 +32,7 @@ func TestMain(m *testing.M) {
 	if err := os.MkdirAll(dataDir, 0o750); err != nil {
 		panic(err)
 	}
-	// Filename must match internal/report/anonymize.go's pseudonymKeyFilename.
+	// Filename must match internal/pseudonym/pseudonym.go's pseudonymKeyFilename.
 	keyPath := filepath.Join(dataDir, "pseudonym.key")
 	if err := os.WriteFile(keyPath, fixedPseudonymKey, 0o600); err != nil {
 		panic(err)

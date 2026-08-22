@@ -834,22 +834,17 @@ they wait behind features but keep the growing metric surface maintainable.
   it read as a real zero. Confirmed against v0.10 as well, so it is not new. Either stamp the
   window like `analyze` does, or render the unstamped case as what it is — a conformance
   check on the document, not a verdict about anyone's data.
-- [ ] **B116 · a parser fix reaches only the columns the restate covers** — S/M · solo —
-  `InsertLocal` restates activity and granularity on a re-read; `ts`, `model`, `project`,
-  `entrypoint` and `git_branch` are stamped once and never corrected, so a parser fix to any of
-  them cannot reach history and no canary looks at them. **No live case found:** the one
-  candidate on the audited store (a Codex session whose 198 records all carry the session's
-  start timestamp) has two-part dedupe keys and therefore predates v0.1 — it is a prototype
-  artifact, not a shipped build's output. This is a hole to close before a fix needs it, and
-  the question it turns on is which of those columns a re-read of the same file is the
-  authority on. **v0.13 answered it for one more column and found the second half of the
-  hole**: every activity column takes `MAX(stored, offered)`, so a correction that lowers a
-  figure cannot reach history at all — `B132`'s did not, until `rework_lines` joined
-  `granularity` as an assigned column. The rule that made that safe is stated and narrow (the
-  value is derived from the whole file by a rule that is monotone in the prefix read), and it
-  does not obviously extend to `lines_added` or the token counts, where MAX is repairing a
-  genuinely partial read. Deciding that per column is the remaining work, and a canary that
-  notices a re-read wanting to lower a figure is what would make it visible.
+- [ ] **B116 · `model` is the one column a re-read still cannot correct** — S · solo — the rest
+  of this item shipped in v0.24: `ts`, `project`, `subpath`, `entrypoint` and `git_branch` now
+  follow the rule `granularity` answered yes to, `session_step.ts` and `kind` move with them, and
+  ingest counts the rows a re-read moves *down* so a corrected rule and a parser regression are
+  no longer indistinguishable from the store's side. What is left is `model`, which is still
+  fill-only — `CASE WHEN model = '' THEN ? ELSE model END` — because a source can legitimately
+  emit a record before it knows the model (Cline reads it from a sidecar that may not exist yet)
+  and a first read that saw none must not pin those tokens as unpriceable forever. That reasoning
+  argues for filling a blank; it does not argue against *correcting* a wrong one, and a model
+  name decides the price, so a fix to model extraction reaches nothing today. The question is
+  whether a later read of the same file is the authority on a name an earlier read already had.
 
 ## Pool — from the v0.13 whole-codebase review
 
@@ -910,33 +905,6 @@ file-size norm.
   store an operator cannot walk over to is diagnosable. What remains is the decision this item
   is named for -- what to keep, at what resolution, for how long -- which is a policy, not a
   line of SQL.
-- [ ] **B179 · `survival` prints a rate that is not comparable to itself across windows** — S ·
-  solo — survival is monotonic in commit age: `--since 7d` reads near 100% and `--since 365d`
-  far lower, on the same repository, because a young commit has had no time to be rewritten.
-  `renderSurvival` never says the rate is age-dependent, and the default 90d is one silent
-  arbitrary band. Either state the dependence beside the figure or report it per age bucket;
-  `B18`'s age-matching is the fuller answer and this is the disclosure that should not wait for
-  it.
-- [ ] **B181 · three files carry two responsibilities each** — S · solo —
-  `internal/digest/compare.go` (259 lines) holds the diff and a comparability engine that never
-  touches a `Mover`, and the package doc already names them as two → `comparability.go`.
-  `internal/cli/analyze.go` (231) holds the command and the input builder six other commands
-  call; the trace half was already extracted for this reason, and hiding a shared builder inside
-  one command's file is what produced the `metrics verify` plan-price bug v0.22 fixed →
-  `analyze_input.go`. `internal/parser/claude/steps.go` (233) holds the step recorder and
-  cross-platform target identity — UNC shares, drive letters, `gopath.Clean` vs `filepath` — a
-  pure function of two strings holding no recorder state → `target.go`. The five other files over
-  the budget were reviewed one by one and are each one responsibility; they stay.
-
-- [ ] **B183 · a step's `kind` cannot be corrected at all** — S · solo — `parser.StepKind` is
-  assaio's own classification of a tool call, and `restateStepSQL` does not touch it, so no path
-  including `backfill --full` can change a stored one. v0.22 moved `tokens` and `outcome` off the
-  rules that pinned them (`B116`); `kind` is the same class one step further, since it is not in
-  the restate to be pinned or assigned. Under the default 30-day horizon a wrong classification
-  ages out; under `trace.horizon_days: 0` it is permanent. The work is deciding whether the
-  current parse is the authority on it — the same question `granularity` answered yes to — and
-  adding the column if so.
-
 - [ ] **B190 · read the uncovered branches, not the coverage number** — M · solo — measured on
   this build: `internal/parser` 47.7%, `internal/recommend` 60.6%, `internal/usage` 70.0%,
   `internal/reconcile` 70.7%, `internal/config` 72.0%, `internal/vcs` 74.1%, `internal/cli`
@@ -957,24 +925,6 @@ file-size norm.
   minimum-volume rules the skill dimension already carries. Verified against Claude Code
   2.1.238.
 
-- [ ] **B188 · say what `/usage` answers that assaio cannot** — S · solo — measured on the
-  maintainer's machine: no Claude Code transcript carries any plan-limit state (`rate_limit`,
-  `reset`, `quota`, `window` — zero matching fields across a session's records), so assaio
-  cannot report 5-hour or weekly plan consumption from local logs and will not pretend to.
-  `subscription-fit` compares an **API-equivalent estimate** against a configured plan price,
-  which answers "is the plan worth it" and not "how much of this week is left" — `/usage`
-  answers the second and is authoritative on it. The two are complementary and the published
-  surfaces should say so rather than leaving a reader to assume assaio replaces it.
-
-- [ ] **B189 · the history a vendor has already deleted is the differentiator** — S · solo —
-  Claude Code's `/insights` reads `~/.claude/projects/` over a 30-day window and at most 50
-  sessions per run, and summarizes them with Haiku, so two runs need not agree. Measured against
-  the same machine assaio reads: 178,254 records over 52 days, **22 of those days older than
-  the source still keeps**, deterministic and reproducible. That contrast — whole corpus versus
-  a sample, retained history versus the vendor's retention, computed figures versus an LLM
-  summary, five tools versus one — is the honest positioning, and none of it is currently said
-  anywhere. Belongs in README and on the site, with the numbers, and it needs no new code.
-
 - [ ] **B186 · one assistant message, two transcripts, two different counts** — M · solo — found
   by the downward-restatement canary `B116` asked for, on its first run against the maintainer's
   store. A Claude sub-agent's transcript and its parent session both carry the same assistant
@@ -992,7 +942,7 @@ file-size norm.
   it must reach zero and stay there.
 
 - [ ] **B185 · give the withdrawn verdicts a line derived from your own history** — L · both —
-  v0.24 withdrew the good/bad call from thirteen metrics because their thresholds were numbers
+  v0.24 withdrew the good/bad call from fourteen metrics because their thresholds were numbers
   picked once (`B176`–`B178`, `B180`, and the same class in `reasoning-share` and
   `session-taxonomy`). The figures stayed; what is gone is a colour this project could not
   defend. The credible line is not a published constant — there is none for most of these — but

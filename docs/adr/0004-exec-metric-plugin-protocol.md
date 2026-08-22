@@ -48,9 +48,10 @@ one JSON `Result` document, in the same shape `analyze --format json` emits.
   the CLI next to the in-process validators (the `ingestPlugins` precedent) and
   appended to the same rendering path. `Validator.Analyze` stays a pure function of
   `Input`; subprocess lifecycle, context, and timeouts stay at the driver layer.
-- **The team server never executes metric plugins.** `GET /` is unauthenticated and
-  rebuilds the dashboard per request; spawning config-declared subprocesses per request
-  would be a denial-of-service vector. Exec metrics run in `analyze`, `dashboard`, and
+- **The team server never executes metric plugins.** `GET /` rebuilds the dashboard per
+  request; spawning config-declared subprocesses per request would be a denial-of-service
+  vector. (The route was also unauthenticated when this was written; it is not since v0.24, and
+  the reasoning above never depended on that.) Exec metrics run in `analyze`, `dashboard`, and
   `metrics verify`; compiled-in validators still cover the served dashboard. The
   drill-down section likewise re-runs built-ins only, and `demo` stays deterministic.
 - **Pre-1.0 instability is explicit.** The envelope and result are versioned; a release
@@ -60,7 +61,7 @@ Rejected alternatives:
 - **Registering plugins as `analyze.Validator` adapters** — uniform flow (drill,
   server) but breaks the documented purity of `Analyze(Input)`, smuggles a context into
   a struct field, and would put subprocess execution behind the server's
-  unauthenticated GET.
+  served GET.
 - **Embedded scripting (Starlark/WASM)** — sandboxing for free, but a heavy new
   dependency, a new language forced on metric authors, and a second extension contract
   alien to the ADR 0003 model already shipped.

@@ -69,6 +69,11 @@ trace:
 #   - name: weekend-usage     # [a-z0-9-]+; appears as validator "plugin:weekend-usage"
 #     command: /path/to/assaio-metric-weekend
 #     timeout: 30s            # optional, default 60s
+#     needs: [trace]          # metric plugins only. The step timeline is the one section you
+#                              # have to ask for -- it encodes to ~44 MB on a real store -- and a
+#                              # plugin that does not is told so in the envelope's `withheld`
+#                              # rather than handed an empty array. Valid names: usage, sessions,
+#                              # trace, attribution, turn-sizing, cache-misses, prices.
 
 # Out-of-tree exec rule plugins: your own CI gate, in any language — see
 # docs/extending/rule-plugin.md. Same entry shape as plugins:. Only
@@ -83,8 +88,9 @@ trace:
 
 # Privacy settings for shareable exports (today: `assaio-agent dashboard` and the team
 # server's served dashboard both read this). The interactive CLI tables
-# (status/report/effectiveness) always show real project/member names regardless of this
-# setting.
+# (status/report/effectiveness) always show real *project* names regardless of this setting.
+# Member names are stricter and not governed by it: every `report` format renders a pseudonym,
+# and `report --identify` is the only door to raw ones.
 # privacy:
 #   anonymize: true          # pseudonymize project names in the dashboard HTML; also
 #                             # governs member names in the dashboard's Team section
@@ -95,7 +101,8 @@ trace:
 # pushed by `assaio-agent sync` from every teammate's machine and serves it back as one
 # aggregated, pseudonymized-by-default Assay dashboard. This is the one non-offline
 # exception in assaio -- you run and control this server yourself, on your own network.
-# Security model: every route requires a bearer token, the dashboard included. There is no
+# Security model: every route but the /healthz probe requires a bearer token, the dashboard
+# included. There is no
 # TLS -- put a reverse proxy in front (see internal/server's package doc). Not
 # production-hardened.
 # server:
@@ -117,7 +124,9 @@ trace:
 # sync:
 #   server: ""                # team server base URL, e.g. http://assaio.internal:8787
 #   token: ""                 # override with ASSAIO_SYNC_TOKEN
-#   member: ""                # opt-in self-identification; default: auto pseudonym
+#   member: ""                # opt-in self-identification; default: auto pseudonym. A server
+#                              # configured with server.members decides this from your token
+#                              # and ignores whatever is set here.
 
 # Pricing basis: by default every "$" assaio prints is an ESTIMATE at public pay-as-you-go
 # API rates (the vendored LiteLLM table) -- not your actual spend. If you pay a flat

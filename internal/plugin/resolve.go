@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/config"
@@ -36,9 +37,36 @@ func resolve(pc config.PluginConfig, validate func() error) (Config, error) {
 		command = resolved
 	}
 
-	needs := make([]analyze.Capability, len(pc.Needs))
-	for i, n := range pc.Needs {
-		needs[i] = analyze.Capability(n)
+	needs, err := capabilities(pc)
+	if err != nil {
+		return Config{}, fmt.Errorf("plugin %s: %w", pc.Name, err)
 	}
 	return Config{Name: pc.Name, Command: command, Timeout: timeout, Needs: needs}, nil
+}
+
+// capabilities maps a config entry's declared needs onto the closed vocabulary, rejecting a
+// name this build does not know. The check lives here rather than in internal/config because
+// the vocabulary is internal/analyze's, and every package that reads a config would otherwise
+// drag the validator registry in behind it.
+func capabilities(pc config.PluginConfig) ([]analyze.Capability, error) {
+	out := make([]analyze.Capability, len(pc.Needs))
+	for i, n := range pc.Needs {
+		c := analyze.Capability(n)
+		if !analyze.ValidCapability(c) {
+			return nil, fmt.Errorf("unknown need %q (want one of %s)", n, strings.Join(capabilityNames(), ", "))
+		}
+		out[i] = c
+	}
+	return out, nil
+}
+
+// capabilityNames renders the closed set for an error message, read from the registry rather
+// than repeated here.
+func capabilityNames() []string {
+	caps := analyze.Capabilities()
+	names := make([]string, len(caps))
+	for i, c := range caps {
+		names[i] = string(c)
+	}
+	return names
 }

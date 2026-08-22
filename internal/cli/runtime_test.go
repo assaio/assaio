@@ -90,19 +90,27 @@ func TestRuntimeInspectStoresNothing(t *testing.T) {
 	}
 }
 
-// TestRuntimeInspectRejectsAnInvalidExposition keeps a parse failure from reading as a
-// deployment that publishes nothing.
-func TestRuntimeInspectRejectsAnInvalidExposition(t *testing.T) {
+// TestRuntimeInspectReportsAPartialParseAsPartial: the endpoint answered, so a line the parser
+// could not read is not a source it could not reach. Collapsing the two would tell a reader
+// assaio never looked at a deployment it did look at -- and would hide the families it did read.
+func TestRuntimeInspectReportsAPartialParseAsPartial(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bad.prom")
-	// One line past the parser's line budget: readable as bytes, not as an exposition.
-	if err := os.WriteFile(path, []byte("a{k=\""+strings.Repeat("v", 200000)+"\"} 1\n"), 0o600); err != nil {
+	// One readable family, then a line past the parser's line budget.
+	body := "# TYPE vllm:num_requests_running gauge\nvllm:num_requests_running 3\n" +
+		"a{k=\"" + strings.Repeat("v", 200000) + "\"} 1\n"
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	out, err := runCLI(t, "runtime", "inspect", "--vllm-file", path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out, "could not be parsed") {
-		t.Fatalf("output = %q, want the parse failure named", out)
+	if strings.Contains(out, "unreachable") {
+		t.Fatalf("a partly readable exposition was reported as unreachable:\n%s", out)
+	}
+	for _, want := range []string{"partly read", "size limit stopped this read", "running-requests"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output missing %q:\n%s", want, out)
+		}
 	}
 }

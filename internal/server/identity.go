@@ -70,6 +70,21 @@ func (m Members) Validate() error {
 // that guessing it is not the easiest way in.
 const MinTokenBytes = 16
 
+// authenticated reports whether a presented secret is one this server knows. It is separate
+// from memberFor because the two answers are needed at different moments: whether to read the
+// body at all, and -- once read -- whose rows it holds.
+func (s *Server) authenticated(presented string) bool {
+	if s.members.Mode() == ClientAsserted {
+		return constantTimeEqual(presented, s.token)
+	}
+	for _, token := range s.members {
+		if constantTimeEqual(presented, token) {
+			return true
+		}
+	}
+	return false
+}
+
 // memberFor resolves the member a presented token identifies. In shared-token mode it returns
 // the name the client asserted, because that is all the deployment can know; the caller has
 // already validated it.

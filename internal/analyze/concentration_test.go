@@ -30,8 +30,11 @@ func TestConcentrationReportsTheGapWithoutGradingIt(t *testing.T) {
 	if !strings.Contains(figureValues(wide.Figures), "70pp") {
 		t.Fatalf("Figures = %q, want the 70pp spend gap", figureValues(wide.Figures))
 	}
-	if !strings.Contains(wide.Takeaway, "70%") {
-		t.Fatalf("Takeaway = %q, want the widest gap stated", wide.Takeaway)
+	if !strings.Contains(wide.Takeaway, "70pp") {
+		t.Fatalf("Takeaway = %q, want the gap in share points, the unit the figure uses", wide.Takeaway)
+	}
+	if strings.Contains(wide.Takeaway, "70%") {
+		t.Fatalf("Takeaway = %q, still renders a difference of two shares as a percent", wide.Takeaway)
 	}
 
 	tracking := mustGet(t, concentrationName).Analyze(concentrationInput(8000, 80, 2000, 20))

@@ -8,8 +8,10 @@ pseudonymized-by-default Assay dashboard for the whole team at `GET /`
 (`internal/server`). This is still an MVP — there is no TLS, so run `serve` behind a reverse
 proxy on a trusted network rather than exposing it to the open internet.
 
-**Every route requires the bearer token, the dashboard included** (since v0.24; it was open
-before, which protected the wrong direction — the page carries a whole team's usage).
+**Every route but the `/healthz` probe requires the bearer token, the dashboard included**
+(since v0.24; it was open before, which protected the wrong direction — the page carries a whole
+team's usage). `/healthz` reads nothing, is deliberately open for an orchestrator, and is exempt
+from the rate limit so unrelated traffic cannot fail a liveness probe.
 
 Identity has two modes and `serve` prints which one it started in:
 

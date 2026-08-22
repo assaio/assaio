@@ -39,7 +39,7 @@ likely way this project starts lying.
 
 | Module | What it is | Status |
 | --- | --- | --- |
-| **Assaio Usage** | The core: how a person or team uses AI coding tools, on what model, at what cost, producing what, with what outcome — and the small number of experiments that evidence supports. | **shipped** and where investment goes first |
+| **Assaio Usage** | The core: how a person or team uses AI coding tools, on what model, at what cost, and producing what — plus the small number of experiments that evidence supports. **Outcome is the milestone, not a shipped layer**: `survival` is a directional local check and nothing else joins a session to what shipped. | **shipped** through the output layer; outcome is stage 3 |
 | **Assaio Team & Cloud** | Aggregation and the commercial path: self-hosted or managed collection, budgets, governance, retention, access control, shared recommendations. Never an employee ranking. | self-hosted is an **MVP**; managed is **later** |
 | **Assaio Runtime Insights** | Optional, for people running their own models: import request, runtime and accelerator evidence to explain self-hosted cost, latency and capacity. | **experimental** feasibility slice only, behind a demand gate |
 
@@ -82,7 +82,8 @@ assumed.
 Nothing is built on a surface known to be wrong.
 
 - Member identity is pseudonymous at every export boundary, including the metric-plugin wire.
-- Thirteen metrics gave up verdicts whose lines had no source; the figures stayed.
+- Fourteen metrics gave up verdicts whose lines had no source; the figures stayed, and
+  `session-taxonomy` gave up a favourable colour on a fact that has no better or worse.
 - `recovery`'s baseline no longer contains the aftermath it is compared against.
 - A parser fix reaches `ts`, `project`, `entrypoint`, `git_branch` and a step's `kind`, and a
   re-read that *lowers* a figure is counted and reported.
@@ -93,7 +94,7 @@ Nothing is built on a surface known to be wrong.
 **Still open here:** `B185` (a line derived from your own history, which is what would earn the
 withdrawn verdicts back) and `B186` (one message, two transcripts, two counts).
 
-### 2. Analytics kernel — **next**
+### 2. Analytics kernel — **next**, and the one stage 3 waits on where they touch
 
 Make new evidence domains possible without weakening what exists.
 
@@ -110,7 +111,7 @@ Make new evidence domains possible without weakening what exists.
 payload, a signal and a recommendation without importing internal packages; a missing capability
 produces an explicit reason; corrections are idempotent and keep their lineage.
 
-### 3. Assaio Usage outcomes and verified recommendations — **next**
+### 3. Assaio Usage outcomes and verified recommendations — **next, alongside stage 2**
 
 The core product, and where most effort belongs.
 

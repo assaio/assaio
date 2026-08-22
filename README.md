@@ -41,18 +41,21 @@ about 60 seconds.
 ## What the built-in stats cannot do
 
 Measured against one real machine — a Claude Max user's own store, 178,254 records over 52
-days — beside what Claude Code 2.1.238 ships:
+days — beside what Claude Code ships. The `/insights` column describes the command as
+[documented](https://support.claude.com/en/articles/14553413-claude-code-cheatsheet) and as
+observed on Claude Code 2.1.238 in August 2026; it is a fast-moving product and this comparison
+carries the date for that reason.
 
 | | Built-in `/insights` | `assaio` |
 |---|---|---|
 | **How far back** | 30 days, and only what the tool still keeps | Everything ever ingested. On that machine **22 days are older than Claude Code's own retention** — they exist nowhere else now |
-| **How much** | At most 50 sessions per run | Every session: 6,300 transcripts on that store |
+| **How much** | A capped sample of sessions per run | Every session the store holds |
 | **How** | An LLM summarizes the sessions, so two runs need not agree | Computed from the records. Same window, same number, every time |
 | **Which tools** | Claude Code | Claude Code, Codex CLI, Gemini CLI, Copilot CLI, Cline — normalized, one cost basis |
 | **What moved** | A snapshot | `digest` reports the delta since last run, and says when two runs are not comparable |
 | **When it was wrong** | Nothing restates a past report | A parser fix reaches stored history, and a re-read that *lowers* a figure is counted and reported |
 | **A team** | Not aggregated | `serve` + `sync`, pseudonymous by default, nothing ranked per person |
-| **Where the line is** | "Friction", "satisfaction" as scores | A verdict only where its line is derived from your data, cited, or set by you. Thirteen metrics report their figure and refuse the grade |
+| **Where the line is** | "Friction", "satisfaction" as scores | A verdict only where its line is derived from your data, cited, or set by you. Fourteen report their figure and refuse the grade |
 
 **And what it cannot do that `/usage` can.** Claude Code's `/usage` reads your plan consumption
 from the API — the 5-hour and weekly percentages, and your extra-usage balance. No local
@@ -286,6 +289,8 @@ for something to hand a teammate, and `doctor` when a number looks wrong.
 | `dashboard` | Write a self-contained, offline **HTML dashboard** — stat tiles, hot/going-stale projects, model/tool mix, inventory. `--since`, `--output`. Project names are pseudonymized by default so it's safe to share; `--no-anonymize` for real names. |
 | `serve`    | Run the self-hosted **team server**: collects usage pushed by teammates' `sync` and serves the aggregated, pseudonymized-by-default team dashboard. |
 | `sync`     | Push this machine's local usage to a team server — pseudonymous by default, `--member` is an explicit opt-in to a real name. |
+| `recommend` | The few experiments this window's evidence supports, each as a typed record: what triggered it, what it requires, what it risks, how to undo it, when to look again, and the figure that would show whether it worked. The rendered text projects the record and adds nothing to it. A thin window, a low-confidence verdict or a metric missing a declared input produces **nothing at all**, and says that is an abstention rather than a clean bill. |
+| `runtime`  | **Experimental.** `runtime inspect` snapshots a *self-hosted* vLLM server's or NVIDIA DCGM exporter's own metrics endpoint — by URL or from a saved file. Read-only: nothing stored, no cost model, no GPU advice. A counter is never shown as a rate and a missing metric is never shown as zero. A hosted vendor's accelerators stay `unknown`; no local signal reveals them. May be removed — see [ROADMAP.md](ROADMAP.md). |
 | `doctor`   | Show detected tools, log locations, store inventory and size, format-drift canaries, how much of your store the price table cannot cost, and accuracy caveats. `--strict` exits non-zero for cron/CI — including when too much of the store carries no model price for `$` to mean anything (`pricing.max_unpriced_share`, default 5%). |
 | `survival` | Read the local git history beside your AI usage: how much of a repository's recent work still lives in `HEAD`. Directional and age-dependent by construction — a short window reads near 100% because its commits have had no time to be rewritten — so it is a lead, never a productivity figure. `--since`, `--repo`. |
 | `status`   | A terminal overview: inventory, headline `$`/100 lines, hottest projects, and what's going stale — projects only. `--since`. |

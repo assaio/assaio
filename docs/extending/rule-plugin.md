@@ -134,7 +134,7 @@ $ echo $?
 **Where it deliberately does not run:** `analyze` (a per-validator report, and its
 `--format json` array is the metric-plugin contract — alerts would either reshape that
 public surface or print in text what JSON omits), the dashboard, and the team server
-(unauthenticated `GET /`, same reasoning as metric plugins). `check` is the gate, and the
+(`GET /` rebuilds per request, same reasoning as metric plugins). `check` is the gate, and the
 gate is where rules live. See [ADR 0005](../adr/0005-exec-rule-plugin-protocol.md) for the
 full rationale.
 

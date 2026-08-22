@@ -63,21 +63,38 @@ func (l *rateLimiter) evict(now time.Time) {
 	}
 }
 
-// limit wraps a handler, refusing a caller past its budget with 429 and a Retry-After. The key
-// is the presented secret; a request with no Authorization header is keyed as one anonymous
-// caller, which is the right shape -- every such request is going to be rejected anyway, and
-// the limit is what stops it being rejected a million times a second.
+// anonymousKey is the single bucket every request that does not present a *known* secret shares.
+// Keying on the presented string instead would hand a caller a fresh budget per header value,
+// which is not a rate limit at all -- and would grow the window map by one entry per distinct
+// header, under the same mutex, which turns the mitigation into the amplifier.
+const anonymousKey = "anonymous"
+
+// limit wraps a handler, refusing a caller past its budget with 429 and a Retry-After.
+//
+// /healthz is exempt: it is what an orchestrator polls, it reads nothing and it is deliberately
+// unauthenticated, so counting it against the shared anonymous bucket would let unrelated
+// traffic fail a liveness probe and restart a healthy server.
 func (s *Server) limit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key, ok := bearer(r)
-		if !ok {
-			key = "anonymous"
+		if r.URL.Path == healthzPath {
+			next.ServeHTTP(w, r)
+			return
 		}
-		if !s.rate.allow(key, time.Now()) {
+		if !s.rate.allow(s.rateKey(r), time.Now()) {
 			w.Header().Set("Retry-After", "60")
 			http.Error(w, "too many requests", http.StatusTooManyRequests)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// rateKey is the presented secret when this server knows it, and one shared anonymous bucket
+// for everything else.
+func (s *Server) rateKey(r *http.Request) string {
+	presented, ok := bearer(r)
+	if !ok || !s.authenticated(presented) {
+		return anonymousKey
+	}
+	return presented
 }

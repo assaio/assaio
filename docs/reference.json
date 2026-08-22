@@ -1651,11 +1651,6 @@
       "default": ""
     },
     {
-      "key": "plugins[].needs",
-      "type": "strings",
-      "default": ""
-    },
-    {
       "key": "plugins[].timeout",
       "type": "string",
       "default": ""
@@ -1704,11 +1699,6 @@
     {
       "key": "rules[].name",
       "type": "string",
-      "default": ""
-    },
-    {
-      "key": "rules[].needs",
-      "type": "strings",
       "default": ""
     },
     {

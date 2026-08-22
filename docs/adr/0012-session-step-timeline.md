@@ -113,6 +113,6 @@ three consequences of that were not obvious until they were measured:
   gained; letting a plugin declare its needs is `B168`.
 - **Per-step and per-turn answers differ, and only one of them is a cost.** A tool call carries no
   tokens, and the steps after a failure are more heavily assistant turns than the window is, so the
-  aftermath of a failure reads 1.06x the window's average *step* and 1.02x its average *turn* --
-  1.35x against 1.03x over a three-step window. The first number measures the sample's composition.
+  aftermath of a failure reads 1.06x the window's average *step* and 1.03x its average *turn* --
+  1.37x against 1.04x over a three-step window. The first number measures the sample's composition.
   Any future detector dividing tokens by steps inherits that trap.

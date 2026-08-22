@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/store"
 	"github.com/assaio/assaio/internal/usage"
 )
@@ -32,10 +33,26 @@ func growthStore(t *testing.T, oldest time.Time) *store.Store {
 func TestGrowthLineProjectsFromTheStoreItRead(t *testing.T) {
 	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
 	line := growthLine(context.Background(), growthStore(t, now.AddDate(0, 0, -60)), now)
-	for _, want := range []string{"/day", "/year", "projection, not a measurement"} {
+	for _, want := range []string{"live over", "/day", "At most", "/year", "upper bound, not an estimate"} {
 		if !strings.Contains(line, want) {
 			t.Fatalf("growth line = %q, want it to contain %q", line, want)
 		}
+	}
+}
+
+// TestGrowthLineCountsLiveBytesNotTheFile is the defect that made deleting history raise the
+// projected year: free pages are the normal state after every step prune, and a rate over the
+// file size counts space the next insert reuses.
+func TestGrowthLineCountsLiveBytesNotTheFile(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	st := growthStore(t, now.AddDate(0, 0, -60))
+	size, err := st.Size(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := growthLine(context.Background(), st, now)
+	if !strings.Contains(line, humanize.Bytes(size.Bytes-size.Reclaimable)+" live") {
+		t.Fatalf("growth line = %q, want it to report %s of live bytes", line, humanize.Bytes(size.Bytes-size.Reclaimable))
 	}
 }
 
@@ -44,8 +61,8 @@ func TestGrowthLineProjectsFromTheStoreItRead(t *testing.T) {
 func TestGrowthLineRefusesToProjectFromTooShortASpan(t *testing.T) {
 	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
 	line := growthLine(context.Background(), growthStore(t, now.AddDate(0, 0, -2)), now)
-	if strings.Contains(line, "/year") {
-		t.Fatalf("growth line = %q, want no yearly projection from a two-day store", line)
+	if strings.Contains(line, "At most") {
+		t.Fatalf("growth line = %q, want no yearly bound from a two-day store", line)
 	}
 	if !strings.Contains(line, "too few to project") {
 		t.Fatalf("growth line = %q, want it to say why there is no projection", line)

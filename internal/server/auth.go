@@ -24,16 +24,5 @@ func bearer(r *http.Request) (string, bool) {
 // the product does not carry. What it does not do any more is grant a read to nobody at all.
 func (s *Server) authorizedReader(r *http.Request) bool {
 	presented, present := bearer(r)
-	if !present {
-		return false
-	}
-	if s.members.Mode() == ClientAsserted {
-		return constantTimeEqual(presented, s.token)
-	}
-	for _, token := range s.members {
-		if constantTimeEqual(presented, token) {
-			return true
-		}
-	}
-	return false
+	return present && s.authenticated(presented)
 }

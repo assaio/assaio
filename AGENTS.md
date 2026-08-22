@@ -110,7 +110,11 @@ is deliberate (see `docs/adr/0002-code-standards-and-enforcement.md`).
   to keep the history clean. Do the work; leave committing to the maintainer unless
   explicitly asked.
 - **Conventional Commits**, concrete subjects: `feat(agent): parse Codex rollout logs`,
-  not `wip` or `updates`. Body explains *why* when it is not obvious.
+  not `wip` or `updates`.
+- **Keep the message short.** Subject, and a body only when the *why* is not obvious — a few
+  lines, not an essay. The reasoning belongs in the code comment, the ADR or the changelog
+  entry, each of which a reader can find later. A long commit body is the one place none of
+  them look.
 - **One commit per PR.** The author squashes their branch before merge; multi-commit
   PRs are not accepted. `main` is protected; PR + green CI + ≥1 review required.
 - Sign every commit with DCO (`Signed-off-by`).

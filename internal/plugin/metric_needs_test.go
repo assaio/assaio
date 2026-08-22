@@ -49,6 +49,22 @@ func TestUndeclaredTraceIsWithheldNotSentEmpty(t *testing.T) {
 	}
 }
 
+// TestNothingIsWithheldFromAWindowWithNoTrace: a window holding no sequences had nothing kept
+// from it, and saying otherwise sends a plugin author after a `needs:` line that changes
+// nothing.
+func TestNothingIsWithheldFromAWindowWithNoTrace(t *testing.T) {
+	now := time.Date(2026, 7, 17, 10, 0, 0, 0, time.UTC)
+	in := analyze.BuildInput(
+		[]store.UsageRow{{Day: "2026-07-16", Tool: "claude-code", Model: "m", In: 10}},
+		nil, pricing.Table{}, now, 7*24*time.Hour, analyze.Delegation{},
+	)
+
+	envelope := buildMetricInput(&in, Config{Name: "quiet"})
+	if len(envelope.Withheld) != 0 {
+		t.Fatalf("Withheld = %v on a window that holds no sequences", envelope.Withheld)
+	}
+}
+
 // TestUndeclaredTraceShrinksThePayload is the reason the declaration exists at all.
 func TestUndeclaredTraceShrinksThePayload(t *testing.T) {
 	in := tracedInput()

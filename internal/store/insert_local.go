@@ -66,12 +66,17 @@ import (
 // is not correcting. ts carries no such empty case -- a record without a timestamp never reaches
 // the store -- so it is assigned outright, which is what lets a fix to timestamp extraction move
 // rows back into the days they belong to.
+//
+// subpath travels with project because one call to projectid.Resolve sets both. Correcting the
+// repository root and leaving the path relative to the old one produces a row the drill-down
+// reads as a subpath of a project it never belonged to.
 const restateActivitySQL = `
         UPDATE usage_record SET
             granularity = ?,
             ts = ?,
             model = CASE WHEN model = '' THEN ? ELSE model END,
             project = CASE WHEN ? <> '' THEN ? ELSE project END,
+            subpath = CASE WHEN ? <> '' THEN ? ELSE subpath END,
             entrypoint = CASE WHEN ? <> '' THEN ? ELSE entrypoint END,
             git_branch = CASE WHEN ? <> '' THEN ? ELSE git_branch END,
             input_tokens = MAX(input_tokens, ?), output_tokens = MAX(output_tokens, ?),
@@ -120,6 +125,7 @@ func activityRestateArgs(r *usage.Record) []any {
 		r.Timestamp.UTC().Format(time.RFC3339),
 		r.Model,
 		r.Project, r.Project,
+		r.Subpath, r.Subpath,
 		r.Entrypoint, r.Entrypoint,
 		r.GitBranch, r.GitBranch,
 		r.InputTokens, r.OutputTokens, r.CacheReadTokens, r.CacheWriteTokens, r.ReasoningTokens,

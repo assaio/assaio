@@ -156,3 +156,43 @@ func sequenceEndedAgo(t *testing.T, id, project, spec string, d time.Duration) s
 	}
 	return seq
 }
+
+// TestRecoveryWhenEveryTurnFollowsAFailure is the case the baseline fix made reachable: with
+// the aftermath out of the denominator, a scope whose every assistant turn follows a failure
+// has no baseline left. Reporting that as "nothing follows a failure" says the opposite of what
+// happened.
+func TestRecoveryWhenEveryTurnFollowsAFailure(t *testing.T) {
+	var a aftermath
+	a.Turns, a.AfterTurns = 4, 4
+	a.Tokens, a.AfterTokens = 400, 400
+	a.Failures = 1
+
+	if _, ok := a.CostRatio(); ok {
+		t.Fatal("a ratio was computed against an empty baseline")
+	}
+	if note := recoveryUnratedNote(&a); !strings.Contains(note, "no baseline left") {
+		t.Fatalf("note = %q, want it to name the empty baseline", note)
+	}
+	if got := recoveryTakeaway(false, 0, &a); !strings.Contains(got, "nothing here to compare") {
+		t.Fatalf("takeaway = %q, want it to say what is missing", got)
+	}
+}
+
+// TestRecoveryFigureNamesTheDenominatorItActuallyUses guards the conflation the baseline fix
+// exists to end.
+func TestRecoveryFigureNamesTheDenominatorItActuallyUses(t *testing.T) {
+	var a aftermath
+	a.Turns, a.AfterTurns = 100, 20
+	a.Tokens, a.AfterTokens = 10000, 2400
+	ratio, ok := a.CostRatio()
+	if !ok {
+		t.Fatal("expected a ratio")
+	}
+	f := recoveryCostFigure(&a, ratio, true)
+	if strings.Contains(f.Value, "the window's own turn") {
+		t.Fatalf("figure = %q, still names the denominator the fix removed", f.Value)
+	}
+	if !strings.Contains(f.Value, "follows none") {
+		t.Fatalf("figure = %q, want the baseline named as turns following no failure", f.Value)
+	}
+}

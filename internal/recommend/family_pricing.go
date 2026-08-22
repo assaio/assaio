@@ -1,6 +1,7 @@
 package recommend
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/assaio/assaio/internal/analyze"
@@ -46,7 +47,7 @@ func (pricingCoverage) Propose(e *Evidence) []Record {
 		Evidence: []string{
 			humanize.Percent(unpriced.Share()) + " of the window's billable tokens carry no known price (" +
 				humanize.Count(unpriced.Tokens) + " of " + humanize.Count(unpriced.Total) + ")",
-			"heaviest unpriced model(s): " + strings.Join(named, ", "),
+			modelLine(models, named),
 		},
 		// The condition is arithmetic over the whole window, not a sampled verdict, so it is
 		// as confident as the store is complete.
@@ -55,8 +56,13 @@ func (pricingCoverage) Propose(e *Evidence) []Record {
 		Action: "Add a price for " + named[0] + " (and the others listed) to the vendored table, or set " +
 			"`pricing.effective_per_token` if you are on a negotiated rate. `assaio-agent doctor` lists every model a refresh must cover.",
 		Prerequisites: []string{"The published per-token price for each model, from the vendor's own pricing page"},
-		Effect: "Cost, `$`/100 lines and subscription-fit stop understating by the share above. The direction is known; " +
-			"the size is exactly that share and nothing has to be predicted.",
+		// The share above is a share of *tokens*. What it costs is unknown by construction --
+		// the models are unpriced, so their rate is exactly what nobody here knows -- and
+		// quoting the token share as the size of the cost error would be the predicted number
+		// Record.Effect forbids.
+		Effect: "Cost, `$`/100 lines and subscription-fit stop understating. The direction is certain; the size is not, " +
+			"and cannot be until the prices are in: the share above is a share of tokens, and an unpriced model can bill " +
+			"well above or well below this window's average rate.",
 		Risks: []string{
 			"A wrong price is worse than no price: it turns a disclosed gap into a confident wrong number. Copy the figure, do not estimate it.",
 		},
@@ -65,4 +71,14 @@ func (pricingCoverage) Propose(e *Evidence) []Record {
 		FollowUp:     "the unpriced share on the same window, which should reach 0%",
 		Status:       StatusProposed,
 	}}
+}
+
+// modelLine names the heaviest unpriced models, and says how many it did not name. A truncated
+// list that reads as complete is the shape of an evidence line a reader acts on and finds short.
+func modelLine(all, named []string) string {
+	line := "heaviest unpriced model(s): " + strings.Join(named, ", ")
+	if len(all) > len(named) {
+		line += " (and " + strconv.Itoa(len(all)-len(named)) + " more)"
+	}
+	return line
 }

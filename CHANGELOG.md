@@ -21,32 +21,33 @@ Discussion.
 
 ## [Unreleased]
 
-### Changed
+### Breaking
 
-- **Thirteen metrics stopped publishing a verdict they could not source.** `friction`,
-  `rework`, `turn-efficiency`, `context`, `explore-produce`, `cache-hygiene`, `model-fit`,
-  `model-right-sizing`, `concentration`, `skill-economics`, `recovery`, `rhythm` and
-  `throughput` each decided good-versus-watch on a number picked once — a 15% error rate, a 20%
-  compaction rate, a 1.5× recovery multiple — with no published definition behind it and no
-  derivation from the window's own distribution. Rendered in colour, a number like that is read
-  afterwards as knowledge. Every figure those metrics computed is unchanged and still printed;
-  what is gone is the colour, the gauge and the promotion into "worth a week's attention", and
-  each now carries a caveat naming the authority it would need. `burn-anomaly` and `edit-loops`
-  are what a sourced line looks like here — both derive theirs from the window's own median and
-  MAD at the conventional 3.5 cutoff — and `adoption`, `coverage` and `subscription-fit` keep
-  verdicts resting on a definition, assaio's own confidence model, and your configured plan
-  price. On the maintainer's corpus this moves a 90-day window from 7 graded reads to 5.
-  `B185` tracks the line that would earn them back: your own earlier windows.
-- **`rhythm` no longer judges when the work happened, and prints the band it counts against.**
-  On a local store every session is one person's, so "off-hours: 31% [WATCH]" was a workload
-  judgement about an individual, promotable to the top of the dashboard — close enough to the
-  refusals that it should never have been a verdict. The shares are still reported, and the
-  8:00–18:00 weekday band they are measured against is now on the surface instead of in the
-  source, so a reader can disagree with it.
-- **`throughput` no longer reads more AI lines as good news.** A rising line count is an output
-  measure; colouring it favourably and raising the gauge with it promoted output to value, which
-  the roadmap calls the most likely way this project starts lying. The count and its direction
-  are reported without a verdict.
+Four changes here break a working setup on upgrade. Each is a `B`-id closing, and each fails
+loudly rather than quietly — which is the point of listing them apart.
+
+- **The team server's dashboard route now requires the bearer token.** `GET /` was open while
+  the write route was guarded, which protected the wrong direction: the page carries a whole
+  team's usage. An existing bookmark, reverse-proxy rule or read-only monitor gets a 401 until
+  it presents the token. `/healthz` stays open, and stays exempt from the rate limit, because it
+  is what an orchestrator polls.
+- **`serve` refuses a shared token shorter than 16 characters.** A secret short enough to guess
+  is not one. A deployment using a short token must lengthen it — or move to `server.members`,
+  where a shared token is no longer required at all.
+- **A metric plugin gets the step timeline only if its config declares `needs: [trace]`, and the
+  handshake version moves to 3** (`B168`). The timeline encodes to about 44 MB on a real store
+  and every plugin received it whether or not it read one. Leaving the version alone would have
+  had a plugin built against v2 report "no sequences" over a full store — a wrong number with no
+  error attached — so the handshake now fails loudly and names the version instead. Add
+  `needs: [trace]` to the `metrics:` entry and emit `"assaio_metric": 3`.
+- **`report --format json|csv` now emits a member pseudonym, not the synced name** (`B182`). On a
+  central store the `member` field carried the raw name every sync had pushed, on the default
+  `--by day` path that never reaches the dimension check — one pivot away from the leaderboard
+  the `--by member` refusal exists to prevent, and flatly contrary to what the README promised.
+  Closes `B182`.
+  Every format now carries a stable `member-xxxx` label instead, and the export says which
+  identity it holds. Scripts that joined on a raw name need `--identify`, which names
+  individuals deliberately. A purely local store is unaffected: it has no member to label.
 
 ### Added
 
@@ -93,7 +94,7 @@ Discussion.
   first two are about assaio's own evidence — an engine that recommends changing how someone
   works while its own cost basis is missing a fifth of the window has the order backwards.
 - **README and the site say what the built-in stats cannot do, instead of a claim that stopped
-  being true.** The opening said vendor dashboards count "spend, never output"; Claude Code
+  being true** (`B188`, `B189`). The opening said vendor dashboards count "spend, never output"; Claude Code
   analytics has reported accepted lines and cost per commit, Copilot has reported code
   generation and pull-request metrics, and Claude Code now ships `/insights` — a local 30-day
   report — and `/usage` for plan consumption. The comparison is now specific and measured: a
@@ -127,7 +128,7 @@ Discussion.
   implementation detail with migration, export and backup guarantees; the in-process Go API is
   deferred and is not a v1 contract. Two tests hold it — one rejects a retired promise
   reappearing in any published file, one fails if a file stops linking to the policy.
-- **`survival` states the age of what it measured.** The rate is monotonic in commit age -- this
+- **`survival` states the age of what it measured** (`B179`). The rate is monotonic in commit age -- this
   repository reads 99% over `--since 7d` at a median commit age of 3 days and 92% over `365d` at
   13 days -- so a figure printed without its age invited a comparison between two windows that
   measured different things. Every run now names the median commit age and the span, and a
@@ -139,9 +140,71 @@ Discussion.
   behind them, now tracked as `B186`: a sub-agent transcript and its parent both carry the same
   assistant message id and see different amounts of it, so the stored tool-call count oscillates.
 
+### Changed
+
+- **Fourteen metrics stopped publishing a verdict they could not source** (`B176`, `B177`). `friction`,
+  `rework`, `turn-efficiency`, `context`, `explore-produce`, `cache-hygiene`, `model-fit`,
+  `model-right-sizing`, `concentration`, `skill-economics`, `recovery`, `rhythm` and
+  `throughput` each decided good-versus-watch on a number picked once — a 15% error rate, a 20%
+  compaction rate, a 1.5× recovery multiple — with no published definition behind it and no
+  derivation from the window's own distribution. Rendered in colour, a number like that is read
+  afterwards as knowledge. Every figure those metrics computed is unchanged and still printed;
+  what is gone is the colour, the promotion into "worth a week's attention", and a gauge that
+  moved -- it is pinned at half, carrying no verdict either way. Each of those metrics
+  each now carries a caveat naming the authority it would need. `burn-anomaly` and `edit-loops`
+  are what a sourced line looks like here — both derive theirs from the window's own median and
+  MAD at the conventional 3.5 cutoff — and `adoption`, `coverage` and `subscription-fit` keep
+  verdicts resting on a definition, assaio's own confidence model, and your configured plan
+  price. On the maintainer's corpus this moves a 90-day window from 7 graded reads to 5.
+  `B185` tracks the line that would earn them back: your own earlier windows.
+- **`rhythm` no longer judges when the work happened, and prints the band it counts against**
+  (`B178`).
+  On a local store every session is one person's, so "off-hours: 31% [WATCH]" was a workload
+  judgement about an individual, promotable to the top of the dashboard — close enough to the
+  refusals that it should never have been a verdict. The shares are still reported, and the
+  8:00–18:00 weekday band they are measured against is now on the surface instead of in the
+  source, so a reader can disagree with it.
+- **`throughput` no longer reads more AI lines as good news** (`B180`). A rising line count is an output
+  measure; colouring it favourably and raising the gauge with it promoted output to value, which
+  the roadmap calls the most likely way this project starts lying. The count and its direction
+  are reported without a verdict.
+
 ### Fixed
 
-- **`recovery` compared the aftermath of a failure against a baseline containing it.** The
+- **The team server read the whole request body before checking the token.** `handleUsage`
+  confirmed only that an `Authorization` header existed, decoded up to 128 MiB of JSON, and
+  verified the secret afterwards -- so an unauthenticated caller could make the server allocate
+  a whole batch and then be told 401. The secret is verified before a byte of the body is read.
+- **The rate limiter could be bypassed by varying the header, and the bypass grew the map it
+  walked.** Keying on the presented string handed a caller a fresh budget per request and added
+  an entry per distinct header under the same mutex. Anything that is not a *known* secret now
+  shares one anonymous bucket, and `/healthz` is exempt so unrelated traffic cannot fail a
+  liveness probe.
+- **`digest` would have reported fourteen verdict changes as findings after upgrading.** The
+  stored snapshot records each metric's read key, and the comparability check compares the
+  *ingesting* build, which does not move when the analyzing binary does -- so the first digest
+  after this release would have listed every withdrawn verdict as something that moved in the
+  reader's work. `SnapshotVersion` is 2, which makes the first run after an upgrade report a
+  first run.
+- **`model-fit`'s two figures and its sentence used different denominators.** The shares divided
+  by the window's whole token count while the takeaway divided by the tokens that carry a tier,
+  so a window with any unpriced usage read "60% premium" above a sentence saying 80%. Both use
+  the tiered tokens now, and the unpriced figure says it sits outside that denominator rather
+  than claiming to be excluded from a split it was inside.
+- **A lines-per-million-tokens rate off a trivial token base.** The maintainer's own dashboard
+  printed 5,298,857 lines/1M tokens beside a real 6,386 -- an 830x contrast off a 3,500-token
+  base, under a line suggesting the cheaper model is the bargain. A tier under 100,000 tokens
+  now renders an em dash, the same refusal every other rate here already makes.
+- **`concentration` rendered one quantity in two units.** The figure printed the spend gap in
+  share points (`89pp`) and the takeaway printed the same number as a percent (`89%`), which
+  invites the relative reading the figure avoids. One helper renders it everywhere.
+- **`session_step.ts` stayed pinned while `usage_record.ts` became correctable.** Both come from
+  the same source line, so a timestamp fix would have moved a usage row into the day it belongs
+  to and left its steps in the old one -- and `PruneSteps` reads that column, so the horizon
+  would then have cut the wrong steps. `subpath` follows `project` for the same reason: one
+  `projectid.Resolve` sets both.
+
+- **`recovery` compared the aftermath of a failure against a baseline containing it** (`B175`). The
   denominator counted every assistant turn in the window, including the turns following a
   failure, so the ratio was compressed toward 1.0 — toward `CONTAINED`, a bias in the direction
   that flatters, by exactly the share of the window that follows a failure. The baseline now
@@ -172,17 +235,6 @@ Discussion.
   v0.39.0, which clears the last (unreachable) module advisory. The scan reports no
   vulnerabilities at all.
 
-### Breaking
-
-- **`report --format json|csv` now emits a member pseudonym, not the synced name.** On a
-  central store the `member` field carried the raw name every sync had pushed, on the default
-  `--by day` path that never reaches the dimension check — one pivot away from the leaderboard
-  the `--by member` refusal exists to prevent, and flatly contrary to what the README promised.
-  Every format now carries a stable `member-xxxx` label instead, and the export says which
-  identity it holds. Scripts that joined on a raw name need `--identify`, which names
-  individuals deliberately. A purely local store is unaffected: it has no member to label.
-
-### Fixed
 
 - **A metric plugin was handed raw member names.** The usage rows, session rows and step
   timelines sent to an out-of-tree subprocess carried the name each member synced under. They

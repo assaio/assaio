@@ -3,6 +3,7 @@ package docs
 import (
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -55,7 +56,9 @@ func configKeys() []ConfigKey {
 				// A list of entries has no environment form -- one variable holds one string,
 				// and the decode into a struct fails -- and neither does anything under it.
 				out = append(out, ConfigKey{Key: key, Type: typeName(f.Type), List: true})
+				before := len(out)
 				walk(f.Type.Elem(), reflect.Value{}, key+"[].", false)
+				out = out[:before+keptUnder(key, out[before:])]
 			default:
 				out = append(out, ConfigKey{
 					Key: key, Env: envVar(key, settable),
@@ -123,4 +126,32 @@ func plural(s string) string {
 		return strings.TrimSuffix(s, "y") + "ies"
 	}
 	return s + "s"
+}
+
+// rejectedUnder names the keys one list shares with another by Go type but rejects at its own
+// boundary. `plugins:`, `metrics:` and `rules:` decode into the same struct, so reflection sees
+// `needs` under all three while PluginConfig.Validate refuses it for two -- and a reference that
+// publishes a key the binary rejects is worse than one that omits it, because the reader has no
+// way to tell which half is wrong.
+var rejectedUnder = map[string][]string{
+	"plugins": {"needs"},
+	"rules":   {"needs"},
+}
+
+// keptUnder returns how many of a list's fields survive, having moved the rejected ones to the
+// end. Order inside the list is not meaningful -- configKeys sorts the whole set afterwards.
+func keptUnder(list string, fields []ConfigKey) int {
+	rejected := rejectedUnder[list]
+	if len(rejected) == 0 {
+		return len(fields)
+	}
+	kept := 0
+	for i := range fields {
+		if slices.Contains(rejected, strings.TrimPrefix(fields[i].Key, list+"[].")) {
+			continue
+		}
+		fields[kept], fields[i] = fields[i], fields[kept]
+		kept++
+	}
+	return kept
 }

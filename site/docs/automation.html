@@ -305,7 +305,7 @@ message ever leaves the repository.</p>
 <pre><code class="language-sh">assaio-agent serve --addr :8787 --token &quot;$ASSAIO_SERVER_TOKEN&quot;   # behind a TLS reverse proxy
 </code></pre>
 <p>The server collects pushed usage and serves the aggregated, always-anonymized team
-dashboard at <code>/</code>. It is a deliberate MVP (one shared token, no TLS of its own — run it
+dashboard at <code>/</code>. It is a deliberate MVP (no TLS of its own — run it
 behind a reverse proxy on a trusted network); see the server package doc and <code>ROADMAP.md</code>
 for the hardening path (per-member auth, retention, resumable sync).</p>
 <h2 id="what-is-and-isnt-automated-to-the-server-today">What is and isn't automated to the server today</h2>

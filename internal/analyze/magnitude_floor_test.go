@@ -5,6 +5,7 @@
 package analyze
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -48,8 +49,14 @@ func TestThroughputTrivialLinesIsNotConfidentlyRamping(t *testing.T) {
 		t.Fatal("throughput not registered")
 	}
 	got := v.Analyze(in)
-	if got.Read.Label == "RAMPING" {
-		t.Fatalf("Read = %+v, want NOT RAMPING for a 1-to-2-line change (trivial sample)", got.Read)
+	// The verdict this floor used to guard is gone (B177), so asserting on its absence would
+	// pass whatever the floor did. What the floor still decides is whether a direction is
+	// stated at all, and that is what this asserts.
+	if strings.Contains(got.Takeaway, "up 100%") {
+		t.Fatalf("Takeaway = %q, want a 1-to-2-line change not stated as a direction", got.Takeaway)
+	}
+	if !strings.Contains(got.Takeaway, "too small") {
+		t.Fatalf("Takeaway = %q, want the trivial comparison named", got.Takeaway)
 	}
 }
 
@@ -65,7 +72,12 @@ func TestContextTrivialHealthyIsNotConfident(t *testing.T) {
 		t.Fatal("context not registered")
 	}
 	got := v.Analyze(in)
-	if got.Read.Label == "HEALTHY" {
-		t.Fatalf("Read = %+v, want NOT HEALTHY for a single session with zero compactions (trivial sample)", got.Read)
+	// Same as above: "HEALTHY" no longer exists, so the floor is asserted on what it still
+	// controls -- whether a rate is read off one session at all.
+	if got.Read != noDataRead {
+		t.Fatalf("Read = %+v, want the withheld read for a single session", got.Read)
+	}
+	if !strings.Contains(got.Takeaway, "Too few sessions") {
+		t.Fatalf("Takeaway = %q, want the session floor named", got.Takeaway)
 	}
 }

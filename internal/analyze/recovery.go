@@ -83,18 +83,21 @@ func recoveryFigures(a *aftermath, ratio float64, rated bool) []Figure {
 	}
 }
 
-// recoveryCostFigure renders the aftermath's cost as a multiple of the window's own turn, and a
-// dash when there were no turns on one side of it: a ratio against nothing is not 1.0.
+// recoveryCostFigure renders the aftermath's cost as a multiple of a turn that follows no
+// failure, and a dash when either side has no turns: a ratio against nothing is not 1.0. The
+// two empty sides are different facts and are named separately -- since the baseline stopped
+// containing the aftermath, "every turn here follows a failure" became reachable, and reporting
+// it as "nothing follows a failure" would say the opposite of what happened.
 func recoveryCostFigure(a *aftermath, ratio float64, rated bool) Figure {
 	if !rated {
 		return Figure{
 			Label: "cost of the turns after a failure", Value: "—",
-			Note: "no assistant turn follows a failure in this window",
+			Note: recoveryUnratedNote(a),
 		}
 	}
 	return Figure{
 		Label: "cost of the turns after a failure",
-		Value: ratioLabel(ratio) + " the window's own turn",
+		Value: ratioLabel(ratio) + " a turn that follows none",
 		Note: humanize.Int(a.AfterTurns) + " of " + humanize.Int(a.Turns) + " turns follow one of " +
 			humanize.Int(int64(a.Failures)) + " failed or declined call(s) and " +
 			humanize.Int(int64(a.Compactions)) + " context loss(es)",
@@ -123,6 +126,8 @@ func recoveryTakeaway(enough bool, ratio float64, a *aftermath) string {
 	switch {
 	case !enough && a.Failures+a.Compactions == 0:
 		return "Nothing failed, was declined, or lost its context in this scope, so there was no recovery to measure."
+	case a.AfterTurns > 0 && a.ElsewhereTurns() == 0:
+		return "Every assistant turn in this scope follows a failure, so there is nothing here to compare them against."
 	case !enough:
 		return "Too few turns follow a failure in this window to say what recovering from one costs."
 	default:
@@ -151,4 +156,14 @@ const (
 
 func recoveryOpenCaveat(a *aftermath) string {
 	return "Prov.: " + humanize.Int(int64(a.Open)) + " session(s) were still running when this was read and are excluded from the ending figure rather than counted as finished -- their last step is whatever they were doing, not how they turned out."
+}
+
+// recoveryUnratedNote names which side of the ratio was empty. Both are real and they mean
+// opposite things: no aftermath at all, or an aftermath with no ordinary turn left to measure
+// it against.
+func recoveryUnratedNote(a *aftermath) string {
+	if a.AfterTurns > 0 {
+		return "every assistant turn in this window follows a failure, so there is no baseline left to compare against"
+	}
+	return "no assistant turn follows a failure in this window"
 }

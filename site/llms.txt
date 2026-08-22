@@ -38,6 +38,11 @@ contain no counterfactual), per-named-individual leaderboards of lines or tokens
 analytics outside a governed team-mode opt-in, and cohort comparisons without a minimum
 cohort size and explicit consent.
 
+`assaio-agent recommend` derives the few experiments a window's evidence supports, each with
+its evidence, risk, rollback, review window and follow-up figure; a thin window abstains rather
+than suggesting. `assaio-agent runtime inspect` is an experimental read-only snapshot of a
+self-hosted vLLM or DCGM endpoint and may be removed.
+
 What a weekly loop looks like: `backfill` imports, `analyze` prints the reads worth acting on,
 `digest` reports in markdown what *moved* since the last run and declares when the comparison
 itself is weak, and `mark --suggest` derives a session's labels from what the logs already hold
@@ -48,8 +53,10 @@ Publishing: `assaio-agent share` renders one window as a postable reel, poster o
 Privacy posture: prompts and file contents are never read or stored — the parsers extract
 token counts, model names, timestamps, session ids and activity counts only. Line counts
 come from diff `+`/`-` markers; the code on those lines is counted, never kept. There is no
-telemetry. The optional self-hosted team server is the only component that uses a network,
-and it talks only to infrastructure the operator stands up.
+telemetry. Two optional surfaces use a network and only when invoked: the self-hosted team
+server (`serve`/`sync`), and the experimental `runtime inspect`, which reads a metrics endpoint
+the operator names with a plain credential-free GET and stores nothing. Both talk only to
+infrastructure the operator stands up.
 
 ## Docs
 

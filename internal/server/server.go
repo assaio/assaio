@@ -5,8 +5,8 @@
 // for.
 //
 // SECURITY (MVP boundary, read before deploying): there is no TLS, so run this behind a reverse
-// proxy on a trusted network rather than exposing it directly. Every route requires a bearer
-// token, including the dashboard. Member identity is server-derived when per-member tokens are
+// proxy on a trusted network rather than exposing it directly. Every route but the /healthz
+// probe requires a bearer token, the dashboard included. Member identity is server-derived when per-member tokens are
 // configured and client-asserted otherwise. See Server's doc comment for the exact boundary.
 package server
 
@@ -43,7 +43,8 @@ const idleTimeout = 120 * time.Second
 // backed by one central *store.Store.
 //
 // SECURITY (MVP boundary): there is no TLS -- run this behind a reverse proxy that terminates
-// it, on a network you trust. Reads are authenticated as of v0.24, and identity has two modes:
+// it, on a network you trust. Every route but the /healthz probe is authenticated as of v0.24,
+// and identity has two modes:
 // with per-member tokens (WithMembers) the member is derived from the presented secret and
 // cannot be asserted by the client; with a single shared token, any holder can still push as
 // any member, which is what the operator diagnostics say out loud.

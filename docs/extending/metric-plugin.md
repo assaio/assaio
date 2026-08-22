@@ -42,7 +42,7 @@ parser protocol's `assaio_plugin`):
 
 ```json
 {
-  "assaio_metric_input": 2,
+  "assaio_metric_input": 3,
   "now": "2026-07-17T10:00:00Z",
   "recentDays": 7,
   "usage":    [{"day":"2026-07-16","tool":"claude-code","model":"...","project":"...",
@@ -141,7 +141,7 @@ reshapes it says so explicitly (see `RELEASING.md`).
 **stdout** — a one-line handshake, then exactly **one** JSON `Result` document
 (pretty-printed is fine; anything after it is a violation):
 
-1. `{"assaio_metric": 2, "name": "<name>"}` — version must be `1`, `name` must equal
+1. `{"assaio_metric": 3, "name": "<name>"}` — version must be `1`, `name` must equal
    the configured name.
 2. One `Result` in the same shape `analyze --format json` emits — see [What a validator
    returns: Result](metric-validator.md#what-a-validator-returns-result). The wire `name` field is ignored:
@@ -285,7 +285,7 @@ for row in inp["usage"]:
     if date.fromisoformat(row["day"]).weekday() >= 5:
         weekend += tokens
 
-print(json.dumps({"assaio_metric": 2, "name": "weekend-usage"}))
+print(json.dumps({"assaio_metric": 3, "name": "weekend-usage"}))
 
 if total == 0:
     print(json.dumps({
@@ -336,7 +336,7 @@ From then on a bare `assaio-agent analyze` prints it after the built-ins,
 ledger entry like any built-in's.
 
 **Where it deliberately does not run:** the [team server](team-server.md)'s served
-dashboard (`GET /` is unauthenticated and rebuilds per request — spawning
+dashboard (`GET /` rebuilds per request — spawning
 config-declared subprocesses per request would be a denial-of-service vector), the
 dashboard's per-project drill-down (built-ins only), and `demo` (deterministic sample).
 It *does* run in `assaio-agent check` when you have configured [rule

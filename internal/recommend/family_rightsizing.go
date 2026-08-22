@@ -49,6 +49,7 @@ func (premiumSmallTurns) Propose(e *Evidence) []Record {
 		Prerequisites: []string{
 			"A kind of work you can name and route separately; a blanket model switch is not this experiment",
 			"Session labels on both the before and after window, or the comparison averages research against greenfield",
+			"Usage billed per token. On a flat subscription this experiment buys speed and rate-limit headroom, not money -- model-right-sizing's own caveat says so, and `pricing.mode: subscription` is where assaio knows which you are.",
 		},
 		Effect: "Directionally lower spend on that slice, at unknown cost to quality. assaio has no counterfactual and " +
 			"will not predict a number; what it can do is tell you afterwards whether output and rework moved with it.",

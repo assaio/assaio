@@ -54,6 +54,11 @@ func traceSection(in *analyze.Input, cfg Config) (timelines []metricTimeline, wi
 	if cfg.needsTrace() {
 		return traceWire(&in.Trace), nil
 	}
+	// Nothing was withheld from a window that holds no sequences, and saying otherwise would
+	// send a plugin author looking for a `needs:` line that would change nothing.
+	if !in.Has(analyze.CapTrace) {
+		return nil, nil
+	}
 	return nil, []analyze.Capability{analyze.CapTrace}
 }
 

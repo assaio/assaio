@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/assaio/assaio/internal/server"
 )
 
 // TestServeAddrDefaultsToLoopback locks in the fix: binding all interfaces by default
@@ -30,7 +32,7 @@ func TestServeAddrDefaultsToLoopback(t *testing.T) {
 // any holder can push as anybody.
 func TestServeHelpDisclosesTheIdentityBoundary(t *testing.T) {
 	long := strings.ToLower(newServeCmd().Long)
-	for _, want := range []string{"no tls", "every route requires the bearer token", "push usage under any member name"} {
+	for _, want := range []string{"no tls", "requires the bearer token", "push usage under any member name"} {
 		if !strings.Contains(long, want) {
 			t.Fatalf("serve --help does not mention %q: %q", want, long)
 		}
@@ -49,7 +51,7 @@ func TestServeRequiresToken(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when --token is missing")
 	}
-	if !strings.Contains(err.Error(), "--token is required") {
+	if !strings.Contains(err.Error(), "--token or server.members is required") {
 		t.Fatalf("error = %q", err)
 	}
 }
@@ -79,5 +81,21 @@ func TestServeListensAndShutsDownGracefully(t *testing.T) {
 	}
 	if !strings.Contains(strings.ToLower(out.String()), "client-asserted") {
 		t.Fatalf("stdout = %q, want the startup note to name the identity mode it is running in", out.String())
+	}
+}
+
+// TestServeAcceptsMembersWithoutASharedToken: with per-member tokens configured the shared
+// secret authenticates nothing, so requiring one would be a secret the operator has to invent
+// and then keep.
+func TestServeAcceptsMembersWithoutASharedToken(t *testing.T) {
+	members := server.Members{"alice": "alice-token-long-enough"}
+	if err := requireServeSecret("", members); err != nil {
+		t.Fatalf("per-member tokens were refused without a shared one: %v", err)
+	}
+	if err := requireServeSecret("", nil); err == nil {
+		t.Fatal("a server with neither a token nor members was accepted")
+	}
+	if err := requireServeSecret("short", nil); err == nil {
+		t.Fatal("a five-character shared secret was accepted")
 	}
 }

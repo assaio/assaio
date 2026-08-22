@@ -12,17 +12,6 @@ import "github.com/assaio/assaio/internal/runtime"
 // Source is the adapter's name in output.
 const Source = "dcgm"
 
-// IdentityLabels are the labels DCGM attaches that say which accelerator a reading is about.
-// They are listed here rather than discovered so a snapshot can report which identity the
-// deployment actually publishes: a node exporting no `pod` label cannot have its GPU joined to
-// a workload, and that is a fact about the deployment worth stating.
-func IdentityLabels() []string {
-	return []string{
-		"gpu", "UUID", "device", "modelName", "Hostname", "DCGM_FI_DRIVER_VERSION",
-		"GPU_I_ID", "GPU_I_PROFILE", "pod", "namespace", "container",
-	}
-}
-
 // Catalog is the set assaio reads: utilization, memory, power, energy, temperature and health.
 func Catalog() []runtime.Capability {
 	return []runtime.Capability{

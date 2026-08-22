@@ -70,7 +70,7 @@ func (rhythmValidator) Analyze(in Input) Result {
 	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "sessions timed", Value: humanize.Int(int64(len(timed)))},
-		{Label: "off-hours", Value: humanize.PercentAt(p.OffHoursShare, 0), Note: humanize.PercentAt(p.WeekendShare, 0) + " on weekends, outside " + rhythmDayBand()},
+		{Label: "off-hours", Value: humanize.PercentAt(p.OffHoursShare, 0), Note: "outside " + rhythmDayBand() + " on a weekday, or any weekend hour; " + humanize.PercentAt(p.WeekendShare, 0) + " of it is weekend"},
 		basisFigure("longest sessions", minutesLabel(p.P95ActiveMinutes)+" p95", "focused work", len(paced)),
 		basisFigure("marathons", humanize.PercentAt(p.MarathonShare, 0), "over "+strconv.Itoa(rhythmMarathonMinutes)+" min focused, assaio's own line", len(paced)),
 	}

@@ -31,9 +31,9 @@ const restateSignalsSQL = `
 // build gains the new signals on the next backfill instead of keeping zeros forever; it is a
 // repair of existing rows, so it is deliberately not counted here.
 //
-// This is the path the sync server writes through, so it stays first-write-wins: one team
-// member's push must never restate a row another member already wrote. Reading a local file
-// the store owns is a different contract -- see InsertLocal.
+// This path stays first-write-wins because its callers do not own the rows they offer: exec
+// parser plugins, `demo` and `share`. A file the store reads itself is a different contract --
+// see InsertLocal, which the sync server writes through as InsertSynced.
 func (s *Store) Insert(ctx context.Context, recs []usage.Record) (int, error) {
 	// restateSignalsSQL only ever fills columns that are still zero, so this path cannot lower
 	// a figure and has nothing to watch.

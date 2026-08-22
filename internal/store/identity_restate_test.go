@@ -120,3 +120,63 @@ func TestInsertLocalCountsADownwardRestatement(t *testing.T) {
 		t.Fatalf("lines_added = %d, want the correction to have landed at 120", lines)
 	}
 }
+
+// TestRestateMovesAStepWithItsRecord: both timestamps come from the same source line, so a
+// timestamp fix that moves a usage row and leaves its steps behind splits one session across
+// two days -- and PruneSteps reads the step's ts, so the horizon would cut the wrong ones.
+func TestRestateMovesAStepWithItsRecord(t *testing.T) {
+	ctx := context.Background()
+	st := openTempStore(t)
+	first := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+	corrected := time.Date(2026, 7, 3, 9, 0, 0, 0, time.UTC)
+
+	step := usage.Step{
+		Tool: "claude-code", SessionID: "s1", Timeline: "s1", DedupeKey: "k1",
+		Timestamp: first, Ordinal: 1, Kind: usage.StepAssistant,
+	}
+	if _, _, err := st.InsertSteps(ctx, []usage.Step{step}); err != nil {
+		t.Fatal(err)
+	}
+	step.Timestamp = corrected
+	if _, _, err := st.InsertSteps(ctx, []usage.Step{step}); err != nil {
+		t.Fatal(err)
+	}
+
+	var ts string
+	row := st.db.QueryRowContext(ctx, `SELECT ts FROM session_step WHERE dedupe_key = 'k1'`)
+	if err := row.Scan(&ts); err != nil {
+		t.Fatal(err)
+	}
+	if ts != corrected.Format(time.RFC3339) {
+		t.Fatalf("step ts = %q, want the re-read's %q so it stays in the same day as its record", ts, corrected.Format(time.RFC3339))
+	}
+}
+
+// TestRestateCorrectsSubpathWithProject: one projectid.Resolve sets both, so correcting the
+// root and keeping a path relative to the old one produces a subpath of a project it never
+// belonged to -- which is exactly what the dashboard drill-down reads.
+func TestRestateCorrectsSubpathWithProject(t *testing.T) {
+	ctx := context.Background()
+	st := openTempStore(t)
+	at := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+
+	first := identityTurn(at, "old-root", "cli", "main")
+	first.Subpath = "old/path"
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{first}); err != nil {
+		t.Fatal(err)
+	}
+	corrected := identityTurn(at, "new-root", "cli", "main")
+	corrected.Subpath = "new/path"
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{corrected}); err != nil {
+		t.Fatal(err)
+	}
+
+	var project, subpath string
+	row := st.db.QueryRowContext(ctx, `SELECT project, subpath FROM usage_record WHERE dedupe_key = 'k1'`)
+	if err := row.Scan(&project, &subpath); err != nil {
+		t.Fatal(err)
+	}
+	if project != "new-root" || subpath != "new/path" {
+		t.Fatalf("stored = (%q, %q), want both corrected together", project, subpath)
+	}
+}

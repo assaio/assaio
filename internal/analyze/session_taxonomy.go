@@ -90,6 +90,7 @@ func (taxonomyValidator) Analyze(in Input) Result {
 	}
 	r.Takeaway = taxonomyTakeaway(conv, editing, total, enough)
 	r.Caveats = []string{
+		"Every share here is of the sessions whose source records an edit count, not of the window's sessions.",
 		"Conversational sessions are real work (design, debugging, planning) -- not idle time.",
 		"A thrash bucket needs per-session rework, which isn't stored yet, so it isn't split out here.",
 	}

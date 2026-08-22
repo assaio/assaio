@@ -24,7 +24,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/usage", s.handleUsage)
 	mux.HandleFunc("GET /{$}", s.handleDashboard)
-	mux.HandleFunc("GET /healthz", s.handleHealthz)
+	mux.HandleFunc("GET "+healthzPath, s.handleHealthz)
 	return s.limit(logRequests(mux))
 }
 
@@ -39,6 +39,10 @@ func logRequests(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+// healthzPath is the one route with no token and no rate limit: an orchestrator's liveness
+// probe, which reads nothing and must not be able to fail because of unrelated traffic.
+const healthzPath = "/healthz"
 
 func (s *Server) handleHealthz(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -71,8 +75,11 @@ type usagePushResult struct {
 // possible writer, so restating one on a re-push is that member correcting their own figure
 // and can never overwrite somebody else's.
 func (s *Server) handleUsage(w http.ResponseWriter, r *http.Request) {
+	// The secret is verified before a byte of the body is read. Authenticating after the
+	// decode would let an unauthenticated caller make the server allocate a whole batch first,
+	// which is the denial-of-service maxUsageBodyBytes exists to bound.
 	presented, ok := bearer(r)
-	if !ok {
+	if !ok || !s.authenticated(presented) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/assaio/assaio/internal/analyze"
 )
@@ -69,13 +70,28 @@ func runMetric(ctx context.Context, cfg Config, in *analyze.Input) (analyze.Resu
 		return analyze.Result{}, nil, err
 	}
 	res, violations, err := parseMetricResult(doc, cfg.Name)
-	if err == nil {
-		// What the core kept out of the envelope travels onto the verdict, so a plugin's
-		// result discloses the same missing input a built-in's would (see analyze.Result.Withheld).
-		res.Withheld = envelope.Withheld
+	if err == nil && len(envelope.Withheld) > 0 {
+		// Deliberately a caveat and not Result.Withheld: that field means "this window could
+		// not supply what the analyzer declared it reads", and this is the opposite -- the
+		// window had it and the plugin did not ask. Putting the second into the first would
+		// make one JSON field carry two contradictory meanings, and recommend.enough already
+		// abstains on a non-empty Withheld.
+		res.Caveats = append(res.Caveats, notRequestedCaveat(cfg.Name, envelope.Withheld))
 	}
 	if err != nil {
 		return analyze.Result{}, violations, fmt.Errorf("metric plugin %s: %w%s", cfg.Name, err, violationSuffix(violations))
 	}
 	return res, nil, nil
+}
+
+// notRequestedCaveat states what the core did not send this plugin, and why. A reader looking
+// at a plugin verdict cannot otherwise tell a metric that read the timeline from one that was
+// never handed it.
+func notRequestedCaveat(name string, withheld []analyze.Capability) string {
+	names := make([]string, len(withheld))
+	for i, c := range withheld {
+		names[i] = string(c)
+	}
+	return "Prov.: the metric plugin " + name + " did not declare " + strings.Join(names, ", ") +
+		" in its `needs:`, so assaio did not send it. This verdict rests on the rest of the envelope."
 }

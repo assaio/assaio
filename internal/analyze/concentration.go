@@ -131,9 +131,16 @@ func concentrationRead(measurable bool) Read {
 func concentrationGapFigure(gap float64, found bool) Figure {
 	f := Figure{Label: "widest spend gap", Value: "—", Note: "tokens minus lines, share points"}
 	if found {
-		f.Value = strconv.FormatFloat(gap*100, 'f', 0, 64) + "pp"
+		f.Value = gapLabel(gap)
 	}
 	return f
+}
+
+// gapLabel renders a difference of two shares in share points. Every surface uses it, so the
+// figure and the sentence beside it cannot render the same quantity in different units -- which
+// they did, "89pp" above "89%", for one release.
+func gapLabel(gap float64) string {
+	return strconv.FormatFloat(gap*100, 'f', 0, 64) + "pp"
 }
 
 // concentrationBars ranks projects by token share, showing the line share beside it so the
@@ -169,7 +176,9 @@ func concentrationTakeaway(measurable, gapFound bool, gap float64) string {
 	case !measurable:
 		return "Only one project has usage this window -- concentration needs at least two to mean anything."
 	default:
+		// Share points, not a percent: the gap is a difference of two shares, and rendering it
+		// as "89%" invites the relative reading the figure above deliberately avoids.
 		return "The widest gap between a project's share of tokens and its share of AI lines is " +
-			humanize.PercentAt(gap, 0) + " -- the project worth asking what those tokens bought. Lines are not value, so a gap is a question, not a fault."
+			gapLabel(gap) + " -- the project worth asking what those tokens bought. Lines are not value, so a gap is a question, not a fault."
 	}
 }

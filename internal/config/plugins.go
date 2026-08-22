@@ -4,10 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strings"
 	"time"
-
-	"github.com/assaio/assaio/internal/analyze"
 )
 
 // pluginNamePattern constrains a plugin's config name, which also becomes its namespace
@@ -54,32 +51,13 @@ func (p PluginConfig) Validate() error {
 }
 
 // ValidateMetric is Validate for an entry under `metrics:`, which is the one kind that may
-// declare what it reads. Kept as a second method rather than a flag on the first so the
-// generic path cannot accidentally accept a key it would then ignore -- silently ignored
-// configuration is how a user ends up sure they asked for something they never got.
+// declare what it reads. It deliberately does not check the capability *names*: that vocabulary
+// belongs to internal/analyze, and having every package that reads a config drag the validator
+// registry in behind it is the dependency this repo points the other way. internal/plugin owns
+// both and checks them there.
 func (p PluginConfig) ValidateMetric() error {
-	needs := p.Needs
 	p.Needs = nil
-	if err := p.Validate(); err != nil {
-		return err
-	}
-	for _, need := range needs {
-		if !analyze.ValidCapability(analyze.Capability(need)) {
-			return fmt.Errorf("unknown need %q (want one of %s)", need, strings.Join(capabilityNames(), ", "))
-		}
-	}
-	return nil
-}
-
-// capabilityNames renders the closed capability set for an error message, read from the
-// registry rather than repeated here.
-func capabilityNames() []string {
-	caps := analyze.Capabilities()
-	names := make([]string, len(caps))
-	for i, c := range caps {
-		names[i] = string(c)
-	}
-	return names
+	return p.Validate()
 }
 
 // TimeoutOrDefault parses Timeout, defaulting to 60s when empty.

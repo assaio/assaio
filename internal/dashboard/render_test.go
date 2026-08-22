@@ -26,7 +26,7 @@ var fixedPseudonymKey = bytes.Repeat([]byte{0x5a}, 32)
 // TestMain gives every test in this package a hermetic, fixed data directory. Dashboard
 // tests call Build/RenderHTML directly rather than through the CLI's own per-test
 // XDG_DATA_HOME convention, and pseudonym.For now persists a per-install secret to
-// disk (see internal/report/anonymize.go) -- without this, tests would read and write the
+// disk (see internal/pseudonym/pseudonym.go) -- without this, tests would read and write the
 // real user's data directory, and golden-file comparisons would depend on whatever key
 // happened to already be there.
 func TestMain(m *testing.M) {
@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 	if err := os.MkdirAll(dataDir, 0o750); err != nil {
 		panic(err)
 	}
-	// The filename must match internal/report/anonymize.go's own pseudonymKeyFilename;
+	// The filename must match internal/pseudonym/pseudonym.go's own pseudonymKeyFilename;
 	// duplicated here rather than exported since it is a test-only seam.
 	keyPath := filepath.Join(dataDir, "pseudonym.key")
 	if err := os.WriteFile(keyPath, fixedPseudonymKey, 0o600); err != nil {

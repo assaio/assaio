@@ -44,7 +44,7 @@ handshake (`{"assaio_rule":1,"name":"<name>"}`) followed by exactly one JSON doc
 - **Not in `analyze`, not on the server.** `analyze` stays a per-validator report and its
   `--format json` array stays exactly the metric-plugin `Result` contract; folding alerts
   in would either reshape that public surface or print in text what JSON omits. The team
-  server executes no config-declared subprocess per unauthenticated request, as in ADR
+  server executes no config-declared subprocess per served request, as in ADR
   0004.
 - **Pre-1.0 instability is explicit.** Envelope and alerts are versioned; a release that
   changes either must say so (RELEASING.md), the same stance as the SQLite schema.

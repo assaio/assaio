@@ -12,7 +12,14 @@ import (
 // (ADR 0013). Every field added before it was additive, so the version stayed at 1 through
 // v0.17 and v0.21; a newly required output field has to be a version a plugin can branch on,
 // or its only signal is a contract violation naming a field it has never heard of.
-const metricInputVersion = 2
+//
+// v3 is the second: `trace` is now sent only to a plugin whose config declares `needs: [trace]`
+// (B168). A plugin built against v2 read the timeline unconditionally, so leaving the version
+// alone would have had it report "no sequences" over a full store -- a wrong number with no
+// error attached, which is the failure mode this project refuses. Bumping makes the handshake
+// fail loudly instead, naming the version, so the fix is a config line rather than a
+// mystery.
+const metricInputVersion = 3
 
 // MetricProtocolVersion is metricInputVersion for the published-docs check, so a recipe and the
 // runtime cannot disagree about which handshake a plugin must emit.

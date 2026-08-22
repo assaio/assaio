@@ -167,7 +167,7 @@ else:
                      else "A meaningful share of usage falls outside the working week."),
     }
 
-print(json.dumps({"assaio_metric": 2, "name": "weekday-split"}))
+print(json.dumps({"assaio_metric": 3, "name": "weekday-split"}))
 print(json.dumps(result))
 ```
 
@@ -221,7 +221,7 @@ else:
         "takeaway": "Edit size is measurable in this window.",
     }
 
-print(json.dumps({"assaio_metric": 2, "name": "edit-size"}))
+print(json.dumps({"assaio_metric": 3, "name": "edit-size"}))
 print(json.dumps(result))
 ```
 

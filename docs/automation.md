@@ -221,7 +221,7 @@ assaio-agent serve --addr :8787 --token "$ASSAIO_SERVER_TOKEN"   # behind a TLS 
 ```
 
 The server collects pushed usage and serves the aggregated, always-anonymized team
-dashboard at `/`. It is a deliberate MVP (one shared token, no TLS of its own — run it
+dashboard at `/`. It is a deliberate MVP (no TLS of its own — run it
 behind a reverse proxy on a trusted network); see the server package doc and `ROADMAP.md`
 for the hardening path (per-member auth, retention, resumable sync).
 

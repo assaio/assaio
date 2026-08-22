@@ -40,7 +40,7 @@ assaio-agent runtime inspect --vllm-file vllm.prom --dcgm-file dcgm.prom
 
 `--vllm-url` and `--vllm-file` are mutually exclusive, as are the DCGM pair: a live endpoint and
 a saved snapshot are two different claims about where a number came from. Either source may be
-used alone. `--format json` prints the same content as a stable document.
+used alone. `--format json` prints the same content as a deterministic document -- the same input encodes the same way -- and not as a frozen contract while the demand gate is open.
 
 Bounds are flags, not hidden defaults: `--timeout` (5s), `--max-bytes` (8 MiB), `--max-redirects`
 (2; `0` forbids redirects entirely). The request is a plain GET with no header, body or

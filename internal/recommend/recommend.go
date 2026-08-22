@@ -41,9 +41,6 @@ var statuses = []Status{
 // ValidStatus reports whether s is one this build understands.
 func ValidStatus(s Status) bool { return slices.Contains(statuses, s) }
 
-// Statuses returns the closed set, for the registries that publish it.
-func Statuses() []Status { return slices.Clone(statuses) }
-
 // Record is one proposed experiment, complete enough to be judged before it is run and
 // checked after.
 type Record struct {

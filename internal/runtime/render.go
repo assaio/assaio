@@ -25,7 +25,11 @@ func RenderText(w io.Writer, s *Snapshot) error {
 		return err
 	}
 	if s.Error != "" {
-		if _, err := fmt.Fprintf(w, "  could not read it: %s\n", s.Error); err != nil {
+		prefix := "  partly read: "
+		if s.Availability == AvailabilityUnreachable {
+			prefix = "  could not read it: "
+		}
+		if _, err := fmt.Fprintf(w, "%s%s\n", prefix, s.Error); err != nil {
 			return err
 		}
 	}
@@ -77,6 +81,9 @@ func renderFinding(w io.Writer, f *Finding) error {
 	head := "  · " + f.Key + " (" + f.Metric + ")"
 	if f.Unit != "" {
 		head += " in " + f.Unit
+		if f.UnitSource != "" {
+			head += " (unit from " + f.UnitSource + ")"
+		}
 	}
 	if _, err := fmt.Fprintln(w, head); err != nil {
 		return err
@@ -94,15 +101,21 @@ func renderFinding(w io.Writer, f *Finding) error {
 	return nil
 }
 
-// renderMissing names what this deployment does not expose. Unavailable is never zero: a
-// metric nobody published is not a metric measured at zero, and the difference decides whether
-// a reader goes looking for a configuration flag or concludes their GPUs are idle.
+// renderMissing names what this read did not find. Unavailable is never zero: a metric nobody
+// published is not a metric measured at zero, and the difference decides whether a reader goes
+// looking for a configuration flag or concludes their GPUs are idle. A read that failed makes
+// no claim about the deployment at all, and gets its own heading -- "unavailable here" would be
+// an availability statement derived from never having looked.
 func renderMissing(w io.Writer, s *Snapshot) error {
 	missing := s.Missing()
 	if len(missing) == 0 {
 		return nil
 	}
-	if _, err := fmt.Fprintf(w, "\n  unavailable here -- not zero, not measured (%d):\n", len(missing)); err != nil {
+	heading := "\n  unavailable here -- not zero, not measured (%d):\n"
+	if s.Availability == AvailabilityUnreachable {
+		heading = "\n  not established -- the source could not be read, so nothing below is a fact about the deployment (%d):\n"
+	}
+	if _, err := fmt.Fprintf(w, heading, len(missing)); err != nil {
 		return err
 	}
 	for i := range missing {

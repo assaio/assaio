@@ -345,7 +345,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
           <span class="qt">adoption</span>
         </div>
       </div>
-      <p class="more"><span data-claim="validators.count">Twenty-one</span> reads in all, each one file in the codebase, each printing a directional verdict with its caveat rather than a bare score — and each able to be recomputed over just the sessions you labelled a given kind of work, so <code>$</code>/100 lines on bugfixes stops being averaged in with greenfield features.</p>
+      <p class="more"><span data-claim="validators.count">Twenty-one</span> reads in all, each one file in the codebase, each printing a figure with its caveat, and a verdict only where the line behind it is derived from your own data, cited, or set by you — and each able to be recomputed over just the sessions you labelled a given kind of work, so <code>$</code>/100 lines on bugfixes stops being averaged in with greenfield features.</p>
     </div>
   </section>
 
@@ -358,15 +358,15 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         consumption and <code>/insights</code> for a local 30-day report; Copilot and Claude
         Code analytics publish adoption, accepted lines and cost per commit. They are good, and
         for one vendor over the last few weeks they are often enough. These are the questions
-        they structurally cannot answer — measured against one real machine, a store of 178,254
-        records over 52 days.
+        they structurally cannot answer — measured against one real machine, a store of 178,254 records
+        over 52 days, in August 2026.
       </p>
       <div class="tbl">
         <table>
           <thead><tr><th></th><th>a built-in local report</th><th>assaio</th></tr></thead>
           <tbody>
             <tr><td>how far back</td><td>30 days, and only what the tool still keeps</td><td><span class="g">everything ingested — 22 of those 52 days are older than the source's own retention</span></td></tr>
-            <tr><td>how much of it</td><td>a capped sample of sessions per run</td><td>every session in the store</td></tr>
+            <tr><td>how much of it</td><td>a capped sample of sessions per run</td><td>every session the store holds</td></tr>
             <tr><td>how it is produced</td><td>a model summarizes the sessions</td><td><span class="g">computed from the records — same window, same number</span></td></tr>
             <tr><td>which tools</td><td>one vendor</td><td><span data-claim="sources.count">five</span>, normalized onto one cost basis</td></tr>
             <tr><td>what moved</td><td>a snapshot</td><td><code>digest</code>, which also says when two runs are not comparable</td></tr>
@@ -416,35 +416,35 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
     <div class="wrap">
       <div class="sec-head"><h2><span data-claim="validators.count">Twenty-one</span> reads, one faceplate</h2><p class="eyebrow">analyze</p></div>
       <p class="intro">
-        <code>analyze</code> prints a directional verdict for each dimension, always with its
+        <code>analyze</code> prints a directional read for each dimension, always with its
         caveat and always with <strong>what it rests on</strong>: how much of your window the
         figure actually reaches, how many observations are behind it, how fresh the data is,
         and which build read it. A thin read cannot be quoted as a solid one.
       </p>
       <div class="plate mini" id="plate">
-        <div class="cell"><span class="cn">Model fit</span><span class="cv watch">Watch</span><div class="bar"><i data-p=".2"></i></div></div>
-        <div class="cell"><span class="cn">Model right-sizing</span><span class="cv">Right-sized</span><div class="bar"><i data-p=".75"></i></div></div>
-        <div class="cell"><span class="cn">Context health</span><span class="cv">Healthy</span><div class="bar"><i data-p=".9"></i></div></div>
+        <div class="cell"><span class="cn">Model fit</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
+        <div class="cell"><span class="cn">Model right-sizing</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
+        <div class="cell"><span class="cn">Context health</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
         <div class="cell"><span class="cn">Adoption</span><span class="cv">Strong</span><div class="bar"><i data-p=".82"></i></div></div>
-        <div class="cell"><span class="cn">Cache hygiene</span><span class="cv">Efficient</span><div class="bar"><i data-p="1"></i></div></div>
-        <div class="cell"><span class="cn">Turn efficiency</span><span class="cv watch">Watch</span><div class="bar"><i data-p=".35"></i></div></div>
-        <div class="cell"><span class="cn">Throughput</span><span class="cv watch">Watch</span><div class="bar"><i data-p=".4"></i></div></div>
-        <div class="cell"><span class="cn">Rework</span><span class="cv">Low</span><div class="bar"><i data-p=".93"></i></div></div>
-        <div class="cell"><span class="cn">Reasoning share</span><span class="cv">Lean</span><div class="bar"><i data-p=".85"></i></div></div>
+        <div class="cell"><span class="cn">Cache hygiene</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
+        <div class="cell"><span class="cn">Turn efficiency</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
+        <div class="cell"><span class="cn">Throughput</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
+        <div class="cell"><span class="cn">Rework</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
+        <div class="cell"><span class="cn">Reasoning share</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
         <div class="cell"><span class="cn">Session taxonomy</span><span class="cv neutral">Chat-led</span><div class="bar"><i data-p=".55"></i></div></div>
         <div class="cell"><span class="cn">Coverage</span><span class="cv">Solid</span><div class="bar"><i data-p="1"></i></div></div>
         <div class="cell"><span class="cn">Subscription fit</span><span class="cv">Paying off</span><div class="bar"><i data-p="1"></i></div></div>
-        <div class="cell"><span class="cn">Burn anomaly</span><span class="cv">No spikes</span><div class="bar"><i data-p=".95"></i></div></div>
-        <div class="cell"><span class="cn">Spend concentration</span><span class="cv neutral">Spread</span><div class="bar"><i data-p=".6"></i></div></div>
-        <div class="cell"><span class="cn">Explore vs produce</span><span class="cv">Balanced</span><div class="bar"><i data-p=".7"></i></div></div>
-        <div class="cell"><span class="cn">Friction</span><span class="cv">Low</span><div class="bar"><i data-p=".88"></i></div></div>
-        <div class="cell"><span class="cn">Work rhythm</span><span class="cv neutral">Mostly hours</span><div class="bar"><i data-p=".65"></i></div></div>
-        <div class="cell"><span class="cn">Skill economics</span><span class="cv">Proportionate</span><div class="bar"><i data-p=".8"></i></div></div>
+        <div class="cell"><span class="cn">Burn anomaly</span><span class="cv">Steady</span><div class="bar"><i data-p=".95"></i></div></div>
+        <div class="cell"><span class="cn">Spend concentration</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
+        <div class="cell"><span class="cn">Explore vs produce</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
+        <div class="cell"><span class="cn">Friction</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
+        <div class="cell"><span class="cn">Work rhythm</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
+        <div class="cell"><span class="cn">Skill economics</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
         <div class="cell"><span class="cn">Task intent</span><span class="cv neutral">Building</span><div class="bar"><i data-p=".45"></i></div></div>
         <div class="cell"><span class="cn">Edit loops</span><span class="cv watch">Watch</span><div class="bar"><i data-p=".38"></i></div></div>
-        <div class="cell"><span class="cn">Recovery</span><span class="cv">Contained</span><div class="bar"><i data-p=".78"></i></div></div>
+        <div class="cell"><span class="cn">Recovery</span><span class="cv neutral">REPORTED</span><div class="bar"><i data-p=".5"></i></div></div>
       </div>
-      <p class="more">A reasoning share read off under 1% of your output says so instead of reporting <b>high</b>; a metric nothing in the window can answer reads <b>insufficient</b> rather than confident, and names <em>which</em> nothing it hit — a window that cannot answer, a genuine count of zero, or a plugin that never declared what it rests on. Write your own <b>metric plugin</b> in any language and it renders right beside the built-ins, carrying the same envelope.</p>
+      <p class="more"><b>Most cells read <code>REPORTED</code>, and that is the point.</b> A verdict needs a line, and a line needs an authority — derived from your own data, cited from a published definition, or set by you. Fourteen of these had none, so they print the figure and refuse the grade; the gauge sits at half rather than implying a middling score. The five that still judge earn it: adoption and coverage from definitions, burn-anomaly and edit-loops from your window's own median and spread, subscription-fit from the plan price you configured. A reasoning share read off under 1% of your output says so instead of reporting <b>high</b>; a metric nothing in the window can answer reads <b>insufficient</b> rather than confident, and names <em>which</em> nothing it hit. Write your own <b>metric plugin</b> in any language and it renders right beside the built-ins, carrying the same envelope.</p>
     </div>
   </section>
 
@@ -552,7 +552,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <li>The price table is flat per model — long-context premiums aren't modeled yet, so heavy-context sessions under-estimate.</li>
         <li>A model missing from the table renders <code>—</code> (JSON <code>null</code>, CSV blank, excluded from totals) — never a faked <code>$0</code>. <code>doctor</code> prints every caveat on each run.</li>
       </ul>
-      <p class="more">More sources — opencode, Aider, Qwen, Roo &amp; Kilo Code — are on the roadmap and buildable out-of-tree today.</p>
+      <p class="more">More sources — opencode, Aider, Qwen, Roo &amp; Kilo Code — are ranked candidates in BACKLOG.md and buildable out-of-tree today.</p>
     </div>
   </section>
 
@@ -580,7 +580,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="cmd"><b><span data-claim="command.statusline">statusline</span></b><span>One ambient line for your status bar: today's tokens, AI lines, cost basis and data age. Read-only, never fails loudly.</span></div>
         <div class="cmd"><b><span data-claim="command.serve">serve</span> · <span data-claim="command.sync">sync</span></b><span>Self-hosted team server and the push to it — pseudonymous by default, on infrastructure you control.</span></div>
         <div class="cmd"><b><span data-claim="command.doctor">doctor</span> · <span data-claim="command.status">status</span></b><span>Detected tools, resolved log roots, store size, the per-source depth matrix, and format-drift canaries. <code>doctor --strict</code> exits non-zero on suspected drift — for cron.</span></div>
-        <div class="cmd"><b><span data-claim="command.runtime">runtime</span></b><span><b>Experimental.</b> <code>runtime inspect</code> reads what a <em>self-hosted</em> vLLM or NVIDIA DCGM endpoint publishes: one snapshot, read-only, nothing stored, no cost model and no GPU advice. A hosted vendor's accelerators stay unknown — no local signal reveals them. <a href="/docs/runtime-inspect">What it can and cannot see →</a></span></div>
+        <div class="cmd"><b><span data-claim="command.runtime">runtime</span></b><span><b>Experimental.</b> <code>runtime inspect</code> reads what a <em>self-hosted</em> vLLM or NVIDIA DCGM endpoint publishes: one snapshot, read-only, nothing stored, no cost model and no GPU advice. A hosted vendor's accelerators stay unknown — no local signal reveals them. It sits behind a demand gate and <b>may be removed</b> if no self-hosted user finds a recurring decision it answers. <a href="/docs/runtime-inspect">What it can and cannot see →</a></span></div>
         <div class="cmd"><b><span data-claim="command.docs">docs</span></b><span>Everything this binary can enumerate about itself — signals, sources, validators, commands, settings, the plugin protocol — as JSON or as a page. The <a href="/docs/reference">published reference</a> is generated from it, and a check fails the build when this site and the binary disagree.</span></div>
         <div class="cmd"><b><span data-claim="command.plugins">plugins</span> · <span data-claim="command.metrics">metrics</span></b><span><code>list</code> / <code>verify</code> out-of-tree exec parser, metric and rule plugins — nothing stored.</span></div>
         <div class="cmd"><b><span data-claim="command.config">config</span> · <span data-claim="command.clear">clear</span> · <span data-claim="command.compact">compact</span></b><span>Print the effective config; delete stored data with an explicit scope and <code>--yes</code>; return freed pages to the filesystem.</span></div>
@@ -627,7 +627,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
       <div class="sec-head"><h2>Install</h2><p class="eyebrow">single static binary</p></div>
       <div class="installs">
         <div class="inst"><span class="il">Homebrew · macOS &amp; Linux</span><pre>brew install assaio/tap/assaio-agent</pre></div>
-        <div class="inst"><span class="il">Go 1.25+</span><pre>go install github.com/assaio/assaio/cmd/assaio-agent@latest</pre></div>
+        <div class="inst"><span class="il">Go 1.25+ (release toolchain 1.26.6)</span><pre>go install github.com/assaio/assaio/cmd/assaio-agent@latest</pre></div>
         <div class="inst"><span class="il">Manual · mac · Linux · Windows</span><pre>tar xzf assaio_&lt;ver&gt;_&lt;os&gt;_&lt;arch&gt;.tar.gz   # from Releases
 install assaio-agent /usr/local/bin/</pre><p class="ip">amd64 &amp; arm64. Every artifact ships checksums and a build-provenance attestation — verify with <code>gh attestation verify</code>.</p></div>
         <div class="inst"><span class="il">First run</span><pre>assaio-agent init       # detect, disclose, import, report

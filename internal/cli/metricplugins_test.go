@@ -13,7 +13,7 @@ import (
 const goodMetricScript = `#!/bin/sh
 cat >/dev/null
 touch "${0%.sh}.ran"
-echo '{"assaio_metric":2,"name":"demo"}'
+echo '{"assaio_metric":3,"name":"demo"}'
 echo '{"title":"Demo Metric","layer":"activity","read":{"key":"watch","label":"WATCH"},"purity":0.4,"howToRead":"Directional demo.","figures":[{"label":"x","value":"1"}],"takeaway":"Demo takeaway."}'
 `
 

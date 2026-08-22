@@ -104,11 +104,18 @@ func inspectSource(ctx context.Context, s *runtimeSource, lim runtime.FetchLimit
 	if err != nil {
 		return runtime.Unreachable(s.name, origin, err.Error(), s.catalog, now)
 	}
-	doc, err := openmetrics.Parse(bytes.NewReader(body), openmetrics.Limits{})
-	if err != nil {
-		return runtime.Unreachable(s.name, origin, "the exposition could not be parsed: "+err.Error(), s.catalog, now)
+	doc, parseErr := openmetrics.Parse(bytes.NewReader(body), openmetrics.Limits{})
+	if parseErr != nil {
+		// The endpoint answered; a line it could not read is not a source it could not reach.
+		// Parse returns what it did read alongside the error, and Truncated is what makes every
+		// absence below unproven -- renderIntegrity states that before listing them.
+		doc.Truncated = true
 	}
-	return runtime.Inspect(s.name, origin, doc, s.catalog, now)
+	snapshot := runtime.Inspect(s.name, origin, doc, s.catalog, now)
+	if parseErr != nil {
+		snapshot.Error = "the exposition is only partly readable: " + parseErr.Error()
+	}
+	return snapshot
 }
 
 func readSource(ctx context.Context, s *runtimeSource, lim runtime.FetchLimits) (origin string, body []byte, err error) {

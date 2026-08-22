@@ -122,7 +122,7 @@ func randomSecret() []byte {
 	k := make([]byte, keySize)
 	if _, err := rand.Read(k); err != nil {
 		// The OS CSPRNG failing has no safe fallback source of randomness.
-		panic("report: crypto/rand unavailable: " + err.Error())
+		panic("pseudonym: crypto/rand unavailable: " + err.Error())
 	}
 	return k
 }

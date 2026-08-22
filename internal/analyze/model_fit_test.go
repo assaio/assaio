@@ -74,3 +74,18 @@ func TestModelFitNoUnknownTokensOmitsUnpricedFigure(t *testing.T) {
 		}
 	}
 }
+
+// TestLinesPerMTokWithholdsATrivialBase is the artifact the shipped golden printed: 5,298,857
+// lines per million tokens off a 3.5K-token base, beside a real 6,386 -- an 830x contrast that
+// is a property of the denominator, under a line suggesting the cheaper model is the bargain.
+func TestLinesPerMTokWithholdsATrivialBase(t *testing.T) {
+	if got := linesPerMTok(18_500, 3_500); got != "—" {
+		t.Fatalf("linesPerMTok(18500, 3500) = %q, want a withheld rate off a trivial base", got)
+	}
+	if got := linesPerMTok(0, 0); got != "—" {
+		t.Fatalf("linesPerMTok(0, 0) = %q, want a dash", got)
+	}
+	if got := linesPerMTok(6_000, 1_000_000); got == "—" {
+		t.Fatal("a rate over a million tokens was withheld")
+	}
+}
