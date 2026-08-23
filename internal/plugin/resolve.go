@@ -27,6 +27,13 @@ func resolve(pc config.PluginConfig, validate func() error) (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("plugin %s: invalid timeout %q: %w", pc.Name, pc.Timeout, err)
 	}
+	// Every check on what the config *says* runs before the one that touches the filesystem:
+	// a typo'd capability is the same mistake whether or not the command happens to exist, and
+	// reporting the missing binary first hides it behind an error about a different line.
+	needs, err := capabilities(pc)
+	if err != nil {
+		return Config{}, fmt.Errorf("plugin %s: %w", pc.Name, err)
+	}
 
 	command := pc.Command
 	if !filepath.IsAbs(command) {
@@ -35,11 +42,6 @@ func resolve(pc config.PluginConfig, validate func() error) (Config, error) {
 			return Config{}, fmt.Errorf("plugin %s: command %q not found: %w", pc.Name, command, err)
 		}
 		command = resolved
-	}
-
-	needs, err := capabilities(pc)
-	if err != nil {
-		return Config{}, fmt.Errorf("plugin %s: %w", pc.Name, err)
 	}
 	return Config{Name: pc.Name, Command: command, Timeout: timeout, Needs: needs}, nil
 }

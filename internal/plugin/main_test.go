@@ -31,7 +31,13 @@ func tracingPlugin() Config {
 	return Config{Name: "test", Needs: []analyze.Capability{analyze.CapTrace}}
 }
 
-// pluginNeeding builds a config entry declaring one need, for the boundary tests.
+// pluginNeeding builds a config entry declaring one need, for the boundary tests. The command
+// is this test binary itself: it exists on every platform the suite runs on, which a hardcoded
+// /bin/echo does not -- that spelling passed on macOS and Linux and failed the Windows job.
 func pluginNeeding(need string) config.PluginConfig {
-	return config.PluginConfig{Name: "p", Command: "/bin/echo", Needs: []string{need}}
+	self, err := os.Executable()
+	if err != nil {
+		self = os.Args[0]
+	}
+	return config.PluginConfig{Name: "p", Command: self, Needs: []string{need}}
 }
