@@ -18,7 +18,8 @@ metric plugin is any executable that, invoked as `<command> analyze` with
 `Input` bundle every built-in validator reads (usage, sessions, delegation, byModel,
 byProject, totals, prices, answers, windowStart, planMonthlyCost, skills, agents, turnSizing,
 cacheMisses), versioned as `assaio_metric_input: 1` — and writes to
-stdout a one-line handshake (`{"assaio_metric":1,"name":"<name>"}`) followed by exactly
+stdout a one-line handshake (`{"assaio_metric":<version>,"name":"<name>"}` — `1` when this
+ADR was written, `3` since v0.24) followed by exactly
 one JSON `Result` document, in the same shape `analyze --format json` emits.
 
 - **The contract is the data format, not a Go API** — both sides of it are shapes

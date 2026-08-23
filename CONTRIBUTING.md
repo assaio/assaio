@@ -199,9 +199,10 @@ larger one.
   organizational, so in-tree rules are not a surface we ship; the in-process
   `plugin/rule/` tree stays roadmap (`ROADMAP.md`).
 
-If your change alters the data schema or a plugin protocol, follow the
-versioning/compatibility policy (semver + deprecation window), call it out in the PR,
-and remember release notes must flag it (see `RELEASING.md`).
+If your change alters the data schema or a plugin protocol, read
+[docs/compatibility.md](docs/compatibility.md) — it says which contracts freeze at `v1.0` and
+which deliberately do not. Pre-1.0 a minor release may break any of them, so call it out in the
+PR and remember release notes must flag it under **Breaking** (see `RELEASING.md`).
 
 ---
 

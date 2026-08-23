@@ -21,6 +21,9 @@ Where everything lives, in one place.
   flag, config key and protocol field this build has, from its own registries. `make docs`
   rewrites it and `make test` fails when it and the binary disagree, which is also what keeps
   [assaio.dev/docs/reference](https://assaio.dev/docs/reference) from falling behind.
+- [`runtime-inspect.md`](runtime-inspect.md) — the experimental self-hosted vLLM/DCGM
+  snapshot: what it can and cannot see, and the gate that decides whether it survives.
+- [`automation.md`](automation.md) — running assaio from cron, launchd, CI, or a status line.
 - [`reconcile.md`](reconcile.md) — checking the `$` estimate against a vendor's own
   billing or usage export, offline: how columns bind, how to read the unexplained delta,
   and what no export can answer.

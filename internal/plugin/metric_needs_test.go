@@ -91,3 +91,15 @@ func TestAnUnknownNeedIsRejectedAtTheConfigBoundary(t *testing.T) {
 		t.Fatalf("Resolve error = %v, want it to reject an unknown need", err)
 	}
 }
+
+// TestAPluginIsToldWhatItWasNotSent: without this the verdict of a plugin that never received
+// the timeline is indistinguishable from one that read it and found nothing.
+func TestAPluginIsToldWhatItWasNotSent(t *testing.T) {
+	in := tracedInput()
+	if !strings.Contains(notRequestedCaveat("quiet", buildMetricInput(&in, Config{Name: "quiet"}).Withheld), "trace") {
+		t.Fatal("the caveat does not name the withheld capability")
+	}
+	if got := notRequestedCaveat("quiet", nil); !strings.Contains(got, "quiet") {
+		t.Fatalf("caveat = %q, want the plugin named", got)
+	}
+}

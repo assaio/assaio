@@ -141,8 +141,9 @@ reshapes it says so explicitly (see `RELEASING.md`).
 **stdout** — a one-line handshake, then exactly **one** JSON `Result` document
 (pretty-printed is fine; anything after it is a violation):
 
-1. `{"assaio_metric": 3, "name": "<name>"}` — version must be `1`, `name` must equal
-   the configured name.
+1. `{"assaio_metric": 3, "name": "<name>"}` — version must be `3` (it was `2` before v0.24;
+   see the breaking change in [CHANGELOG.md](../../CHANGELOG.md)), `name` must equal the
+   configured name.
 2. One `Result` in the same shape `analyze --format json` emits — see [What a validator
    returns: Result](metric-validator.md#what-a-validator-returns-result). The wire `name` field is ignored:
    assaio always stamps `plugin:<name>`, so a plugin can never shadow a built-in

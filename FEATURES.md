@@ -99,9 +99,9 @@ same questions as one that reports both. Every source therefore publishes its **
 |------|-------|-------|---------------|-------------------------------|---------------------------------|
 | Claude Code | v0.1 | **deep** | ✔ (incl. sub-agent turns) | ✔ full, incl. rejections | ✔ |
 | OpenAI Codex CLI | v0.1 | standard | ✔ (exact, delta-based) | ✔ except rejections; since v0.13 a created file contributes its lines, which it did not before | — |
-| Gemini CLI | v0.1 | standard | ✔ | — (cost only, see ROADMAP) | — |
+| Gemini CLI | v0.1 | standard | ✔ | — (cost only; `B39` / `B72` in [BACKLOG.md](BACKLOG.md)) | — |
 | GitHub Copilot CLI | v0.6 | standard | ✔ (exact, per model, incl. reasoning) | ✔ lines added/removed per session; edit and tool-call counts are in the log but not extracted yet ([audit](docs/extending/source-fields.md)) | — |
-| Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (cost only, see ROADMAP) | — |
+| Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (cost only; `B39` / `B72` in [BACKLOG.md](BACKLOG.md)) | — |
 | Exec parser plugins | v0.1 | declared per record | ✔ (validated at the boundary) | — (protocol carries tokens only) | — |
 
 - **deep** — tokens, per-turn activity, and the labels that say what the work was.

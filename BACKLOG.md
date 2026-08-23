@@ -836,7 +836,10 @@ they wait behind features but keep the growing metric surface maintainable.
   check on the document, not a verdict about anyone's data.
 - [ ] **B116 · `model` is the one column a re-read still cannot correct** — S · solo — the rest
   of this item shipped in v0.24: `ts`, `project`, `subpath`, `entrypoint` and `git_branch` now
-  follow the rule `granularity` answered yes to, `session_step.ts` and `kind` move with them, and
+  follow the rule `granularity` answered yes to — **and the downward watch does not cover them**:
+  `lowerRestateSQL` reads the thirteen activity counters only, so a parser regression on those
+  five is writable and uncounted, where the fill-only rules made it unwritable. Widening the
+  predicate (or renaming the counter to "restated") is part of this item now, `session_step.ts` and `kind` move with them, and
   ingest counts the rows a re-read moves *down* so a corrected rule and a parser regression are
   no longer indistinguishable from the store's side. What is left is `model`, which is still
   fill-only — `CASE WHEN model = '' THEN ? ELSE model END` — because a source can legitimately
@@ -901,7 +904,9 @@ file-size norm.
   reads, so a retention rule has to answer what a five-year cost trend is worth against a store
   nobody can carry. Deciding that is the work; the size is not in dispute.
   **v0.24 made it visible without deciding it**: `doctor` projects the store's own measured
-  growth (3.2 MB/day → 1.1 GB/year on the maintainer's store) and takes `--db`, so the central
+  growth from live bytes (2.9 MB/day → at most 1.0 GB/year on the maintainer's store, stated as
+  an upper bound because the rate averages the horizon-bounded timeline with this table) and
+  takes `--db`, so the central
   store an operator cannot walk over to is diagnosable. What remains is the decision this item
   is named for -- what to keep, at what resolution, for how long -- which is a policy, not a
   line of SQL.

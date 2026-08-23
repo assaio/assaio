@@ -12,7 +12,7 @@ recommendation* cannot have its final link be prose.
 
 The risk is asymmetric. A recommendation magnifies whatever error sits under it: a precise
 action derived from a biased baseline is worse than a missing metric, because it moves someone.
-That is why this ADR lands in the same release as the trust reset that withdrew thirteen
+That is why this ADR lands in the same release as the trust reset that withdrew fourteen
 unsourced verdicts (`B177`) and fixed the recovery baseline (`B175`) — advice built on those
 would have inherited them.
 
@@ -52,6 +52,15 @@ every earlier record unable to say which of these it had been.
 `analyze` published for the same window, so a recommendation and the report can never disagree
 about the same figure.
 
-**The first families are about assaio's own evidence.** Pricing coverage and capture gaps come
-before advice about how someone works — an engine that recommends changing a workflow while its
-own cost basis is missing a fifth of the window has the order backwards.
+**The first families are about assaio's own evidence.** Pricing coverage comes before advice
+about how someone works — an engine that recommends changing a workflow while its own cost basis
+is missing a fifth of the window has the order backwards. That ordering is explicit in
+`familyOrder`, not alphabetical: a reader acts on what is at the top.
+
+**A family that cannot state its condition honestly does not ship.** A capture-gap family — "part
+of this window was read by a build that captured less, run `backfill`" — was written twice and
+withdrawn twice before release, because the coverage ratio it needed does not exist on a
+`Result`: the only available denominator counts every tool call, including those from sources
+that structurally record no failure, so on a two-tool store it fired on a gap no backfill can
+close. Shipping a third guess would have made the one recommendation carrying a checkable
+follow-up the one that never checks out.

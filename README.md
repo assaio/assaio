@@ -82,8 +82,8 @@ and needs no network at all.
 Full detail, including the exact fields extracted: [PRIVACY.md](PRIVACY.md).
 
 **The optional team server** (`serve` + `sync`) pools a team's usage on infrastructure you
-stand up. It is the one piece that uses the network — the guarantee above is about the local
-analysis. Team views stay aggregated and pseudonymized by default, and the per-member row shows
+stand up. It and the experimental `runtime inspect` are the only commands that touch the network, and
+only when you invoke them — the guarantee above is about the local analysis. Team views stay aggregated and pseudonymized by default, and the per-member row shows
 engagement only — output and spend are the team's. Nothing is ranked per named individual:
 `--by member` is refused rather than caveated, in table, JSON and CSV alike, and member names
 leave `report` as stable pseudonyms in every format — `--identify` is the one way to export raw
@@ -245,7 +245,7 @@ would be the easiest way to lie with this tool.
 |-----------|------------|------------------|
 | **Adoption** | Tool mix, sessions, and sub-agent delegation. | Session logs; sub-agent token usage is now counted (it used to be invisible — a correctness fix). |
 | **Effect** | AI lines added and removed. | Counted from the `+`/`-` markers in diff hunks. **The code text itself is never read or stored** — only the line counts. |
-| **Efficiency** | **`$` per 100 AI lines** — the headline. | Priced cost ÷ AI lines added, shown per 100 lines. Unpriced models stay an honest blank. |
+| **Efficiency** | **`$` per 100 AI lines** — a directional diagnostic, never the headline. | Priced cost ÷ AI lines added, shown per 100 lines. Unpriced models stay an honest blank. |
 | **Friction** | Edits, and rejections. | Edit/Write tool-calls, plus proposals the human declined (`REJ`). |
 
 **Not measured yet** — these need correlation with your git history and issue tracker, the

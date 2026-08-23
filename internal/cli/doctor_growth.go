@@ -44,7 +44,9 @@ func growthLine(ctx context.Context, st *store.Store, now time.Time) string {
 	return fmt.Sprintf("%s live over %.0f day(s) since %s = %s/day.\n"+
 		"              At most %s/year, and likely less: that rate averages the step timeline, which\n"+
 		"              stops growing at its horizon, together with the usage table, which does not.\n"+
-		"              An upper bound, not an estimate -- and one old record sets the span it divides by.",
+		"              An upper bound, not an estimate. One old record sets the span it divides by, and\n"+
+		"              `clear --older-than` can raise this figure rather than lower it -- it shortens the\n"+
+		"              span faster than it frees bytes, because the timeline was already horizon-bounded.",
 		humanize.Bytes(live), days, oldest.UTC().Format("2006-01-02"),
 		humanize.Bytes(int64(perDay)), humanize.Bytes(int64(perDay*365)))
 }

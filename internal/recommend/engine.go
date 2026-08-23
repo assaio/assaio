@@ -68,13 +68,30 @@ func From(e *Evidence) []Record {
 			out = append(out, *r)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool {
+	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Family != out[j].Family {
-			return out[i].Family < out[j].Family
+			return familyRank(out[i].Family) < familyRank(out[j].Family)
 		}
 		return out[i].ID < out[j].ID
 	})
 	return out
+}
+
+// familyOrder is the order a reader meets these in, and it is not alphabetical. Advice about
+// assaio's own evidence comes before advice about how somebody works: an engine that recommends
+// changing a workflow while its own cost basis is missing a fifth of the window has it backwards
+// (ADR 0015). A reader acts on what is at the top, so the ordering is the claim.
+var familyOrder = []string{"pricing-coverage", "premium-small-turns"}
+
+// familyRank places a family, putting an unlisted one last rather than first -- a new family
+// has to earn its position deliberately.
+func familyRank(name string) int {
+	for i, f := range familyOrder {
+		if f == name {
+			return i
+		}
+	}
+	return len(familyOrder)
 }
 
 // enough reports whether a verdict is strong enough to build advice on. Abstention is the

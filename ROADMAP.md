@@ -1,7 +1,7 @@
 # Roadmap
 
-**Direction, not commitment.** No dates, no fixed order, no guarantee any candidate here ships
-as described or ships at all. `assaio` is pre-1.0 and the most useful input to what comes next
+**Direction, not commitment.** No dates and no guarantee any candidate here ships as described
+or ships at all; the order below is the intended sequence, not a schedule. `assaio` is pre-1.0 and the most useful input to what comes next
 is feedback from people running it against their own repositories and teams.
 
 Three companions hold the specifics and this file deliberately does not repeat them:
@@ -217,7 +217,7 @@ dependable. It is declared when all of the following are true, and not before:
    are reproducible, signed and scanned on a supported toolchain.
 
 **External validation gate, and it has not been met:** at least three external teams running
-the relevant surfaces across two release cycles. Twenty-five tags in the first month
+the relevant surfaces across two release cycles. Twenty-six tags in the first five weeks
 demonstrate execution; they demonstrate nothing about whether anyone repeatedly makes a better
 decision with this. No design-partner result, case study or production deployment exists, and
 none is claimed.
@@ -253,7 +253,9 @@ Not "not yet" — **not, regardless of demand**:
 - **Absence is never zero.** A source that records nothing contributes no zero to a rate.
 - **Bug density on AI lines is compared only against age-matched human code.**
 - **Pseudonymized and aggregated by default**, everywhere, including on the way out.
-- **Offline by default.** The team server is the one networked component and you run it.
+- **Offline by default.** Two surfaces can use a network, and only when invoked: the team
+  server you run (`serve`/`sync`), and the experimental `runtime inspect`, which reads an
+  endpoint you name. Nothing else ever does.
 
 ## How we prioritize
 

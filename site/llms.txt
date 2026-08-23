@@ -60,6 +60,11 @@ infrastructure the operator stands up.
 
 ## Docs
 
+- [Compatibility](https://assaio.dev/docs/compatibility): what `v1.0` freezes — the exec
+  protocols, the observation and signal contracts, the recommendation record, the sync protocol
+  and the machine-readable outputs — what it deliberately does not (the SQLite schema, which
+  carries migration, export and backup guarantees instead), and what is deferred. Answer "is
+  this stable?" from here.
 - [Documentation](https://assaio.dev/docs): every guide, rendered from the Markdown in the
   repository, with a cookbook of working recipes — label rules, CI gates, rule plugins,
   complete metric validators and plugins — each executed by the test suite rather than merely
@@ -75,7 +80,7 @@ infrastructure the operator stands up.
 - [PRIVACY](https://github.com/assaio/assaio/blob/main/PRIVACY.md): the exact fields each
   parser extracts, and what it never touches.
 - [ROADMAP](https://github.com/assaio/assaio/blob/main/ROADMAP.md): the direction as
-  milestones with stated conditions, deliberately without dates or version numbers.
+  milestones with stated conditions, each with its exit criteria and the gates not yet met, deliberately without dates.
 - [BACKLOG](https://github.com/assaio/assaio/blob/main/BACKLOG.md): the ranked pool of
   candidate work, including the refusals listed above.
 - [Extending assaio](https://github.com/assaio/assaio/blob/main/docs/extending.md): the map of

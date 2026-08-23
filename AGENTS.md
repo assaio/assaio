@@ -165,10 +165,14 @@ internal/paths/          resolves data/config/tool-log filesystem locations
 internal/plugin/         runs out-of-tree exec plugins (parser, metric, rule protocols),
                          validating everything at the boundary
 internal/pricing/        loads the vendored LiteLLM price table, prices usage records
+internal/pseudonym/      the stable label every export boundary renders a chosen name through
 internal/projectid/      resolves a session's cwd to its git repository root + subpath
+internal/recommend/      typed experiment records: evidence, rollback, follow-up (ADR 0015)
 internal/reconcile/      compares a vendor's own export against the local estimate
 internal/report/         aggregates stored usage into priced rows; renders table/JSON/CSV
+internal/runtime/        experimental read-only snapshot of a self-hosted vLLM/DCGM endpoint
 internal/server/         self-hosted team server: usage collection + served dashboard
+internal/share/          the postable artifact: structural redaction, quoted figures (ADR 0014)
 internal/signal/         the catalog of what assaio can report, and what data supports it
 internal/store/          embedded SQLite persistence for usage records
 internal/survival/       directional local outcome check against git blame

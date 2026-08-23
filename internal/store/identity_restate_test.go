@@ -171,12 +171,70 @@ func TestRestateCorrectsSubpathWithProject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var project, subpath string
-	row := st.db.QueryRowContext(ctx, `SELECT project, subpath FROM usage_record WHERE dedupe_key = 'k1'`)
-	if err := row.Scan(&project, &subpath); err != nil {
-		t.Fatal(err)
-	}
+	project, subpath := storedProjectPath(t, st)
 	if project != "new-root" || subpath != "new/path" {
 		t.Fatalf("stored = (%q, %q), want both corrected together", project, subpath)
 	}
+}
+
+// TestRestateClearsSubpathWhenTheReReadResolvesARoot is the case guarding subpath on *itself*
+// discards: "" is the correct subpath for a session at a repository root, so a re-read that
+// resolves a deeper root -- a `git init` in a subdirectory, a submodule -- offers
+// (deeper-project, "") and must move both. Guarded on its own emptiness, the project moved and
+// the path stayed relative to a root it no longer belonged to, which is what the drill-down
+// reads.
+func TestRestateClearsSubpathWhenTheReReadResolvesARoot(t *testing.T) {
+	ctx := context.Background()
+	st := openTempStore(t)
+	at := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+
+	nested := identityTurn(at, "mono", "cli", "main")
+	nested.Subpath = "apps/mobile"
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{nested}); err != nil {
+		t.Fatal(err)
+	}
+	// The same cwd, now its own repository root.
+	rerooted := identityTurn(at, "mobile", "cli", "main")
+	rerooted.Subpath = ""
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{rerooted}); err != nil {
+		t.Fatal(err)
+	}
+
+	project, subpath := storedProjectPath(t, st)
+	if project != "mobile" || subpath != "" {
+		t.Fatalf("stored = (%q, %q), want (mobile, \"\") -- the path must not survive its project", project, subpath)
+	}
+}
+
+// TestRestateStillKeepsAnIdentityTheReReadCannotSee holds the other half: a re-read with no
+// project at all clears nothing.
+func TestRestateStillKeepsAnIdentityTheReReadCannotSee(t *testing.T) {
+	ctx := context.Background()
+	st := openTempStore(t)
+	at := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+
+	known := identityTurn(at, "mono", "cli", "main")
+	known.Subpath = "apps/mobile"
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{known}); err != nil {
+		t.Fatal(err)
+	}
+	blind := identityTurn(at, "", "", "")
+	if _, _, err := st.InsertLocal(ctx, []usage.Record{blind}); err != nil {
+		t.Fatal(err)
+	}
+
+	project, subpath := storedProjectPath(t, st)
+	if project != "mono" || subpath != "apps/mobile" {
+		t.Fatalf("stored = (%q, %q), want the captured pair kept", project, subpath)
+	}
+}
+
+func storedProjectPath(t *testing.T, st *Store) (project, subpath string) {
+	t.Helper()
+	row := st.db.QueryRowContext(context.Background(),
+		`SELECT project, subpath FROM usage_record WHERE dedupe_key = 'k1'`)
+	if err := row.Scan(&project, &subpath); err != nil {
+		t.Fatal(err)
+	}
+	return project, subpath
 }

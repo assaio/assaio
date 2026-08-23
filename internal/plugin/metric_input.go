@@ -69,6 +69,9 @@ type metricInput struct {
 	// states no reason and is absent, as is every turn from a source that reports none.
 	CacheMisses []metricCacheMissRow `json:"cacheMisses"`
 	// Trace is the window's step sequences: what each session did, in what order (ADR 0012).
+	// Present only when this plugin's `metrics:` entry declares `needs: [trace]`; otherwise the
+	// section is absent and Withheld names it. It is by far the largest thing on the wire --
+	// about 44 MB at 339,000 steps -- which is why it is the one section that must be asked for.
 	// Every scope is sent, each sequence carrying the one it belongs to, because a detector's
 	// scope is its denominator and both sides have to agree on it rather than each deriving one.
 	//

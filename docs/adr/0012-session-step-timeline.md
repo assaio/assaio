@@ -108,7 +108,12 @@ three consequences of that were not obvious until they were measured:
   out, and every detector renders the same sentence for it.
 - **Reading the sequences costs about 2.5s on a 339,000-step store**, most of it row scanning
   rather than SQL. It is skipped when no registered validator wants it, and `trace.horizon_days`
-  bounds it. The metric-plugin wire carries the whole set unconditionally -- about 44MB at that
+  bounds it. **Amended in v0.24.0:** the metric-plugin wire no longer carries the set unconditionally — a
+plugin declares `needs: [trace]` in its `metrics:` entry and one that does not is told the
+section was withheld (`B168` shipped; the handshake moved to version 3). The paragraph below
+describes the contract before that change.
+
+The metric-plugin wire carries the whole set unconditionally -- about 44MB at that
   size -- because the alternative is an extension surface that cannot write what the core just
   gained; letting a plugin declare its needs is `B168`.
 - **Per-step and per-turn answers differ, and only one of them is a cost.** A tool call carries no

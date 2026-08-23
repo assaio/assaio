@@ -269,7 +269,9 @@ generalizing from one to the other.
 with no external fonts, scripts, or requests, so it renders offline and phones nowhere.
 Because that file is meant to be shared, it **pseudonymizes project names by default**
 (a stable `project-xxxx` label); pass `--no-anonymize` to keep real names. The interactive
-CLI tables always show real names — the setting governs only the shareable export.
+CLI tables always show real *project* names — the setting governs only the shareable export.
+Member names are stricter and not governed by it: `report` renders a pseudonym in every format,
+and `--identify` is the only door to raw ones (see below).
 
 `assaio-agent share` is the artifact built *for* publication, and its redaction is
 **structural rather than a flag** — there is no `--no-anonymize` equivalent, because no field
@@ -295,8 +297,8 @@ travels only if you post it.
 
 v0.1 ships an early, self-hostable **team server** so a team can pool its usage in one
 place: `assaio-agent serve` runs a central collector and `assaio-agent sync` pushes each
-member's records to it, with a per-member team dashboard. It is the **networked exception**
-to everything above — the offline guarantee is about the local analysis, not this. You run
+member's records to it, with a per-member team dashboard. It is the **largest of the networked exceptions**
+named above — the offline guarantee is about the local analysis, not this. You run
 the server on **your own infrastructure** and control what reaches it. It is an honest MVP:
 no TLS of its own (put a reverse proxy in front), meant for a trusted network — not yet
 production-hardened. Every route requires a bearer token, the dashboard included, and

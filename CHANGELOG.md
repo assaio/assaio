@@ -25,8 +25,11 @@ Discussion.
 
 ### Breaking
 
-Four changes here break a working setup on upgrade. Each is a `B`-id closing, and each fails
-loudly rather than quietly — which is the point of listing them apart.
+Four changes here break a working setup on upgrade. Three fail loudly — a 401, a refused
+startup, a rejected handshake. **The fourth is quiet**, and that is why it leads the list: a
+pipeline reading `report --format json|csv` keeps getting a valid document, with different join
+keys and no error in it. The disclosure goes to stderr, deliberately, because a line inside the
+document would corrupt the CSV and the JSON array every script already parses.
 
 - **The team server's dashboard route now requires the bearer token.** `GET /` was open while
   the write route was guarded, which protected the wrong direction: the page carries a whole
@@ -67,9 +70,13 @@ loudly rather than quietly — which is the point of listing them apart.
 - **`doctor --db` and a storage-growth projection.** An operator could diagnose a local store
   and no other — including the central one their whole team pushes into, which is the one they
   cannot walk over to (`B174`). `doctor` now takes `--db`, and every store reports its own
-  measured growth: 170.1 MB over 54 days = 3.2 MB/day, projecting to 1.1 GB/year on the
-  maintainer's own store. It is labelled a projection rather than a measurement, and a store
-  younger than a week says why it will not project at all.
+  measured growth — on the maintainer's own store, 162.6 MB **live** over 56 days = 2.9 MB/day,
+  and *at most* 1.0 GB/year. Live bytes, not the file: free pages are the normal state after
+  every step prune, and counting them made deleting history raise the projected year. The yearly
+  figure is an upper bound rather than an estimate, because the rate averages the
+  horizon-bounded step timeline with the unbounded usage table; the line also says that
+  `clear --older-than` can raise it, since it shortens the span faster than it frees bytes. A
+  store younger than a week says why it will not project at all.
 - **`runtime inspect` (experimental): read what a self-hosted deployment already publishes.**
   A snapshot of a vLLM server's and an NVIDIA DCGM exporter's own metrics endpoints, by URL or
   from a saved file, reporting availability, the metric families found, current gauges with
@@ -92,9 +99,10 @@ loudly rather than quietly — which is the point of listing them apart.
   nothing to it, a record missing a required field is dropped rather than printed with a
   caveat, and **abstention is the default**: a thin window, a low-confidence verdict or a metric
   missing a declared input produces nothing, with the empty output saying it is an abstention
-  rather than a clean bill. No effect is ever a predicted number. Three families ship, and the
-  first two are about assaio's own evidence — an engine that recommends changing how someone
-  works while its own cost basis is missing a fifth of the window has the order backwards.
+  rather than a clean bill. No effect is ever a predicted number. Two families ship, ordered
+  deliberately rather than alphabetically: pricing coverage first, because an engine that
+  recommends changing how someone works while its own cost basis is missing a fifth of the
+  window has the order backwards.
 - **README and the site say what the built-in stats cannot do, instead of a claim that stopped
   being true** (`B188`, `B189`). The opening said vendor dashboards count "spend, never output"; Claude Code
   analytics has reported accepted lines and cost per commit, Copilot has reported code
@@ -144,20 +152,29 @@ loudly rather than quietly — which is the point of listing them apart.
 
 ### Changed
 
+- **The vendored LiteLLM price table is refreshed to its 2026-08-23 snapshot: 3,040 → 3,111
+  models, none removed.** Fifteen existing entries changed price — including `gemini-3.6-flash`
+  and its `gemini/` and `vertex_ai/` aliases, whose input, output *and* cache-read costs all
+  halve — so a window containing them re-prices on upgrade, and `openrouter/anthropic/claude-opus-5`
+  becomes costable. Every `$` assaio prints is a token count times this table, computed at read
+  time, so this restates cost history rather than only new records. Run `doctor` after upgrading
+  to see what the new table can price that the old one could not.
+
 - **Fourteen metrics stopped publishing a verdict they could not source** (`B176`, `B177`). `friction`,
   `rework`, `turn-efficiency`, `context`, `explore-produce`, `cache-hygiene`, `model-fit`,
-  `model-right-sizing`, `concentration`, `skill-economics`, `recovery`, `rhythm` and
-  `throughput` each decided good-versus-watch on a number picked once — a 15% error rate, a 20%
+  `model-right-sizing`, `concentration`, `skill-economics`, `recovery`, `rhythm`,
+  `reasoning-share` and `throughput` each decided good-versus-watch on a number picked once — a 15% error rate, a 20%
   compaction rate, a 1.5× recovery multiple — with no published definition behind it and no
   derivation from the window's own distribution. Rendered in colour, a number like that is read
-  afterwards as knowledge. Every figure those metrics computed is unchanged and still printed;
+  afterwards as knowledge. No figure changed *because of this withdrawal* and every one is still printed (two moved for
+  their own reasons, both in `Fixed` below: `model-fit`'s denominator and `recovery`'s baseline);
   what is gone is the colour, the promotion into "worth a week's attention", and a gauge that
-  moved -- it is pinned at half, carrying no verdict either way. Each of those metrics
-  each now carries a caveat naming the authority it would need. `burn-anomaly` and `edit-loops`
+  moved -- it is pinned at half, carrying no verdict either way. Each now carries a caveat naming the authority it would need. `burn-anomaly` and `edit-loops`
   are what a sourced line looks like here — both derive theirs from the window's own median and
   MAD at the conventional 3.5 cutoff — and `adoption`, `coverage` and `subscription-fit` keep
   verdicts resting on a definition, assaio's own confidence model, and your configured plan
-  price. On the maintainer's corpus this moves a 90-day window from 7 graded reads to 5.
+  price; `intent` keeps a favourable read about whether labels exist at all, which is a fact
+  about coverage rather than about the work. On the maintainer's corpus, 5 of the 21 reads on a 90-day window still carry a verdict.
   `B185` tracks the line that would earn them back: your own earlier windows.
 - **`rhythm` no longer judges when the work happened, and prints the band it counts against**
   (`B178`).
@@ -236,8 +253,6 @@ loudly rather than quietly — which is the point of listing them apart.
   advisories; `go.mod` now pins the toolchain and the indirect `golang.org/x/text` is on
   v0.39.0, which clears the last (unreachable) module advisory. The scan reports no
   vulnerabilities at all.
-
-
 - **A metric plugin was handed raw member names.** The usage rows, session rows and step
   timelines sent to an out-of-tree subprocess carried the name each member synced under. They
   now carry the same pseudonym every other surface uses, so a plugin can still group by member

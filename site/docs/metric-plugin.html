@@ -245,8 +245,9 @@ reshapes it says so explicitly (see <code>RELEASING.md</code>).</p>
 <p><strong>stdout</strong> — a one-line handshake, then exactly <strong>one</strong> JSON <code>Result</code> document
 (pretty-printed is fine; anything after it is a violation):</p>
 <ol>
-<li><code>{&quot;assaio_metric&quot;: 3, &quot;name&quot;: &quot;&lt;name&gt;&quot;}</code> — version must be <code>1</code>, <code>name</code> must equal
-the configured name.</li>
+<li><code>{&quot;assaio_metric&quot;: 3, &quot;name&quot;: &quot;&lt;name&gt;&quot;}</code> — version must be <code>3</code> (it was <code>2</code> before v0.24;
+see the breaking change in <a href="https://github.com/assaio/assaio/blob/main/CHANGELOG.md">CHANGELOG.md</a>), <code>name</code> must equal the
+configured name.</li>
 <li>One <code>Result</code> in the same shape <code>analyze --format json</code> emits — see <a href="https://assaio.dev/docs/metric-validator#what-a-validator-returns-result">What a validator
 returns: Result</a>. The wire <code>name</code> field is ignored:
 assaio always stamps <code>plugin:&lt;name&gt;</code>, so a plugin can never shadow a built-in

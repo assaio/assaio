@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -260,4 +261,35 @@ func TestDashboardHandlerBuildFailureReturnsGenericError(t *testing.T) {
 	if got := strings.TrimSpace(rec.Body.String()); got != "failed to build dashboard" {
 		t.Fatalf("body = %q, want the generic message with no DB detail leaked", got)
 	}
+}
+
+// TestUsagePushRejectsBeforeReadingTheBody is the ordering, not the status code: both a
+// pre-decode and a post-decode rejection answer 401, so only the *cost* separates them. An
+// unauthenticated caller must not be able to make the server allocate a batch first.
+func TestUsagePushRejectsBeforeReadingTheBody(t *testing.T) {
+	s, _ := newTestServer(t)
+	body := &countingReader{r: bytes.NewReader(pushBody(t, "alice", nil))}
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/v1/usage", body)
+	req.Header.Set("Authorization", "Bearer wrong-token-long-enough")
+	rec := httptest.NewRecorder()
+	s.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", rec.Code)
+	}
+	if body.n != 0 {
+		t.Fatalf("the server read %d body bytes before rejecting the token; it must read none", body.n)
+	}
+}
+
+// countingReader records how much of the body a handler consumed.
+type countingReader struct {
+	r io.Reader
+	n int
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += n
+	return n, err
 }

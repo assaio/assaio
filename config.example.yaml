@@ -99,8 +99,9 @@ trace:
 
 # Team server (`assaio-agent serve`): a self-hosted HTTP endpoint that collects usage
 # pushed by `assaio-agent sync` from every teammate's machine and serves it back as one
-# aggregated, pseudonymized-by-default Assay dashboard. This is the one non-offline
-# exception in assaio -- you run and control this server yourself, on your own network.
+# aggregated, pseudonymized-by-default Assay dashboard. This is one of only two non-offline
+# surfaces in assaio (the other is the experimental `runtime inspect`) -- you run and control
+# this server yourself, on your own network.
 # Security model: every route but the /healthz probe requires a bearer token, the dashboard
 # included. There is no
 # TLS -- put a reverse proxy in front (see internal/server's package doc). Not
@@ -134,6 +135,8 @@ trace:
 # per token differs; set this so assaio shows your real basis alongside the estimate.
 # Leaving it unset keeps the honest default: API-equivalent estimate, disclosed as such.
 # pricing:
+#   max_unpriced_share: 0.05  # doctor --strict fails above this share of stored tokens
+#                              # carrying no price; 0 disables that half of the gate
 #   mode: subscription              # "api" (default) or "subscription"; override ASSAIO_PRICING_MODE
 #   effective_per_token: 0.0        # your blended $/token (e.g. monthly cost / tokens used)
 #   monthly_subscription_cost: 0.0  # flat plan price per month, to compare vs API-equivalent spend

@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -89,5 +90,50 @@ func TestDoctorReadsTheStoreItWasPointedAt(t *testing.T) {
 	}
 	if !strings.Contains(out, path) {
 		t.Fatalf("doctor read some other store:\n%s", out)
+	}
+}
+
+// TestGrowthLineIgnoresReclaimablePages is the defect that made deleting history raise the
+// projected year. The earlier test could not see it: a fresh store has no free pages, so
+// `Bytes` and `Bytes - Reclaimable` were the same number. This one deletes without vacuuming,
+// which is exactly the state every step prune leaves behind.
+func TestGrowthLineIgnoresReclaimablePages(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	st := growthStore(t, now.AddDate(0, 0, -60))
+
+	recs := make([]usage.Record, 0, 400)
+	for i := range 400 {
+		recs = append(recs, usage.Record{
+			Tool: "claude-code", SessionID: "s", Timestamp: now.AddDate(0, 0, -90), Model: "m",
+			DedupeKey: "bulk" + strconv.Itoa(i), Granularity: "turn", InputTokens: 1000,
+			Project: strings.Repeat("p", 200),
+		})
+	}
+	if _, err := st.Insert(ctx, recs); err != nil {
+		t.Fatal(err)
+	}
+	// Clear is the real deletion path, and like every one of them it frees pages without
+	// shrinking the file -- which is the state this test needs.
+	// Older than the bulk, newer than the seed: the span the projection divides by is unchanged
+	// and only the freed pages differ, which is the one variable this test is about.
+	if _, err := st.Clear(ctx, now.AddDate(0, 0, -70), ""); err != nil {
+		t.Fatal(err)
+	}
+	size, err := st.Size(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if size.Reclaimable == 0 {
+		t.Skip("this SQLite build reclaimed the pages immediately; the branch cannot be exercised here")
+	}
+
+	line := growthLine(ctx, st, now)
+	if strings.Contains(line, humanize.Bytes(size.Bytes)+" live") {
+		t.Fatalf("growth line = %q, want live bytes rather than the file size (%s reclaimable)",
+			line, humanize.Bytes(size.Reclaimable))
+	}
+	if !strings.Contains(line, humanize.Bytes(size.Bytes-size.Reclaimable)+" live") {
+		t.Fatalf("growth line = %q, want %s of live bytes", line, humanize.Bytes(size.Bytes-size.Reclaimable))
 	}
 }
