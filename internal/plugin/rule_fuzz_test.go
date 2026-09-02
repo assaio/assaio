@@ -20,6 +20,10 @@ func FuzzRuleAlerts(f *testing.F) {
 	f.Add([]byte(`{"alerts":[{"rule":"r","severity":"error","message":"m"}]} {"alerts":[]}`))
 	f.Add([]byte("\xff\xfe"))
 
+	for _, doc := range catalogueSeeds(f, "rule-alerts") {
+		f.Add([]byte(doc))
+	}
+
 	f.Fuzz(func(t *testing.T, doc []byte) {
 		alerts, violations, err := parseRuleAlerts(doc, "demo")
 		if err != nil {

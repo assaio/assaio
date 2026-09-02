@@ -55,18 +55,7 @@ func Families() []Family {
 func From(e *Evidence) []Record {
 	var out []Record
 	for _, f := range Families() {
-		proposed := f.Propose(e)
-		for i := range proposed {
-			r := &proposed[i]
-			r.Family = f.Name()
-			if r.Status == "" {
-				r.Status = StatusProposed
-			}
-			if err := r.Validate(); err != nil {
-				continue
-			}
-			out = append(out, *r)
-		}
+		out = append(out, propose(f, e)...)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Family != out[j].Family {
@@ -77,11 +66,44 @@ func From(e *Evidence) []Record {
 	return out
 }
 
+// FromFamily runs one family over the window, for a command that renders its own advice
+// beside its own arithmetic. Same validation as From: a record missing what would make it
+// checkable is dropped rather than printed with a warning.
+func FromFamily(name string, e *Evidence) []Record {
+	for _, f := range Families() {
+		if f.Name() == name {
+			return propose(f, e)
+		}
+	}
+	return nil
+}
+
+// propose runs one family and keeps the records that survive validation, stamping the two
+// fields a family is not asked to repeat on every record it builds.
+func propose(f Family, e *Evidence) []Record {
+	var out []Record
+	proposed := f.Propose(e)
+	for i := range proposed {
+		r := &proposed[i]
+		r.Family = f.Name()
+		if r.Status == "" {
+			r.Status = StatusProposed
+		}
+		if err := r.Validate(); err != nil {
+			continue
+		}
+		out = append(out, *r)
+	}
+	return out
+}
+
 // familyOrder is the order a reader meets these in, and it is not alphabetical. Advice about
 // assaio's own evidence comes before advice about how somebody works: an engine that recommends
 // changing a workflow while its own cost basis is missing a fifth of the window has it backwards
-// (ADR 0015). A reader acts on what is at the top, so the ordering is the claim.
-var familyOrder = []string{"pricing-coverage", "premium-small-turns"}
+// (ADR 0015). A reader acts on what is at the top, so the ordering is the claim. Between the two
+// routing families, the one resting on arithmetic over the whole window comes before the one
+// resting on a sampled share, which is the only one of the two that can be a sampling artifact.
+var familyOrder = []string{"pricing-coverage", FamilyCheaperRoute, "premium-small-turns"}
 
 // familyRank places a family, putting an unlisted one last rather than first -- a new family
 // has to earn its position deliberately.

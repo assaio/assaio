@@ -45,7 +45,12 @@
       "Bash(git push:*)",
       "Bash(git rebase:*)",
       "Bash(git reset --hard:*)",
-      "Bash(git tag:*)",
+      "Bash(git tag -a:*)",
+      "Bash(git tag -s:*)",
+      "Bash(git tag -m:*)",
+      "Bash(git tag -d:*)",
+      "Bash(git tag -f:*)",
+      "Bash(git tag v:*)",
       "Bash(make release:*)",
       "Bash(make release-minor:*)",
       "Bash(make release-patch:*)"

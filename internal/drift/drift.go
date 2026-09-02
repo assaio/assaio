@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -167,7 +168,17 @@ func skippedCanary(cur *store.SourceRun, _ []store.SourceRun) (string, bool) {
 // zeroTokenCanary catches the quiet half: a renamed or moved token field still parses, so
 // records keep arriving at the usual rate while the numbers they carry go to zero. This
 // is the exact shape of silent under-reporting.
+//
+// It judges a source that has a token field to lose. A source whose depth row declares no token
+// counter at all -- Antigravity CLI publishes none anywhere in its format -- produces zero-token
+// records by construction, so the share is 100% on a healthy run and the canary would fire
+// forever, failing `doctor --strict` on data that is exactly what it should be. An undeclared
+// source is still judged: "we have never heard of this tool" is not evidence that it has no
+// tokens.
 func zeroTokenCanary(cur *store.SourceRun, _ []store.SourceRun) (string, bool) {
+	if _, declared := parser.DepthOf(cur.Tool); declared && !parser.Answers(cur.Tool, parser.SignalTokensTotal) {
+		return "", false
+	}
 	if cur.Records < zeroTokenRecordsMin {
 		return "", false
 	}

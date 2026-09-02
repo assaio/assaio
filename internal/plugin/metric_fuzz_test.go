@@ -18,6 +18,10 @@ func FuzzMetricResult(f *testing.F) {
 	f.Add([]byte("\xff\xfe"))
 	f.Add([]byte(`{"name":"adoption","title":"T","read":{"key":"good","label":"OK"},"howToRead":"H","takeaway":"K"}`))
 
+	for _, doc := range catalogueSeeds(f, "metric-result") {
+		f.Add([]byte(doc))
+	}
+
 	f.Fuzz(func(t *testing.T, doc []byte) {
 		r, violations, err := parseMetricResult(doc, "demo")
 		if err != nil {

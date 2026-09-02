@@ -240,10 +240,14 @@ func TestRenderHTMLEscapesUntrustedNames(t *testing.T) {
 		xssMember  = `<img src=x onerror=alert('assay-xss-member')>`
 		xssSubpath = `<script>alert('assay-xss-subpath')</script>`
 	)
+	// xssMember is deliberately not in this map. The team panel renders a pseudonym for
+	// every member on every render (see buildTeam), so a hostile member name has no path to
+	// the page and there is no escaped form to look for. It stays in the fixture below, and
+	// the raw-payload half of the loop still covers it: the assertion for a member name is
+	// that it never appears at all, escaped or not.
 	escaped := map[string]string{
 		xssProject: `&lt;script&gt;alert(&#39;assay-xss-project&#39;)&lt;/script&gt;`,
 		xssModel:   `&#34;&gt;&lt;img src=x onerror=alert(&#39;assay-xss-model&#39;)&gt;`,
-		xssMember:  `&lt;img src=x onerror=alert(&#39;assay-xss-member&#39;)&gt;`,
 		xssSubpath: `&lt;script&gt;alert(&#39;assay-xss-subpath&#39;)&lt;/script&gt;`,
 	}
 
@@ -281,6 +285,9 @@ func TestRenderHTMLEscapesUntrustedNames(t *testing.T) {
 		if !strings.Contains(html, want) {
 			t.Fatalf("dashboard HTML must contain the escaped form of %q (want %q)", payload, want)
 		}
+	}
+	if strings.Contains(html, xssMember) || strings.Contains(html, `&lt;img src=x onerror=alert(&#39;assay-xss-member&#39;)&gt;`) {
+		t.Fatalf("dashboard HTML must not render a member name at all, raw or escaped: %s", html)
 	}
 }
 

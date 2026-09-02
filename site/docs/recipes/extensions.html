@@ -240,13 +240,22 @@ func (editSizeValidator) Analyze(in Input) Result {
 <p>The caveat is not decoration. It states the share of the window the figure actually describes,
 which is the difference between a number and a number you can act on.</p>
 <h2 id="a-metric-plugin-any-language">A metric plugin, any language</h2>
-<p>The same metric as an executable: no fork, no Go, declared in config under <code>metrics:</code>. It reads
-one JSON document on stdin and writes a handshake plus one <code>Result</code> on stdout.</p>
+<p>The same metric as an executable: no fork, no Go, declared in config under <code>metrics:</code>. It
+answers <code>describe</code> with what it reads, and <code>analyze</code> with one <code>Result</code> over exactly that.
+<code>assaio-agent plugins init --kind metric --lang python</code> prints this skeleton for you.</p>
 <pre><code class="language-python">#!/usr/bin/env python3
 &quot;&quot;&quot;Weekday token share as an out-of-tree metric plugin.&quot;&quot;&quot;
 import datetime as dt
 import json
 import sys
+
+HANDSHAKE = {&quot;assaio_metric&quot;: 4, &quot;name&quot;: &quot;weekday-split&quot;}
+
+if sys.argv[1:2] == [&quot;describe&quot;]:
+    print(json.dumps(HANDSHAKE))
+    print(json.dumps({&quot;needs&quot;: [&quot;usage&quot;],
+                      &quot;fields&quot;: {&quot;usage&quot;: [&quot;day&quot;, &quot;in&quot;, &quot;out&quot;, &quot;cacheRead&quot;, &quot;cacheWrite&quot;]}}))
+    sys.exit(0)
 
 inp = json.load(sys.stdin)
 weekday = total = 0
@@ -276,7 +285,7 @@ else:
                      else &quot;A meaningful share of usage falls outside the working week.&quot;),
     }
 
-print(json.dumps({&quot;assaio_metric&quot;: 3, &quot;name&quot;: &quot;weekday-split&quot;}))
+print(json.dumps(HANDSHAKE))
 print(json.dumps(result))
 </code></pre>
 <p><code>name</code> is stamped by the core as <code>plugin:&lt;name&gt;</code> on arrival, so a plugin cannot shadow a
@@ -292,6 +301,14 @@ import json
 import sys
 
 NEEDED = (&quot;ai.edits.count&quot;, &quot;ai.lines.added&quot;)
+HANDSHAKE = {&quot;assaio_metric&quot;: 4, &quot;name&quot;: &quot;edit-size&quot;}
+
+if sys.argv[1:2] == [&quot;describe&quot;]:
+    print(json.dumps(HANDSHAKE))
+    print(json.dumps({&quot;needs&quot;: [&quot;usage&quot;],
+                      &quot;fields&quot;: {&quot;usage&quot;: [&quot;tool&quot;, &quot;in&quot;, &quot;out&quot;, &quot;cacheRead&quot;, &quot;cacheWrite&quot;,
+                                           &quot;linesAdded&quot;, &quot;edits&quot;]}}))
+    sys.exit(0)
 
 inp = json.load(sys.stdin)
 answers = inp.get(&quot;answers&quot;, {})
@@ -325,7 +342,7 @@ else:
         &quot;takeaway&quot;: &quot;Edit size is measurable in this window.&quot;,
     }
 
-print(json.dumps({&quot;assaio_metric&quot;: 3, &quot;name&quot;: &quot;edit-size&quot;}))
+print(json.dumps(HANDSHAKE))
 print(json.dumps(result))
 </code></pre>
 <p>Both plugins are wired the same way:</p>

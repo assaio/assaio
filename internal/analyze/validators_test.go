@@ -289,3 +289,33 @@ func TestAdoptionPerActiveDayDashWhenNoUsageDays(t *testing.T) {
 		t.Fatalf("adoption output with no usage days = %q", out)
 	}
 }
+
+// TestAdoptionWithholdsBreadthWhenNoSourceNamesAProject: breadth counts projects, and a project
+// comes from a session's working directory. Antigravity CLI writes none, so every row is
+// unattributed -- and "0 projects · usage is narrow and flat" would be a verdict about how far
+// AI use has spread, drawn from a field the tool never kept.
+func TestAdoptionWithholdsBreadthWhenNoSourceNamesAProject(t *testing.T) {
+	usage := []store.UsageRow{
+		{Day: "2026-07-10", Tool: "agy", ToolCalls: 2},
+		{Day: "2026-07-11", Tool: "agy", ToolCalls: 2},
+	}
+	sessions := []store.SessionRow{
+		{SessionID: "s1", Tool: "agy", FirstTs: validatorsTestNow, Turns: 3},
+		{SessionID: "s2", Tool: "agy", FirstTs: validatorsTestNow, Turns: 3},
+		{SessionID: "s3", Tool: "agy", FirstTs: validatorsTestNow, Turns: 3},
+	}
+	in := BuildInput(usage, sessions, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
+	v, _ := Get("adoption")
+	got := v.Analyze(in)
+	for _, f := range got.Figures {
+		if f.Label == "projects" && f.Value != "—" {
+			t.Errorf("projects = %q, want — from a window whose source records no working directory", f.Value)
+		}
+	}
+	if strings.Contains(got.Takeaway, "narrow and flat") {
+		t.Errorf("Takeaway = %q, want it to name the missing capture rather than grade breadth", got.Takeaway)
+	}
+	if !strings.Contains(got.Takeaway, "working directory") {
+		t.Errorf("Takeaway = %q, want it to say why breadth cannot be read", got.Takeaway)
+	}
+}

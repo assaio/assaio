@@ -79,7 +79,7 @@ field is skipped for that reason.
 ## GitHub Copilot CLI
 
 *Corpus: 3 sessions · 43 lines · 145 distinct key paths, plus `testdata/session.jsonl`. This is
-the thinnest corpus of the five and the table should be read as provisional.*
+the thinnest corpus of the six and the table should be read as provisional.*
 
 | Field | State | Notes |
 |---|---|---|
@@ -116,7 +116,7 @@ halves.
 ## Cline
 
 *Corpus: no Cline install on the audited machine — `testdata/ui_messages.json` and
-`testdata/task_metadata.json` only. This table is the weakest of the five and says so.*
+`testdata/task_metadata.json` only. This table is the weakest of the six and says so.*
 
 | Field | State | Notes |
 |---|---|---|
@@ -128,10 +128,39 @@ halves.
 | `task_metadata.{files_in_context,environment_history}` | skipped — content and paths | File paths and environment snapshots. |
 | `ui_messages[]` `say` = `tool` payloads | **skipped — the known activity gap** | The diffs that would give Cline line counts (`B39`). |
 
+## Antigravity CLI (`agy`)
+
+*Corpus: 500 conversations · 1,537 transcript lines · 9 distinct key paths, plus 500
+`conversations/<uuid>.db` SQLite databases holding 1,975 steps and 638 `gen_metadata` blobs.
+Antigravity CLI 1.1.23, captured 2026-09-02.*
+
+The one source with a rich local corpus and no token counter in it. The audit below is why the
+depth matrix answers no token signal for it rather than reporting zeros: the search for a
+counter was exhaustive and is recorded here so nobody repeats it.
+
+| Field | State | Notes |
+|---|---|---|
+| `transcript.jsonl` → `step_index`, `source`, `created_at` | extracted | Record identity, the dedupe key, and the timestamp every window is bounded by. `source` = `MODEL` is what makes an entry a model *entry*; `USER_EXPLICIT` and `SYSTEM` are filtered. A **turn** is every consecutive `MODEL` entry sharing one `created_at`, because the vendor writes one response as a `GENERIC` half and a `PLANNER_RESPONSE` half — 8 of 653 entries in the reference capture. The grouping is on the timestamp, not on `type`: there is no response id, so two genuinely distinct responses inside one second read as one turn, which under-counts turns rather than inflating every per-turn figure. |
+| `transcript.jsonl` → `tool_calls[].name` | extracted | `ai.tool_calls.count`, `ai.edits.count` and the purpose split, through the shared tool-class allowlist. 26 calls across the corpus: `run_command` ×14, `write_to_file` ×9, `finish` ×3. |
+| the conversation directory name | extracted | The session id. Nothing inside the transcript identifies the conversation, which is why this parser takes a directory rather than a reader. |
+| `conversations/<uuid>.db` → `gen_metadata.data` field path `1.9.10.1` | **skipped — a real figure, and not a billable one** | Context tokens occupied at that step. Monotonic across steps in 198/198 conversations with more than one row, and `used ≤ window` in 638/638 observations, so the reading is settled. It is not input, output or cache, which is what a cost model needs, and `store.SessionRow.PeakContextTokens` is *derived* on every other source (`cache_read + input`) where this would be *observed* — two different measurements in one column. `B194` carries the evidence. |
+| `conversations/<uuid>.db` → `gen_metadata.data` field path `1.9.10.4` | skipped — a model property, not usage | The model's context window in tokens: exactly {80000, 128000, 160000, 256000}, pairing with the model name in the same blob 218/218 without exception. It is the ceiling that proved the field above is denominated in tokens; it says nothing about what a session did. |
+| `conversations/<uuid>.db` → `gen_metadata.data` field paths `3.28` / `1.19` | **skipped — present, and not attributable** | The model name (`gemini-3.7-flash-high` ×208, `gemini-3.7-flash` ×45, `claude-opus-4-6-thinking` ×52, `gpt-oss-120b-medium`, `claude-sonnet-4-6`, `gemini-pro-agent`). Reading it means opening another tool's live WAL-mode SQLite database and walking an unnamed protobuf field, for a name that covers 218 of 500 conversations and is frequently several per conversation with no request count to choose between them. `B194`. |
+| `conversations/<uuid>.db` → `steps.has_subtrajectory` | skipped — unverifiable, not absent | False on all 1,975 steps of the corpus. A column uniformly false across a whole capture cannot separate "no sub-agent ran" from "this build never sets it", so the matrix claims delegation neither way. |
+| `conversations/<uuid>.db` → `steps.{step_type,status}` | skipped — undocumented vocabulary | Integers with no published meaning: `step_type` ∈ {17 ×822, 15 ×642, 14 ×500, 132 ×26}, `status` = 3 on 1,975 of 1,990 steps. Naming them would be guessing from a number. |
+| `transcript.jsonl` → `type` = `ERROR_MESSAGE` (384 lines) | **skipped — a different question from the one the signal asks** | A stream or platform failure, not a tool call returning an error. Counting it under `ai.tool_errors.count` would answer "did a tool fail" with "did the connection drop". A session-level failure signal does not exist in the catalog; `B194` names it. |
+| `transcript.jsonl` → `type`, `status` | skipped — no variation to read | `status` is `DONE` on all 1,537 lines and `type` takes four values, three of which `source` already separates. A constant is not a signal. |
+| `transcript.jsonl` → `content`, `thinking`, `tool_calls[].args` | skipped — content, by construction | The prompt, the model's own reasoning, and every tool argument including the file a write targets. This source is the first whose accounting sits inside the same lines as its content, so the omission is structural: the decoded struct has no field for any of them, and a test asserts a sentinel planted in each never reaches a record, an error or a log. |
+| `transcript.jsonl` → `truncated_fields` | skipped — names a content field | Lists which content fields the vendor shortened. Useful only to a reader of the content. |
+| `transcript_full.jsonl`, `logs/chunks/**` | skipped — the same entries, less redacted | The untruncated copy of the same 1,537 lines and its chunked form: strictly more prompt text for no additional accounting. |
+| `annotations/<uuid>.pbtxt` | skipped — content | One field, `title`, holding a model-written summary of the conversation. |
+| `conversation_summaries.db` | **skipped — stale on this machine** | Would answer the project question: `workspace_uris`, `step_count`, `parent_conversation_id`, `nesting_depth`, `agent_name`. It holds 8 rows dated 2025-11-20 to 2026-01-02, from the IDE era, against 500 CLI conversations from 2026-08-26 onward. The CLI does not appear to write it, so no project can be resolved and every `agy` session lands unattributed. |
+| `implicit/*.pb`, `presence/*.lock`, `jetski_state.pbtxt`, `settings.json`, `installation_id`, `updater/**` | skipped — harness inventory | Runtime locks, install identity and configuration (`B95`). |
+
 ## What this audit is not
 
-It does not claim the five formats have no other fields — only that these are the fields the
-corpus above contains. Two of the five tables rest on a corpus too thin to be conclusive and
+It does not claim the six formats have no other fields — only that these are the fields the
+corpus above contains. Two of the six tables rest on a corpus too thin to be conclusive and
 say so in their own heading. Widening that is the same work as widening the golden corpus
 (`B20`), and the two should be re-run together.
 

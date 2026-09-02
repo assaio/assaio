@@ -1,8 +1,11 @@
 # Roadmap
 
-**Direction, not commitment.** No dates and no guarantee any candidate here ships as described
-or ships at all; the order below is the intended sequence, not a schedule. `assaio` is pre-1.0 and the most useful input to what comes next
-is feedback from people running it against their own repositories and teams.
+**Direction, not commitment.** No delivery dates and no guarantee any candidate here ships as
+described or ships at all; the order below is the intended sequence, not a schedule. One kind of
+version is named on purpose and points the other way: two experimental surfaces have their
+**kill criteria read at v0.30** — a promise to decide by then, not to deliver by then, and the
+only kind of date a file like this can keep alone. `assaio` is pre-1.0 and the most useful input
+to what comes next is feedback from people running it against their own repositories and teams.
 
 Three companions hold the specifics and this file deliberately does not repeat them:
 [FEATURES.md](FEATURES.md) (what exists today, and since when), [CHANGELOG.md](CHANGELOG.md)
@@ -74,8 +77,74 @@ next ([ADR 0013](docs/adr/0013-measurement-layers.md)).
 
 ## The next milestones
 
-Ordered. A stage may overlap the next only once its exit criteria are **measured**, not
-assumed.
+Ordered from stage 1. A stage may overlap the next only once its exit criteria are
+**measured**, not assumed. Stage 0 stands outside that order: it runs alongside all of them,
+nothing waits on it, and it is the only one this repository cannot finish by itself.
+
+### 0. Somebody outside this repository — **parallel to every stage below**
+
+The largest risk this file names, under [what v1.0 has to mean](#what-v10-has-to-mean):
+**no external user exists.** Every other v1.0 condition can be met by writing code. This one cannot, it has the longest lead time
+of anything here, and until now it had no plan — no stage, no item, nobody named to ask.
+
+**The ask is data, not adoption.** A redacted log is a smaller commitment than a pilot, it
+arrives in one message, and — unlike a stated interest — the project can check it. Three
+captures are wanted, and each closes a hole nothing done here can close:
+
+| What | Why it cannot be produced here | What it fixes |
+| --- | --- | --- |
+| One Gemini CLI chat log carrying token counts | the maintainer's install writes none (`B110`) | `gemini-cli`'s calibration trace becomes `capture: real` (`B144`) |
+| One Cline task directory | Cline is not installed here | `cline`'s calibration trace becomes `capture: real` (`B144`) |
+| One vendor billing export | no real export has ever been read here | `reconcile`'s column aliases stop being a guess (`B192`) |
+
+Stage 4 wants a fourth capture — one vLLM or DCGM exposition from a real deployment — through
+the same door.
+
+**How to send one.** A [GitHub Discussion](https://github.com/assaio/assaio/discussions) is the
+door that exists today; the intake template that should exist is `B191`. Redact by the field
+allowlist every checked-in trace was captured under — it is the only redaction procedure this
+repository has, and each trace states it in its own `origin`
+([example](internal/calibration/testdata/claude-code/session.adjudicated.json)):
+
+- every number the tool wrote stays **verbatim** — the numbers are the entire point;
+- every identifier — session id, message uuid, tool-call id — becomes a stand-in;
+- every path becomes a stand-in;
+- every body — prompt, response, file content — becomes the **same number of** placeholder
+  lines, because a line count is one of the figures being calibrated;
+- nothing the parser does not read is copied at all.
+
+A billing export has a shorter allowlist, written down where the sample lives
+([`internal/reconcile/testdata/README.md`](internal/reconcile/testdata/README.md)): date, model,
+token count, amount, currency, and nothing else.
+
+Two things a contributor should not have to ask. The file is **committed to a public,
+Apache-2.0 repository**, so it is redacted for publication rather than for a private handoff.
+And `assaio` transmits nothing, ever ([PRIVACY.md](PRIVACY.md)) — this is a file you send by
+hand, not a setting you turn on.
+
+**What comes back.** The trace is adjudicated by hand — counted by a second implementation that
+never calls the parser — and the result is a per-figure derivation stating exactly what assaio
+reads out of your tool's log, field by field. Your source stops being calibrated against a
+sample in its own shape, which is the difference between *the parser reads this* and *the vendor
+still writes this*. Credit in the release notes by name, or none, as you prefer.
+
+**Decision this stage produces:** whether a figure assaio publishes is trustworthy on a machine
+that is not the maintainer's. Two sources and the reconciler answer *unknown* today, and no
+local work moves them.
+
+**Exit:** three captures from three different people are checked in, `B144` and `B192` close,
+and at least one of those people comes back a second time — a second capture, a bug, or a
+`format-drift` report ([docs/format-resilience.md](docs/format-resilience.md)). One contribution
+is a gift; a second from the same person is the first evidence of a *user*, which is what the
+v1.0 gate is actually about.
+
+**Kill criteria.** If **v0.30** arrives with no capture from anybody outside this repository and
+`B193` has recorded where the ask was made, then asking again is not the answer: `B144` and
+`B192` are closed as *not closable here*, the affected sources stay `constructed` and keep
+saying so, and the effort returns to the half of the product that needs nobody. An open item
+whose only possible input is a stranger's file is how a backlog starts lying about what is in
+progress. The deadline is the same release the Runtime Insights gate is read at, and for the
+same reason — see there for how the cadence picks it.
 
 ### 1. Trust reset — **shipped in v0.24**
 
@@ -94,22 +163,27 @@ Nothing is built on a surface known to be wrong.
 **Still open here:** `B185` (a line derived from your own history, which is what would earn the
 withdrawn verdicts back) and `B186` (one message, two transcripts, two counts).
 
-### 2. Analytics kernel — **next**, and the one stage 3 waits on where they touch
+### 2. Analytics kernel — **thin, and stage 3 no longer waits on it**
 
-Make new evidence domains possible without weakening what exists.
+Make new evidence domains possible without weakening what exists — and stop there.
 
-- `analyze.Capability` and `Needs` shipped in v0.24; four validators declare. Retiring the
-  store row types from `analyze.Input` is the rest of `B102` and is a breaking change to the
-  metric-plugin wire, so it lands with the contract freeze.
-- Decide `internal/event`'s future: make the observation contract the persisted, correction-
-  aware ingestion spine, or delete the unused half. Two canonical models is the thing not to
-  keep (`B104`).
-- Correction lineage on the envelope; a typed delivery-outcome payload.
+- **Decided (`B104`, [ADR 0016](docs/adr/0016-usage-is-a-store-row-not-an-event.md)): AI usage is
+  a store row, not an event.** `internal/event` is the observation contract for the domains that
+  have no store row of their own — a commit today, a pull request, a review round and a check run
+  next — and its unused AI half is deleted. One canonical model per fact, and one error posture:
+  the parsers' skip-and-count.
+- The rest of `B102` — retiring the store row types from `analyze.Input` — is a breaking change to
+  the metric-plugin wire, so it **lands with the contract freeze (`B23`)**, not ahead of it.
+  `analyze.Capability` and `Needs` shipped in v0.24 and are the seam that change moves through;
+  nothing in stage 3 waits on it in the meantime.
+- Correction lineage stays where corrections happen: on `usage_record`'s restatement path, which
+  already counts the rows a re-read moved down. It is not an envelope field.
 - Version signal definitions independently of SQLite migrations.
 
 **Exit:** current reports are equivalent on the calibration corpus; a fixture plugin can add a
 payload, a signal and a recommendation without importing internal packages; a missing capability
-produces an explicit reason; corrections are idempotent and keep their lineage.
+produces an explicit reason; a re-read that restates a stored figure is idempotent and reports what
+it moved.
 
 ### 3. Assaio Usage outcomes and verified recommendations — **next, alongside stage 2**
 
@@ -145,9 +219,17 @@ true before anything further is built:
    constructed from vendor documentation and prove only that the parser reads the documented
    shape.
 
-**Kill criteria.** If no repeatable decision emerges, or nobody is willing to run it a second
-time, `runtime inspect` is **removed** rather than kept as a feature nobody uses. Deleting it is
-the expected outcome of a gate that fails, not a failure of the gate.
+**Kill criteria, and the release they are read at.** If no repeatable decision emerges, or
+nobody is willing to run it a second time, `runtime inspect` is **removed** rather than kept as
+a feature nobody uses. Deleting it is the expected outcome of a gate that fails, not a failure
+of the gate. The three conditions above are read when **v0.30** is prepared, and if they are not
+all true then, the removal ships in that release. Six minors after the slice landed in v0.24,
+read off the cadence in [CHANGELOG.md](CHANGELOG.md): twenty-six tags reached v0.24 in five
+weeks, but the last four minors among them spanned ten days, so six more is on the order of two
+months rather than two weeks — long enough for a stranger to find this, run it twice and say so,
+and short enough that "still experimental" stops being an answer. This file promises no date for
+anything that ships; a date for a *removal* is the opposite promise, and the one it can keep
+alone.
 
 ### 5. Runtime Insights economics — **later, and only if stage 4 passes**
 
@@ -220,7 +302,8 @@ dependable. It is declared when all of the following are true, and not before:
 the relevant surfaces across two release cycles. Twenty-six tags in the first five weeks
 demonstrate execution; they demonstrate nothing about whether anyone repeatedly makes a better
 decision with this. No design-partner result, case study or production deployment exists, and
-none is claimed.
+none is claimed. **Stage 0 is the plan for it** — it asks for data rather than adoption, because
+a redacted log is a smaller commitment than a pilot and is something this project can check.
 
 Runtime Insights is **not** a v1 requirement. It joins the supported surface only if its demand
 gate passes and the maintainers then choose to add its contracts.

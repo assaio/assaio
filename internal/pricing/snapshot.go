@@ -1,7 +1,7 @@
 package pricing
 
 // SnapshotDate is the date the vendored litellm.json was downloaded; update when refreshing the file.
-const SnapshotDate = "2026-08-23"
+const SnapshotDate = "2026-09-02"
 
 // Info loads the embedded price table and returns its model count and snapshot date.
 func Info() (models int, snapshotDate string) {

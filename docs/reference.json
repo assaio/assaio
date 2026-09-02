@@ -66,7 +66,7 @@
         "window"
       ],
       "zeroMeans": "no priced usage -- a model absent from the price table is excluded, never counted as free",
-      "describe": "Tokens priced at public pay-as-you-go rates. Not your bill: a flat plan bills differently, and long-context and cache tiers are not modelled.",
+      "describe": "Tokens priced at public pay-as-you-go rates. Not your bill: a flat plan bills differently, and long-context rates are not modelled.",
       "sources": [
         "claude-code",
         "cline",
@@ -90,6 +90,7 @@
       "zeroMeans": "this source records no edit activity -- absent, not zero",
       "describe": "How many edit-type tool calls ran, regardless of how many lines each moved.",
       "sources": [
+        "agy",
         "claude-code",
         "codex"
       ]
@@ -184,6 +185,7 @@
       "zeroMeans": "no measurable gap-free activity",
       "describe": "Time between turns with gaps over 30 minutes excluded, so a resumed session's idle time is not counted as work.",
       "sources": [
+        "agy",
         "claude-code",
         "cline",
         "codex",
@@ -203,6 +205,7 @@
       "zeroMeans": "no sessions in the window",
       "describe": "Distinct sessions seen. A resumed session keeps its id, so one session can span days.",
       "sources": [
+        "agy",
         "claude-code",
         "cline",
         "codex",
@@ -436,6 +439,7 @@
       "zeroMeans": "this source does not name its tool calls -- absent, not zero",
       "describe": "Every tool invocation in a turn, split by purpose where the source names them.",
       "sources": [
+        "agy",
         "claude-code",
         "codex"
       ]
@@ -472,6 +476,7 @@
       "zeroMeans": "no turns recorded -- a session-total source contributes none",
       "describe": "Model requests. A source that totals a whole session cannot contribute here, which is what turn-level coverage reports.",
       "sources": [
+        "agy",
         "claude-code",
         "cline",
         "codex",
@@ -613,6 +618,28 @@
         "no ordered step sequence, so the behaviour detectors exclude it",
         "no line, edit or tool-call signals, so it contributes cost but no output figures",
         "its own per-request cost is recorded but recomputed from tokens for cross-tool consistency"
+      ]
+    },
+    {
+      "tool": "agy",
+      "tier": "activity-only",
+      "tokens": false,
+      "activity": true,
+      "attribution": false,
+      "answers": [
+        "ai.edits.count",
+        "ai.session.active_minutes",
+        "ai.sessions.count",
+        "ai.tool_calls.count",
+        "ai.turns.count"
+      ],
+      "gaps": [
+        "no token counter of any kind: every token and cost figure withholds its verdict for it rather than counting a zero",
+        "no model name -- the one the vendor keeps sits in an unnamed protobuf field of a live SQLite database, on 218 of 500 captured conversations and several per conversation with nothing to choose between them",
+        "no working directory, so its sessions carry no project and are absent from every per-project figure",
+        "no changed-line, rework or compaction counter",
+        "no ordered step sequence: the transcript is ordered, but the captured corpus holds 26 tool calls across 500 conversations, so there is nothing for the behaviour detectors to read",
+        "delegation is unverified rather than absent: the vendor's has_subtrajectory column is false on all 1,975 steps of the captured corpus, which cannot separate 'no sub-agent ran' from 'this build never sets it', so this source claims neither"
       ]
     }
   ],
@@ -886,7 +913,7 @@
           "name": "tool",
           "type": "string",
           "default": "",
-          "usage": "restrict to one tool (claude-code|codex|gemini-cli|copilot-cli|cline|plugin:\u003cname\u003e)"
+          "usage": "restrict to one tool (claude-code|codex|gemini-cli|copilot-cli|cline|agy|plugin:\u003cname\u003e)"
         },
         {
           "name": "yes",
@@ -924,7 +951,7 @@
           "name": "anonymize",
           "type": "bool",
           "default": "true",
-          "usage": "pseudonymize project and member names (default: from config privacy.anonymize)"
+          "usage": "pseudonymize project names (default: from config privacy.anonymize)"
         },
         {
           "name": "db",
@@ -936,7 +963,7 @@
           "name": "no-anonymize",
           "type": "bool",
           "default": "false",
-          "usage": "show real project and member names, overriding --anonymize"
+          "usage": "show real project names, overriding --anonymize (member names stay pseudonymous)"
         },
         {
           "name": "output",
@@ -1195,6 +1222,31 @@
       "flags": []
     },
     {
+      "path": "plugins init",
+      "short": "Print a working out-of-tree plugin skeleton",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "kind",
+          "type": "string",
+          "default": "metric",
+          "usage": "parser|metric|rule"
+        },
+        {
+          "name": "lang",
+          "type": "string",
+          "default": "python",
+          "usage": "go|python|sh"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "default": "",
+          "usage": "plugin name, [a-z0-9-]+ (default my-\u003ckind\u003e)"
+        }
+      ]
+    },
+    {
       "path": "plugins list",
       "short": "List configured plugins and their resolved command paths",
       "hidden": false,
@@ -1296,6 +1348,43 @@
           "type": "bool",
           "default": "false",
           "usage": "export raw member names instead of pseudonyms (team stores only; names individuals)"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        }
+      ]
+    },
+    {
+      "path": "reprice",
+      "short": "Which plan and which model mix this window's own numbers support",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "against",
+          "type": "stringArray",
+          "default": "[]",
+          "usage": "extra model to re-price the premium slice onto, repeatable"
+        },
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "override the store path, e.g. point at a central team-server store"
+        },
+        {
+          "name": "format",
+          "type": "string",
+          "default": "text",
+          "usage": "output format: text|json"
+        },
+        {
+          "name": "plan",
+          "type": "stringArray",
+          "default": "[]",
+          "usage": "candidate flat plan, \"name=monthly-price\", repeatable"
         },
         {
           "name": "since",
@@ -1737,6 +1826,12 @@
       "default": "30d"
     },
     {
+      "key": "sources.agy",
+      "env": "ASSAIO_SOURCES_AGY",
+      "type": "strings",
+      "default": ""
+    },
+    {
       "key": "sources.claude",
       "env": "ASSAIO_SOURCES_CLAUDE",
       "type": "strings",
@@ -2040,6 +2135,36 @@
       {
         "path": "prices{}.output",
         "type": "number"
+      },
+      {
+        "path": "projection",
+        "type": "object"
+      },
+      {
+        "path": "projection.fields",
+        "type": "object keyed by string, values array of string",
+        "omitEmpty": true
+      },
+      {
+        "path": "projection.needs",
+        "type": "array of string"
+      },
+      {
+        "path": "projection.rows",
+        "type": "object keyed by string, values object"
+      },
+      {
+        "path": "projection.rows{}.available",
+        "type": "number"
+      },
+      {
+        "path": "projection.rows{}.sent",
+        "type": "number"
+      },
+      {
+        "path": "projection.where",
+        "type": "object keyed by string, values array of string",
+        "omitEmpty": true
       },
       {
         "path": "recentDays",

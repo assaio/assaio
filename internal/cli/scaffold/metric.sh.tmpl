@@ -1,0 +1,31 @@
+#!/bin/sh
+# {{.Name}}: an assaio metric plugin (ADR 0004, protocol {{.Protocol}}).
+#
+#   {{.Name}} describe   nothing on stdin; a handshake line and what this metric reads
+#   {{.Name}} analyze    the projected window on stdin; a handshake line and one Result
+#
+# POSIX sh cannot read JSON, so this skeleton declares the narrowest thing it could use and
+# publishes no figure. Pipe stdin through jq (or rewrite in python) before computing anything:
+# a figure this file could produce without parsing would not be a measurement.
+set -eu
+
+handshake() { printf '{"assaio_metric":%s,"name":"%s"}\n' '{{.Protocol}}' '{{.Name}}'; }
+
+case "${1-}" in
+describe)
+	handshake
+	printf '{"needs":["usage"],"fields":{"usage":["day","in","out"]}}\n'
+	;;
+analyze)
+	cat >/dev/null
+	handshake
+	printf '%s' '{"title":"TODO: name this metric","layer":"activity",'
+	printf '%s' '"read":{"key":"neutral","label":"TODO"},'
+	printf '%s' '"howToRead":"TODO: one sentence telling a reader how to read this metric.",'
+	printf '%s\n' '"takeaway":"TODO: this skeleton has not measured anything yet."}'
+	;;
+*)
+	echo "usage: $0 describe|analyze" >&2
+	exit 64
+	;;
+esac

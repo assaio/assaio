@@ -181,3 +181,28 @@ func TestCorruptLinesAreSkippedAndCounted(t *testing.T) {
 		t.Fatalf("skipped = %d, want 1", skipped)
 	}
 }
+
+// TestUnnamedModelIsSkippedAndCounted: the dedupe key is "<session>:<model>", so a model with
+// no name would collapse every unnamed model in one session onto a single stored row, and could
+// be neither priced nor grouped. A fuzz seed found it. The session's code changes go to the
+// named model that made the most requests rather than to the one that emits no record.
+func TestUnnamedModelIsSkippedAndCounted(t *testing.T) {
+	recs, skipped, err := Parse(strings.NewReader(
+		`{"type":"session.start","data":{"sessionId":"s1"},"timestamp":"2026-07-31T11:00:00Z"}` + "\n" +
+			`{"type":"session.shutdown","data":{"sessionId":"s1","codeChanges":{"linesAdded":9},` +
+			`"modelMetrics":{"":{"requests":{"count":9}},"gpt-5":{"requests":{"count":1},` +
+			`"tokenDetails":{"output":{"tokenCount":5}}}}},"timestamp":"2026-07-31T11:10:00Z"}` + "\n",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recs) != 1 || recs[0].Model != "gpt-5" {
+		t.Fatalf("recs = %+v, want only the named model", recs)
+	}
+	if skipped != 1 {
+		t.Fatalf("skipped = %d, want the unnamed model counted rather than lost silently", skipped)
+	}
+	if recs[0].LinesAdded != 9 {
+		t.Fatalf("LinesAdded = %d, want the session's changes credited to a model that has a record", recs[0].LinesAdded)
+	}
+}

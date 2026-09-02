@@ -244,3 +244,45 @@ func TestBarrenCanaryFiresOnlyOnASourceThatNeverYielded(t *testing.T) {
 		})
 	}
 }
+
+// TestZeroTokenCanaryExemptsASourceWithNoTokenCounter: agy publishes no token counter at all,
+// so every record it produces is zero-token on a perfectly healthy run. Judging it by the share
+// would fire this canary on every backfill forever and fail `doctor --strict` on correct data --
+// which is how a canary stops being evidence. The other canaries still judge it: what it cannot
+// lose is the token field, not its files or its yield.
+func TestZeroTokenCanaryExemptsASourceWithNoTokenCounter(t *testing.T) {
+	all := run(500, 500, 653, 0, 653)
+	all.Tool = "agy"
+	if fired(Evaluate([]store.SourceRun{all}), ZeroToken) {
+		t.Error("a source whose depth row declares no token counter has no token field to lose")
+	}
+	// The same numbers under a source that does declare one are the failure this canary exists
+	// for, so the exemption is capability and not the shape of the run.
+	all.Tool = "claude-code"
+	if !fired(Evaluate([]store.SourceRun{all}), ZeroToken) {
+		t.Error("a token-carrying source reporting no tokens is the silent under-reporting case")
+	}
+	// A name the matrix has never heard of is judged, not exempted: not knowing a tool is not
+	// evidence that it keeps no tokens.
+	all.Tool = "some-future-tool"
+	if !fired(Evaluate([]store.SourceRun{all}), ZeroToken) {
+		t.Error("an undeclared source must stay under the canary")
+	}
+}
+
+// The barren and discovery canaries are what actually guard a token-less source, so the
+// exemption above must not have taken it out from under them.
+func TestATokenLessSourceIsStillJudgedByTheOtherCanaries(t *testing.T) {
+	barren := run(500, 500, 0, 0, 0)
+	barren.Tool = "agy"
+	if !fired(Evaluate([]store.SourceRun{barren}), Barren) {
+		t.Error("500 conversations found and nothing read out of them is drift on any source")
+	}
+	healthy := run(500, 500, 653, 0, 653)
+	healthy.Tool = "agy"
+	gone := run(0, 0, 0, 0, 0)
+	gone.Tool = "agy"
+	if !fired(Evaluate(append(repeat(3, &healthy), gone)), Discovery) {
+		t.Error("a source whose files vanished is drift on any source")
+	}
+}

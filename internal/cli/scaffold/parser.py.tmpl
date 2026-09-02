@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""{{.Name}}: an assaio parser plugin (ADR 0003, protocol {{.Protocol}}).
+
+Invoked as `{{.Name}} scan` with ASSAIO_PLUGIN_PROTOCOL=1. Writes one handshake line, then one
+JSON record per line. Every record is validated at assaio's boundary; the documents it accepts
+and the ones it refuses are published in docs/conformance/parser-record.json, which you can run
+in your own CI without the assaio binary.
+"""
+import json
+import sys
+
+NAME = "{{.Name}}"
+PROTOCOL = {{.Protocol}}
+
+
+def discover():
+    """Yield one dict per AI turn this plugin can see.
+
+    Empty until you write it. A parser that invents a record puts a number in someone's store
+    that never happened, which is the one failure assaio has no way to detect afterwards.
+
+    A record looks like this -- `granularity` is "turn" or "session" and has no default,
+    because silence about the grain is not the turn grain:
+
+    yield {
+        "session_id": "...", "timestamp": "2026-08-12T09:00:00Z", "model": "...",
+        "input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0,
+        "cache_write_tokens": 0, "dedupe_key": "<stable id for this turn>",
+        "project": "", "git_branch": "", "entrypoint": "", "granularity": "turn",
+    }
+    """
+    return []
+
+
+def main():
+    if sys.argv[1:2] != ["scan"]:
+        sys.exit(f"usage: {sys.argv[0]} scan")
+    print(json.dumps({"assaio_plugin": PROTOCOL, "tool": NAME}))
+    for rec in discover():
+        print(json.dumps(rec))
+
+
+if __name__ == "__main__":
+    main()

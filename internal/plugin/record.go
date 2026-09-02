@@ -35,16 +35,10 @@ type wireRecord struct {
 	Granularity      string `json:"granularity"`
 }
 
-// toRecord validates the boundary invariants (honesty rules enforced at ingest) and
-// converts a wire record into a namespaced usage.Record. pluginName is the plugin's
-// config name; the stored Tool is always "plugin:<name>" so a plugin can never
-// impersonate a built-in source.
-func (w *wireRecord) toRecord(pluginName string) (usage.Record, error) {
-	return w.toRecordAt(pluginName, time.Now())
-}
-
-// toRecordAt is toRecord with the clock injected, so the range a timestamp is judged
-// against is a test's to choose.
+// toRecordAt validates the boundary invariants (honesty rules enforced at ingest) and converts
+// a wire record into a namespaced usage.Record. pluginName is the plugin's config name; the
+// stored Tool is always "plugin:<name>" so a plugin can never impersonate a built-in source.
+// The clock is injected so the range a timestamp is judged against is the caller's to choose.
 func (w *wireRecord) toRecordAt(pluginName string, now time.Time) (usage.Record, error) {
 	if w.SessionID == "" {
 		return usage.Record{}, errors.New("empty session_id")
@@ -100,11 +94,17 @@ func (w *wireRecord) toRecordAt(pluginName string, now time.Time) (usage.Record,
 // as a valid record, which is a silent wrong number rather than a loud protocol error. An
 // unknown field is now a named violation, which is the posture ADR 0003 argues for.
 func parseRecordLine(line []byte, pluginName string) (usage.Record, error) {
+	return parseRecordLineAt(line, pluginName, time.Now())
+}
+
+// parseRecordLineAt is parseRecordLine with the clock injected, so the published conformance
+// vectors can pin a timestamp that would otherwise drift out of range as the wall clock moves.
+func parseRecordLineAt(line []byte, pluginName string, now time.Time) (usage.Record, error) {
 	var w wireRecord
 	dec := json.NewDecoder(bytes.NewReader(line))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&w); err != nil {
 		return usage.Record{}, fmt.Errorf("invalid JSON: %w", err)
 	}
-	return w.toRecord(pluginName)
+	return w.toRecordAt(pluginName, now)
 }

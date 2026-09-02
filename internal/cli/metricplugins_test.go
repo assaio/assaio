@@ -11,13 +11,23 @@ import (
 // goodMetricScript emits a valid handshake + Result and drops a <name>.ran sentinel, so
 // tests can assert whether a command actually executed the plugin.
 const goodMetricScript = `#!/bin/sh
+if [ "$1" = "describe" ]; then
+  echo '{"assaio_metric":4,"name":"demo"}'
+  echo '{"needs":["usage"]}'
+  exit 0
+fi
 cat >/dev/null
 touch "${0%.sh}.ran"
-echo '{"assaio_metric":3,"name":"demo"}'
+echo '{"assaio_metric":4,"name":"demo"}'
 echo '{"title":"Demo Metric","layer":"activity","read":{"key":"watch","label":"WATCH"},"purity":0.4,"howToRead":"Directional demo.","figures":[{"label":"x","value":"1"}],"takeaway":"Demo takeaway."}'
 `
 
 const failingMetricScript = `#!/bin/sh
+if [ "$1" = "describe" ]; then
+  echo '{"assaio_metric":4,"name":"demo"}'
+  echo '{"needs":["usage"]}'
+  exit 0
+fi
 cat >/dev/null
 exit 3
 `

@@ -26,7 +26,7 @@ func TestDemoShowsSampleReports(t *testing.T) {
 	got := out.String()
 	for _, want := range []string{
 		"report -- cost", "effectiveness", "analyze", "web-app",
-		"est. savings", report.CostEstimateDisclosure,
+		"MODEL-FIT", report.CostEstimateDisclosure,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("demo output missing %q\n---\n%s", want, got)

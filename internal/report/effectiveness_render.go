@@ -1,37 +1,14 @@
 package report
 
 import (
-	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	prettytable "github.com/jedib0t/go-pretty/v6/table"
 
 	"github.com/assaio/assaio/internal/humanize"
 )
-
-// effCaveat states that efficiency is a diagnostic signal, never a performance metric. It
-// names the dimension the table is actually grouped by: printed as "per project" over a table
-// grouped by something else, the caveat scoped a claim to a dimension the rows never carried.
-func effCaveat(by string) string {
-	return "Efficiency is directional: task type (greenfield vs. debugging) drives lines-per-cost; this is a diagnostic per " +
-		by + ", never a performance metric."
-}
-
-// effCoverageNote discloses how far the AI-line column reaches. Quantified rather than
-// qualitative: a note that reads the same whether the line-blind share is 0.1% or half the table
-// is the failure UnpricedDisclosure already fixed for the cost column.
-func effCoverageNote(lineCapableTokens, totalTokens int64) string {
-	if totalTokens == 0 || lineCapableTokens == totalTokens {
-		return "Every source in this table records changed lines."
-	}
-	return "AI lines and edits come only from the sources that record them (" +
-		humanize.Percent(float64(lineCapableTokens)/float64(totalTokens)) +
-		" of this table's tokens); a group showing — contributes cost and no line count. Run `assaio-agent signals coverage` for what your own data supports."
-}
 
 // RenderEffectivenessTable writes rows to w as a human-readable efficiency table
 // grouped by by, with a totals footer and the honesty caveats every effectiveness view
@@ -42,30 +19,24 @@ func RenderEffectivenessTable(w io.Writer, rows []EffRow, by string) error {
 	tw.AppendHeader(prettytable.Row{strings.ToUpper(by), "AI LINES", "EDITS", "REJ", "COST $", "$/100 LINES"})
 	tw.SetColumnConfigs(rightAlignFrom(1, 5))
 
-	var totalLines, totalEdits, totalRejected, lineCapableTokens int64
-	var totalCost float64
+	totals := effTotals{Coverage: effCoverage{Rows: len(rows)}}
 	var unpriced Unpriced
 	for i := range rows {
 		r := &rows[i]
 		cost, priced := formatEffCost(r)
-		totalCost += priced
-		if r.LineCapable {
-			totalLines += r.LinesAdded
-			totalEdits += r.Edits
-			lineCapableTokens += r.TokensTotal
-		}
-		totalRejected += r.Rejected
+		totals.add(r, priced)
 		unpriced.Tokens += r.UnpricedTokens
 		unpriced.Total += r.TokensTotal
 		if r.HasUnpriced {
 			unpriced.Rows++
+			if !r.Tokened {
+				unpriced.Untokened++
+			}
 		}
 		tw.AppendRow(effTableRow(r, cost))
 	}
-	tw.AppendFooter(prettytable.Row{
-		"TOTAL", humanize.Int(totalLines), humanize.Int(totalEdits), humanize.Int(totalRejected),
-		humanize.USDCell(totalCost), footerRatio(totalCost, totalLines),
-	})
+	totals.Coverage.TotalTokens = unpriced.Total
+	tw.AppendFooter(effTotalRow(&totals))
 	tw.Render()
 
 	if note := UnpricedDisclosure(&unpriced, "the tokens in this table"); note != "" {
@@ -76,11 +47,70 @@ func RenderEffectivenessTable(w io.Writer, rows []EffRow, by string) error {
 	if _, err := fmt.Fprintln(w, effCaveat(by)); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintln(w, effCoverageNote(lineCapableTokens, unpriced.Total)); err != nil {
+	if _, err := fmt.Fprintln(w, effCoverageNote(&totals.Coverage)); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(w, CostEstimateDisclosure)
 	return err
+}
+
+// effTotals is the footer's running sum together with the capability counts that decide which
+// of its cells may be printed at all.
+type effTotals struct {
+	Lines, Edits, Rejected int64
+	Cost                   float64
+	AnyPriced              bool
+	// RefusableRows is how many groups came from a source that records a human declining a
+	// call; Coverage carries the same count for the line and edit columns.
+	RefusableRows int
+	Coverage      effCoverage
+}
+
+// add folds one group into the footer, each column under its own capability. One condition for
+// all of them dropped what a source did measure: a group recording edits and no changed line
+// contributed nothing to the edit total it could answer.
+func (t *effTotals) add(r *EffRow, priced float64) {
+	t.Cost += priced
+	t.AnyPriced = t.AnyPriced || r.Cost != nil
+	if r.LineCapable {
+		t.Coverage.LineCapableRows++
+		t.Lines += r.LinesAdded
+		t.Coverage.LineCapableTokens += r.TokensTotal
+	}
+	if r.EditCapable {
+		t.Coverage.EditCapableRows++
+		t.Edits += r.Edits
+	}
+	if r.Refusable {
+		t.RefusableRows++
+		t.Rejected += r.Rejected
+	}
+}
+
+// effTotalRow sums the columns that have something to sum. A total is the cell a reader trusts
+// most and checks least, so each cell withholds on the same condition its rows do: no group
+// recording a changed line totals no lines, no group whose source records a refusal totals no
+// rejections, and no group priced totals no cost -- "0" and "$0.00" would each be a
+// measurement nobody made.
+func effTotalRow(t *effTotals) prettytable.Row {
+	lineCapable := t.Coverage.LineCapableRows > 0
+	return prettytable.Row{
+		"TOTAL",
+		capableCell(humanize.Int(t.Lines), lineCapable),
+		capableCell(humanize.Int(t.Edits), t.Coverage.EditCapableRows > 0),
+		capableCell(humanize.Int(t.Rejected), t.RefusableRows > 0),
+		capableCell(humanize.USDCell(t.Cost), t.AnyPriced),
+		capableCell(footerRatio(t.Cost, t.Lines), lineCapable && t.AnyPriced),
+	}
+}
+
+// capableCell prints value only where some source behind the cell records what it counts, and
+// the dash otherwise -- never the zero the arithmetic hands back for a field nobody wrote.
+func capableCell(value string, capable bool) string {
+	if !capable {
+		return "—"
+	}
+	return value
 }
 
 // formatEffCost renders r's cost cell (with a trailing "*" when the row has unpriced
@@ -109,17 +139,22 @@ func formatCostPer100(r *EffRow) string {
 	return cell
 }
 
-// effTableRow builds one data row, substituting a placeholder for an empty group label.
+// effTableRow builds one data row, substituting a placeholder for an empty group label. Each
+// activity cell answers for its own source capability: the three are recorded apart and a
+// group can answer any one of them without the others.
 func effTableRow(r *EffRow, cost string) prettytable.Row {
 	label := r.Group
 	if label == "" {
 		label = "(unknown)"
 	}
-	lines, edits := humanize.Int(r.LinesAdded), humanize.Int(r.Edits)
-	if !r.LineCapable {
-		lines, edits = "—", "—"
+	return prettytable.Row{
+		label,
+		capableCell(humanize.Int(r.LinesAdded), r.LineCapable),
+		capableCell(humanize.Int(r.Edits), r.EditCapable),
+		capableCell(humanize.Int(r.Rejected), r.Refusable),
+		cost,
+		formatCostPer100(r),
 	}
-	return prettytable.Row{label, lines, edits, humanize.Int(r.Rejected), cost, formatCostPer100(r)}
 }
 
 // footerRatio recomputes $/100 lines from column totals rather than averaging each
@@ -129,37 +164,4 @@ func footerRatio(totalCost float64, totalLines int64) string {
 		return "—"
 	}
 	return humanize.USDCell(totalCost / (float64(totalLines) / 100))
-}
-
-// RenderEffectivenessJSON writes rows to w as indented JSON.
-func RenderEffectivenessJSON(w io.Writer, rows []EffRow) error {
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	return enc.Encode(rows)
-}
-
-// RenderEffectivenessCSV writes rows to w as CSV with a header row.
-func RenderEffectivenessCSV(w io.Writer, rows []EffRow) error {
-	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{
-		"group", "lines_added", "lines_removed", "edits", "tool_calls", "rejected",
-		"tokens_total", "cost", "has_unpriced", "cost_per_100_lines",
-	})
-	for i := range rows {
-		r := &rows[i]
-		cost, ratio := "", ""
-		if r.Cost != nil {
-			cost = strconv.FormatFloat(*r.Cost, 'f', 6, 64)
-		}
-		if r.CostPer100Lines != nil {
-			ratio = strconv.FormatFloat(*r.CostPer100Lines, 'f', 6, 64)
-		}
-		_ = cw.Write([]string{
-			r.Group, strconv.FormatInt(r.LinesAdded, 10), strconv.FormatInt(r.LinesRemoved, 10),
-			strconv.FormatInt(r.Edits, 10), strconv.FormatInt(r.ToolCalls, 10), strconv.FormatInt(r.Rejected, 10),
-			strconv.FormatInt(r.TokensTotal, 10), cost, strconv.FormatBool(r.HasUnpriced), ratio,
-		})
-	}
-	cw.Flush()
-	return cw.Error()
 }

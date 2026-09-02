@@ -59,6 +59,13 @@ func GeminiRoot(home string) string {
 	return filepath.Join(home, ".gemini")
 }
 
+// AgyRoot returns the root of Antigravity CLI's data. It sits under ~/.gemini and is not
+// Gemini CLI: the two tools share a home directory and nothing else, which is why each has
+// its own root here and its own narrow discovery glob rather than one shared scan.
+func AgyRoot(home string) string {
+	return filepath.Join(home, ".gemini", "antigravity-cli")
+}
+
 // CopilotRoot returns the root of GitHub Copilot CLI session state. The CLI resolves its
 // own home as configDir -> COPILOT_HOME -> ~/.copilot, so COPILOT_HOME is honored here for
 // the same reason: a user who relocated the CLI's data should not have to tell assaio about

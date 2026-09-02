@@ -86,6 +86,6 @@ var enDashboard = Dashboard{
 	AnonymizedCaveat:      "Project names pseudonymized for sharing -- run with --no-anonymize for real names.",
 	TeamPanelLabel:        "Team",
 	MembersSuffix:         "members",
-	TeamCaption:           "Team adoption -- how widely AI use has spread, by sessions. Lines and cost are the team's, never a member's: this panel is not a scoreboard.",
+	TeamCaption:           "Team adoption -- how widely AI use has spread, by sessions. Members are pseudonymous and listed alphabetically, never ranked; --no-anonymize reveals project names, never people's. Lines and cost are the team's, never a member's: this panel is not a scoreboard.",
 	TeamTotalPrefix:       "Together:",
 }

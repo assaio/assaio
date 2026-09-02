@@ -21,7 +21,10 @@ import (
 // so a newly registered analyze.Validator appears on the report with no template
 // change -- the extensibility seam a future navigation/multi-page layer builds on.
 type Data struct {
-	Window     string
+	Window string
+	// Anonymized reports whether the project-scoped names on this page are pseudonymized.
+	// It never governs member labels: those are pseudonymous on every render, whatever the
+	// caller passed (see buildTeam).
 	Anonymized bool
 	Verdicts   []analyze.Result
 	Drill      *ProjectDrill
@@ -62,7 +65,7 @@ func Build(in analyze.Input, window string, anonymize bool, subpaths []store.Sub
 	if anonymize {
 		anonymizeVerdicts(verdicts)
 	}
-	team := buildTeam(in.Usage, in.Sessions, in.Prices, anonymize)
+	team := buildTeam(in.Usage, in.Sessions, in.Prices)
 
 	inv := report.BuildInventory(in.Usage, in.Prices)
 	return Data{

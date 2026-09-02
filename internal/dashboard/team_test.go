@@ -3,6 +3,7 @@ package dashboard
 import (
 	"bytes"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -51,12 +52,11 @@ func TestBuildTeamAbsentWithoutMemberData(t *testing.T) {
 	}
 }
 
-// TestBuildTeamRankedBySessionsNotCostOrLines locks in the honesty framing: adoption
-// spread (session/engagement frequency), never a cost or lines-added scoreboard. bob out-
-// spends and out-produces alice here, yet alice -- more sessions -- still ranks first.
+// twoMemberInput is the alice-vs-bob comparison on its own: bob out-spends and
+// out-produces alice by two orders of magnitude, alice engages twice as often.
 // Deliberately self-contained (not fixtureInputWithMembers, which also carries the base
-// fixture's un-tagged local rows) so the alice-vs-bob comparison is the only variable.
-func TestBuildTeamRankedBySessionsNotCostOrLines(t *testing.T) {
+// fixture's un-tagged local rows) so that contrast is the only variable.
+func twoMemberInput() analyze.Input {
 	usage := []store.UsageRow{
 		{
 			Day: "2026-07-12", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web", Member: "alice",
@@ -72,22 +72,64 @@ func TestBuildTeamRankedBySessionsNotCostOrLines(t *testing.T) {
 		{SessionID: "s2", Project: "web", Tool: "claude-code", Model: "claude-sonnet-4-5", Member: "alice", FirstTs: fixtureNow, LastTs: fixtureNow},
 		{SessionID: "s3", Project: "web", Tool: "claude-code", Model: "claude-sonnet-4-5", Member: "bob", FirstTs: fixtureNow, LastTs: fixtureNow},
 	}
-	in := analyze.BuildInput(usage, sessions, fixturePrices(), fixtureNow, 7*24*time.Hour, analyze.Delegation{})
-	d := Build(in, "last 30 days", false, nil, nil)
+	return analyze.BuildInput(usage, sessions, fixturePrices(), fixtureNow, 7*24*time.Hour, analyze.Delegation{})
+}
+
+// TestBuildTeamBarScalesBySessionsNotCostOrLines locks in what the bar means: engagement
+// frequency, never a cost or lines-added scoreboard. A bar drawn from output would run bob's
+// to full width and leave alice's a sliver; drawn from sessions it is alice's that fills and
+// bob's that reaches half.
+func TestBuildTeamBarScalesBySessionsNotCostOrLines(t *testing.T) {
+	d := Build(twoMemberInput(), "last 30 days", false, nil, nil)
 	if d.Team == nil || len(d.Team.Stats) != 2 {
 		t.Fatalf("Team = %+v, want 2 member stats", d.Team)
 	}
-	if d.Team.Stats[0].Member != "alice" || d.Team.Stats[0].Sessions != 2 {
-		t.Fatalf("Team.Stats[0] = %+v, want alice ranked first on 2 sessions despite bob's higher cost/lines", d.Team.Stats[0])
+	byLabel := map[string]TeamStat{}
+	for _, s := range d.Team.Stats {
+		byLabel[s.Member] = s
 	}
-	if d.Team.Stats[1].Member != "bob" || d.Team.Stats[1].Sessions != 1 {
-		t.Fatalf("Team.Stats[1] = %+v, want bob ranked second", d.Team.Stats[1])
+	busiest, quietest := byLabel[memberLabel("alice")], byLabel[memberLabel("bob")]
+	if busiest.Sessions != 2 || busiest.Frac != 1 {
+		t.Fatalf("2-session member = %+v, want Frac 1 -- scaled against the list's own max", busiest)
 	}
-	if d.Team.Stats[0].Frac != 1 {
-		t.Fatalf("top-ranked member's Frac = %v, want 1 (scaled against the list's own max)", d.Team.Stats[0].Frac)
+	if quietest.Sessions != 1 || quietest.Frac != 0.5 {
+		t.Fatalf("1-session member = %+v, want Frac 0.5 despite far higher cost and lines", quietest)
 	}
 	if d.Team.LinesAdded != 5040 {
 		t.Fatalf("Team.LinesAdded = %d, want 5040 -- the team's total, not any member's", d.Team.LinesAdded)
+	}
+}
+
+// TestBuildTeamOrderedAlphabeticallyNotByMagnitude: the panel is a list of people, and a
+// list of people ordered by a number is a league table however the caption reads. The
+// order is the rendered label's, so the busiest member has no reserved position.
+func TestBuildTeamOrderedAlphabeticallyNotByMagnitude(t *testing.T) {
+	for _, anonymize := range []bool{true, false} {
+		d := Build(fixtureInputWithMembers(), "last 30 days", anonymize, nil, nil)
+		if d.Team == nil || len(d.Team.Stats) < 2 {
+			t.Fatalf("anonymize=%v: Team = %+v, want at least 2 member stats", anonymize, d.Team)
+		}
+		labels := make([]string, len(d.Team.Stats))
+		for i, s := range d.Team.Stats {
+			labels[i] = s.Member
+		}
+		if !sort.StringsAreSorted(labels) {
+			t.Errorf("anonymize=%v: Team.Stats must be ordered alphabetically by label, got %q", anonymize, labels)
+		}
+	}
+}
+
+// TestSortMembersByLabelIgnoresSessionCount states the ordering contract on its own,
+// without depending on which pseudonym this install happens to derive: a 99-session member
+// sorts last when their label does.
+func TestSortMembersByLabelIgnoresSessionCount(t *testing.T) {
+	stats := []TeamStat{
+		{Member: "member-zzzz", Sessions: 99},
+		{Member: "member-aaaa", Sessions: 1},
+	}
+	sortMembersByLabel(stats)
+	if stats[0].Member != "member-aaaa" || stats[1].Member != "member-zzzz" {
+		t.Fatalf("sortMembersByLabel = %+v, want label order, not session order", stats)
 	}
 }
 
@@ -109,32 +151,27 @@ func TestTeamRowCarriesNoOutputFigure(t *testing.T) {
 	}
 }
 
-func TestBuildTeamPseudonymizedByDefault(t *testing.T) {
-	d := Build(fixtureInputWithMembers(), "last 30 days", true, nil, nil)
-	if d.Team == nil {
-		t.Fatal("Team = nil, want a breakdown when usage carries member data")
-	}
-	for _, s := range d.Team.Stats {
-		if s.Member == "alice" || s.Member == "bob" {
-			t.Fatalf("Team member labels must be pseudonymized by default: %+v", d.Team.Stats)
+// TestBuildTeamAlwaysPseudonymized: no value of Build's anonymize argument prints a real
+// member name here. That flag reveals project names; a roster of real names beside
+// proportional bars is the per-named-individual ranking the Refusals rule out, so the
+// panel has no real-name path at all (see buildTeam).
+func TestBuildTeamAlwaysPseudonymized(t *testing.T) {
+	for _, anonymize := range []bool{true, false} {
+		d := Build(fixtureInputWithMembers(), "last 30 days", anonymize, nil, nil)
+		if d.Team == nil {
+			t.Fatalf("anonymize=%v: Team = nil, want a breakdown when usage carries member data", anonymize)
 		}
-		if s.Member == "(local)" {
-			continue // the fixture's inherited un-tagged rows form their own local group.
+		for _, s := range d.Team.Stats {
+			if s.Member == "alice" || s.Member == "bob" {
+				t.Fatalf("anonymize=%v: Team member labels must never be real names: %+v", anonymize, d.Team.Stats)
+			}
+			if s.Member == "(local)" {
+				continue // the fixture's inherited un-tagged rows form their own local group.
+			}
+			if !strings.HasPrefix(s.Member, "member-") {
+				t.Fatalf("anonymize=%v: Team member label %q must look like a member pseudonym", anonymize, s.Member)
+			}
 		}
-		if !strings.HasPrefix(s.Member, "member-") {
-			t.Fatalf("Team member label %q must look like a member pseudonym", s.Member)
-		}
-	}
-}
-
-func TestBuildTeamRealNamesWhenNotAnonymized(t *testing.T) {
-	d := Build(fixtureInputWithMembers(), "last 30 days", false, nil, nil)
-	names := map[string]bool{}
-	for _, s := range d.Team.Stats {
-		names[s.Member] = true
-	}
-	if !names["alice"] || !names["bob"] {
-		t.Fatalf("Team member labels must show real names when anonymize=false: %+v", d.Team.Stats)
 	}
 }
 
@@ -158,19 +195,28 @@ func TestBuildTeamLocalRowsLabeledLocalNeverPseudonymized(t *testing.T) {
 }
 
 func TestRenderHTMLTeamSectionPresentWithMemberData(t *testing.T) {
-	var buf bytes.Buffer
-	if err := RenderHTML(&buf, Build(fixtureInputWithMembers(), "last 30 days", true, nil, nil)); err != nil {
-		t.Fatal(err)
-	}
-	html := buf.String()
-	if !strings.Contains(html, `class="team"`) {
-		t.Fatalf("dashboard HTML must include the Team section when usage carries member data: %s", html)
-	}
-	if !strings.Contains(html, "this panel is not a scoreboard") {
-		t.Fatalf("Team section must carry its honesty caption: %s", html)
-	}
-	if !strings.Contains(html, "member-") {
-		t.Fatalf("Team section must show pseudonymized member labels by default: %s", html)
+	for _, anonymize := range []bool{true, false} {
+		var buf bytes.Buffer
+		if err := RenderHTML(&buf, Build(fixtureInputWithMembers(), "last 30 days", anonymize, nil, nil)); err != nil {
+			t.Fatal(err)
+		}
+		html := buf.String()
+		if !strings.Contains(html, `class="team"`) {
+			t.Fatalf("anonymize=%v: dashboard HTML must include the Team section when usage carries member data: %s", anonymize, html)
+		}
+		if !strings.Contains(html, "this panel is not a scoreboard") {
+			t.Fatalf("anonymize=%v: Team section must carry its honesty caption: %s", anonymize, html)
+		}
+		if !strings.Contains(html, "member-") {
+			t.Fatalf("anonymize=%v: Team section must show pseudonymized member labels: %s", anonymize, html)
+		}
+		// The rendered page, not just the built Data: the whole finding was that a
+		// --no-anonymize render put real names in front of a reader.
+		for _, name := range []string{">alice<", ">bob<"} {
+			if strings.Contains(html, name) {
+				t.Fatalf("anonymize=%v: rendered dashboard names a real member (%s): %s", anonymize, name, html)
+			}
+		}
 	}
 }
 

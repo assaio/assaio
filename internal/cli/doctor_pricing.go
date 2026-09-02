@@ -21,6 +21,13 @@ func unpricedSection(cmd *cobra.Command, c *storeContents, maxShare float64) str
 	u := &c.Unpriced
 	switch {
 	case u.Missing():
+	case u.Rows > 0 && u.Rows == u.Untokened:
+		// A source that publishes no token counter has nothing to price, and no refreshed
+		// price table will change that. Reporting it as a missing price would send a reader
+		// after a fix that does not exist.
+		cmd.Printf("unpriced:     not priceable — %d row(s) in the last %s come from a source that publishes no token counter\n",
+			u.Rows, c.Window)
+		return ""
 	case u.Rows > 0:
 		// The middle case report and check both print: rows on a model with no price that
 		// carry no token. Collapsing it into "everything is priced" would have this line
@@ -36,6 +43,12 @@ func unpricedSection(cmd *cobra.Command, c *storeContents, maxShare float64) str
 	cmd.Printf("unpriced:     %s of the last %s (%s of %s tokens) on %s\n",
 		share, c.Window, humanize.Count(u.Tokens), humanize.Count(u.Total), modelsPhrase(c.Models))
 	cmd.Println("              Cost excludes them entirely. Upgrade assaio for a refreshed price table.")
+	if u.Untokened > 0 {
+		// The two reasons coexist, and only the first switch case above used to be reachable when
+		// they did: a store holding both an unlisted model and a counter-less source printed the
+		// upgrade line alone, which is a fix for part of the gap presented as the fix for all of it.
+		cmd.Printf("              %d of the unpriced row(s) publish no token counter at all, which no refresh changes.\n", u.Untokened)
+	}
 	if maxShare <= 0 || u.Share() <= maxShare {
 		return ""
 	}

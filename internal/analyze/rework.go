@@ -7,6 +7,7 @@ import (
 
 	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/parser"
+	"github.com/assaio/assaio/internal/threshold"
 
 	"github.com/assaio/assaio/internal/report"
 )
@@ -64,6 +65,9 @@ func (reworkValidator) Analyze(in Input) Result {
 	if complete {
 		r.Caveats = append(r.Caveats, unsourcedLine("a rework or rejection rate", ownHistoryWouldSettleIt))
 	}
+	// The published churn figure a reader will hold this rate up against, named rather than
+	// left as a silence they fill with it (internal/threshold).
+	r.Caveats = append(r.Caveats, citationLines(threshold.For(reworkName), in.Now)...)
 	r.Takeaway = reworkTakeaway(complete, churn.ReworkRate, reworkKnown, rejectionRate)
 	return r
 }

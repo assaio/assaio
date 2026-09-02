@@ -58,7 +58,15 @@ none of this relies on memory:
 
 1. **During development**, every user-facing change lands under `## [Unreleased]` in
    the same PR that ships it (the PR template's checklist item). `[Unreleased]` always
-   means: merged to `main`, **in no tagged release yet**.
+   means: merged to `main`, **in no tagged release yet**. Entries go under one of seven
+   headings — `Breaking`, `Added`, `Changed`, `Fixed`, `Removed`, `Deprecated`,
+   `Security` — and run one to three lines each.
+   **A change that corrects a figure an earlier release published updates two files**:
+   the entry here, and the post-mortem in [docs/corrections.md](docs/corrections.md)
+   that entry links to by anchor. The changelog says what moved; the register says what
+   the wrong number showed a reader, and what the fix overruled. Neither ships without
+   the other — an unlinked correction is the long story with nothing pointing at it, and
+   a dangling link is a claim the evidence is filed when it is not.
 2. **Before tagging `vX.Y.Z`**, in one `chore(release): prepare vX.Y.Z changelog`
    commit: retitle the `[Unreleased]` section to `## [X.Y.Z] - YYYY-MM-DD`, recreate
    an empty `## [Unreleased]` above it, and update the link references at the bottom
@@ -90,11 +98,35 @@ how an honesty-first product starts making false claims about itself:
   narrative sections, the caveat lists, and any "on the roadmap" wording about something that
   has since shipped. It deploys itself from `main` (see [docs/site.md](docs/site.md)), so a
   merge publishes it immediately — there is no separate step that would prompt a review.
+- `site/llms.txt` — the same page's machine-readable companion, deployed from the same commit
+  and covered by none of those annotations. Its source list, its refusals and its index of
+  documents are judgement every time.
+- `README.md` — the "Every command" table, the caveat list under what it cannot measure, and the
+  source list. All three have gone stale before, and once together: a shipped command missing
+  from the table, a caveat that had been false for twenty minors, and a source whose second
+  structural absence it never named.
+  ([correction](docs/corrections.md#readme-commands-and-counts))
+- `PRIVACY.md` — the directories the binary opens and the fields each parser extracts. **A new
+  parser changes this file in the same commit**, and a parser that reads *less* than the others
+  changes it too — that reduction is the part a reader deciding whether this is safe on a work
+  machine is owed. Shipping a source without it is already on the register.
+  ([correction](docs/corrections.md#privacy-md-named-three-of-five-sources))
+- `AGENTS.md` — the "What this is" paragraph and the layout block. It is the first thing every
+  contributor and every assistant reads, so a source or an `internal/` package missing from it
+  is wrong guidance rather than a stale document.
+  ([correction](docs/corrections.md#surfaces-counted-four-sources))
 - `FEATURES.md` — a row per user-facing capability, with the release it arrived in.
 - `ROADMAP.md` and `BACKLOG.md` — levels and items marked shipped, shipped entries deleted
   from the backlog, and any scope deliberately moved recorded on the item that inherited it.
 - `docs/` — including an ADR whenever the release makes a commitment a future contributor
   could unknowingly undo.
+- `CITATION.cff` — `version` and `date-released` for the tag being cut, and the tool list in
+  the abstract. Mechanical now: `consistency.yml` fails when the version is neither the newest
+  tag nor the one `CHANGELOG.md` is preparing, when `date-released` is not that tag's date, or
+  when the abstract names a different set of tools than the parsers in `docs/reference.json`.
+  It is on this list at all because it is the one published surface nothing in review opens —
+  it sat at 0.1.1 for twenty-three releases, still naming four parsers a release after the
+  fifth shipped.
 - `internal/pricing/litellm.json` — re-download LiteLLM's
   `model_prices_and_context_window.json` and bump `SnapshotDate` in
   `internal/pricing/snapshot.go`. **This is the release's job, not a background chore**: every

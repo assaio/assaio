@@ -238,7 +238,7 @@ against its own recent history, and one judges a condition:</p>
 <tr>
 <td><code>zero-token</code></td>
 <td>at least a quarter of parsed records carry no tokens at all</td>
-<td>50 records</td>
+<td>50 records, <strong>and</strong> a source whose depth row declares a token counter</td>
 </tr>
 <tr>
 <td><code>barren</code></td>
@@ -260,6 +260,13 @@ That was measured, not assumed — setting all four sample floors to <code>1</co
 the real corpus fired nothing on either build. It reads the whole history rather than
 one run, because an ordinary incremental pass whose single changed input yields nothing
 is not a barren source.</p>
+<p><code>zero-token</code> carries a second floor the others do not, and it is a capability rather than a
+sample size: a source whose depth row answers no token signal is exempt. Antigravity CLI
+publishes no counter anywhere in its format, so 100% of its records are zero-token on a
+perfectly healthy run — judged by the share it would fire on every backfill forever and fail
+<code>doctor --strict</code> on data that is exactly right, which is how a canary stops being evidence.
+A source the matrix has never heard of is still judged: not knowing a tool is not evidence
+that it keeps no tokens.</p>
 <p>A breach prints <code>warning: possible format drift in &lt;tool&gt;</code> — or, for <code>barren</code>, <code>warning: nothing read from a detected source</code>, because a condition is not a diagnosis — and appears
 in <code>doctor</code>'s drift section; <code>doctor --strict</code> turns it into an exit code for cron or CI. While a
 source's discovery canary is lit, its per-input ingest state is frozen rather than
@@ -281,13 +288,58 @@ a scratch store (<code>--db</code>); eyeball the counts. Cheap, and catches drif
 do.</p>
 </li>
 </ol>
+<h2 id="the-most-brittle-source-named">The most brittle source, named</h2>
+<p>Not all six are equally exposed, and pretending otherwise is the same mistake as a bare
+checkmark on a depth matrix. <strong>Antigravity CLI (<code>agy</code>) is the most brittle of the six</strong>, on
+three counts at once:</p>
+<ul>
+<li><strong>The binary self-updates.</strong> Antigravity CLI 1.1.23 was verified on 2026-09-02, with a <code>.old</code> copy of
+the previous build sitting beside it from the day before — two versions from two consecutive
+days on one machine. Nothing pins a user to the version this parser was read against, and the
+depth matrix names Antigravity CLI 1.1.23 for exactly that reason.</li>
+<li><strong>The schema is unpublished</strong> and the format is under a directory shared with another tool.
+<code>~/.gemini</code> holds Gemini CLI as well, which is why both discoverers glob narrowly and neither
+scans the shared root.</li>
+<li><strong>What accounting exists is in unnamed protobuf fields.</strong> The parser deliberately reads none
+of them (see <a href="https://assaio.dev/docs/source-fields">what each source's log carries</a>); the fields it does
+read are named JSON keys, which is the single reason this source is readable at all.</li>
+</ul>
+<p>Which canary catches which failure here, and which does not:</p>
+<table>
+<thead>
+<tr>
+<th>If Antigravity CLI…</th>
+<th>caught by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>moves or renames <code>brain/&lt;id&gt;/.system_generated/logs/</code></td>
+<td><code>discovery</code> — 500 conversations to none</td>
+</tr>
+<tr>
+<td>renames <code>source</code>, <code>created_at</code> or <code>step_index</code></td>
+<td><code>barren</code> on a fresh store, <code>yield</code> on an existing one: entries still parse as JSON and stop producing records</td>
+</tr>
+<tr>
+<td>writes a <code>created_at</code> in another format</td>
+<td><code>skipped</code> — undatable turns are counted, not silently dropped</td>
+</tr>
+<tr>
+<td>renames <code>tool_calls</code></td>
+<td><strong>nothing.</strong> The corpus holds 26 tool calls across 500 conversations, which is far too sparse to form a baseline any share could be judged against. Stated here rather than guarded, because a canary computed from 26 observations is not evidence.</td>
+</tr>
+</tbody>
+</table>
+<p>The last row is the honest limit. It is also the reason <code>agy</code> is <code>activity-only</code> and not
+<code>standard</code>: the figures it feeds are few enough to check by eye, and none of them is a cost.</p>
 <h2 id="reaction--the-fix-loop">Reaction — the fix loop</h2>
 <ol>
 <li><strong>Label and confirm.</strong> Tag the issue <code>format-drift</code>; reproduce from the redacted
 sample and the reported tool version.</li>
-<li><strong>Capture the new shape as a fixture.</strong> Add a <strong>new synthetic</strong> fixture beside the
-old one (never a real transcript) and regenerate goldens with <code>-update</code>. <strong>Keep the
-old fixture and keep parsing the old shape</strong> — users' disks still hold months of
+<li><strong>Capture the new shape as a fixture.</strong> Add a new fixture beside the old one — synthetic,
+or a field-allowlist redaction of a real capture, never a real transcript — and regenerate
+goldens with <code>-update</code>. <strong>Keep the old fixture and keep parsing the old shape</strong> — users' disks still hold months of
 history in the previous format; a parser upgrade must handle both, additively.</li>
 <li><strong>Fix the parser.</strong> Update mappings; add fuzz seeds for the new shape; <code>make fuzz</code>
 is mandatory on any parser change.</li>

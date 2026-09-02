@@ -38,9 +38,10 @@ A collector, not a store. `internal/vcs` reads a repository and returns
   identity plus timing is exactly what the correlation threat model (`B100`) exists to reason
   about. The strictest class is the answer that costs nothing today and does not pre-empt that
   decision.
-- **A commit is its own grain.** `grain` gains `commit` beside `turn` and `session`. Reusing
-  `session` would let a consumer average two things that are not the same unit, which is the
-  mistake the field exists to prevent.
+- **A commit is its own grain.** `grain` gains `commit` beside `turn` and `session` (which
+  [ADR 0016](0016-usage-is-a-store-row-not-an-event.md) later removed with the AI payloads that
+  counted in them). Reusing `session` would let a consumer average two things that are not the
+  same unit, which is the mistake the field exists to prevent.
 - **The id is the commit hash.** Idempotency is a property of the identifier (ADR 0007), and a
   hash is the source's own key, so re-reading a repository produces the same observations
   rather than a second set. A keyed pseudonymous digest is what a *syncable* variant would
@@ -82,6 +83,11 @@ Rejected alternatives:
   collector skips and counts an observation it cannot build, while `event.FromRecord` returns
   an error for the whole batch on the first record the contract rejects. Both are defensible;
   having both is not, and the log parsers' skip-and-count is the precedent.
+
+  *Settled by [ADR 0016](0016-usage-is-a-store-row-not-an-event.md):* skip-and-count, by
+  deleting the adapter that held the other posture rather than by choosing between two live
+  ones. `event.Validate` judges one observation and never a batch, so the batch-abort posture
+  is no longer available to invent.
 - The category heuristic is a published behaviour the moment it is printed. Changing how a
   path is classified changes a reported number, so it is a change with a changelog entry, not
   an implementation detail.

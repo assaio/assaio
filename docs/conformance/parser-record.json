@@ -1,0 +1,90 @@
+{
+  "about": "Conformance vectors for the assaio exec-plugin protocols. Each vector is one document exactly as a plugin would write it, plus the verdict assaio's own boundary gives it. Run them in your plugin's CI without the assaio binary: feed `doc` to your decoder and assert `accept`; when `accept` is false, your rejection reason should mention `expect`. assaio's own tests are driven by these same files (internal/plugin/conformance_test.go), so a vector that stops describing the boundary fails assaio's build rather than yours.",
+  "contract": "parser-record",
+  "description": "One JSONL usage record a parser plugin writes after its handshake when invoked as `<command> scan`. Every timestamp is judged against `now` below rather than the wall clock, so these vectors do not go stale.",
+  "protocol": 1,
+  "now": "2026-08-13T00:00:00Z",
+  "vectors": [
+    {
+      "id": "minimal",
+      "accept": true,
+      "why": "identity, time, grain and counts",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"2026-08-12T09:00:00Z\", \"model\": \"m\", \"input_tokens\": 100, \"output_tokens\": 200, \"dedupe_key\": \"s1:1\", \"granularity\": \"turn\"}"
+    },
+    {
+      "id": "session-grain",
+      "accept": true,
+      "why": "a source that only reports whole sessions",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"2026-08-12T09:00:00Z\", \"model\": \"m\", \"input_tokens\": 100, \"output_tokens\": 200, \"dedupe_key\": \"s1:1\", \"granularity\": \"session\", \"project\": \"web\", \"git_branch\": \"main\", \"entrypoint\": \"cli\"}"
+    },
+    {
+      "id": "zero-counts",
+      "accept": true,
+      "why": "a turn that spent nothing is a measurement; only a negative one is a contradiction",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"2026-08-12T09:00:00Z\", \"model\": \"m\", \"input_tokens\": 0, \"output_tokens\": 0, \"dedupe_key\": \"s1:1\", \"granularity\": \"turn\"}"
+    },
+    {
+      "id": "session-id-absent",
+      "accept": false,
+      "expect": "empty session_id",
+      "why": "a record that belongs to no session cannot be deduplicated or attributed",
+      "doc": "{\"session_id\": \"\", \"timestamp\": \"2026-08-12T09:00:00Z\", \"model\": \"m\", \"input_tokens\": 100, \"output_tokens\": 200, \"dedupe_key\": \"s1:1\", \"granularity\": \"turn\"}"
+    },
+    {
+      "id": "dedupe-key-absent",
+      "accept": false,
+      "expect": "empty dedupe_key",
+      "why": "without it a re-scan doubles the store",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"2026-08-12T09:00:00Z\", \"model\": \"m\", \"input_tokens\": 100, \"output_tokens\": 200, \"dedupe_key\": \"\", \"granularity\": \"turn\"}"
+    },
+    {
+      "id": "granularity-unknown",
+      "accept": false,
+      "expect": "invalid granularity",
+      "why": "mixing whole-session aggregates into a per-turn figure is the misread reports now disclose",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"2026-08-12T09:00:00Z\", \"model\": \"m\", \"input_tokens\": 100, \"output_tokens\": 200, \"dedupe_key\": \"s1:1\", \"granularity\": \"day\"}"
+    },
+    {
+      "id": "granularity-absent",
+      "accept": false,
+      "expect": "invalid granularity",
+      "why": "silence about the grain is not the turn grain",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"2026-08-12T09:00:00Z\", \"dedupe_key\": \"k\"}"
+    },
+    {
+      "id": "timestamp-unparseable",
+      "accept": false,
+      "expect": "bad timestamp",
+      "why": "RFC3339 or nothing",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"12/08/2026\", \"model\": \"m\", \"input_tokens\": 100, \"output_tokens\": 200, \"dedupe_key\": \"s1:1\", \"granularity\": \"turn\"}"
+    },
+    {
+      "id": "timestamp-far-future",
+      "accept": false,
+      "expect": "out of range",
+      "why": "one unbounded timestamp sits in every --since window forever",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"2099-01-01T00:00:00Z\", \"model\": \"m\", \"input_tokens\": 100, \"output_tokens\": 200, \"dedupe_key\": \"s1:1\", \"granularity\": \"turn\"}"
+    },
+    {
+      "id": "negative-count",
+      "accept": false,
+      "expect": "negative count",
+      "why": "a negative token count prices as a refund",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"2026-08-12T09:00:00Z\", \"model\": \"m\", \"input_tokens\": 100, \"output_tokens\": -1, \"dedupe_key\": \"s1:1\", \"granularity\": \"turn\"}"
+    },
+    {
+      "id": "snake-case-violated",
+      "accept": false,
+      "expect": "unknown field",
+      "why": "`outputTokens` used to store a zero and count as a valid record",
+      "doc": "{\"session_id\":\"s1\",\"timestamp\":\"2026-08-12T09:00:00Z\",\"outputTokens\":200,\"dedupe_key\":\"k\",\"granularity\":\"turn\"}"
+    },
+    {
+      "id": "not-json",
+      "accept": false,
+      "expect": "invalid JSON",
+      "why": "a plugin that logged to stdout",
+      "doc": "scanning ~/.claude/projects ..."
+    }
+  ]
+}

@@ -19,7 +19,15 @@ import (
 // error attached, which is the failure mode this project refuses. Bumping makes the handshake
 // fail loudly instead, naming the version, so the fix is a config line rather than a
 // mystery.
-const metricInputVersion = 3
+//
+// v4 is the third, and the first to reshape the *request* rather than the answer: a plugin
+// declares what it reads in a `describe` run, and the envelope carries only that -- the sections
+// it named, the columns inside them, and the rows its own predicates admit. A v3 plugin declared
+// nothing and was sent everything, so leaving the version alone would hand it a document with
+// most of its sections missing and no way to tell a projection from an empty window. Bumping
+// fails the handshake instead, naming the version, so the fix is a `describe` verb rather than a
+// figure computed over sections that were never there.
+const metricInputVersion = 4
 
 // MetricProtocolVersion is metricInputVersion for the published-docs check, so a recipe and the
 // runtime cannot disagree about which handshake a plugin must emit.
@@ -69,25 +77,28 @@ type metricInput struct {
 	// states no reason and is absent, as is every turn from a source that reports none.
 	CacheMisses []metricCacheMissRow `json:"cacheMisses"`
 	// Trace is the window's step sequences: what each session did, in what order (ADR 0012).
-	// Present only when this plugin's `metrics:` entry declares `needs: [trace]`; otherwise the
-	// section is absent and Withheld names it. It is by far the largest thing on the wire --
-	// about 44 MB at 339,000 steps -- which is why it is the one section that must be asked for.
-	// Every scope is sent, each sequence carrying the one it belongs to, because a detector's
-	// scope is its denominator and both sides have to agree on it rather than each deriving one.
+	// By far the largest section -- 339,000 steps encode to about 44 MB -- which is what a
+	// projection is for: a detector that reads three step columns of one scope no longer pays
+	// for the other four columns and the other three scopes. Every scope is sent unless a
+	// predicate excludes one, each sequence carrying the scope it belongs to, because a
+	// detector's scope is its denominator and both sides have to agree on it rather than each
+	// deriving one.
 	//
-	// This is the largest thing on the wire by an order of magnitude -- 339,000 steps encode to
-	// 44MB -- and it is sent unconditionally because the alternative is a plugin that cannot
-	// write the detectors the core just gained. A plugin declaring what it needs is the way out
-	// and needs a protocol version to carry it (`B168`).
-	//
-	// Empty on a store with no step history, and for every source with no step reading: absent,
-	// not a session that did nothing.
+	// Empty on a store with no step history, and for every source with no step reading: a
+	// window that recorded nothing, never a session that did nothing.
 	Trace []metricTimeline `json:"trace"`
-	// Withheld names the capabilities this envelope does not carry because the plugin did not
-	// declare them in its `needs:` config. An empty section is otherwise indistinguishable from
-	// a window that holds none, and a plugin that divides by it would be reporting a zero
-	// nobody measured.
+	// Withheld names the capabilities the plugin declared and the local config denied. It is
+	// the only absence assaio decided: a section missing because the plugin never asked for it
+	// is named by Projection.Needs instead. Both exist because an empty array is
+	// indistinguishable from a window that holds none, and a plugin dividing by one would be
+	// reporting a zero nobody measured.
 	Withheld []analyze.Capability `json:"withheld,omitempty"`
+	// Projection is what this run carries and why: the capabilities granted, the columns and
+	// predicates the plugin declared, and per section how many rows it received out of how many
+	// the window held. It is what makes the document self-describing, which a projected one has
+	// to be -- a column projected away is absent, and nothing else on the wire says whether an
+	// absence was chosen or measured.
+	Projection metricProjection `json:"projection"`
 	// HistoryStart is the earliest observation the store holds, ignoring this window. It is what
 	// makes a trend's own horizon knowable: a comparison against an earlier span means nothing when
 	// the store's history began inside it, and a source that deletes its transcripts makes that the
@@ -95,100 +106,14 @@ type metricInput struct {
 	HistoryStart time.Time `json:"historyStart"`
 }
 
-type metricUsageRow struct {
-	Day        string `json:"day"`
-	Tool       string `json:"tool"`
-	Model      string `json:"model"`
-	Project    string `json:"project"`
-	Entrypoint string `json:"entrypoint"`
-	// Member is a pseudonym, never the name a member synced under -- see memberLabels.
-	Member string `json:"member"`
-	// Granularity is "turn" or "session". A plugin that sums these rows without reading it
-	// would fold whole-session aggregates into a per-turn figure, which is the same misread
-	// the core reports now disclose.
-	Granularity string `json:"granularity"`
-	In          int64  `json:"in"`
-	Out         int64  `json:"out"`
-	CacheRead   int64  `json:"cacheRead"`
-	CacheWrite  int64  `json:"cacheWrite"`
-	// CacheWrite1h is the portion of CacheWrite that bought a 1-hour cache lifetime, billed
-	// at its own higher rate (metricPrice.CacheWrite1h). A subset, never added to the total.
-	// Without it a plugin re-pricing these rows necessarily bills every write at the cheaper
-	// 5-minute rate and reports a cost the core does not agree with.
-	CacheWrite1h int64 `json:"cacheWrite1h"`
-	Reasoning    int64 `json:"reasoning"`
-	LinesAdded   int64 `json:"linesAdded"`
-	LinesRemoved int64 `json:"linesRemoved"`
-	Edits        int64 `json:"edits"`
-	ToolCalls    int64 `json:"toolCalls"`
-	Rejected     int64 `json:"rejected"`
-	Compactions  int64 `json:"compactions"`
-	ReworkLines  int64 `json:"reworkLines"`
-}
-
-type metricSessionRow struct {
-	SessionID string `json:"sessionId"`
-	Project   string `json:"project"`
-	Tool      string `json:"tool"`
-	Model     string `json:"model"`
-	// Member is a pseudonym, never the name a member synced under -- see memberLabels.
-	Member            string    `json:"member"`
-	FirstTs           time.Time `json:"firstTs"`
-	LastTs            time.Time `json:"lastTs"`
-	Turns             int64     `json:"turns"`
-	OutputTokens      int64     `json:"outputTokens"`
-	PeakContextTokens int64     `json:"peakContextTokens"`
-	Edits             int64     `json:"edits"`
-	Compactions       int64     `json:"compactions"`
-	ActiveMinutes     float64   `json:"activeMinutes"`
-}
-
-type metricDelegation struct {
-	Sub   int64 `json:"sub"`
-	Total int64 `json:"total"`
-}
-
-type metricModelStat struct {
-	Model      string   `json:"model"`
-	Tier       string   `json:"tier"`
-	Tokens     int64    `json:"tokens"`
-	Input      int64    `json:"input"`
-	Output     int64    `json:"output"`
-	CacheRead  int64    `json:"cacheRead"`
-	CacheWrite int64    `json:"cacheWrite"`
-	Lines      int64    `json:"lines"`
-	Cost       *float64 `json:"cost"`
-	Priced     bool     `json:"priced"`
-	TokenShare float64  `json:"tokenShare"`
-}
-
-type metricProjectStat struct {
-	Project    string   `json:"project"`
-	Lines      int64    `json:"lines"`
-	Cost       *float64 `json:"cost"`
-	Priced     bool     `json:"priced"`
-	TokenShare float64  `json:"tokenShare"`
-}
-
-type metricTotals struct {
-	Tokens          int64    `json:"tokens"`
-	Input           int64    `json:"input"`
-	Output          int64    `json:"output"`
-	CacheRead       int64    `json:"cacheRead"`
-	CacheWrite      int64    `json:"cacheWrite"`
-	Lines           int64    `json:"lines"`
-	Cost            *float64 `json:"cost"`
-	Priced          bool     `json:"priced"`
-	CacheEfficiency float64  `json:"cacheEfficiency"`
-}
-
-type metricPrice struct {
-	Input      float64 `json:"input"`
-	Output     float64 `json:"output"`
-	CacheRead  float64 `json:"cacheRead"`
-	CacheWrite float64 `json:"cacheWrite"`
-	// CacheWrite1h prices the 1-hour portion of a cache write; it equals CacheWrite for a
-	// model the table gives only one write rate, which is the vendor charging one rate rather
-	// than the tier being free.
-	CacheWrite1h float64 `json:"cacheWrite1h"`
+// metricProjection echoes the negotiated projection back to the plugin that declared it, after
+// the local config's veto.
+type metricProjection struct {
+	Needs  []analyze.Capability `json:"needs"`
+	Fields map[string][]string  `json:"fields,omitempty"`
+	Where  map[string][]string  `json:"where,omitempty"`
+	// Rows counts, per array section this envelope carries, how many rows the plugin received
+	// out of how many the window held before its own predicate ran. A share computed over a
+	// filtered section has its denominator here and nowhere else.
+	Rows map[string]rowCount `json:"rows"`
 }

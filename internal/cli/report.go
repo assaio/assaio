@@ -106,9 +106,11 @@ func renderReport(cmd *cobra.Command, built []report.Row, format, by string, id 
 			cmd.Println(emptyStoreHint(cmd, "No usage found."))
 			return nil
 		}
-		if err := report.RenderTable(cmd.OutOrStdout(), built, by); err != nil {
+		if err := report.RenderTable(cmd.OutOrStdout(), report.CollapseForTable(built, by), by); err != nil {
 			return err
 		}
+		// The disclosure reads the uncollapsed rows: the collapse drops Member, and a team
+		// store still has to state which identity the operator asked for.
 		return printMemberDisclosure(cmd.OutOrStdout(), built, id)
 	case "json":
 		if err := report.RenderJSON(cmd.OutOrStdout(), built); err != nil {

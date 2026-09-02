@@ -1,0 +1,17 @@
+#!/bin/sh
+# {{.Name}}: an assaio rule plugin (ADR 0005, protocol {{.Protocol}}).
+#
+# Invoked as `{{.Name}} evaluate` with ASSAIO_RULE_PROTOCOL=1: the window's verdicts on stdin, a
+# handshake line and one alerts document on stdout. Only `error` fails `assaio-agent check`.
+#
+# POSIX sh cannot read JSON, so this skeleton raises nothing. `{"alerts":[]}` is a real answer --
+# "nothing to flag" -- and the key is required rather than optional: a document without it is a
+# rule that did not run, which assaio fails the gate on instead of reading as a pass. Pipe stdin
+# through jq to decide anything.
+set -eu
+
+[ "${1-}" = "evaluate" ] || { echo "usage: $0 evaluate" >&2; exit 64; }
+cat >/dev/null
+
+printf '{"assaio_rule":%s,"name":"%s"}\n' '{{.Protocol}}' '{{.Name}}'
+printf '{"alerts":[]}\n'

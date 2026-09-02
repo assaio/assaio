@@ -21,7 +21,14 @@ metrics:
   - name: weekend-usage      # required, [a-z0-9-]+; appears as "plugin:weekend-usage"
     command: /path/to/assaio-metric-weekend   # required; PATH lookup if not absolute
     timeout: 30s             # optional, default 60s
+    needs: [usage]           # optional veto -- see "Declare what you read" below
 ```
+
+**Start from a working skeleton.** `assaio-agent plugins init --kind metric --lang python`
+prints a runnable metric plugin -- correct handshake, both verbs, one result the boundary
+accepts -- to stdout, and the next steps to stderr, so
+`assaio-agent plugins init --kind metric --lang python > my-metric.py` writes only the program.
+`--lang go|python|sh` and `--kind parser|metric|rule` cover every combination.
 
 **One privacy note before the protocol.** Unlike a parser plugin (which reads a tool's
 own logs), a metric plugin **receives your usage data on stdin**: project names, model
@@ -33,16 +40,25 @@ binary you didn't write.
 
 ## The protocol
 
-`assaio` invokes `<command> analyze` with `ASSAIO_METRIC_PROTOCOL=1` in the environment,
-writes one JSON envelope to the plugin's **stdin**, closes it, and reads stdout.
+`assaio` runs your plugin **twice per analysis**, both times with
+`ASSAIO_METRIC_PROTOCOL=1` in the environment:
+
+1. `<command> describe` — nothing on stdin. You write a handshake line and **one
+   Declaration**: what this metric reads.
+2. `<command> analyze` — the window on stdin, cut to exactly what you declared. You write a
+   handshake line and **one `Result`**.
+
+The extra process is what buys the envelope: on a real 30-day store the whole window is
+53 MB and an ordinary metric's projection of it is 43 KB (see below).
 
 **stdin** — the prepared `Input`, versioned, camelCase (mirroring the public
 `analyze --format json` shapes; only the version keys stay snake_case, matching the
-parser protocol's `assaio_plugin`):
+parser protocol's `assaio_plugin`). This is the envelope of a plugin that declared
+everything; a section you do not declare is **not on the document at all**:
 
 ```json
 {
-  "assaio_metric_input": 3,
+  "assaio_metric_input": 4,
   "now": "2026-07-17T10:00:00Z",
   "recentDays": 7,
   "usage":    [{"day":"2026-07-16","tool":"claude-code","model":"...","project":"...",
@@ -76,9 +92,86 @@ parser protocol's `assaio_plugin`):
              "project":"…","scope":"interactive",
              "steps":[{"ordinal":1,"at":"2026-08-12T09:00:00Z","kind":"edit","outcome":"ok",
                        "model":"claude-opus-5","tokens":0,"targetRef":1}]}],
-  "historyStart": "2026-07-13T08:11:04Z"
+  "historyStart": "2026-07-13T08:11:04Z",
+  "projection": {"needs":["usage","trace"],
+                 "fields":{"usage":["day","in","out"],"trace.steps":["kind","outcome"]},
+                 "where":{"trace.scope":["interactive"]},
+                 "rows":{"usage":{"sent":522,"available":522},
+                         "trace":{"sent":471,"available":4279}}}
 }
 ```
+
+### Declare what you read (since v0.25, protocol 4)
+
+`describe` answers one question: what does this metric read? assaio sends that and nothing
+else.
+
+```json
+{"assaio_metric": 4, "name": "weekend-usage"}
+{"needs": ["usage"], "fields": {"usage": ["day", "tool", "in", "out"]}}
+```
+
+| Key | What it does |
+|---|---|
+| `needs` | **Required**, at least one. The capability vocabulary a built-in validator declares: `usage`, `sessions`, `trace`, `attribution`, `turn-sizing`, `cache-misses`, `prices`. An empty list is refused — a metric that reads nothing has nothing to report, and treating it as "everything" would restore the pre-4 default under a name saying the opposite |
+| `fields` | Optional. Columns of a section, keyed by the section's JSON key. A section you do not name arrives whole. `trace.steps` is addressable on its own, which is where the bytes are |
+| `where` | Optional. Rows, keyed `<section>.<column>` with the values that column may hold. **Grain is a column**: `usage.granularity` picks `turn` or `session` rows, `trace.scope` picks `interactive`, `sub-agent`, `programmatic` or `unstated`. Only string columns, and only top-level rows — a predicate inside a sequence would leave its ordinals describing a set nobody declared |
+
+Which sections each capability carries: `usage` carries `usage`, `byModel`, `byProject`,
+`totals` and `delegation`; `sessions` carries `sessions`; `prices` carries `prices` and
+`planMonthlyCost`; `attribution` carries `skills` and `agents`; `turn-sizing`, `cache-misses`
+and `trace` carry the sections of their own names. The prepared views ride with the rows they
+aggregate because they are bounded by model and project count, not by observation count —
+and only while those rows are the whole window. A `where` predicate declared against `usage`,
+`byModel` or `byProject` **withholds `totals` and `delegation` entirely**, because they span
+the window rather than the rows you asked for, and `sum(usage.in) / totals.tokens` would be a
+share of a population your rows do not describe. The window's own denominator stays reachable
+as `projection.rows[<section>].available`. The condition is your declaration, never the
+outcome, so the keys cannot be present on one window and absent on the next.
+`now`, `recentDays`, `windowStart`, `historyStart`, `answers`, `projection` and `withheld`
+are always sent: they are how you judge what you did receive.
+
+**A column you did not project is absent, and absent is not zero.** `projection.fields` on
+the envelope is the list of keys you may read; decoding a missing key into a struct field
+gives you a `0` that no source ever recorded. Same for a section: read `projection.needs`
+before assuming a key exists.
+
+**A predicate changes your denominator, so the envelope states it.**
+`projection.rows[section]` gives `sent` and `available` — how many rows you received, and how
+many the window held before your own predicate ran. A share over a filtered section is a
+share of `sent`; saying which of the two your figure means is your job, and
+`confidence.signalCoverage` is where it goes.
+
+**What this is worth.** The same 30-day window on a real store — 522 usage rows, 3,376
+sessions, 4,279 step sequences, 424,310 steps — serialized under four declarations:
+
+| What the plugin gets | Bytes |
+|---|---|
+| protocol 3, no `needs:` line (everything except `trace`) | 1,237,872 (1.18 MB) |
+| protocol 3, `needs: [trace]` (everything) | 55,864,147 (53.28 MB) |
+| protocol 4, `needs: [usage]` with four columns | 43,779 (0.04 MB) |
+| protocol 4, `needs: [trace]`, three sequence and two step columns, `trace.scope = interactive` | 7,531,004 (7.18 MB) |
+
+**Your config entry is a veto, not the declaration.** Before v0.25 the reader wrote
+`needs:` in `config.yaml`, which asked the person pasting a config entry to know what your
+plugin reads. Now you declare it and their `needs:` only *narrows* it: no key means no
+constraint, allowing more than you declared grants nothing extra, and allowing less sends the
+section absent, names the capability in the envelope's top-level `withheld`, and adds a
+caveat to your rendered verdict saying the verdict rests on less than you asked for.
+
+### Migrating a protocol-3 plugin
+
+A protocol-3 plugin fails on the handshake, naming the version, before any window is
+serialized for it. Two edits:
+
+1. Change the handshake integer from `3` to `4`, in both verbs.
+2. Add a `describe` branch that prints that handshake and one declaration. To reproduce
+   protocol 3's payload exactly:
+   `{"needs":["usage","sessions","trace","attribution","turn-sizing","cache-misses","prices"]}`.
+
+Narrowing from there is optional and is where every byte in the table above comes from. A
+`needs:` line already in someone's `config.yaml` keeps working and now reads as a veto over
+your declaration rather than an extension of it.
 
 ### `cacheWrite1h` — a subset, never a total (since v0.14)
 
@@ -141,9 +234,9 @@ reshapes it says so explicitly (see `RELEASING.md`).
 **stdout** — a one-line handshake, then exactly **one** JSON `Result` document
 (pretty-printed is fine; anything after it is a violation):
 
-1. `{"assaio_metric": 3, "name": "<name>"}` — version must be `3` (it was `2` before v0.24;
+1. `{"assaio_metric": 4, "name": "<name>"}` — version must be `4` (it was `3` before v0.25;
    see the breaking change in [CHANGELOG.md](../../CHANGELOG.md)), `name` must equal the
-   configured name.
+   configured name. The same line opens `describe`.
 2. One `Result` in the same shape `analyze --format json` emits — see [What a validator
    returns: Result](metric-validator.md#what-a-validator-returns-result). The wire `name` field is ignored:
    assaio always stamps `plugin:<name>`, so a plugin can never shadow a built-in
@@ -218,8 +311,9 @@ with its reason.
 | `skills`, `agents` | per-skill and per-sub-agent totals. A row carrying no attribution is absent rather than bucketed under `""`, and both lists are empty when no tool in the window records attribution at all. That emptiness is a coverage fact to state, not a zero to publish |
 | `turnSizing` | per-model turn counts at the raw per-turn grain the daily `usage` rows aggregate away. `smallTurns` is a **subset** of `turns`, not a separate population |
 | `cacheMisses` | turns that stated a cache-miss reason, per tool. A turn that hit cache states nothing and is absent, as is every turn from a source that reports no reason — so this is never a denominator |
-| `withheld` | the capabilities assaio did **not** put in this envelope, because your `metrics:` entry did not declare them. Present only when something was withheld. Read it: an absent section and a window that genuinely holds none of that evidence look identical otherwise, and dividing by one you were never sent is the fabricated zero this protocol exists to refuse. Today the only withholdable section is `trace`; everything else costs kilobytes and is sent unasked |
-| `trace` | the window's step sequences: what each session did, in what order (ADR 0012). One entry per sequence — a session's main loop, or one sub-agent inside it — carrying the `scope` the core classified it as (`interactive`, `sub-agent`, `programmatic`, `unstated`). **Read one scope, not the set:** 89% of the sequences on the audited store are one-shot SDK calls holding 5.7% of its steps, so a rate spanning two scopes describes neither, and the share you excluded belongs beside your figure. `outcome` is `""` when the source said nothing, which is never `ok`; `targetRef` stands for the file a step named and is comparable **only inside its own sequence**, never across sequences and never a path. This is by far the largest thing on the wire — 339,000 steps encode to about 44 MB — so it is the one section you have to **ask for**: add `needs: [trace]` to your `metrics:` entry. Without it the section is absent and `withheld` says so |
+| `withheld` | the capabilities you declared that this install's `needs:` entry refused. Present only when something was refused, and it is the *only* absence assaio decided — a section you never declared is simply not on the document, and `projection.needs` is what says so. Read both: an absent section and a window that genuinely holds none of that evidence look identical otherwise, and dividing by one you were never sent is the fabricated zero this protocol exists to refuse |
+| `projection` | what this envelope carries and why: `needs` (the capabilities granted), `fields` and `where` (your own narrowing, echoed back after the config's veto), and `rows` — per section, how many rows you were `sent` out of how many were `available` before your predicate ran. It is what makes a projected document self-describing; nothing else on the wire says whether an absence was chosen or measured |
+| `trace` | the window's step sequences: what each session did, in what order (ADR 0012). One entry per sequence — a session's main loop, or one sub-agent inside it — carrying the `scope` the core classified it as (`interactive`, `sub-agent`, `programmatic`, `unstated`). **Read one scope, not the set:** 89% of the sequences on the audited store are one-shot SDK calls holding 5.7% of its steps, so a rate spanning two scopes describes neither, and the share you excluded belongs beside your figure — declare `where: {"trace.scope": ["interactive"]}` and `projection.rows.trace` tells you what you left out. `outcome` is `""` when the source said nothing, which is never `ok`; `targetRef` stands for the file a step named and is comparable **only inside its own sequence**, never across sequences and never a path. By far the largest section — 424,000 steps encode to 53 MB — which is what projecting `trace.steps` down to the two columns you read is for |
 | `historyStart` | the earliest observation the store holds, **ignoring the window**. Compare it against the span your figure leans on: a trend against "the prior week" means nothing if the store's history began inside that week, and several tools delete their own transcripts (Claude Code after 30 days by default), which makes that the ordinary case rather than the odd one. The zero time means the core could not answer |
 
 `skills`, `agents` and `cacheMisses` are all shaped the same way: **present means recorded,
@@ -228,7 +322,8 @@ them, check `answers` for whether the tools in this window record it at all, and
 coverage you actually had.
 
 Those additions kept the envelope at `assaio_metric_input: 1`, because a plugin written
-against the earlier shape keeps working and simply ignores them.
+against the earlier shape kept working and simply ignored them. Protocol 4 is the first
+change to the request rather than the answer, which is why it could not be additive.
 
 ## What the boundary enforces
 
@@ -238,6 +333,12 @@ bare `analyze`/`dashboard` run a failing plugin is skipped with one `warning:` l
 the built-ins still render; an explicitly selected one (`analyze plugin:<name>`) is a
 hard error.
 
+- The **declaration** is refused whole, with every reason, before any window is serialized:
+  `needs` must be present and non-empty and name only known capabilities, with no duplicate;
+  every `fields` key must be a section whose capability you declared, and every column in it a
+  column that section has; every `where` key must address `<section>.<column>`, on a top-level
+  section you declared, on a string column, admitting at least one value. Nothing is repaired —
+  a column assaio silently dropped from your projection is a column you read as absent.
 - `layer` must be `activity`, `output`, `outcome` or `impact` — which of the four measurement
   layers your verdict rests on (ADR 0013). Required, because a built-in metric cannot compile
   without stating it and an extension surface weaker than the core it extends is not a surface.
@@ -278,6 +379,15 @@ example](metric-validator-example.md) — one metric, both extension paths:
 import json, sys
 from datetime import date
 
+HANDSHAKE = {"assaio_metric": 4, "name": "weekend-usage"}
+
+if sys.argv[1:2] == ["describe"]:
+    # Four columns of one section. Everything else -- sessions, the step timeline, the
+    # price table -- is never serialized for this plugin at all.
+    print(json.dumps(HANDSHAKE))
+    print(json.dumps({"needs": ["usage"], "fields": {"usage": ["day", "in", "out"]}}))
+    sys.exit(0)
+
 inp = json.load(sys.stdin)
 weekend = total = 0
 for row in inp["usage"]:
@@ -286,13 +396,13 @@ for row in inp["usage"]:
     if date.fromisoformat(row["day"]).weekday() >= 5:
         weekend += tokens
 
-print(json.dumps({"assaio_metric": 3, "name": "weekend-usage"}))
+print(json.dumps(HANDSHAKE))
 
 if total == 0:
     print(json.dumps({
         "title": "Weekend Usage",
         "layer": "activity",
-        "read": {"key": "neutral", "label": "—"},
+        "read": {"key": "neutral", "label": "\u2014"},
         "howToRead": "A rising weekend share can mean crunch time or just flexible hours -- read it next to team sentiment, not as a verdict on its own.",
         "takeaway": "No usage in this window.",
     }))
@@ -335,6 +445,26 @@ From then on a bare `assaio-agent analyze` prints it after the built-ins,
 `assaio-agent analyze plugin:weekend-usage` runs it alone, `analyze --list` shows it
 (without executing it), and `assaio-agent dashboard` gives it a faceplate cell and
 ledger entry like any built-in's.
+
+## Conformance vectors — your CI without this binary
+
+`docs/conformance/` publishes every document this boundary accepts and refuses, with the
+verdict and the reason:
+
+| File | The document it judges |
+|---|---|
+| [`metric-declaration.json`](../conformance/metric-declaration.json) | what `describe` writes |
+| [`metric-result.json`](../conformance/metric-result.json) | what `analyze` writes |
+| [`rule-alerts.json`](../conformance/rule-alerts.json) | what a [rule plugin](rule-plugin.md) writes |
+| [`parser-record.json`](../conformance/parser-record.json) | one record from a [parser plugin](parser-plugin.md) |
+
+Each file is `{about, contract, protocol, vectors: [{id, doc, accept, expect, why}]}`. `doc`
+is the document as a **string**, so a malformed one — trailing data, a control character, text
+that is not JSON at all — is representable. Feed each `doc` to your decoder and assert
+`accept`; when it is `false`, your rejection reason should mention `expect`.
+
+These same files drive assaio's own tests and seed its fuzzers, so a vector that stops
+describing the boundary fails assaio's build rather than yours.
 
 **Where it deliberately does not run:** the [team server](team-server.md)'s served
 dashboard (`GET /` rebuilds per request — spawning

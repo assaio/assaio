@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/assaio/assaio/internal/parser/agy"
 	"github.com/assaio/assaio/internal/parser/claude"
 	"github.com/assaio/assaio/internal/parser/cline"
 	"github.com/assaio/assaio/internal/parser/codex"
@@ -25,6 +26,7 @@ var parsers = map[string]func(path string) ([]usage.Record, []usage.Step, int, e
 	"gemini-cli":  recordsOnly(gemini.Parse),
 	"copilot-cli": recordsOnly(copilot.Parse),
 	"cline":       dirRecordsOnly(cline.ParseDir),
+	"agy":         dirRecordsOnly(agy.ParseDir),
 }
 
 func fromFile(parse func(io.Reader) ([]usage.Record, []usage.Step, int, error)) func(string) ([]usage.Record, []usage.Step, int, error) {

@@ -1,0 +1,54 @@
+// Command {{.Name}} is an assaio parser plugin (ADR 0003, protocol {{.Protocol}}).
+//
+// Invoked as `{{.Name}} scan` with ASSAIO_PLUGIN_PROTOCOL=1: one handshake line, then one JSON
+// record per line. The documents assaio accepts and refuses are published in
+// docs/conformance/parser-record.json, which you can run in your own CI without that binary.
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
+
+const (
+	name     = "{{.Name}}"
+	protocol = {{.Protocol}}
+)
+
+// record is one AI turn. Granularity is "turn" or "session" and has no default, because silence
+// about the grain is not the turn grain.
+type record struct {
+	SessionID        string `json:"session_id"`
+	Timestamp        string `json:"timestamp"`
+	Model            string `json:"model"`
+	InputTokens      int64  `json:"input_tokens"`
+	OutputTokens     int64  `json:"output_tokens"`
+	CacheReadTokens  int64  `json:"cache_read_tokens"`
+	CacheWriteTokens int64  `json:"cache_write_tokens"`
+	DedupeKey        string `json:"dedupe_key"`
+	Project          string `json:"project"`
+	Granularity      string `json:"granularity"`
+}
+
+// discover returns one record per AI turn this plugin can see. Empty until you write it: a
+// parser that invents a record puts a number in someone's store that never happened.
+func discover() []record { return nil }
+
+func main() {
+	if len(os.Args) < 2 || os.Args[1] != "scan" {
+		fmt.Fprintf(os.Stderr, "usage: %s scan\n", os.Args[0])
+		os.Exit(64)
+	}
+	emit(map[string]any{"assaio_plugin": protocol, "tool": name})
+	for _, r := range discover() {
+		emit(r)
+	}
+}
+
+func emit(v any) {
+	if err := json.NewEncoder(os.Stdout).Encode(v); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(70)
+	}
+}

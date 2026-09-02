@@ -1,0 +1,17 @@
+#!/bin/sh
+# {{.Name}}: an assaio parser plugin (ADR 0003, protocol {{.Protocol}}).
+#
+# Invoked as `{{.Name}} scan` with ASSAIO_PLUGIN_PROTOCOL=1: one handshake line, then one JSON
+# record per line. The documents assaio accepts and refuses are published in
+# docs/conformance/parser-record.json, which you can run in your own CI without this binary.
+set -eu
+
+[ "${1-}" = "scan" ] || { echo "usage: $0 scan" >&2; exit 64; }
+
+printf '{"assaio_plugin":%s,"tool":"%s"}\n' '{{.Protocol}}' '{{.Name}}'
+
+# Emit one line per turn below. Nothing is written until you do: a parser that invents a record
+# puts a number in someone's store that never happened.
+#
+# printf '{"session_id":"s1","timestamp":"2026-08-12T09:00:00Z","model":"m",'
+# printf '"input_tokens":0,"output_tokens":0,"dedupe_key":"s1:1","granularity":"turn"}\n'

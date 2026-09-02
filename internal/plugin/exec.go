@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"slices"
 	"time"
 
 	"github.com/assaio/assaio/internal/analyze"
@@ -35,19 +34,13 @@ type Config struct {
 	Name    string
 	Command string
 	Timeout time.Duration
-	// Needs is the metric plugin's declared inputs, from its `needs:` config key. Empty means
-	// it declared nothing, which grants everything cheap and withholds the one payload that is
-	// not: see needsTrace.
-	Needs []analyze.Capability
-}
-
-// needsTrace reports whether this plugin asked for the step timeline. Everything else in the
-// envelope costs kilobytes and is sent unasked; the timeline was measured at ~44 MB on a real
-// store (B168), which is enough latency, memory and disclosure to be worth declaring. A plugin
-// that wants it says so in config -- the same place its command and timeout are already
-// trusted from.
-func (c Config) needsTrace() bool {
-	return slices.Contains(c.Needs, analyze.CapTrace)
+	// Allow is the local config's veto over what this metric plugin may read, from its `needs:`
+	// entry. Since protocol 4 it constrains the plugin's own declaration rather than defining
+	// it: the author knows what the metric reads and the reader pasting a config entry does
+	// not, but the disclosure decision stays the reader's. Empty is no constraint, not an empty
+	// grant -- almost no entry carries the key, and reading that silence as a denial would
+	// starve every plugin the moment it shipped.
+	Allow []analyze.Capability
 }
 
 // Stats summarizes one plugin run: records accepted and lines skipped for failing a

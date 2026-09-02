@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/assaio/assaio/internal/config"
+	"github.com/assaio/assaio/internal/parser/agy"
 	"github.com/assaio/assaio/internal/parser/claude"
 	"github.com/assaio/assaio/internal/parser/cline"
 	"github.com/assaio/assaio/internal/parser/codex"
@@ -36,6 +37,7 @@ func scanSources(home string, s *config.Sources) []sourceScan {
 		scanSource("gemini-cli", "file", s.Gemini, gemini.Discover, paths.GeminiRoot(home)),
 		scanSource("cline", "task", s.Cline, cline.Discover, paths.ClineRoots(home)...),
 		scanSource("copilot-cli", "session", s.Copilot, copilot.Discover, paths.CopilotRoot(home)),
+		scanSource("agy", "conversation", s.Agy, agy.Discover, paths.AgyRoot(home)),
 	}
 }
 

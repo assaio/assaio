@@ -30,8 +30,8 @@ func newDashboardCmd() *cobra.Command {
 	c.Flags().StringVar(&output, "output", dashboardDefaultOutput, "HTML output path")
 	// anonymize/no-anonymize are read via cmd.Flags().Changed in resolveAnonymize, not
 	// through these locals, so an unset flag can fall back to config.
-	c.Flags().Bool("anonymize", true, "pseudonymize project and member names (default: from config privacy.anonymize)")
-	c.Flags().Bool("no-anonymize", false, "show real project and member names, overriding --anonymize")
+	c.Flags().Bool("anonymize", true, "pseudonymize project names (default: from config privacy.anonymize)")
+	c.Flags().Bool("no-anonymize", false, "show real project names, overriding --anonymize (member names stay pseudonymous)")
 	addDBFlag(c)
 	return c
 }
@@ -140,7 +140,7 @@ func windowLabel(since string) string {
 // dashboardWroteLine is the friendly confirmation printed after a successful write.
 func dashboardWroteLine(path, since string, anonymized bool) string {
 	if anonymized {
-		return fmt.Sprintf("Wrote dashboard to %s (window: %s, project/member names pseudonymized).", path, windowLabel(since))
+		return fmt.Sprintf("Wrote dashboard to %s (window: %s, project names pseudonymized).", path, windowLabel(since))
 	}
 	return fmt.Sprintf("Wrote dashboard to %s (window: %s).", path, windowLabel(since))
 }

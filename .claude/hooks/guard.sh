@@ -17,13 +17,39 @@ deny() {
 	exit 0
 }
 
-# `clear` has no --db: it opens whatever DataDir() resolves to, which is the maintainer's
-# real store unless XDG_DATA_HOME was redirected to a throwaway first. That redirect is the
-# only accepted way to run it, so it is required in the same command rather than assumed.
-if printf '%s' "$cmd" | grep -qE '(^|[[:space:]/])(assaio-agent|assaio)[[:space:]][^|;&]*clear([[:space:]]|$)' &&
-	! printf '%s' "$cmd" | grep -qE 'XDG_DATA_HOME=("|\$\(mktemp|/tmp/|/private/tmp/|/var/folders/)'; then
-	deny "assaio clear has no --db and would open the real store (~/.local/share/assaio/assaio.db, 170 MB of history older than the sources keep). Point it at a throwaway in the same command: XDG_DATA_HOME=\$(mktemp -d) assaio-agent clear ..."
-fi
+# A command is what a segment *starts* with, not what its text happens to contain. Heredoc
+# bodies are data -- this repo's own docs and changelog name the deletion subcommand -- so
+# they are cut before matching, and each remaining segment is judged by its leading word
+# past any env/assignment prefix. Without that, writing about the subcommand was refused as
+# running it.
+segments() {
+	printf '%s\n' "$1" | awk '
+		inbody { line = $0; sub(/^[[:space:]]+/, "", line); if (line == delim) inbody = 0; next }
+		{
+			if (match($0, "<<-?[[:space:]]*[\047\042]?[A-Za-z_][A-Za-z0-9_]*")) {
+				delim = substr($0, RSTART, RLENGTH)
+				sub(/^<<-?[[:space:]]*/, "", delim)
+				gsub("[\047\042]", "", delim)
+				inbody = 1
+			}
+			print
+		}
+	' | tr '|;&' '\n\n\n'
+}
+
+# The deletion subcommand has no --db: it opens whatever DataDir() resolves to, which is the
+# maintainer's real store unless XDG_DATA_HOME was redirected to a throwaway first. That
+# redirect is the only accepted way to run it, so it is required in the same segment rather
+# than assumed to be in effect from somewhere else.
+while IFS= read -r seg; do
+	bare=$(printf '%s' "$seg" | sed -E 's/^[[:space:]]*//; s/^((env|sudo|nohup|time)[[:space:]]+|[A-Za-z_][A-Za-z0-9_]*=("[^"]*"|\$\([^)]*\)|[^[:space:]]*)[[:space:]]+)*//')
+	printf '%s' "$bare" | grep -qE '^(([^[:space:]]*/)?(assaio-agent|assaio)|go[[:space:]]+run[[:space:]]+[^[:space:]]*assaio-agent)[[:space:]]' || continue
+	printf '%s' "$bare" | grep -qE '[[:space:]]clear([[:space:]]|$)' || continue
+	printf '%s' "$seg" | grep -qE 'XDG_DATA_HOME=("|\$\(mktemp|/tmp/|/private/tmp/|/var/folders/)' && continue
+	deny "This subcommand has no --db and would open the real store (~/.local/share/assaio/assaio.db, 170 MB of history older than the sources keep). Point it at a throwaway in the same command: XDG_DATA_HOME=\$(mktemp -d) assaio-agent ..."
+done <<EOF
+$(segments "$cmd")
+EOF
 
 # Published tags are immutable by repository ruleset; a bad release is fixed by the next one.
 if printf '%s' "$cmd" | grep -qE 'git[[:space:]]+tag[[:space:]]+(-d|--delete|-f|--force)([[:space:]]|$)'; then

@@ -54,7 +54,10 @@ func (turnEffValidator) Analyze(in Input) Result {
 		if s.Turns <= turnEffOneShotMax {
 			oneShot++
 		}
-		if s.Turns > 0 {
+		// Output per turn is a third capability beyond edits and turns: a source recording
+		// every turn and no token would contribute a structural zero and pull the median of a
+		// figure denominated in tokens toward one.
+		if s.Turns > 0 && parser.Answers(s.Tool, parser.SignalTokensOutput) {
 			outPerTurn = append(outPerTurn, float64(s.OutputTokens)/float64(s.Turns))
 		}
 	}
@@ -76,7 +79,11 @@ func (turnEffValidator) Analyze(in Input) Result {
 	r.Figures = []Figure{
 		{Label: "one-shot rate", Value: humanize.Percent(oneShotRate), Note: "code sessions in <=" + strconv.Itoa(turnEffOneShotMax) + " turns"},
 		{Label: "median turns", Value: strconv.FormatFloat(medianAt50(codeTurns), 'f', 0, 64), Note: "per code session"},
-		{Label: "output/turn", Value: medianOutputPerTurn(outPerTurn), Note: "median tokens"},
+		// Stated per figure, because r.covering() above is one number for the whole result and
+		// this figure rests on a narrower basis than the two beside it: the sessions whose
+		// source also counts output tokens. Left to the shared envelope, the dash here read as
+		// an ordinary empty rather than as a third capability the window does not have.
+		basisFigure("output/turn", medianOutputPerTurn(outPerTurn), "median tokens", len(outPerTurn)),
 	}
 	r.Takeaway = turnEffTakeaway(enough, oneShotRate, medianAt50(codeTurns))
 	r.Caveats = []string{"Task size is invisible in logs, so a low one-shot rate can mean hard problems, not weak prompting -- directional only."}
@@ -95,11 +102,10 @@ func turnEffEmptyTakeaway(edited int) string {
 	return "No code-producing sessions in this window."
 }
 
-// medianOutputPerTurn renders the median output-tokens-per-turn, or "—" when no session had turns.
+// medianOutputPerTurn renders the median output-tokens-per-turn. The empty case belongs to
+// basisFigure, which prints the dash together with the reason for it; returning a bare "—"
+// here would state the absence without naming what caused it.
 func medianOutputPerTurn(outPerTurn []float64) string {
-	if len(outPerTurn) == 0 {
-		return "—"
-	}
 	sort.Float64s(outPerTurn)
 	return humanize.Count(int64(medianAt50(outPerTurn)))
 }

@@ -33,11 +33,11 @@ are never read. The optional team server (serve/sync) is self-hosted and opt-in.
 		SilenceErrors: true,
 	}
 	root.PersistentFlags().String("config", "", "config file path")
-	root.AddCommand(newVersionCmd(), newDemoCmd(), newReportCmd(), newEffectivenessCmd(), newAnalyzeCmd(), newCheckCmd(),
+	addCommands(root, newVersionCmd(), newDemoCmd(), newReportCmd(), newEffectivenessCmd(), newAnalyzeCmd(), newCheckCmd(),
 		newInitCmd(), newDashboardCmd(), newBackfillCmd(), newDoctorCmd(), newStatusCmd(), newClearCmd(), newCompactCmd(),
 		newConfigCmd(), newPluginsCmd(), newMetricsCmd(), newServeCmd(), newSyncCmd(), newSurvivalCmd(),
 		newStatuslineCmd(), newExplainCmd(), newMarkCmd(), newSignalsCmd(), newReconcileCmd(),
-		newDigestCmd(), newDocsCmd(), newShareCmd(), newRecommendCmd(), newRuntimeCmd())
+		newDigestCmd(), newDocsCmd(), newShareCmd(), newRecommendCmd(), newRepriceCmd(), newRuntimeCmd())
 	return root
 }
 

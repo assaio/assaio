@@ -27,7 +27,7 @@ func TestMetricPayloadCarriesNoRawMember(t *testing.T) {
 		SessionID: "s1", Tool: "claude-code", Member: pluginRawMember, Timeline: "programmatic",
 	}})
 
-	envelope := buildMetricInput(&in, tracingPlugin())
+	envelope := buildMetricInput(&in, everything())
 	raw, err := envelope.marshal()
 	if err != nil {
 		t.Fatalf("marshal() err = %v", err)

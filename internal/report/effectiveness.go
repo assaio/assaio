@@ -23,10 +23,20 @@ type EffRow struct {
 	LinesRemoved int64 `json:"lines_removed"`
 	// Edits is the count of productive edit tool-calls (Edit/Write/NotebookEdit/MultiEdit).
 	Edits int64 `json:"edits"`
+	// EditCapable reports whether any row in this group came from a source that records an
+	// edit. It is a separate bit from LineCapable because the two do not travel together:
+	// Copilot CLI reports changed lines and no edit count, Antigravity CLI the reverse, and
+	// gating the edit column on the line capability withheld a figure one of them measured
+	// while the note beside it called that figure absent.
+	EditCapable bool `json:"edit_capable"`
 	// ToolCalls is the count of all tool-use calls in the group, including edits.
 	ToolCalls int64 `json:"tool_calls"`
 	// Rejected is tool-use proposals the human declined: a friction signal.
 	Rejected int64 `json:"rejected"`
+	// Refusable reports whether any row in this group came from a source that records a
+	// human declining a tool call. Claude Code is the only one today, so an ungated "0
+	// rejected" is a friction reading taken from a field nobody wrote.
+	Refusable bool `json:"refusable"`
 	// TokensTotal sums input, output, cache-read, and cache-write tokens. Reasoning
 	// tokens are a subset of output (usage.Record) and are never added again here.
 	TokensTotal int64 `json:"tokens_total"`
@@ -41,6 +51,10 @@ type EffRow struct {
 	// CostPer100Lines is Cost per 100 AI lines; nil when LinesAdded is zero or Cost is
 	// unknown -- never a divide-by-zero substitute for a legitimate zero-line group.
 	CostPer100Lines *float64 `json:"cost_per_100_lines"`
+	// Tokened reports whether any row in this group came from a source that counts tokens at
+	// all. It is LineCapable's counterpart on the cost half: false means this group's cost is
+	// unknowable rather than merely unpriced.
+	Tokened bool `json:"tokened"`
 }
 
 // BuildEffectiveness groups rows by the chosen --by dimension (day, project, tool,
@@ -92,6 +106,9 @@ func usageDimValue(u *store.UsageRow, by string) string {
 // accumulateEff folds u's activity counts and, when u.Model is priced, its cost into g.
 func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table) {
 	g.LineCapable = g.LineCapable || parser.HasLineOutput(u.Tool)
+	g.EditCapable = g.EditCapable || parser.Answers(u.Tool, parser.SignalEditsCount)
+	g.Refusable = g.Refusable || parser.Answers(u.Tool, parser.SignalRejectedCount)
+	g.Tokened = g.Tokened || parser.Answers(u.Tool, parser.SignalTokensTotal)
 	g.LinesAdded += u.LinesAdded
 	g.LinesRemoved += u.LinesRemoved
 	g.Edits += u.Edits

@@ -275,3 +275,99 @@ func TestRenderJSONUnpricedNull(t *testing.T) {
 		t.Fatalf("priced row must serialize cost as a number: %q", out)
 	}
 }
+
+// TestATokenLessSourceWithholdsEveryTokenCellAndTheTotal is the report-table half of the
+// mandate ADR 0011 sets: a source that publishes no token counter must not have its silence
+// rendered as "0 in, 0 out, $0.00". Antigravity CLI is the first such source, and $0.00 is the
+// one cell in this table a reader takes for a bill.
+func TestATokenLessSourceWithholdsEveryTokenCellAndTheTotal(t *testing.T) {
+	rows := Build([]store.UsageRow{
+		{Day: "2026-09-01", Tool: "agy", Project: "web"},
+		{Day: "2026-09-02", Tool: "agy", Project: "web"},
+	}, table())
+	var buf bytes.Buffer
+	if err := RenderTable(&buf, rows, "day"); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if strings.Contains(out, "0.00") {
+		t.Errorf("a table with nothing priced must total —, not a dollar figure:\n%s", out)
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "agy") && strings.Contains(line, "| 0 ") {
+			t.Errorf("a token cell reads 0 for a source that counts none: %s", line)
+		}
+	}
+	if !strings.Contains(out, "publishes no token counter") {
+		t.Errorf("the footnote must name the real reason nothing priced:\n%s", out)
+	}
+}
+
+// The same table with a priced source present still totals a dollar figure: the withholding is
+// a property of what the rows can answer, not a blanket refusal.
+func TestAPricedSourceStillTotals(t *testing.T) {
+	rows := Build([]store.UsageRow{
+		{Day: "2026-09-01", Tool: "agy"},
+		{Day: "2026-09-01", Tool: "claude-code", Model: "claude-opus-4-5", In: 100, Out: 200},
+	}, table())
+	var buf bytes.Buffer
+	if err := RenderTable(&buf, rows, "day"); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "TOTAL") || strings.Contains(out, "| TOTAL |      — |") {
+		t.Errorf("a window holding one priced row still has a total:\n%s", out)
+	}
+}
+
+// TestATokenedSourceThatMeasuredZeroStillPrintsZero is the inverse-direction guard on the
+// whole Tokened thread, and the case neither test above covers: a priced model that genuinely
+// burned nothing. Its cells must read 0 and its cost 0.00, because that is a measurement --
+// the dash is reserved for the source that keeps no counter, and spending it on a real zero
+// would make "nothing was used" and "nothing was recorded" indistinguishable in the other
+// direction.
+func TestATokenedSourceThatMeasuredZeroStillPrintsZero(t *testing.T) {
+	rows := Build([]store.UsageRow{
+		{Day: "2026-09-01", Tool: "claude-code", Model: "claude-opus-4-5", Project: "web"},
+	}, table())
+	if !rows[0].Tokened || !rows[0].Priced {
+		t.Fatalf("a known model with no usage is still counted and still priced: %+v", rows[0])
+	}
+	var buf bytes.Buffer
+	if err := RenderTable(&buf, rows, "day"); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	// Read whole, because the claim is about which cells are dashed: the four token cells and
+	// the cost are measurements and print their zero, and the one dash is Cache%, a ratio with
+	// no denominator rather than a counter nobody kept.
+	const want = "| 2026-09-01 | claude-code | claude-opus-4-5 |  0 |   0 |       0 |       0 |      — |   0.00 |"
+	if !strings.Contains(out, want) {
+		t.Errorf("row must print its measured zeros:\nwant %s\ngot:\n%s", want, out)
+	}
+
+	records := csvRecords(t, rows)
+	for _, column := range []string{"in", "out", "cache_read", "cache_write"} {
+		if got := records[1][indexOf(records[0], column)]; got != "0" {
+			t.Errorf("csv %s = %q, want the measured 0", column, got)
+		}
+	}
+	for _, tt := range []struct{ column, want string }{{"tokened", "true"}, {"priced", "true"}, {"cost", "0.000000"}} {
+		if got := records[1][indexOf(records[0], tt.column)]; got != tt.want {
+			t.Errorf("csv %s = %q, want %q", tt.column, got, tt.want)
+		}
+	}
+}
+
+func csvRecords(t *testing.T, rows []Row) [][]string {
+	t.Helper()
+	var buf bytes.Buffer
+	if err := RenderCSV(&buf, rows); err != nil {
+		t.Fatal(err)
+	}
+	records, err := csv.NewReader(&buf).ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return records
+}

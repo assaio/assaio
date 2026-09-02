@@ -129,8 +129,9 @@ which is the difference between a number and a number you can act on.
 
 ## A metric plugin, any language
 
-The same metric as an executable: no fork, no Go, declared in config under `metrics:`. It reads
-one JSON document on stdin and writes a handshake plus one `Result` on stdout.
+The same metric as an executable: no fork, no Go, declared in config under `metrics:`. It
+answers `describe` with what it reads, and `analyze` with one `Result` over exactly that.
+`assaio-agent plugins init --kind metric --lang python` prints this skeleton for you.
 
 ```python #plugin-weekday
 #!/usr/bin/env python3
@@ -138,6 +139,14 @@ one JSON document on stdin and writes a handshake plus one `Result` on stdout.
 import datetime as dt
 import json
 import sys
+
+HANDSHAKE = {"assaio_metric": 4, "name": "weekday-split"}
+
+if sys.argv[1:2] == ["describe"]:
+    print(json.dumps(HANDSHAKE))
+    print(json.dumps({"needs": ["usage"],
+                      "fields": {"usage": ["day", "in", "out", "cacheRead", "cacheWrite"]}}))
+    sys.exit(0)
 
 inp = json.load(sys.stdin)
 weekday = total = 0
@@ -167,7 +176,7 @@ else:
                      else "A meaningful share of usage falls outside the working week."),
     }
 
-print(json.dumps({"assaio_metric": 3, "name": "weekday-split"}))
+print(json.dumps(HANDSHAKE))
 print(json.dumps(result))
 ```
 
@@ -188,6 +197,14 @@ import json
 import sys
 
 NEEDED = ("ai.edits.count", "ai.lines.added")
+HANDSHAKE = {"assaio_metric": 4, "name": "edit-size"}
+
+if sys.argv[1:2] == ["describe"]:
+    print(json.dumps(HANDSHAKE))
+    print(json.dumps({"needs": ["usage"],
+                      "fields": {"usage": ["tool", "in", "out", "cacheRead", "cacheWrite",
+                                           "linesAdded", "edits"]}}))
+    sys.exit(0)
 
 inp = json.load(sys.stdin)
 answers = inp.get("answers", {})
@@ -221,7 +238,7 @@ else:
         "takeaway": "Edit size is measurable in this window.",
     }
 
-print(json.dumps({"assaio_metric": 3, "name": "edit-size"}))
+print(json.dumps(HANDSHAKE))
 print(json.dumps(result))
 ```
 

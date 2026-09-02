@@ -116,6 +116,13 @@ func records(start, shutdown *event) (recs []usage.Record, skipped int) {
 	credited := dominantModel(shutdown.Data.ModelMetrics)
 	out := make([]usage.Record, 0, len(models))
 	for _, model := range models {
+		// A model with no name can be neither priced nor grouped, and the dedupe key
+		// "<session>:" would collapse every unnamed model in one session onto a single stored
+		// row. Counting it is the honest outcome: the usage happened, and nothing identifies it.
+		if model == "" {
+			skipped++
+			continue
+		}
 		m := shutdown.Data.ModelMetrics[model]
 		rec := usage.Record{
 			Tool:             tool,
@@ -140,7 +147,7 @@ func records(start, shutdown *event) (recs []usage.Record, skipped int) {
 		}
 		out = append(out, rec)
 	}
-	return out, 0
+	return out, skipped
 }
 
 // sortedModels keeps record order deterministic across runs, which golden tests and stable
@@ -154,11 +161,15 @@ func sortedModels(m map[string]modelMetrics) []string {
 	return out
 }
 
-// dominantModel is the one that served the most requests, ties broken by name so the
-// choice never depends on map iteration order.
+// dominantModel is the named model that served the most requests, ties broken by name so the
+// choice never depends on map iteration order. An unnamed one is not a candidate: it emits no
+// record, so crediting the session's code changes to it would drop them.
 func dominantModel(m map[string]modelMetrics) string {
 	best, bestCount := "", int64(-1)
 	for _, name := range sortedModels(m) {
+		if name == "" {
+			continue
+		}
 		if c := m[name].Requests.Count; c > bestCount {
 			best, bestCount = name, c
 		}

@@ -48,6 +48,45 @@ store, a team-server push that could never correct a partial figure, and an acti
 correction that could not reach a stored row at all. **The milestone is closed** — what a
 later review finds opens a new pool below rather than reopening this one.
 
+## Alongside everything — "Somebody outside this repository"
+
+[ROADMAP.md](ROADMAP.md#the-next-milestones)'s stage 0, and the only milestone in this file
+whose work is not this repository's to do. Two sources and the reconciler are calibrated
+against a sample written in the source's own shape rather than a real one, and no amount of
+local work changes that: the missing input is a file somebody else has. `B144` is the half that
+already had an id; below are the door a capture arrives through, the half that never had an id,
+and the reason a silence here would mean anything.
+
+- [ ] **B191 · a capture contribution has no door** — S · both — the repository takes bug,
+  connector and feature issues and disables blank ones, so somebody who runs Gemini CLI and is
+  willing to hand over a redacted chat log has to pick a template written for a different
+  purpose, or open a Discussion and guess at the rules. A **Capture contribution** template
+  states them instead: which source, the tool's version, the field allowlist every checked-in
+  trace was redacted under (numbers verbatim, identifiers and paths replaced by stand-ins,
+  bodies replaced by the same number of placeholder lines, nothing the parser does not read
+  copied at all), and — the part a contributor should never have to infer — that the file is
+  committed to a public Apache-2.0 repository, so it is redacted for publication rather than for
+  a private handoff.
+
+- [ ] **B192 · the reconciler has never read a real export** — S · both — `B19` shipped the
+  reader and the arithmetic against a **constructed** CSV whose column names and magnitudes were
+  invented ([`internal/reconcile/testdata/README.md`](internal/reconcile/testdata/README.md)),
+  which is why it binds columns by header alias and prints what it bound instead of shipping a
+  named vendor profile. The alias list is therefore a guess about every vendor. One redacted
+  export — date, model, token count, amount, currency, and nothing else — turns that sample
+  `real` and settles the aliases for the vendor it came from. It has been a trailing clause on
+  `B144` with no id of its own, which left a v1.0 condition tracked under an item about two
+  other sources.
+
+- [ ] **B193 · the ask has to reach somebody who has not already found us** — S · solo —
+  publishing the call in [ROADMAP.md](ROADMAP.md) and `README.md` reaches people who are already
+  here, and that is by definition the population that has not appeared. Take it once to where
+  the users of the two uncalibrated tools are — those tools' own issue trackers and community
+  channels, and the places the 2026-08-11 launch post already reached — and record, per channel,
+  what was asked and what came back. That record is what makes stage 0's kill criterion
+  readable: "nobody contributed" decides nothing unless somebody was asked, and a silence with
+  no attempt behind it is evidence about neither the ask nor the reach.
+
 ## Now — "Calibrated measurement"
 
 The guard the v0.12 class of bug needs, which provenance and coverage cannot provide. `B137`,
@@ -55,7 +94,8 @@ the conservation and metamorphic suite, shipped in v0.14 as `internal/calibratio
 the offline reconciliation against a vendor's own export, shipped after it — and `B139`, the
 price table nothing watched, which was the largest error left in the `$` figure. All three are in
 [CHANGELOG.md](CHANGELOG.md). One item remains and it cannot be closed here at all: `B144` needs
-a redacted real capture, the same contribution `B19`'s column aliases need. The milestone also
+a redacted real capture, the same contribution `B19`'s column aliases need — which now carries
+its own id (`B192`) and a milestone to arrive through, above. The milestone also
 depends on `B116` and `B118`, which live in the code-health pool below because they are
 corrections to a shipped mechanism rather than calibration work; `B116` is additionally a v1.0
 condition.
@@ -231,8 +271,9 @@ does not ship.
   metric-plugin wire (ADR 0004). Replacing them is therefore a breaking change to a public
   surface for no user-visible gain, so it waits for a real second consumer to design against
   — the git evidence collector (`B91`) — rather than being guessed at now. Ships with a
-  deprecation window and a conformance fixture, and is a candidate to land with the protocol
-  freeze (`B23`) rather than before it. See [ADR 0008](docs/adr/0008-signal-catalog.md).
+  deprecation window and a conformance fixture, and **lands with the protocol freeze (`B23`)**
+  rather than before it — settled by [ADR 0016](docs/adr/0016-usage-is-a-store-row-not-an-event.md),
+  which put stage 2 behind the freeze rather than in front of stage 3. See [ADR 0008](docs/adr/0008-signal-catalog.md).
   **Three requirements came out of building the git collector** rather than being guessed at:
   (1) a validator receives `[]store.UsageRow`, so there is no shape in which it could read a
   commit observation at all — the context has to serve *heterogeneous* observation streams
@@ -259,17 +300,6 @@ does not ship.
   migration, a size bound and a cleanup path, so none is worth guessing at. Path-level storage
   stays out entirely until something needs it: `B91` never records a path, so there is no
   opt-in to design yet. See [ADR 0009](docs/adr/0009-local-git-evidence-collector.md).
-- [ ] **B104 · the usage→event adapter still has no caller** — S/M · solo — `deadcode
-  ./cmd/...` reports seven unreachable functions, all of them the AI half of the canonical
-  contract: `event.FromRecord`, `Event.with`, and both `Usage` and `Edit` payloads. `B91` gave
-  `internal/event` its first real consumer, but only for `vcs.commit.observed`; nothing in the
-  binary ever adapts a parsed usage record into an observation. Two things hang on this rather
-  than on taste. The error posture is still split — the collector skips and counts, while
-  `FromRecord` fails a whole batch on the first rejected record — and [ADR 0009](docs/adr/0009-local-git-evidence-collector.md)
-  says explicitly that having both is not defensible and the log parsers' skip-and-count is
-  the precedent; that is a decision the adapter's first caller gets to make. And the contract's
-  claim that an analyzer reads AI usage and git commits the same way is currently unproven for
-  half of it. The likely first caller is `B85`, which needs sessions and commits in one stream.
 - [ ] **B92 · GitHub connector v1** — L · both — read-only, least-privilege metadata only:
   PR lifecycle, commits in a PR, review states and requested-changes rounds, check suites and
   runs, merge time and method, detectable revert relations. GitHub Cloud first, with the
@@ -664,10 +694,13 @@ that item (`B60`) rather than becoming a new one.
 - [ ] **B67 · winget manifest** — M · both — automated manifest PR to
   `microsoft/winget-pkgs` on release (goreleaser supports it); a heavier review loop
   than Scoop, so Scoop first.
-- [ ] **B06 · metric-plugin scaffolder + schemas** — S · both — `metrics init --lang
-  python|node|sh` writes a working plugin skeleton; publish JSON Schemas for the
-  metric envelope/result under `docs/schemas/`. Lowers the barrier the moment the
-  protocol is public.
+- [ ] **B06 · JSON Schemas for the metric envelope and result** — S · both — publish
+  machine-readable schemas under `docs/schemas/` for the Input a metric plugin is sent and the
+  Result it returns, so a plugin can be validated by a generic tool rather than by reading
+  prose. `docs/conformance/` already publishes accept/refuse vectors for the same boundary; a
+  schema is the other half, and the two must not be able to disagree. The scaffolder this item
+  used to carry shipped in v0.25 as `plugins init --kind parser|metric|rule --lang
+  go|python|sh`.
 - [ ] **B08 · a second locale** — S · both — add one `i18n.Catalog` beside `en` and a case in
   `i18n.For`, proving the scaffolding with a real language. v0.4 built the catalog (dashboard
   chrome, statusline words, the 18 explain pages); what remains is translating it and choosing
@@ -700,23 +733,48 @@ a tool used by one organization is usually better served by an out-of-tree
   cache{read,write}}`, `cost`, `modelID`, and — richest of any candidate — the `edit` tool
   persists a structured `filediff{additions,deletions,patch}`, so lines +/- are stored
   directly, no diff parsing. The best activity target after the current four.
-- [ ] **B88 · Antigravity — activity-only, no cost** — M · both — research verified
-  (2026-07-31), and the answer is unusual enough to record: Google Antigravity stores a lot
-  locally and **no token counts anywhere**. Its CLI keeps one SQLite database per
-  conversation under `~/.gemini/antigravity-cli/conversations/<uuid>.db` (175 of them, 191 MB
-  on the inspected machine) whose every payload column — `steps.metadata`,
-  `steps.step_payload`, `gen_metadata.data` — is an **undocumented protobuf blob**; no column
-  or field named `token` exists in any of them, nor in `log/`, nor in `brain/`. What *is*
-  readable is `conversation_summaries.db`: `conversation_id`, `step_count`,
-  `last_modified_time`, `last_user_input_time`, `workspace_uris` (→ project), `agent_name`,
-  `status`, `nesting_depth`. That is enough for adoption and rhythm signals and **nothing
-  else** — no cost, no model, no lines. Two consequences to settle before building: a
-  token-less source would report zero tokens forever, which trips the B58 zero-token canary
-  and would need the canary to read a source's declared depth rather than assume tokens; and
-  under B83 it fits no current tier, so the matrix needs an `activity-only` row or an honest
-  reason to refuse the source. Decision record first, code second.
+- [ ] **B194 · Antigravity's two readable figures, and the two questions they raise** — M ·
+  both — the `agy` parser ships (ADR 0017) reading the transcript only, and three findings from
+  the 2026-09-02 corpus sweep are parked here rather than lost. **(a) Observed context
+  occupancy.** `gen_metadata` field path `1.9.10.1` is prompt/context tokens used: monotonic
+  across steps in **198/198** conversations with more than one row, and `used ≤ window` in
+  **638/638** observations against `1.9.10.4`, the model's context window, which takes exactly
+  {80000, 128000, 160000, 256000} and pairs with the model name in the same blob **218/218**
+  times. `store.SessionRow.PeakContextTokens` is *derived* on every other source
+  (`cache_read + input`); this would be *observed*, and one column holding both with no field
+  to say which is which is the blend AGENTS.md forbids. Needs a provenance flag on the column
+  first. **(b) The model name.** Field paths `3.28` / `1.19` hold it (`gemini-3.7-flash-high`
+  ×208, `gemini-3.7-flash` ×45, `claude-opus-4-6-thinking` ×52, plus `gpt-oss-120b-medium`,
+  `claude-sonnet-4-6`, `gemini-pro-agent`) — so this source runs models from three vendors and
+  assaio reports none of them. Reading it means opening another tool's live WAL-mode SQLite
+  file and walking an unnamed protobuf field, for a name covering 218 of 500 conversations and
+  often several per conversation with no request count to choose between them. **(c) A
+  session-level failure signal.** 384 of 1,537 transcript entries are `ERROR_MESSAGE` — a
+  stream or platform failure, not a tool call returning an error, and the catalog has no id for
+  it. `ai.tool_errors.count` is the wrong home; a new signal is a catalog decision. All three
+  were verified against Antigravity CLI 1.1.23, whose binary self-updates.
 - [ ] **B55 · Cursor (Admin API)** — M — local storage verified to lack token counts;
   vendor-aggregate granularity, tagged as such.
+- [ ] **B195 · Cursor's local store — the format passes and the corpus does not** — S · both —
+  measured 2026-09-02 against the same two-part test every source has to pass: a stable
+  discoverable format **and** a real captured corpus. The format half passes and is the most
+  discoverable of any candidate — `~/.cursor/ai-tracking/ai-code-tracking.db` is a plain SQLite
+  file at a fixed path with named columns and no protobuf:
+  `ai_code_hashes(hash, source, fileExtension, fileName, requestId, conversationId, timestamp,
+  model)` and `scored_commits(commitHash, branchName, scoredAt, linesAdded, linesDeleted,
+  tabLinesAdded, tabLinesDeleted, composerLinesAdded, composerLinesDeleted, humanLinesAdded,
+  humanLinesDeleted, blankLinesAdded, blankLinesDeleted, commitMessage)`. The corpus half fails
+  on the audited machine: 1,493 `ai_code_hashes` rows spanning 2026-07-15..2026-07-29 — 14 days
+  that stopped five weeks before the measurement — 85 `scored_commits`, and `conversation_summaries`
+  and `tracked_file_content` both empty. Summed over all 85 scored commits, `linesAdded` = 53,059
+  while `composerLinesAdded` = 6,636, `tabLinesAdded` = 0 and `humanLinesAdded` = 0: the AI-versus-
+  human split the columns promise is not written here. **No token count and no cost column exists
+  anywhere in the schema, on any machine**, so Cursor can never answer the token half — `B55`
+  covers that through the Admin API instead. **What would change the answer:** a machine where
+  `humanLinesAdded` and `tabLinesAdded` are populated across a real span. `scored_commits` is, in
+  shape, exactly what ROADMAP stage 3 wants — AI versus human lines *per commit*, already
+  attributed by the vendor — which makes it worth reading for the survival question the day
+  somebody brings that corpus, and never for cost.
 - [ ] **B151 · what a plugin declares, and a badge that goes red when a vendor moves** — M ·
   both — two halves of the same gap. A plugin today is verified for *protocol* conformance
   (`plugins verify`, `metrics verify`) and declares nothing about itself: whether it touches
@@ -725,7 +783,7 @@ a tool used by one organization is usually better served by an out-of-tree
   checksum makes an install a decision instead of a leap. The second half is a compatibility
   run over **public fixtures** per source, so a vendor changing a format turns a badge red
   and notifies the owner rather than being discovered by a wrong number months later — the
-  in-tree drift canaries already do this for the five built-in sources and stop at the repo
+  in-tree drift canaries already do this for the six built-in sources and stop at the repo
   boundary. Blocked on nothing except the fixture question: a public fixture is a real log,
   so what may be in one has to be settled before any are accepted.
 - [ ] **B57 · community plugin registry page** — S — a docs page listing community
@@ -960,6 +1018,38 @@ file-size norm.
   a floor of history below which the comparison is withheld rather than made against two weeks.
   Until it exists, `analyze` leads on the four metrics whose lines *are* derived or cited, and
   that shortness is the honest state, not a gap to paper over.
+
+- [ ] **B196 · attach a published threshold to a metric, once one fits** — M · solo — the
+  register (`internal/threshold`) refuses every candidate today, and
+  `TestNoRegisteredCandidateGradesAnything` keeps it that way until someone changes it
+  deliberately. What would let one attach: a churn or survival figure whose numerator,
+  denominator, window, data source and layer match a metric assaio already computes — or an
+  assaio-side change that closes the gap, chiefly age-matched survival (a fixed post-commit
+  horizon rather than "until now") and AI attribution on the git side, which together would
+  make `survival` comparable to GitClear's two-week churn on all five properties instead of
+  three.
+
+- [ ] **B197 · `report --format csv` publishes a cost its own columns cannot explain** — S ·
+  solo — the export carries `in`, `out`, `cache_read`, `cache_write` and `cost`, but no
+  `cache_write_1h`, and the 1-hour cache-write tier is billed at its own rate. Recomputing the
+  cost from the four published token columns therefore misses exactly
+  `cache_write_1h × (1h rate − standard write rate)` — measured per model against the
+  maintainer's store, it agrees to six decimals for all eight priced models, and for
+  `claude-opus-5` alone the unexplainable remainder is **$2,582.38**. A machine surface whose
+  own figures do not reconcile is the class of defect this project fixes rather than documents.
+  Found while building an independent check for `reprice`, which had to bypass the export and
+  price straight from `internal/pricing/litellm.json` to verify anything.
+
+- [ ] **B198 · `make fuzz` flakes on `agy` at the `-fuzztime` boundary** — S · solo — measured
+  2026-09-02: `internal/parser/agy FuzzParseTranscript` fails roughly one run in three with
+  `context deadline exceeded` at exactly the deadline, writing **no crasher** — three consecutive
+  25s runs passed with zero new corpus entries, and replaying the seed corpus takes 0.269s, so
+  there is no slow input. It is Go's worker-shutdown race, and it grows likelier as the cached
+  corpus does (487 baseline inputs and climbing). This matters because the nightly CI fuzz job
+  added this cycle opens an issue on a finding: a target that fails without producing one will
+  file noise, and a gate that cries wolf gets muted, which is worse than not having it. Options:
+  raise the per-target `-fuzztime` so the drain has room, treat "failed with no new corpus entry"
+  as a retry rather than a finding in the workflow, or both.
 
 ## Refusals (will not build, regardless of demand)
 

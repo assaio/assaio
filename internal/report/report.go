@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/assaio/assaio/internal/label"
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/store"
 )
@@ -45,6 +46,12 @@ type Row struct {
 	// HasUnpriced reports whether this row aggregates any usage with an unknown model
 	// price, meaning Cost excludes that usage.
 	HasUnpriced bool `json:"has_unpriced"`
+	// Tokened reports whether any usage in this row came from a source that counts tokens at
+	// all. False means the four token cells and the cost are absent rather than zero: a source
+	// like Antigravity CLI publishes no counter anywhere in its format, and "0 in, 0 out,
+	// $0.00" is a claim about someone's spend drawn from a field their tool never kept
+	// (ADR 0011). It is the token column's LineCapable.
+	Tokened bool `json:"tokened"`
 	// UnpricedTokens is how much of In+Out+CacheRead+CacheWrite carried no known price.
 	// HasUnpriced says a cost is incomplete; this says by how much, which is the difference
 	// between a rounding error and a headline that is half the real figure. It rides on the
@@ -89,6 +96,7 @@ func build(rows []store.UsageRow, t pricing.Table, id MemberIdentity) []Row {
 			Granularity: u.Granularity,
 			In:          u.In, Out: u.Out, CacheRead: u.CacheRead, CacheWrite: u.CacheWrite, Reasoning: u.Reasoning,
 			Task: u.Task, Outcome: u.Outcome, Difficulty: u.Difficulty,
+			Tokened: parser.Answers(u.Tool, parser.SignalTokensTotal),
 		}
 		if cost, ok := t.CostTokens(u.Model, pricing.Tokens{In: u.In, Out: u.Out, CacheWrite: u.CacheWrite, CacheRead: u.CacheRead, CacheWrite1h: u.CacheWrite1h}); ok {
 			r.Cost = &cost

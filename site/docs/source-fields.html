@@ -379,7 +379,7 @@ field is skipped for that reason.</p>
 </table>
 <h2 id="github-copilot-cli">GitHub Copilot CLI</h2>
 <p><em>Corpus: 3 sessions · 43 lines · 145 distinct key paths, plus <code>testdata/session.jsonl</code>. This is
-the thinnest corpus of the five and the table should be read as provisional.</em></p>
+the thinnest corpus of the six and the table should be read as provisional.</em></p>
 <table>
 <thead>
 <tr>
@@ -491,7 +491,7 @@ canary needs a sample floor (20 files) a two-file source can never reach. <code>
 halves.</p>
 <h2 id="cline">Cline</h2>
 <p><em>Corpus: no Cline install on the audited machine — <code>testdata/ui_messages.json</code> and
-<code>testdata/task_metadata.json</code> only. This table is the weakest of the five and says so.</em></p>
+<code>testdata/task_metadata.json</code> only. This table is the weakest of the six and says so.</em></p>
 <table>
 <thead>
 <tr>
@@ -538,9 +538,107 @@ halves.</p>
 </tr>
 </tbody>
 </table>
+<h2 id="antigravity-cli-agy">Antigravity CLI (<code>agy</code>)</h2>
+<p><em>Corpus: 500 conversations · 1,537 transcript lines · 9 distinct key paths, plus 500
+<code>conversations/&lt;uuid&gt;.db</code> SQLite databases holding 1,975 steps and 638 <code>gen_metadata</code> blobs.
+Antigravity CLI 1.1.23, captured 2026-09-02.</em></p>
+<p>The one source with a rich local corpus and no token counter in it. The audit below is why the
+depth matrix answers no token signal for it rather than reporting zeros: the search for a
+counter was exhaustive and is recorded here so nobody repeats it.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>State</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>transcript.jsonl</code> → <code>step_index</code>, <code>source</code>, <code>created_at</code></td>
+<td>extracted</td>
+<td>Record identity, the dedupe key, and the timestamp every window is bounded by. <code>source</code> = <code>MODEL</code> is what makes an entry a model <em>entry</em>; <code>USER_EXPLICIT</code> and <code>SYSTEM</code> are filtered. A <strong>turn</strong> is every consecutive <code>MODEL</code> entry sharing one <code>created_at</code>, because the vendor writes one response as a <code>GENERIC</code> half and a <code>PLANNER_RESPONSE</code> half — 8 of 653 entries in the reference capture. The grouping is on the timestamp, not on <code>type</code>: there is no response id, so two genuinely distinct responses inside one second read as one turn, which under-counts turns rather than inflating every per-turn figure.</td>
+</tr>
+<tr>
+<td><code>transcript.jsonl</code> → <code>tool_calls[].name</code></td>
+<td>extracted</td>
+<td><code>ai.tool_calls.count</code>, <code>ai.edits.count</code> and the purpose split, through the shared tool-class allowlist. 26 calls across the corpus: <code>run_command</code> ×14, <code>write_to_file</code> ×9, <code>finish</code> ×3.</td>
+</tr>
+<tr>
+<td>the conversation directory name</td>
+<td>extracted</td>
+<td>The session id. Nothing inside the transcript identifies the conversation, which is why this parser takes a directory rather than a reader.</td>
+</tr>
+<tr>
+<td><code>conversations/&lt;uuid&gt;.db</code> → <code>gen_metadata.data</code> field path <code>1.9.10.1</code></td>
+<td><strong>skipped — a real figure, and not a billable one</strong></td>
+<td>Context tokens occupied at that step. Monotonic across steps in 198/198 conversations with more than one row, and <code>used ≤ window</code> in 638/638 observations, so the reading is settled. It is not input, output or cache, which is what a cost model needs, and <code>store.SessionRow.PeakContextTokens</code> is <em>derived</em> on every other source (<code>cache_read + input</code>) where this would be <em>observed</em> — two different measurements in one column. <code>B194</code> carries the evidence.</td>
+</tr>
+<tr>
+<td><code>conversations/&lt;uuid&gt;.db</code> → <code>gen_metadata.data</code> field path <code>1.9.10.4</code></td>
+<td>skipped — a model property, not usage</td>
+<td>The model's context window in tokens: exactly {80000, 128000, 160000, 256000}, pairing with the model name in the same blob 218/218 without exception. It is the ceiling that proved the field above is denominated in tokens; it says nothing about what a session did.</td>
+</tr>
+<tr>
+<td><code>conversations/&lt;uuid&gt;.db</code> → <code>gen_metadata.data</code> field paths <code>3.28</code> / <code>1.19</code></td>
+<td><strong>skipped — present, and not attributable</strong></td>
+<td>The model name (<code>gemini-3.7-flash-high</code> ×208, <code>gemini-3.7-flash</code> ×45, <code>claude-opus-4-6-thinking</code> ×52, <code>gpt-oss-120b-medium</code>, <code>claude-sonnet-4-6</code>, <code>gemini-pro-agent</code>). Reading it means opening another tool's live WAL-mode SQLite database and walking an unnamed protobuf field, for a name that covers 218 of 500 conversations and is frequently several per conversation with no request count to choose between them. <code>B194</code>.</td>
+</tr>
+<tr>
+<td><code>conversations/&lt;uuid&gt;.db</code> → <code>steps.has_subtrajectory</code></td>
+<td>skipped — unverifiable, not absent</td>
+<td>False on all 1,975 steps of the corpus. A column uniformly false across a whole capture cannot separate &quot;no sub-agent ran&quot; from &quot;this build never sets it&quot;, so the matrix claims delegation neither way.</td>
+</tr>
+<tr>
+<td><code>conversations/&lt;uuid&gt;.db</code> → <code>steps.{step_type,status}</code></td>
+<td>skipped — undocumented vocabulary</td>
+<td>Integers with no published meaning: <code>step_type</code> ∈ {17 ×822, 15 ×642, 14 ×500, 132 ×26}, <code>status</code> = 3 on 1,975 of 1,990 steps. Naming them would be guessing from a number.</td>
+</tr>
+<tr>
+<td><code>transcript.jsonl</code> → <code>type</code> = <code>ERROR_MESSAGE</code> (384 lines)</td>
+<td><strong>skipped — a different question from the one the signal asks</strong></td>
+<td>A stream or platform failure, not a tool call returning an error. Counting it under <code>ai.tool_errors.count</code> would answer &quot;did a tool fail&quot; with &quot;did the connection drop&quot;. A session-level failure signal does not exist in the catalog; <code>B194</code> names it.</td>
+</tr>
+<tr>
+<td><code>transcript.jsonl</code> → <code>type</code>, <code>status</code></td>
+<td>skipped — no variation to read</td>
+<td><code>status</code> is <code>DONE</code> on all 1,537 lines and <code>type</code> takes four values, three of which <code>source</code> already separates. A constant is not a signal.</td>
+</tr>
+<tr>
+<td><code>transcript.jsonl</code> → <code>content</code>, <code>thinking</code>, <code>tool_calls[].args</code></td>
+<td>skipped — content, by construction</td>
+<td>The prompt, the model's own reasoning, and every tool argument including the file a write targets. This source is the first whose accounting sits inside the same lines as its content, so the omission is structural: the decoded struct has no field for any of them, and a test asserts a sentinel planted in each never reaches a record, an error or a log.</td>
+</tr>
+<tr>
+<td><code>transcript.jsonl</code> → <code>truncated_fields</code></td>
+<td>skipped — names a content field</td>
+<td>Lists which content fields the vendor shortened. Useful only to a reader of the content.</td>
+</tr>
+<tr>
+<td><code>transcript_full.jsonl</code>, <code>logs/chunks/**</code></td>
+<td>skipped — the same entries, less redacted</td>
+<td>The untruncated copy of the same 1,537 lines and its chunked form: strictly more prompt text for no additional accounting.</td>
+</tr>
+<tr>
+<td><code>annotations/&lt;uuid&gt;.pbtxt</code></td>
+<td>skipped — content</td>
+<td>One field, <code>title</code>, holding a model-written summary of the conversation.</td>
+</tr>
+<tr>
+<td><code>conversation_summaries.db</code></td>
+<td><strong>skipped — stale on this machine</strong></td>
+<td>Would answer the project question: <code>workspace_uris</code>, <code>step_count</code>, <code>parent_conversation_id</code>, <code>nesting_depth</code>, <code>agent_name</code>. It holds 8 rows dated 2025-11-20 to 2026-01-02, from the IDE era, against 500 CLI conversations from 2026-08-26 onward. The CLI does not appear to write it, so no project can be resolved and every <code>agy</code> session lands unattributed.</td>
+</tr>
+<tr>
+<td><code>implicit/*.pb</code>, <code>presence/*.lock</code>, <code>jetski_state.pbtxt</code>, <code>settings.json</code>, <code>installation_id</code>, <code>updater/**</code></td>
+<td>skipped — harness inventory</td>
+<td>Runtime locks, install identity and configuration (<code>B95</code>).</td>
+</tr>
+</tbody>
+</table>
 <h2 id="what-this-audit-is-not">What this audit is not</h2>
-<p>It does not claim the five formats have no other fields — only that these are the fields the
-corpus above contains. Two of the five tables rest on a corpus too thin to be conclusive and
+<p>It does not claim the six formats have no other fields — only that these are the fields the
+corpus above contains. Two of the six tables rest on a corpus too thin to be conclusive and
 say so in their own heading. Widening that is the same work as widening the golden corpus
 (<code>B20</code>), and the two should be re-run together.</p>
 <hr>

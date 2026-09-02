@@ -61,6 +61,13 @@ var order = []string{
 var unpublished = map[string]string{
 	"docs/README.md": "a map of the repository's own files, useful in a checkout and noise on a site",
 	"docs/site.md":   "how this site is built and deployed -- for the maintainer, not the reader",
+	"docs/architecture.md": "the path through the internal packages, step by step -- addressed to " +
+		"someone reading the tree, which is why the ADRs it sits beside are excluded too",
+	"docs/threat-model.md": "belongs with SECURITY.md and PRIVACY.md, which the site links into the " +
+		"repository rather than serving",
+	"docs/corrections.md": "a register of figures that were wrong, quoting the command lines and flags " +
+		"of the releases it describes -- which the invocation check would read as claims about " +
+		"today's binary",
 }
 
 // Guides reads the published set from the repository and returns it in reading order.

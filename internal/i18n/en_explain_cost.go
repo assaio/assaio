@@ -43,10 +43,10 @@ What to do about it
   write premium and got none of the discount.
 
 Limits
-  The cache lifetime a write bought is in some logs but not read yet, so reuse is
-  approximated at day grain.
-  The price table is flat per model and does not model the 1h-cache premium, so heavily
-  cached sessions are costed slightly low.`
+  Reuse is approximated at day grain.
+  The price table carries no long-context rate, so a very long-context session is costed
+  slightly low. The 1-hour cache-write tier is read where a source records it and billed
+  at its own rate.`
 
 const explainConcentration = `Spend Concentration
 

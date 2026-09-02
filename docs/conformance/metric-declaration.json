@@ -1,0 +1,144 @@
+{
+  "about": "Conformance vectors for the assaio exec-plugin protocols. Each vector is one document exactly as a plugin would write it, plus the verdict assaio's own boundary gives it. Run them in your plugin's CI without the assaio binary: feed `doc` to your decoder and assert `accept`; when `accept` is false, your rejection reason should mention `expect`. assaio's own tests are driven by these same files (internal/plugin/conformance_test.go), so a vector that stops describing the boundary fails assaio's build rather than yours.",
+  "contract": "metric-declaration",
+  "description": "What a metric plugin writes after its handshake when invoked as `<command> describe`.",
+  "protocol": 4,
+  "vectors": [
+    {
+      "id": "minimal",
+      "accept": true,
+      "why": "the smallest honest declaration: one capability, no narrowing",
+      "doc": "{\"needs\":[\"usage\"]}"
+    },
+    {
+      "id": "projected-columns",
+      "accept": true,
+      "why": "columns inside a section, including the nested step list where the bytes are",
+      "doc": "{\"needs\":[\"usage\",\"trace\"],\"fields\":{\"usage\":[\"day\",\"in\",\"out\"],\"trace\":[\"scope\",\"steps\"],\"trace.steps\":[\"kind\",\"outcome\"]}}"
+    },
+    {
+      "id": "pushed-down-predicates",
+      "accept": true,
+      "why": "grain and population are columns, so both are ordinary predicates",
+      "doc": "{\"needs\":[\"usage\",\"trace\"],\"where\":{\"usage.granularity\":[\"turn\"],\"trace.scope\":[\"interactive\"]}}"
+    },
+    {
+      "id": "every-capability",
+      "accept": true,
+      "why": "declaring everything is allowed, and is what a protocol-3 plugin's migration looks like",
+      "doc": "{\"needs\":[\"usage\",\"sessions\",\"trace\",\"attribution\",\"turn-sizing\",\"cache-misses\",\"prices\"]}"
+    },
+    {
+      "id": "needs-absent",
+      "accept": false,
+      "expect": "needs is required",
+      "why": "an empty declaration must not mean the pre-4 default of everything",
+      "doc": "{}"
+    },
+    {
+      "id": "needs-empty",
+      "accept": false,
+      "expect": "needs is required",
+      "why": "a plugin that reads nothing has nothing to report",
+      "doc": "{\"needs\":[]}"
+    },
+    {
+      "id": "needs-unknown-capability",
+      "accept": false,
+      "expect": "is not one of",
+      "why": "the capability set is closed; a typo must fail loudly, not withhold silently",
+      "doc": "{\"needs\":[\"telemetry\"]}"
+    },
+    {
+      "id": "needs-duplicate",
+      "accept": false,
+      "expect": "twice",
+      "why": "a capability named twice is a declaration its author did not read back",
+      "doc": "{\"needs\":[\"usage\",\"usage\"]}"
+    },
+    {
+      "id": "fields-unknown-section",
+      "accept": false,
+      "expect": "is not one of",
+      "why": "a projection over a section that does not exist projects nothing, silently",
+      "doc": "{\"needs\":[\"usage\"],\"fields\":{\"usages\":[\"day\"]}}"
+    },
+    {
+      "id": "fields-undeclared-capability",
+      "accept": false,
+      "expect": "is not in needs",
+      "why": "projecting a section you did not ask for cannot be honoured either way",
+      "doc": "{\"needs\":[\"usage\"],\"fields\":{\"sessions\":[\"turns\"]}}"
+    },
+    {
+      "id": "fields-unknown-column",
+      "accept": false,
+      "expect": "which is not one of",
+      "why": "a column projected away and one that never existed read identically on arrival",
+      "doc": "{\"needs\":[\"usage\"],\"fields\":{\"usage\":[\"days\"]}}"
+    },
+    {
+      "id": "fields-empty-list",
+      "accept": false,
+      "expect": "omit the section to receive it whole",
+      "why": "an empty column list is ambiguous between no columns and every column",
+      "doc": "{\"needs\":[\"usage\"],\"fields\":{\"usage\":[]}}"
+    },
+    {
+      "id": "where-unaddressed",
+      "accept": false,
+      "expect": "<section>.<column>",
+      "why": "a predicate names a column, and a bare section name names none",
+      "doc": "{\"needs\":[\"usage\"],\"where\":{\"usage\":[\"claude-code\"]}}"
+    },
+    {
+      "id": "where-unknown-section",
+      "accept": false,
+      "expect": "is not one of",
+      "why": "same reason as an unknown projection: a filter nobody applies is a filter that lies",
+      "doc": "{\"needs\":[\"usage\"],\"where\":{\"usages.tool\":[\"claude-code\"]}}"
+    },
+    {
+      "id": "where-nested-section",
+      "accept": false,
+      "expect": "top-level row",
+      "why": "dropping steps from inside a sequence leaves its ordinals describing a set nobody declared",
+      "doc": "{\"needs\":[\"trace\"],\"where\":{\"trace.steps.kind\":[\"edit\"]}}"
+    },
+    {
+      "id": "where-non-string-column",
+      "accept": false,
+      "expect": "not a string column",
+      "why": "a predicate is set membership over a label, never a comparison over a count",
+      "doc": "{\"needs\":[\"usage\"],\"where\":{\"usage.in\":[\"1\"]}}"
+    },
+    {
+      "id": "where-empty-value-list",
+      "accept": false,
+      "expect": "admits no value",
+      "why": "a predicate admitting nothing sends an empty section that reads as an empty window",
+      "doc": "{\"needs\":[\"usage\"],\"where\":{\"usage.tool\":[]}}"
+    },
+    {
+      "id": "unknown-key",
+      "accept": false,
+      "expect": "unknown field",
+      "why": "a misspelled key that decodes to nothing is a declaration its author believes they made",
+      "doc": "{\"needs\":[\"usage\"],\"limit\":100}"
+    },
+    {
+      "id": "trailing-data",
+      "accept": false,
+      "expect": "trailing data",
+      "why": "exactly one document follows the handshake",
+      "doc": "{\"needs\":[\"usage\"]}\n{\"needs\":[\"sessions\"]}"
+    },
+    {
+      "id": "not-json",
+      "accept": false,
+      "expect": "decoding declaration",
+      "why": "the YAML shape of the old config key is the mistake a migrating author makes first",
+      "doc": "needs: [usage]"
+    }
+  ]
+}

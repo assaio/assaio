@@ -52,12 +52,22 @@ jobs:
           # `serve --addr`'s default of 127.0.0.1:8787, and an IPv4 literal contains a
           # three-component prefix. Masking is the same move both times -- say what is not a
           # version, then look for one. sed keeps line count, so grep -n reports the real line.
+          # A third masking, for the version of a tool that is not this one. The rule exists because
+          # a stamp of *our* version has to be updated at every tag; another product's version does
+          # not rot when we release, it rots when they do -- and naming it is the point, because
+          # "verified against Antigravity CLI 1.1.23" is what makes a claim about a brittle,
+          # self-updating format checkable. Only a version written beside the product it belongs to
+          # is masked, so a bare number is still a finding, and so is ours.
+          # The same distinction inside a link: a tag URL on another project's repository is a
+          # citation, ours is a stamp. Our own URLs are set aside before foreign versioned ones are
+          # masked and put back after, so a link to github.com/assaio/.../tag/vX.Y.Z still fails --
+          # which is the case the error message below is written for.
           # Every text file under site/ is served, so every one of them can carry a stamp that
           # rots. The rule was written for the page and inherited by llms.txt the day it landed;
           # naming only index.html here would move the chore rather than remove it.
           fail=0
           while IFS= read -r page; do
-            if sed -E 's/ (d|points|viewBox|transform)="[^"]*"//g; s/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/IPV4/g' "$page" \
+            if sed -E 's/ (d|points|viewBox|transform)="[^"]*"//g; s/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/IPV4/g; s/(Antigravity CLI|Codex CLI|Claude Code|GitHub Copilot CLI|Copilot CLI|Gemini CLI|Cline|Cursor) v?[0-9]+\.[0-9]+\.[0-9]+/\1 THEIRVERSION/g; s#https://github\.com/assaio/#OURREPO/#g; s#https?://[^"[:space:]]*[0-9]+\.[0-9]+\.[0-9]+[^"[:space:]]*#THEIRURL#g; s#OURREPO/#https://github.com/assaio/#g' "$page" \
                | grep -nE '\bv?[0-9]+\.[0-9]+\.[0-9]+\b'; then
               echo "::error file=$page::This served file names a version. They deliberately do not:"
               echo "::error file=$page::a stamp here has to be updated at every tag, and the release that forgets is the one nobody catches."

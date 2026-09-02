@@ -1,6 +1,10 @@
 // Package event defines the canonical observation contract of the evidence graph: the shape
-// every collector emits and every analyzer reads, so a git reader, a connector and a log
-// parser can be added without each one teaching the analyzers a new record.
+// every collector emits and every analyzer reads, so a git reader and a connector can be added
+// without each one teaching the analyzers a new record.
+//
+// Its scope is the domains that have no store row of their own. AI usage is deliberately not
+// one of them -- it is a usage.Record and a usage_record, with a dedupe contract and a
+// restatement path this contract does not repeat (ADR 0016).
 //
 // An event is an interface contract, not a storage format -- there is no event table and no
 // migration behind it. See docs/adr/0007-canonical-event-contract.md.
@@ -51,8 +55,11 @@ type Source struct {
 	Build   string `json:"build,omitempty"`
 }
 
-// Subject is what the observation is about. Every field is optional because not every
-// observation has all three: a commit has no session, and purely local usage has no member.
+// Subject is what the observation is about. Every field is optional because not every source
+// names all three -- today's commit observation carries only a project. An empty field is the
+// answer "this source did not say", never a placeholder; retiring one is a spec-version change
+// (ADR 0007), so a field no current collector fills waits rather than being removed and
+// re-added.
 type Subject struct {
 	Project string `json:"project,omitempty"`
 	Session string `json:"session,omitempty"`
@@ -70,6 +77,11 @@ type Payload interface {
 // Validate rejects an envelope the contract cannot vouch for. Collectors call it where the
 // event is constructed, so a malformed observation never reaches a consumer -- the same
 // reject-never-fabricate posture the exec plugin protocols take at their boundary.
+//
+// It judges one observation and never a batch, which is the contract's whole error posture: a
+// collector skips the event it cannot build and counts the skip, the way every log parser
+// treats a corrupt line, so a partial history is reported short rather than reported as an
+// error covering evidence that was readable (ADR 0009, settled by ADR 0016).
 func (e *Event) Validate() error {
 	if e.SpecVersion != SpecVersion {
 		return fmt.Errorf("unknown spec version %d (want %d)", e.SpecVersion, SpecVersion)

@@ -12,8 +12,8 @@ import (
 // TeamStat is one member's adoption signal: how often they engaged, and nothing else.
 // Frac is Sessions scaled against the list's own maximum, for the bar width.
 //
-// It deliberately carries no lines and no cost. Ranking by sessions rather than by output
-// was always the rule, but printing each pseudonymous member's AI lines and spend on their
+// It deliberately carries no lines and no cost. Sizing the bar by sessions rather than by
+// output was always the rule, but printing each pseudonymous member's AI lines and spend on their
 // own row hands anyone who knows the roster a productivity comparison anyway, week over
 // week -- pseudonymous is not anonymous to a colleague. The Refusals in BACKLOG.md forbid
 // ranking per named individual; this is the spirit of that line rather than its letter, and
@@ -38,13 +38,19 @@ type Team struct {
 }
 
 // buildTeam returns nil when usage carries no member data at all, so a purely local
-// store's Data.Team stays absent rather than an empty section. Stats are ranked by
-// session count -- engagement frequency, an adoption-spread signal -- deliberately never
-// by cost or lines added, which would read as a productivity scoreboard (AGENTS.md
-// honesty rules: aggregate/pseudonymized by default, never a leaderboard). Member labels
-// are pseudonymized by default via pseudonym.For, matching project names' own
-// opt-in-to-reveal convention.
-func buildTeam(usageRows []store.UsageRow, sessionRows []store.SessionRow, prices pricing.Table, anonymize bool) *Team {
+// store's Data.Team stays absent rather than an empty section. The bar scales against the
+// list's own busiest member, so it reads as engagement frequency -- an adoption-spread
+// signal -- and never as cost or lines added, which would make it a productivity
+// scoreboard.
+//
+// It takes no anonymize flag, and that absence is the contract rather than an omission:
+// member labels are pseudonymous on every render. `--no-anonymize` reveals project names
+// (see i18n's AnonymizedCaveat); extending it to people is what would turn this panel
+// into a roster of real names beside proportional bars, which is the per-named-individual
+// ranking the Refusals rule out. An operator who genuinely needs raw names has
+// `report --identify`: an unordered export that says on its own face that it names
+// individuals (internal/report/member.go), not a rendered league table.
+func buildTeam(usageRows []store.UsageRow, sessionRows []store.SessionRow, prices pricing.Table) *Team {
 	if !hasMemberData(usageRows) {
 		return nil
 	}
@@ -55,20 +61,19 @@ func buildTeam(usageRows []store.UsageRow, sessionRows []store.SessionRow, price
 		members[m] = struct{}{}
 	}
 
-	names := rankedMemberNames(members, sessions)
 	maxSessions := 0
-	for _, m := range names {
+	for m := range members {
 		if sessions[m] > maxSessions {
 			maxSessions = sessions[m]
 		}
 	}
 
-	stats := make([]TeamStat, 0, len(names))
+	stats := make([]TeamStat, 0, len(members))
 	var teamLines, teamCost float64
 	teamPriced, teamUnpriced := false, false
-	for _, m := range names {
+	for m := range members {
 		stats = append(stats, TeamStat{
-			Member:   memberLabel(m, anonymize),
+			Member:   memberLabel(m),
 			Sessions: sessions[m],
 			Frac:     fraction(sessions[m], maxSessions),
 		})
@@ -77,6 +82,7 @@ func buildTeam(usageRows []store.UsageRow, sessionRows []store.SessionRow, price
 		teamPriced = teamPriced || hasCost[m]
 		teamUnpriced = teamUnpriced || unpriced[m]
 	}
+	sortMembersByLabel(stats)
 	return &Team{
 		Stats:       stats,
 		LinesAdded:  int64(teamLines),
@@ -129,32 +135,26 @@ func memberSessionCounts(rows []store.SessionRow) (counts map[string]int, member
 	return counts, members
 }
 
-// rankedMemberNames orders members by session count descending -- adoption spread, not a
-// performance ranking -- breaking ties alphabetically for deterministic output.
-func rankedMemberNames(members map[string]struct{}, sessions map[string]int) []string {
-	names := make([]string, 0, len(members))
-	for m := range members {
-		names = append(names, m)
-	}
-	sort.Slice(names, func(i, j int) bool {
-		if sessions[names[i]] != sessions[names[j]] {
-			return sessions[names[i]] > sessions[names[j]]
-		}
-		return names[i] < names[j]
-	})
-	return names
+// sortMembersByLabel orders the panel alphabetically, never by session count: ordering
+// people by a magnitude is what turns a list into a league table, and each member's bar
+// already carries the magnitude, so the spread stays readable without the page ranking
+// anyone.
+//
+// The key is the rendered label, not the underlying name. A list alphabetical in real
+// names but displayed as pseudonyms would still hand a colleague who knows the roster
+// each member's position in it.
+func sortMembersByLabel(stats []TeamStat) {
+	sort.Slice(stats, func(i, j int) bool { return stats[i].Member < stats[j].Member })
 }
 
 // memberLabel renders m for display: "(local)" for usage with no member attribution
-// (pre-sync or server-local records), else the real name or, by default, its pseudonym.
-func memberLabel(m string, anonymize bool) string {
+// (pre-sync or server-local records), else this install's stable pseudonym. There is no
+// real-name path, by the contract on buildTeam.
+func memberLabel(m string) string {
 	if m == "" {
 		return "(local)"
 	}
-	if anonymize {
-		return pseudonym.For("member", m)
-	}
-	return m
+	return pseudonym.For("member", m)
 }
 
 // costDisplay renders a member's summed cost compactly, or "—" when none of their usage
