@@ -19,6 +19,12 @@ type Unpriced struct {
 	// Rows counts the rows with no known price, a different question: a row can be unpriced
 	// and carry no token at all, and a window missing only those has a complete cost.
 	Rows int
+	// Untokened counts the unpriced rows whose source publishes no token counter at all. They
+	// are unpriced for a different reason from the rest -- not a model the table has yet to
+	// carry, which a refresh fixes, but a format with nothing to price, which no refresh will --
+	// and telling a reader the first when it is the second sends them to look for a fix that
+	// does not exist.
+	Untokened int
 }
 
 // Share is the unpriced share of the window's tokens, 0 when the window holds none.
@@ -44,6 +50,9 @@ func BuildUnpriced(rows []Row) Unpriced {
 		u.Tokens += r.UnpricedTokens
 		if r.HasUnpriced {
 			u.Rows++
+			if !r.Tokened {
+				u.Untokened++
+			}
 		}
 	}
 	return u

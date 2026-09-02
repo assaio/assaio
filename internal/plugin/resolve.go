@@ -30,7 +30,7 @@ func resolve(pc config.PluginConfig, validate func() error) (Config, error) {
 	// Every check on what the config *says* runs before the one that touches the filesystem:
 	// a typo'd capability is the same mistake whether or not the command happens to exist, and
 	// reporting the missing binary first hides it behind an error about a different line.
-	needs, err := capabilities(pc)
+	allow, err := capabilities(pc)
 	if err != nil {
 		return Config{}, fmt.Errorf("plugin %s: %w", pc.Name, err)
 	}
@@ -43,10 +43,10 @@ func resolve(pc config.PluginConfig, validate func() error) (Config, error) {
 		}
 		command = resolved
 	}
-	return Config{Name: pc.Name, Command: command, Timeout: timeout, Needs: needs}, nil
+	return Config{Name: pc.Name, Command: command, Timeout: timeout, Allow: allow}, nil
 }
 
-// capabilities maps a config entry's declared needs onto the closed vocabulary, rejecting a
+// capabilities maps a config entry's `needs:` list onto the closed vocabulary, rejecting a
 // name this build does not know. The check lives here rather than in internal/config because
 // the vocabulary is internal/analyze's, and every package that reads a config would otherwise
 // drag the validator registry in behind it.

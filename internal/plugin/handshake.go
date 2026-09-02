@@ -8,6 +8,11 @@ import (
 // protocolVersion is the only handshake version assaio understands.
 const protocolVersion = 1
 
+// ParserProtocolVersion is protocolVersion for the surfaces that publish it -- the printed
+// skeleton and the conformance catalogue -- so neither can teach a handshake the runtime
+// rejects.
+const ParserProtocolVersion = protocolVersion
+
 // handshake is line 1 of a plugin's stdout, identifying the protocol version and
 // confirming the plugin's own name.
 type handshake struct {

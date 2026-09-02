@@ -364,6 +364,24 @@ func TestValidateRejectsInvalidMetricEntry(t *testing.T) {
 	}
 }
 
+// `metrics:` is the one list whose entries may carry `needs:`, and holding them to the parser
+// rule made every config declaring one refuse to load -- so the key shipped unusable from the
+// file that defines it, and the veto it exists to be was unreachable.
+func TestValidateAcceptsNeedsOnAMetricEntryOnly(t *testing.T) {
+	entry := PluginConfig{Name: "m", Command: "/x", Needs: []string{"trace"}}
+	if err := (Config{Since: "30d", Format: "table", Metrics: []PluginConfig{entry}}).Validate(); err != nil {
+		t.Fatalf("Validate() = %v, want a metric entry with needs: to load", err)
+	}
+	for what, c := range map[string]Config{
+		"plugins": {Since: "30d", Format: "table", Plugins: []PluginConfig{entry}},
+		"rules":   {Since: "30d", Format: "table", Rules: []PluginConfig{entry}},
+	} {
+		if err := c.Validate(); err == nil || !strings.Contains(err.Error(), "metric plugins only") {
+			t.Errorf("%s: Validate() = %v, want needs: rejected on a list that reads a different document", what, err)
+		}
+	}
+}
+
 func TestValidateRejectsDuplicateMetricNames(t *testing.T) {
 	c := Config{Since: "30d", Format: "table", Metrics: []PluginConfig{
 		{Name: "a", Command: "/x"}, {Name: "a", Command: "/y"},

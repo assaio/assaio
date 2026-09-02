@@ -7,8 +7,10 @@ import (
 // Aggregate groups rows by the single dimension by, summing tokens and cost. Cost is
 // summed only across priced rows in each group; a group containing any unpriced usage
 // keeps HasUnpriced=true so callers can flag that its cost excludes that usage. by="day"
-// returns rows unchanged (Build already groups by day/tool/model). An unknown dimension
-// returns an error listing the valid ones.
+// returns rows unchanged, which is not the same as one row per day: the store keys a group
+// by tool, model, project, entrypoint, member and granularity as well, so a day arrives as
+// many rows. CollapseForTable is what folds those, and only for the display that has no
+// column for the difference. An unknown dimension returns an error listing the valid ones.
 func Aggregate(rows []Row, by string) ([]Row, error) {
 	if by == "day" {
 		return rows, nil
@@ -73,6 +75,7 @@ func foldGranularity(group, row string) string {
 // accumulate folds r's tokens and cost into group g.
 func accumulate(g, r *Row) {
 	g.Granularity = foldGranularity(g.Granularity, r.Granularity)
+	g.Tokened = g.Tokened || r.Tokened
 	g.In += r.In
 	g.Out += r.Out
 	g.CacheRead += r.CacheRead

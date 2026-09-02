@@ -26,8 +26,8 @@ func RenderSessionsBlock(w io.Writer, stats *SessionStats) error {
 		stats.Count, turnsPhrase(stats), activePhrase(stats), contextPhrase(stats)); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(w, "  %s output tokens/session · %s · %s · %s/active day\n",
-		humanize.Int(stats.MedianOutputTokens), codePhrase(stats), compactionPhrase(stats),
+	if _, err := fmt.Fprintf(w, "  %s · %s · %s · %s/active day\n",
+		outputPhrase(stats), codePhrase(stats), compactionPhrase(stats),
 		strconv.FormatFloat(stats.SessionsPerActiveDay, 'f', 1, 64)); err != nil {
 		return err
 	}
@@ -49,10 +49,21 @@ func activePhrase(s *SessionStats) string {
 }
 
 func contextPhrase(s *SessionStats) string {
-	if s.Turned == 0 {
+	if s.Contexted == 0 {
 		return "peak context not recorded"
 	}
 	return "peak context ~" + humanize.Count(s.MedianPeakContextTokens) + " tokens"
+}
+
+// outputPhrase keeps a token figure off a window whose sources keep no token counter. It is a
+// separate basis from the turn count beside it: a source can record every turn of a session and
+// no token at all, and "0 output tokens/session" would then be this line stating a fact about
+// someone's work that came from the format's silence.
+func outputPhrase(s *SessionStats) string {
+	if s.Tokened == 0 {
+		return "output tokens not recorded"
+	}
+	return humanize.Int(s.MedianOutputTokens) + " output tokens/session"
 }
 
 // codePhrase renders both sides of the split through the honest share formatter, and
@@ -74,18 +85,48 @@ func compactionPhrase(s *SessionStats) string {
 	return humanize.Percent(s.CompactionRate) + " hit context compaction"
 }
 
-// renderSessionsBasis states how many sessions the narrowest figure above rests on, and
-// stays silent when every one of them covers the whole window. Without it a mix of sources
-// prints one line of figures that quietly describe different subsets of it.
+// renderSessionsBasis names the figure above that rests on the fewest sessions and says how
+// many, and stays silent when every one of them covers the whole window. Without it a mix of
+// sources prints one line of figures that quietly describe different subsets of it; without
+// the name, a reader cannot tell which of the six the warning is about.
 func renderSessionsBasis(w io.Writer, s *SessionStats) error {
-	narrowest := min(s.Turned, s.Paced, s.Edited, s.Compacting)
+	name, narrowest := narrowestSessionFigure(s)
 	if narrowest >= s.Count {
 		return nil
 	}
 	_, err := fmt.Fprintf(w,
-		"  Turn, edit and compaction figures read the %d of %d sessions whose source records them; the rest are absent from those, not zero.\n",
-		narrowest, s.Count)
+		"  The narrowest figure above, %s, reads %d of %d sessions -- the ones whose source records it; the rest are absent from it, not zero.\n",
+		name, narrowest, s.Count)
 	return err
+}
+
+// narrowestSessionFigure is the figure above resting on the fewest sessions, among those that
+// printed a number at all. A basis of zero is skipped rather than reported as the narrowest:
+// that figure already replaced itself with "not recorded" on the line above, and counting it
+// here made the whole block read "0 of 248 sessions" over figures that never claimed one.
+// Ties go to the first in render order, so the sentence is stable across runs.
+func narrowestSessionFigure(s *SessionStats) (name string, basis int) {
+	for _, f := range []struct {
+		name  string
+		basis int
+	}{
+		{"turn depth", s.Turned},
+		{"active work", s.Paced},
+		{"peak context", s.Contexted},
+		{"output tokens", s.Tokened},
+		{"the code-session split", s.Edited},
+		{"compaction rate", s.Compacting},
+	} {
+		if f.basis > 0 && (name == "" || f.basis < basis) {
+			name, basis = f.name, f.basis
+		}
+	}
+	if name == "" {
+		// Every figure withheld itself; there is no narrowest one to name, and the block's
+		// own "not recorded" phrases have already said so six times.
+		return "", s.Count
+	}
+	return name, basis
 }
 
 // formatWhole renders a float rounded to a whole number, e.g. 11.6 -> "12".

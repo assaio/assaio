@@ -20,7 +20,7 @@ func contextFigures(stats *report.SessionStats, sessions []store.SessionRow) []F
 	return []Figure{
 		{Label: "sessions", Value: humanize.Int(int64(stats.Count))},
 		basisFigure("median turns", strconv.FormatInt(stats.MedianTurns, 10), "", stats.Turned),
-		basisFigure("peak context", humanize.Count(stats.MedianPeakContextTokens)+" tokens", "", stats.Turned),
+		basisFigure("peak context", humanize.Count(stats.MedianPeakContextTokens)+" tokens", "", stats.Contexted),
 		activeWorkFigure(stats, codeMedian, codeMedianOK),
 		basisFigure("compaction rate", humanize.PercentAt(stats.CompactionRate, 0), "", stats.Compacting),
 		codeSessionsFigure(stats),
@@ -91,14 +91,14 @@ func medianActiveMinutesForCodeSessions(sessions []store.SessionRow) (median flo
 // narrowestBasis is the smallest number of sessions any figure above rests on -- what
 // decides whether the reach has to be stated at all.
 func narrowestBasis(stats *report.SessionStats) int {
-	return min(stats.Turned, stats.Paced, stats.Edited, stats.Compacting)
+	return min(stats.Turned, stats.Paced, stats.Edited, stats.Compacting, stats.Contexted)
 }
 
 // contextCoverageCaveat names how much of the window each group of figures rests on, so a
 // mix of sources never prints one row of numbers quietly describing different subsets of it.
 func contextCoverageCaveat(stats *report.SessionStats) string {
 	return fmt.Sprintf(
-		"Prov.: of %d sessions, %d come from a source recording turns and context size, %d recording focused minutes, %d recording edits, and %d marking compaction; the rest are absent from those figures, not zero.",
-		stats.Count, stats.Turned, stats.Paced, stats.Edited, stats.Compacting,
+		"Prov.: of %d sessions, %d come from a source recording turns, %d recording the tokens a peak context is measured in, %d recording focused minutes, %d recording edits, and %d marking compaction; the rest are absent from those figures, not zero.",
+		stats.Count, stats.Turned, stats.Contexted, stats.Paced, stats.Edited, stats.Compacting,
 	)
 }

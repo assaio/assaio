@@ -14,7 +14,7 @@ func newPluginsCmd() *cobra.Command {
 		Use:   "plugins",
 		Short: "Inspect and validate configured exec plugins",
 	}
-	c.AddCommand(newPluginsListCmd(), newPluginsVerifyCmd())
+	c.AddCommand(newPluginsListCmd(), newPluginsVerifyCmd(), newPluginsInitCmd())
 	return c
 }
 

@@ -73,7 +73,7 @@ var catalog = []Signal{
 		Layer:  layer.Activity,
 		Status: Estimated, Grains: perTurn,
 		ZeroMeans: "no priced usage -- a model absent from the price table is excluded, never counted as free",
-		Describe:  "Tokens priced at public pay-as-you-go rates. Not your bill: a flat plan bills differently, and long-context and cache tiers are not modelled.",
+		Describe:  "Tokens priced at public pay-as-you-go rates. Not your bill: a flat plan bills differently, and long-context rates are not modelled.",
 	},
 	{
 		ID: "ai.lines.added", Title: "AI lines added", Unit: "lines",

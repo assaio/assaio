@@ -14,6 +14,13 @@ The agent reads local session logs written by AI coding tools:
 - **GitHub Copilot CLI** — `~/.copilot/session-state/*/events.jsonl` (honors `COPILOT_HOME`)
 - **Cline** — the extension's global storage (`saoudrizwan.claude-dev`) under VS Code, VS Code
   Insiders, VSCodium and Cursor, and `~/.cline/data/tasks`
+- **Antigravity CLI** — `~/.gemini/antigravity-cli/brain/<id>/.system_generated/logs/transcript.jsonl`
+  (`~/.gemini` is shared with Gemini CLI, and the two are read as separate sources). It extracts
+  nothing this document does not already list — session ID, timestamp, tool-call and edit counts,
+  the five tool-call purpose counts — and **less than every other source**: its format records no
+  working directory, so nothing walks up to a repository root and neither a project nor a subpath
+  is stored for it, and it carries no token counter at all. The sibling `transcript_full.jsonl`,
+  which holds the same entries with more prompt text and no additional accounting, is not read.
 
 It reads these files; it never modifies or deletes them.
 
@@ -43,6 +50,14 @@ stdin — project names, model names, member pseudonyms, and token/line counts, 
 the fields listed below, never prompts or code (which are never collected at all) — so
 it can compute its metric. That data goes only to the local program you configured;
 know what a metric plugin does with it before declaring one.
+
+What is sent is a **projection**, not the whole window: the plugin answers `describe` with the
+sections it reads, optionally narrowed to named columns and matching rows, and receives exactly
+that — a metric computing a token share is never handed the step timeline. Your `needs:` key in
+the `metrics:` entry is a **veto** over that declaration, never its source: naming fewer
+capabilities than the plugin asked for withholds the rest and says so in the envelope's
+`withheld` field, and naming more grants nothing. Omitting the key sends what the plugin
+declared. The fields listed below remain the ceiling on what any declaration can reach.
 
 Rule plugins (`rules:` in `config.yaml`) are opt-in the same way and receive strictly
 less: only the validator verdicts — titles, verdict labels, figures, caveats, and

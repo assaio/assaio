@@ -25,10 +25,11 @@ const dashboardRecentWindow = 7 * 24 * time.Hour
 // BuildDashboard is the default DashboardBuilder: the whole team's usage across every
 // member, anonymized by default -- aggregate and pseudonymized is assaio's default
 // privacy mode (AGENTS.md). dashboard.Build adds a Team section automatically whenever
-// the store carries member data, with member labels pseudonymized by this hardcoded
-// anonymize=true; showing real member names is a CLI-only, explicit opt-in
-// (`--no-anonymize` against this same store via internal/cli's --db flag), never this
-// served endpoint's default.
+// the store carries member data. Member labels are pseudonymous on every render, here and
+// in the CLI alike, and the panel is ordered alphabetically rather than by magnitude: no
+// flag on either surface prints a roster of real names beside proportional bars. The one
+// sanctioned raw-name path is `report --identify`, an unordered export that says on its
+// own face that it names individuals.
 func BuildDashboard(ctx context.Context, st *store.Store) (dashboard.Data, error) {
 	since := time.Now().Add(-dashboardWindow)
 	usageRows, err := st.Usage(ctx, since)

@@ -2,6 +2,7 @@ package ingest
 
 import (
 	"github.com/assaio/assaio/internal/config"
+	"github.com/assaio/assaio/internal/parser/agy"
 	"github.com/assaio/assaio/internal/parser/claude"
 	"github.com/assaio/assaio/internal/parser/cline"
 	"github.com/assaio/assaio/internal/parser/codex"
@@ -68,14 +69,29 @@ func discoverClaude(home string, sources config.Sources) (main, sub []string, er
 	return main, sub, nil
 }
 
-// discoverClineDirs resolves the Cline roots — sources.cline if configured, else the
-// internal/paths default — and discovers every task directory under them.
+// discoverDirSources resolves the roots of every directory-shaped source — sources.<tool> if
+// configured, else the internal/paths default — and discovers the directories under them.
 //
 //nolint:gocritic // sources is a small value bundle read once per backfill run, not a hot path.
-func discoverClineDirs(home string, sources config.Sources) ([]string, error) {
+func discoverDirSources(home string, sources config.Sources) ([]dirSource, error) {
+	clineDirs, err := discoverDirs(cline.Discover, paths.Resolve(sources.Cline, paths.ClineRoots(home)...))
+	if err != nil {
+		return nil, err
+	}
+	agyDirs, err := discoverDirs(agy.Discover, paths.Resolve(sources.Agy, paths.AgyRoot(home)))
+	if err != nil {
+		return nil, err
+	}
+	return []dirSource{
+		{tool: "cline", dirs: clineDirs, parse: cline.ParseDir},
+		{tool: "agy", dirs: agyDirs, parse: agy.ParseDir},
+	}, nil
+}
+
+func discoverDirs(discover func(string) ([]string, error), roots []string) ([]string, error) {
 	var dirs []string
-	for _, root := range paths.Resolve(sources.Cline, paths.ClineRoots(home)...) {
-		found, err := cline.Discover(root)
+	for _, root := range roots {
+		found, err := discover(root)
 		if err != nil {
 			return nil, err
 		}

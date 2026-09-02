@@ -9,7 +9,7 @@ import (
 
 // payloads is every concrete payload this build defines. The registry and this list must
 // agree: a type nothing can fill is a name pretending to be a capability.
-var payloads = []Payload{Usage{}, Edit{}, Commit{}}
+var payloads = []Payload{Commit{}}
 
 func TestEveryRegisteredTypeHasAPayload(t *testing.T) {
 	have := map[string]bool{}
@@ -25,47 +25,6 @@ func TestEveryRegisteredTypeHasAPayload(t *testing.T) {
 		if !known(p.eventType()) {
 			t.Errorf("payload %T answers to unregistered type %s", p, p.eventType())
 		}
-	}
-}
-
-func TestUsageValidate(t *testing.T) {
-	tests := []struct {
-		name    string
-		usage   Usage
-		wantErr string
-	}{
-		{"empty is valid: a turn can legitimately cost nothing", Usage{}, ""},
-		{"counts only", Usage{InputTokens: 1, OutputTokens: 2, ReasoningTokens: 2}, ""},
-		{"negative input", Usage{InputTokens: -1}, "inputTokens is negative"},
-		{"negative cache read", Usage{CacheReadTokens: -5}, "cacheReadTokens is negative"},
-		{
-			"reasoning cannot exceed the output it is part of",
-			Usage{OutputTokens: 10, ReasoningTokens: 11},
-			"exceeds outputTokens",
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			assertErr(t, tc.usage.validate(), tc.wantErr)
-		})
-	}
-}
-
-func TestEditValidate(t *testing.T) {
-	tests := []struct {
-		name    string
-		edit    Edit
-		wantErr string
-	}{
-		{"one added line is activity", Edit{LinesAdded: 1}, ""},
-		{"an edit with no lines is still activity", Edit{Edits: 1}, ""},
-		{"all zero is not an observation", Edit{}, "carries no activity"},
-		{"negative removed", Edit{LinesAdded: 1, LinesRemoved: -2}, "linesRemoved is negative"},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			assertErr(t, tc.edit.validate(), tc.wantErr)
-		})
 	}
 }
 
@@ -86,7 +45,6 @@ var stringFields = map[string]string{
 	"Event.Subject.Project": "a repository basename, never a path",
 	"Event.Subject.Session": "the session id the tool assigned",
 	"Event.Subject.Member":  "a pseudonymous member id set by the server",
-	"Usage.Model":           "the model identifier the tool reported",
 }
 
 func TestContractCarriesNoFreeText(t *testing.T) {

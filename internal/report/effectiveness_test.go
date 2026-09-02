@@ -2,6 +2,7 @@ package report
 
 import (
 	"bytes"
+	"encoding/csv"
 	"strings"
 	"testing"
 
@@ -250,15 +251,130 @@ func TestRenderEffectivenessCSVEmptyRatioCell(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	records := effCSVRecords(t, eff)
+	if got := records[1][columnIndex(t, records[0], "cost_per_100_lines")]; got != "" {
+		t.Fatalf("zero-line row must have an empty cost_per_100_lines cell, got %q", got)
+	}
+}
+
+// TestEffectivenessCSVCarriesTheCapabilityBits: the table prints a dash where no source behind
+// a column records what it counts, and CSV has no dash -- so without these four columns an
+// `agy` group exported "0 lines, 0 tokens, no cost", byte-identical to a token- and
+// line-recording source that did the work and produced nothing. The bits are the only thing in
+// the machine format that tells the two apart.
+func TestEffectivenessCSVCarriesTheCapabilityBits(t *testing.T) {
+	eff, err := BuildEffectiveness([]store.UsageRow{
+		{Day: "2026-09-01", Tool: "agy", Project: "unmeasured", Edits: 3, ToolCalls: 4},
+		{Day: "2026-09-01", Tool: "claude-code", Model: "claude-opus-4-5", Project: "measured", In: 1000},
+	}, table(), "project")
+	if err != nil {
+		t.Fatal(err)
+	}
+	records := effCSVRecords(t, eff)
+	byGroup := map[string][]string{}
+	for _, rec := range records[1:] {
+		byGroup[rec[columnIndex(t, records[0], "group")]] = rec
+	}
+	for _, tt := range []struct {
+		group  string
+		column string
+		want   string
+	}{
+		{"unmeasured", "line_capable", "false"},
+		{"unmeasured", "edit_capable", "true"},
+		{"unmeasured", "refusable", "false"},
+		{"unmeasured", "tokened", "false"},
+		{"measured", "line_capable", "true"},
+		{"measured", "edit_capable", "true"},
+		{"measured", "refusable", "true"},
+		{"measured", "tokened", "true"},
+	} {
+		if got := byGroup[tt.group][columnIndex(t, records[0], tt.column)]; got != tt.want {
+			t.Errorf("%s %s = %q, want %q", tt.group, tt.column, got, tt.want)
+		}
+	}
+}
+
+func effCSVRecords(t *testing.T, eff []EffRow) [][]string {
+	t.Helper()
 	var buf bytes.Buffer
 	if err := RenderEffectivenessCSV(&buf, eff); err != nil {
 		t.Fatal(err)
 	}
-	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
-	if !strings.Contains(lines[0], "cost_per_100_lines") {
-		t.Fatalf("csv header missing cost_per_100_lines: %q", lines[0])
+	records, err := csv.NewReader(&buf).ReadAll()
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.HasSuffix(lines[1], ",") {
-		t.Fatalf("zero-line row must end with an empty cost_per_100_lines cell: %q", lines[1])
+	if len(records) < 2 {
+		t.Fatalf("csv holds %d lines, want a header and at least one row", len(records))
+	}
+	return records
+}
+
+// TestEffectivenessWithholdsBothHalvesForATokenLessSource: the effectiveness table's whole
+// point is lines against cost, and Antigravity CLI answers neither. Both columns and the total
+// have to withhold -- a group reading "0 lines for $0.00" is the sentence that gets a tool
+// dropped for producing nothing when nothing was ever measured.
+func TestEffectivenessWithholdsBothHalvesForATokenLessSource(t *testing.T) {
+	eff, err := BuildEffectiveness([]store.UsageRow{
+		{Day: "2026-09-01", Tool: "agy", Project: "web", Edits: 3, ToolCalls: 4},
+	}, table(), "project")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if eff[0].Tokened || eff[0].LineCapable {
+		t.Fatalf("agy answers neither tokens nor changed lines: %+v", eff[0])
+	}
+	var buf bytes.Buffer
+	if err := RenderEffectivenessTable(&buf, eff, "project"); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if strings.Contains(out, "0.00") {
+		t.Errorf("nothing priced must total —, not $0.00:\n%s", out)
+	}
+	if strings.Contains(out, "Every source in this table records changed lines.") {
+		t.Errorf("the coverage note claims a capability no source in the table has:\n%s", out)
+	}
+	if !strings.Contains(out, "No source in this table records a changed line") {
+		t.Errorf("the coverage note must say what is missing:\n%s", out)
+	}
+}
+
+// TestEffectivenessRendersTheEditsItMeasuresAndDashesTheRefusalsItCannot is the other
+// direction of the same rule. Antigravity CLI answers ai.edits.count and no refusal counter,
+// so the EDITS cell and the EDITS total have to carry the 3 edits it recorded while the REJ
+// cell and total withhold -- the table previously blanked the edits on the line capability and
+// printed "0" under REJ, withholding a measurement and fabricating one in the same row.
+func TestEffectivenessRendersTheEditsItMeasuresAndDashesTheRefusalsItCannot(t *testing.T) {
+	eff, err := BuildEffectiveness([]store.UsageRow{
+		{Day: "2026-09-01", Tool: "agy", Project: "web", Edits: 3, ToolCalls: 4},
+	}, table(), "project")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eff[0].EditCapable || eff[0].Refusable {
+		t.Fatalf("agy records edits and no refusal: %+v", eff[0])
+	}
+	var buf bytes.Buffer
+	if err := RenderEffectivenessTable(&buf, eff, "project"); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	// Both the group row and the TOTAL footer, each read whole: the cells are positional, and
+	// an assertion on "3" alone would pass on a table that printed it in the wrong column.
+	for _, want := range []string{
+		"| web     |        — |     3 |   — |     —* |           — |",
+		"| TOTAL   |        — |     3 |   — |      — |           — |",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("table missing row %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "edit and $/100-lines columns are withheld") {
+		t.Errorf("the coverage note calls the edit column absent when it holds a measurement:\n%s", out)
+	}
+	if !strings.Contains(out, "the edit column beside them reads the sources that do record one") {
+		t.Errorf("the coverage note must scope itself to the columns actually withheld:\n%s", out)
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/assaio/assaio/internal/config"
-	"github.com/assaio/assaio/internal/parser/cline"
 	"github.com/assaio/assaio/internal/store"
 	"github.com/assaio/assaio/internal/usage"
 )
@@ -47,6 +46,15 @@ type source struct {
 	tool  string
 	files []string
 	parse func(io.Reader) ([]usage.Record, int, error)
+}
+
+// dirSource is a source whose unit of work is a directory rather than a file: a Cline task
+// holds two files, and an Antigravity conversation keeps its id in the directory name and
+// nowhere inside the transcript.
+type dirSource struct {
+	tool  string
+	dirs  []string
+	parse func(dir string) ([]usage.Record, int, error)
 }
 
 // Run discovers every local session file for each supported tool, parses it, and
@@ -99,16 +107,18 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 		seen[s.tool] = pathSet(s.files)
 	}
 
-	clineDirs, err := discoverClineDirs(home, sources)
+	dirSources, err := discoverDirSources(home, sources)
 	if err != nil {
 		return results, err
 	}
-	clineResult, err := ingestClineDirs(ctx, st, sk, clineDirs, cache)
-	if err != nil {
-		return results, err
+	for _, s := range dirSources {
+		res, err := ingestDirs(ctx, st, sk, s, cache)
+		if err != nil {
+			return results, err
+		}
+		results = append(results, res)
+		seen[s.tool] = pathSet(s.dirs)
 	}
-	results = append(results, clineResult)
-	seen[clineResult.Tool] = pathSet(clineDirs)
 
 	at := time.Now()
 	if err := sk.flush(ctx, st, at); err != nil {
@@ -172,13 +182,13 @@ func ingestSource(ctx context.Context, st *store.Store, sk *skipper, s source, c
 	return res, nil
 }
 
-// ingestClineDirs parses and inserts every cline task directory, counting failed
+// ingestDirs parses and inserts every directory-shaped input for one tool, counting failed
 // directories without aborting the rest. cache memoizes project resolution across dirs.
-func ingestClineDirs(ctx context.Context, st *store.Store, sk *skipper, dirs []string, cache projectCache) (Result, error) {
-	res := Result{Tool: "cline", Files: len(dirs)}
-	for _, dir := range dirs {
+func ingestDirs(ctx context.Context, st *store.Store, sk *skipper, s dirSource, cache projectCache) (Result, error) {
+	res := Result{Tool: s.tool, Files: len(s.dirs)}
+	for _, dir := range s.dirs {
 		err := ingestInput(ctx, st, sk, cache, &res, dirInput(dir, res.Tool), func() (parsed, error) {
-			recs, skipped, err := cline.ParseDir(dir)
+			recs, skipped, err := s.parse(dir)
 			return parsed{Records: recs, Skipped: skipped}, err
 		})
 		if err != nil {

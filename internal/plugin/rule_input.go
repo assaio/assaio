@@ -10,6 +10,10 @@ import (
 // assaio_rule_input key.
 const ruleInputVersion = 1
 
+// RuleProtocolVersion is ruleInputVersion for the surfaces that publish it, for the same reason
+// ParserProtocolVersion exists.
+const RuleProtocolVersion = ruleInputVersion
+
 // ruleInput is the wire envelope a rule plugin reads on stdin: the window's validator
 // verdicts and nothing else. A rule reasons over verdicts, never over raw usage -- the
 // data a rule sees is exactly what `analyze --format json` already prints, so the

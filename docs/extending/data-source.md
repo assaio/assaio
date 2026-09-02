@@ -22,12 +22,17 @@ func Parse(r io.Reader) ([]usage.Record, int, error)
 
 `Discover` is a filesystem glob rooted at a path the core resolves for you (see
 [`internal/paths`](../../internal/paths/paths.go)). Keep the glob narrow — `~/.gemini`, for
-example, is shared with other tools, so the Gemini discoverer only matches
-`tmp/*/chats/session-*.jsonl`. `Parse` takes an `io.Reader` (not a path) so it is trivial
-to test against a fixture. A source whose unit of work is a directory rather than a single
-file — Cline reads `ui_messages.json` alongside `task_metadata.json` — may expose a
-`ParseDir(dir string) ([]usage.Record, int, error)` helper instead, but the file-oriented
-`Parse(io.Reader)` shape is the default and the one to reach for first.
+example, is shared with Antigravity CLI, so the Gemini discoverer only matches
+`tmp/*/chats/session-*.jsonl` and the Antigravity one only
+`antigravity-cli/brain/*/.system_generated/logs/transcript.jsonl`. `Parse` takes an
+`io.Reader` (not a path) so it is trivial to test against a fixture. A source whose unit of
+work is a directory rather than a single file may expose a
+`ParseDir(dir string) ([]usage.Record, int, error)` helper instead — Cline reads
+`ui_messages.json` alongside `task_metadata.json`; Antigravity CLI reads one file but keeps
+the conversation id in the directory name and nowhere inside it. Such a parser still keeps a
+reader-shaped core (`cline.ParseTask`, `agy.ParseTranscript`) that takes the id as an argument
+rather than deriving it, so the parsing stays testable against a fixture and hermetic; the
+file-oriented `Parse(io.Reader)` shape is the default and the one to reach for first.
 
 **While you work on a parser, run `assaio-agent backfill --full`.** Ingest skips inputs it
 has already parsed unchanged, and the stored state is keyed on the build's identity — which
@@ -211,10 +216,17 @@ compared to a checked-in `.golden` snapshot of the parsed records. The conventio
   the diff on every future change — a golden mismatch is how you catch a vendor changing
   their format out from under you.
 
-- **Fixtures must be synthetic.** Never commit a real transcript. Fabricate a minimal log
-  that exercises the fields and edge cases you care about (dedupe, model switches mid-
-  session, cache tokens, missing cwd). Synthetic fixtures keep prompts and code out of the
-  repo and make the test's intent legible.
+- **A fixture is synthetic, or a field-allowlist redaction of a real capture. Never a real
+  transcript.** Fabricating a minimal log that exercises the fields and edge cases you care
+  about (dedupe, model switches mid-session, cache tokens, missing cwd) is the default and
+  keeps the test's intent legible. A redaction is the stronger option where you have a real
+  corpus, and it is only a redaction if it is by allowlist: every field the parser reads stays
+  verbatim, every field it does not is replaced — a body by the same number of placeholder
+  lines, an identifier or path by a stand-in — and nothing the parser never reads is copied at
+  all. Either way the rule the fixture exists to keep is the same one, and it is absolute:
+  no prompt, no code, no path, no name reaches the repository. `internal/calibration` records
+  which of the two a trace is, in its `capture` field, because a constructed sample proves the
+  reading and only a real one also proves the shape is still what the vendor writes.
 
 Add a second, assertion-style test for behavior the golden file cannot make obvious —
 that duplicates collapse, that non-usage lines are filtered, that dimensions land on every
@@ -222,8 +234,9 @@ record.
 
 ## Fuzzing
 
-Every parser must ship a native Go fuzz test — `FuzzParse` (Cline, whose unit is a task
-directory, uses `FuzzParseTask`). It seeds `f.Add` with the package's `testdata/` fixture
+Every parser must ship a native Go fuzz test — `FuzzParse`, or a name saying which entry point
+it drives when the parser has more than one (`FuzzParseTask` for Cline, `FuzzParseTranscript`
+for Antigravity CLI). Add it to `make fuzz`, which names each fuzzer explicitly. It seeds `f.Add` with the package's `testdata/` fixture
 plus a few hand-written edge seeds (empty input, `{}`, a truncated JSON line, int64-max
 token values, invalid UTF-8), and asserts the parser's invariants on every returned
 record: `Parse` never panics (a non-nil error returns early, which is fine), `skipped >= 0`,
@@ -236,11 +249,11 @@ regression seed.
 
 ## Wire it in
 
-Two touch points connect a finished parser to the CLI.
+Three touch points connect a finished parser to the CLI.
 
 1. **Ingest** — [`internal/ingest/ingest.go`](../../internal/ingest/ingest.go). Add your
    discovery call and append a `source` (tool name + discovered files + `Parse` function)
-   to the `sources` slice. Directory-oriented sources follow the Cline branch instead.
+   to the `sources` slice. Directory-oriented sources append a `dirSource` instead.
    Add the root resolver to [`internal/paths`](../../internal/paths/paths.go). If your
    source populates `Cwd`, project/subpath resolution happens automatically — every
    `source` and the Cline branch already run through
@@ -252,6 +265,15 @@ Two touch points connect a finished parser to the CLI.
    caveat for any modeling assumption your parser makes (folded token classes, recomputed
    cost, shared directories). Every honesty compromise the parser makes belongs in
    `doctor` output.
+
+3. **Its size** — measure what the source costs the store, on a real corpus, before you call
+   it done. `SELECT name, pgsize FROM dbstat` before and after an ingest into a throwaway
+   store gives the per-record and per-day figure; state both, and state whether any of it is
+   reachable by a retention rule. `trace.horizon_days` prunes the step timeline and nothing
+   else, so a source that emits no steps accumulates in `usage_record` forever and only
+   `clear` plus `compact` frees it. AGENTS.md requires a bound with a cleanup path for every
+   growth, and a parser is a growth: SQLite never shrinks on DELETE, so an unbounded source
+   nobody measured is discovered as a full disk rather than as a number.
 
 ## The intake path: open a connector issue first
 

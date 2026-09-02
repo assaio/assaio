@@ -794,7 +794,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       
       <div class="stat">
         <span class="stat__value stat__value--accent">3</span>
-        <span class="stat__label">active days</span>
+        <span class="stat__label">days with token data</span>
         
       </div>
       
@@ -826,8 +826,8 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     <p class="entry__caveat">Prov.: days are bucketed in UTC, so an evening that runs past midnight UTC is split across two of them — inflating the active-day count and halving the typical day it is measured against.</p>
-    <p class="entry__conf entry__conf--high">Confidence — high · 3 active days</p>
-    <p class="entry__takeaway">Too few active days this window to tell an unusual day from an ordinary one.</p>
+    <p class="entry__conf entry__conf--high">Confidence — high · 3 days with token data</p>
+    <p class="entry__takeaway">Too few days with token data this window to tell an unusual day from an ordinary one.</p>
   </div>
 </article>
 
@@ -1210,7 +1210,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
   </div>
   <div>
-    <p class="entry__howto">High premium-model share isn&#39;t wrong, but routine edits and boilerplate are often just as good on cheaper models — a place to trim spend without losing output.</p>
+    <p class="entry__howto">High premium-model share isn&#39;t wrong, but routine edits and boilerplate are often just as good on cheaper models — a place to trim spend without losing output. What that mix would cost against another price table is `assaio-agent reprice`, which states the arithmetic with its span and its refusals attached.</p>
     
     <div class="entry__stats">
       
@@ -1230,12 +1230,6 @@ table.subpath tbody tr:hover td{background:var(--bg);}
         <span class="stat__value">2.5%</span>
         <span class="stat__label">sub-agent delegation</span>
         <span class="stat__note">of tokens run inside Task sub-agents</span>
-      </div>
-      
-      <div class="stat">
-        <span class="stat__value">~$28/mo</span>
-        <span class="stat__label">est. savings (upper bound)</span>
-        <span class="stat__note">premium-tier tokens repriced on claude-sonnet-4-5</span>
       </div>
       
     </div>
@@ -1261,7 +1255,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       
     </div>
     
-    <p class="entry__caveat">Est. savings is an upper bound — it assumes every premium-tier token could move to claude-sonnet-4-5 with no quality loss (rarely true) and projects this window onto a calendar month; directional, a prompt to review, not a recommendation to switch.</p><p class="entry__caveat">No verdict on purpose: nothing published defines where a premium-token share becomes a problem, and this window&#39;s own distribution cannot derive that line either, so assaio reports the figure and leaves the call to whoever knows the work. Your own earlier windows, once assaio keeps enough history to compare a rate against the one you used to run at, would settle it; until then a colour here would be assaio&#39;s opinion wearing a measurement&#39;s clothes.</p>
+    <p class="entry__caveat">No verdict on purpose: nothing published defines where a premium-token share becomes a problem, and this window&#39;s own distribution cannot derive that line either, so assaio reports the figure and leaves the call to whoever knows the work. Your own earlier windows, once assaio keeps enough history to compare a rate against the one you used to run at, would settle it; until then a colour here would be assaio&#39;s opinion wearing a measurement&#39;s clothes.</p>
     <p class="entry__conf entry__conf--high">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">99% of the tokens that carry a tier ran on a premium model. Routine edits and boilerplate are often just as good on cheaper models, which is where a mix like this gets trimmed — but running everything on the strong model is a choice, and nothing published says at what share it becomes the wrong one.</p>
   </div>
@@ -1379,7 +1373,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
     </div>
     
     
-    <p class="entry__caveat">Evidence on AI churn&#39;s real-world impact is contested; bug/survival impact needs the server stage.</p><p class="entry__caveat">No verdict on purpose: nothing published defines where a rework or rejection rate becomes a problem, and this window&#39;s own distribution cannot derive that line either, so assaio reports the figure and leaves the call to whoever knows the work. Your own earlier windows, once assaio keeps enough history to compare a rate against the one you used to run at, would settle it; until then a colour here would be assaio&#39;s opinion wearing a measurement&#39;s clothes.</p>
+    <p class="entry__caveat">Evidence on AI churn&#39;s real-world impact is contested; bug/survival impact needs the server stage.</p><p class="entry__caveat">No verdict on purpose: nothing published defines where a rework or rejection rate becomes a problem, and this window&#39;s own distribution cannot derive that line either, so assaio reports the figure and leaves the call to whoever knows the work. Your own earlier windows, once assaio keeps enough history to compare a rate against the one you used to run at, would settle it; until then a colour here would be assaio&#39;s opinion wearing a measurement&#39;s clothes.</p><p class="entry__caveat">Not a line here: GitClear, AI Copilot Code Quality: Evaluating 2024&#39;s Increased Defect Rate (www.gitclear.com/ai_assistant_code_quality_2025_research), measured through 2024-12-31: ~3.3% of changed lines before AI assistants, rising to 5.7% in 2024, over 211 million changed lines analysed by GitClear, January 2020 through December 2024. The 7.1% usually quoted beside those figures is the report&#39;s projection for 2025, past the end of its own observation period, and the linked page does not print the year-by-year series. It counts code authored, pushed to the git repo, and then reverted or substantially revised within the subsequent two weeks, as a share of all changed lines, which is not what this figure counts — numerator, denominator, window, data source, layer differ. GitClear pooled changed lines across many repositories and every author in them; assaio&#39;s rate is one developer&#39;s own AI sessions on their own projects, and never leaves the transcript to ask whether the code was pushed at all. Both are percentages and neither is the other, so assaio names the study rather than grading against it.</p>
     <p class="entry__conf entry__conf--high">Confidence — high · 3 active days</p>
     <p class="entry__takeaway">AI-added lines undone inside the same session: 0%; proposed calls a human declined: 3%. Both are directional proxies for friction, and neither has a published line that would make one of them a problem.</p>
   </div>

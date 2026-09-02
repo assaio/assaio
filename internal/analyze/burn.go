@@ -4,6 +4,8 @@ import (
 	"strconv"
 
 	"github.com/assaio/assaio/internal/layer"
+	"github.com/assaio/assaio/internal/parser"
+	"github.com/assaio/assaio/internal/report"
 
 	"github.com/assaio/assaio/internal/humanize"
 )
@@ -18,6 +20,12 @@ const (
 	// days has no typical day to stand out from.
 	burnMinDays = 7
 	burnTopN    = 5
+	// burnDayUnit is what this metric counts, and it is deliberately not "active days": the
+	// days here are the window's days that a token-counting source was active on, which on a
+	// mixed store is fewer than the active days `adoption` prints. Two sections of one
+	// `analyze` run under one label, reading different numbers, is the disagreement a reader
+	// has no way to resolve.
+	burnDayUnit = "days with token data"
 )
 
 func init() { Register(burnValidator{}) }
@@ -34,12 +42,22 @@ func (burnValidator) Layer() layer.Layer { return layer.Activity } // a day's to
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (burnValidator) Analyze(in Input) Result {
 	r := Result{Name: burnName, Title: burnTitle, Describe: burnDescribe, HowToRead: burnHowToRead}
-	days := tokensPerDay(in.Usage)
+	// Every figure below is denominated in tokens, so the window is the rows whose source
+	// counts them. A source that keeps none contributes a day of zero burn, which is not a
+	// quiet day: it is a day nobody measured, and it drags the median every spike is judged
+	// against toward zero.
+	tokened := report.UsageAnswering(in.Usage, parser.SignalTokensTotal)
+	days := tokensPerDay(tokened)
+	// The coverage is a day share, not a row share, because every figure here is denominated
+	// in days. A row share moves with how finely a source writes its rows -- one per turn
+	// against one per session -- so a token-less source emitting a row per turn would report
+	// this metric as reaching almost none of a window whose days it nearly all covers.
+	r.covering(shareOf(int64(len(days)), int64(activeDays(&in))))
 	if len(days) == 0 {
-		r.noData("active days", "No usage in this window.")
+		r.noData(burnDayUnit, burnEmptyTakeaway(len(in.Usage)))
 		return r
 	}
-	r.restsOn(len(days), "active days")
+	r.restsOn(len(days), burnDayUnit)
 	median := medianTokens(days)
 	sufficient := len(days) >= burnMinDays
 	spikes := burnSpikes(days, median)
@@ -48,7 +66,7 @@ func (burnValidator) Analyze(in Input) Result {
 	r.Read = burnRead(sufficient, steady)
 	r.Purity = burnPurity(sufficient, len(spikes), len(days))
 	r.Figures = []Figure{
-		{Label: "active days", Value: strconv.Itoa(len(days))},
+		{Label: burnDayUnit, Value: strconv.Itoa(len(days))},
 		{Label: "typical day", Value: humanize.Count(median), Note: "median tokens"},
 		burnPeakFigure(days, median),
 		burnSpikeFigure(sufficient, len(spikes)),
@@ -126,10 +144,19 @@ func burnBars(spikes []dayBurn, median int64, topN int) []Bar {
 	return bars
 }
 
+// burnEmptyTakeaway separates an empty window from one whose sources keep no token counter --
+// the second says nothing about how anything burned.
+func burnEmptyTakeaway(rows int) string {
+	if rows == 0 {
+		return "No usage in this window."
+	}
+	return "No source in this window counts tokens, so there is no burn to compare a day against."
+}
+
 func burnTakeaway(sufficient, steady bool) string {
 	switch {
 	case !sufficient:
-		return "Too few active days this window to tell an unusual day from an ordinary one."
+		return "Too few " + burnDayUnit + " this window to tell an unusual day from an ordinary one."
 	case steady:
 		return "No day burned far outside this window's normal range."
 	default:

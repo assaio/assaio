@@ -21,9 +21,20 @@ const CostEstimateDisclosure = "Cost is an estimate at public pay-as-you-go API 
 func UnpricedDisclosure(u *Unpriced, scope string) string {
 	switch {
 	case u.Missing():
-		return "* cost excludes " + humanize.PercentAt(u.Share(), 1) + " of " + scope + " (" +
+		// Both reasons can hold at once, and only the first is a refresh away. A window carrying
+		// tokens on an unlisted model *and* rows from a source that publishes no counter used to
+		// print the refresh promise alone, sending a reader after a fix that closes half the gap
+		// at most -- the untokened explanation was reachable only where nothing else was unpriced.
+		note := "* cost excludes " + humanize.PercentAt(u.Share(), 1) + " of " + scope + " (" +
 			humanize.Count(u.Tokens) + " of " + humanize.Count(u.Total) +
 			" tokens) on models the price table does not carry -- a refreshed table ships with each release"
+		if u.Untokened > 0 {
+			note += ". " + humanize.Int(int64(u.Untokened)) + " of the unpriced rows come from a source that publishes no token counter, " +
+				"so no cost can be estimated for them at all -- absent, not zero, and no price-table refresh changes it"
+		}
+		return note
+	case u.Rows > 0 && u.Rows == u.Untokened:
+		return "* marks rows from a source that publishes no token counter, so no cost can be estimated for them at all -- absent, not zero, and no price-table refresh changes it"
 	case u.Rows > 0:
 		return "* marks rows on a model with no known price; they carry no tokens, so the total above is complete"
 	default:

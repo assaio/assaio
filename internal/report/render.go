@@ -19,27 +19,31 @@ import (
 // Day/Tool/Model columns unchanged; any other dimension renders a single leading
 // column labeled with the upper-cased dimension name holding that dimension's value,
 // with an empty value shown as "(unknown)". Rows whose cost excludes unpriced usage
-// are marked with a trailing "*" and a footnote.
+// are marked with a trailing "*" and a footnote. Rows print as given: folding the
+// dimensions this layout has no column for is CollapseForTable's job, and a caller that
+// skips it prints rows a reader cannot tell apart.
 func RenderTable(w io.Writer, rows []Row, by string) error {
 	tw := prettytable.NewWriter()
 	tw.SetOutputMirror(w)
 
-	grouped := by != "" && by != "day"
+	grouped := groupedDim(by)
 	dimCols, dimFooter := tableDimColumns(grouped, by)
 	tw.AppendHeader(append(append(prettytable.Row{}, dimCols...),
 		"In", "Out", "Cache R", "Cache W", "Cache%", "Cost $"))
 	tw.SetColumnConfigs(rightAlignFrom(len(dimCols), 6))
 
 	var total float64
+	var anyPriced bool
 	for i := range rows {
 		r := &rows[i]
 		cost, priced := formatCost(r)
 		total += priced
+		anyPriced = anyPriced || r.Priced
 		tw.AppendRow(tableRow(r, grouped, by, cost))
 	}
 
 	tw.AppendFooter(append(append(prettytable.Row{}, dimFooter...),
-		"", "", "", "", "TOTAL", humanize.USDCell(total)))
+		"", "", "", "", "TOTAL", totalCostCell(total, anyPriced)))
 	tw.Render()
 	unpriced := BuildUnpriced(rows)
 	if note := UnpricedDisclosure(&unpriced, "the tokens in this table"); note != "" {
@@ -116,6 +120,25 @@ func formatCost(r *Row) (cell string, priced float64) {
 	return cell, priced
 }
 
+// totalCostCell renders the footer's cost. A table in which nothing priced totals "—", not
+// "0.00": those are different claims, and a zero is the one a reader takes for a bill.
+func totalCostCell(total float64, anyPriced bool) string {
+	if !anyPriced {
+		return "—"
+	}
+	return humanize.USDCell(total)
+}
+
+// tokenCells renders a row's four token counts, or "—" for each when no source behind the row
+// counts tokens at all. Printing the arithmetic's zero there would report a tool that keeps no
+// counter as one that used nothing.
+func tokenCells(r *Row) []interface{} {
+	if !r.Tokened {
+		return []interface{}{"—", "—", "—", "—"}
+	}
+	return []interface{}{humanize.Int(r.In), humanize.Int(r.Out), humanize.Int(r.CacheRead), humanize.Int(r.CacheWrite)}
+}
+
 // tableRow builds one data row, using the single grouped-dimension layout or the
 // default Day/Tool/Model layout.
 func tableRow(r *Row, grouped bool, by, cost string) prettytable.Row {
@@ -123,22 +146,15 @@ func tableRow(r *Row, grouped bool, by, cost string) prettytable.Row {
 	if r.CacheEff != nil {
 		cacheEffStr = strconv.FormatFloat(*r.CacheEff*100, 'f', 1, 64)
 	}
+	lead := prettytable.Row{r.Day, r.Tool + granularityMark(r.Granularity), r.Model}
 	if grouped {
 		label := dimValue(r, by)
 		if label == "" {
 			label = "(unknown)"
 		}
-		return prettytable.Row{
-			label + granularityMark(r.Granularity),
-			humanize.Int(r.In), humanize.Int(r.Out), humanize.Int(r.CacheRead), humanize.Int(r.CacheWrite),
-			cacheEffStr, cost,
-		}
+		lead = prettytable.Row{label + granularityMark(r.Granularity)}
 	}
-	return prettytable.Row{
-		r.Day, r.Tool + granularityMark(r.Granularity), r.Model,
-		humanize.Int(r.In), humanize.Int(r.Out), humanize.Int(r.CacheRead), humanize.Int(r.CacheWrite),
-		cacheEffStr, cost,
-	}
+	return append(append(lead, tokenCells(r)...), cacheEffStr, cost)
 }
 
 // RenderJSON writes rows to w as indented JSON.
@@ -157,7 +173,7 @@ func RenderCSV(w io.Writer, rows []Row) error {
 	_ = cw.Write([]string{
 		"day", "tool", "model", "project", "entrypoint", "member", "granularity",
 		"task", "outcome", "difficulty", "in", "out",
-		"cache_read", "cache_write", "reasoning", "cache_eff", "cost", "priced", "has_unpriced",
+		"cache_read", "cache_write", "reasoning", "cache_eff", "cost", "priced", "has_unpriced", "tokened",
 	})
 	for i := range rows {
 		r := &rows[i]
@@ -175,7 +191,7 @@ func RenderCSV(w io.Writer, rows []Row) error {
 			strconv.FormatInt(r.In, 10), strconv.FormatInt(r.Out, 10),
 			strconv.FormatInt(r.CacheRead, 10), strconv.FormatInt(r.CacheWrite, 10),
 			strconv.FormatInt(r.Reasoning, 10), cacheEffStr,
-			cost, strconv.FormatBool(r.Priced), strconv.FormatBool(r.HasUnpriced),
+			cost, strconv.FormatBool(r.Priced), strconv.FormatBool(r.HasUnpriced), strconv.FormatBool(r.Tokened),
 		})
 	}
 	cw.Flush()

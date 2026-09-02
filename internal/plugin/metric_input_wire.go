@@ -4,7 +4,6 @@ package plugin
 // shape so the protocol's documented surface reads as one file.
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/assaio/assaio/internal/analyze"
@@ -14,52 +13,53 @@ import (
 	"github.com/assaio/assaio/internal/store"
 )
 
-func (mi *metricInput) marshal() ([]byte, error) { return json.Marshal(mi) }
-
-func buildMetricInput(in *analyze.Input, cfg Config) metricInput {
-	trace, withheld := traceSection(in, cfg)
-	return metricInput{
-		Version:    metricInputVersion,
-		Now:        in.Now,
-		RecentDays: int(in.Recent / (24 * time.Hour)),
-		Usage:      usageWire(in.Usage),
-		Sessions:   sessionWire(in.Sessions),
-		Delegation: metricDelegation{Sub: in.Delegation.Sub, Total: in.Delegation.Total},
-		ByModel:    modelWire(in.ByModel),
-		ByProject:  projectWire(in.ByProject),
-		Totals: metricTotals{
+// buildMetricInput fills the sections p grants and leaves the rest nil. The gate is the
+// capability rather than the emptiness of the window: a section the plugin did not declare must
+// never reach it as an empty array, which is a window with nothing in it -- a different fact,
+// and the one this protocol refuses to fabricate.
+func buildMetricInput(in *analyze.Input, p Projection) metricInput {
+	mi := metricInput{
+		Version:      metricInputVersion,
+		Now:          in.Now,
+		RecentDays:   int(in.Recent / (24 * time.Hour)),
+		Answers:      answersWire(in.Usage, in.Sessions),
+		WindowStart:  in.WindowStart,
+		HistoryStart: in.HistoryStart,
+		Withheld:     p.Withheld,
+		Projection:   metricProjection{Needs: p.Needs, Fields: p.Fields, Where: p.Where},
+	}
+	if p.grants(analyze.CapUsage) {
+		mi.Usage = usageWire(in.Usage)
+		mi.ByModel = modelWire(in.ByModel)
+		mi.ByProject = projectWire(in.ByProject)
+		mi.Delegation = metricDelegation{Sub: in.Delegation.Sub, Total: in.Delegation.Total}
+		mi.Totals = metricTotals{
 			Tokens: in.Totals.Tokens, Input: in.Totals.Input, Output: in.Totals.Output,
 			CacheRead: in.Totals.CacheRead, CacheWrite: in.Totals.CacheWrite,
 			Lines: in.Totals.Lines, Cost: in.Totals.Cost, Priced: in.Totals.Priced,
 			CacheEfficiency: in.Totals.CacheEfficiency,
-		},
-		Prices:          pricesWire(in.Usage, in.Prices),
-		Answers:         answersWire(in.Usage, in.Sessions),
-		WindowStart:     in.WindowStart,
-		PlanMonthlyCost: in.PlanMonthlyCost,
-		Skills:          attributionWire(in.Skills),
-		Agents:          attributionWire(in.Agents),
-		TurnSizing:      turnSizingWire(in.TurnSizing),
-		CacheMisses:     cacheMissWire(in.CacheMisses),
-		Trace:           trace,
-		Withheld:        withheld,
-		HistoryStart:    in.HistoryStart,
+		}
 	}
-}
-
-// traceSection decides whether this run carries the step timeline, and names it as withheld
-// when it does not. Naming it is the whole point: an empty array a plugin cannot distinguish
-// from a window with no sequences is the fabricated zero every other boundary here refuses.
-func traceSection(in *analyze.Input, cfg Config) (timelines []metricTimeline, withheld []analyze.Capability) {
-	if cfg.needsTrace() {
-		return traceWire(&in.Trace), nil
+	if p.grants(analyze.CapSessions) {
+		mi.Sessions = sessionWire(in.Sessions)
 	}
-	// Nothing was withheld from a window that holds no sequences, and saying otherwise would
-	// send a plugin author looking for a `needs:` line that would change nothing.
-	if !in.Has(analyze.CapTrace) {
-		return nil, nil
+	if p.grants(analyze.CapPrices) {
+		mi.Prices = pricesWire(in.Usage, in.Prices)
+		mi.PlanMonthlyCost = in.PlanMonthlyCost
 	}
-	return nil, []analyze.Capability{analyze.CapTrace}
+	if p.grants(analyze.CapAttribution) {
+		mi.Skills, mi.Agents = attributionWire(in.Skills), attributionWire(in.Agents)
+	}
+	if p.grants(analyze.CapTurnSizing) {
+		mi.TurnSizing = turnSizingWire(in.TurnSizing)
+	}
+	if p.grants(analyze.CapCacheMisses) {
+		mi.CacheMisses = cacheMissWire(in.CacheMisses)
+	}
+	if p.grants(analyze.CapTrace) {
+		mi.Trace = traceWire(&in.Trace)
+	}
+	return mi
 }
 
 // answersWire declares what every tool in this window can record. Only the tools actually

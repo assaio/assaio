@@ -54,6 +54,10 @@ func TestRunMetricFailures(t *testing.T) {
 		{"metric_timeout.sh", 200 * time.Millisecond, "timed out"},
 		{"metric_nonzero.sh", 5 * time.Second, "exit status 3"},
 		{"metric_silent.sh", 5 * time.Second, "no handshake"},
+		// A protocol-3 plugin fails on the verb it has never heard of, before a window is
+		// serialized for it -- the loud failure the version bump exists to produce.
+		{"metric_no_describe.sh", 5 * time.Second, "protocol 3 unsupported"},
+		{"metric_bad_declaration.sh", 5 * time.Second, "is not one of"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.script, func(t *testing.T) {
@@ -76,5 +80,18 @@ func TestVerifyMetricCollectsViolations(t *testing.T) {
 	joined := strings.Join(violations, "; ")
 	if !strings.Contains(joined, "read.key") {
 		t.Fatalf("violations = %q, want a read.key reason", joined)
+	}
+}
+
+// A declaration assaio cannot honour is refused whole, with every reason, exactly as a result
+// document is: reducing it to the names the build happens to recognize would hand the plugin a
+// projection it never asked for.
+func TestVerifyMetricCollectsDeclarationViolations(t *testing.T) {
+	_, violations, err := runMetricScript(t, "metric_bad_declaration.sh", 5*time.Second)
+	if err == nil {
+		t.Fatal("err = nil, want a declaration violation")
+	}
+	if joined := strings.Join(violations, "; "); !strings.Contains(joined, "telemetry") {
+		t.Fatalf("violations = %q, want the unknown capability named", joined)
 	}
 }

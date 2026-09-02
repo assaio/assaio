@@ -158,7 +158,7 @@ on the maintainer's store it is the <strong>larger of the two</strong>, 102.0 MB
 <tr>
 <td><code>tool</code></td>
 <td><code>TEXT</code></td>
-<td>Source, e.g. <code>claude-code</code>, <code>codex</code>, <code>gemini-cli</code>, <code>copilot-cli</code>, <code>cline</code>.</td>
+<td>Source: <code>claude-code</code>, <code>codex</code>, <code>gemini-cli</code>, <code>copilot-cli</code>, <code>cline</code>, <code>agy</code> (Antigravity CLI), or <code>plugin:&lt;name&gt;</code> for an out-of-tree parser.</td>
 </tr>
 <tr>
 <td><code>session_id</code></td>
@@ -173,7 +173,7 @@ on the maintainer's store it is the <strong>larger of the two</strong>, 102.0 MB
 <tr>
 <td><code>model</code></td>
 <td><code>TEXT</code></td>
-<td>Model name as recorded by the tool.</td>
+<td>Model name as recorded by the tool, or <code>''</code> when the source records none — Antigravity CLI writes one nowhere in its format, and a source that learns the name later (Cline reads it from a sidecar) fills the blank on the next <code>backfill</code>.</td>
 </tr>
 <tr>
 <td><code>input_tokens</code></td>
@@ -332,8 +332,21 @@ Codex parsers, and <code>lines_added</code>/<code>lines_removed</code> by GitHub
 session, not per turn); <code>rejected</code> is Claude-Code-only. Gemini CLI and Cline record no line or
 edit signal at all, so they store <code>0</code> throughout — <strong>absent, not zero</strong>, which is why every
 figure over these columns filters by what a source can answer (ADR 0011). They hold <strong>counts only</strong> — never the code content of the lines
-they count. <code>report --format csv</code> covers tokens and cost; <code>effectiveness --format csv</code>
-adds the activity and <code>$</code>/100-lines columns.</p>
+they count.</p>
+<p><strong><code>agy</code> is that hazard inverted, and it is the one this page can hand you.</strong> Antigravity CLI
+records <code>edits</code>, <code>tool_calls</code> and the five purpose counts and publishes <strong>no token counter
+anywhere in its format</strong>, so every token column on an <code>agy</code> row is a structural zero. A
+<code>SELECT tool, SUM(input_tokens) … GROUP BY tool</code> written off this page therefore reports a real
+source at zero tokens, and priced, at a fabricated <code>$0</code> — the figure the binary refuses to
+print, on the one surface that bypasses its withholding. Filter token and cost queries with
+<code>WHERE tool &lt;&gt; 'agy'</code>, or read the depth matrix (<code>assaio-agent doctor</code>, <code>signals coverage</code>)
+before summing a column across sources.</p>
+<p><code>report --format csv</code> covers tokens and cost, with one gap tracked as <code>B197</code>: it carries <code>in</code>,
+<code>out</code>, <code>cache_read</code>, <code>cache_write</code> and <code>cost</code>, but <strong>not <code>cache_write_1h</code></strong>, and the 1-hour
+cache-write tier bills at its own rate. Recomputing cost from the four published token columns
+therefore misses <code>cache_write_1h × (1h rate − standard write rate)</code> — measured against the
+maintainer's store that remainder is <strong>$2,582.38</strong> for <code>claude-opus-5</code> alone. Read
+<code>cache_write_1h</code> from the table above when a check has to reconcile. <code>effectiveness --format csv</code> adds the activity and <code>$</code>/100-lines columns.</p>
 <p><strong>Cost is not stored.</strong> The database holds tokens only; dollar cost is computed at report
 time against the embedded price table, because prices change and unpriced models must stay
 honestly blank. For cost figures, use <code>assaio-agent report --format csv</code> (which carries a

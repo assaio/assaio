@@ -142,12 +142,17 @@ func Parse(r io.Reader) ([]usage.Record, int, error)
 </code></pre>
 <p><code>Discover</code> is a filesystem glob rooted at a path the core resolves for you (see
 <a href="https://github.com/assaio/assaio/blob/main/internal/paths/paths.go"><code>internal/paths</code></a>). Keep the glob narrow — <code>~/.gemini</code>, for
-example, is shared with other tools, so the Gemini discoverer only matches
-<code>tmp/*/chats/session-*.jsonl</code>. <code>Parse</code> takes an <code>io.Reader</code> (not a path) so it is trivial
-to test against a fixture. A source whose unit of work is a directory rather than a single
-file — Cline reads <code>ui_messages.json</code> alongside <code>task_metadata.json</code> — may expose a
-<code>ParseDir(dir string) ([]usage.Record, int, error)</code> helper instead, but the file-oriented
-<code>Parse(io.Reader)</code> shape is the default and the one to reach for first.</p>
+example, is shared with Antigravity CLI, so the Gemini discoverer only matches
+<code>tmp/*/chats/session-*.jsonl</code> and the Antigravity one only
+<code>antigravity-cli/brain/*/.system_generated/logs/transcript.jsonl</code>. <code>Parse</code> takes an
+<code>io.Reader</code> (not a path) so it is trivial to test against a fixture. A source whose unit of
+work is a directory rather than a single file may expose a
+<code>ParseDir(dir string) ([]usage.Record, int, error)</code> helper instead — Cline reads
+<code>ui_messages.json</code> alongside <code>task_metadata.json</code>; Antigravity CLI reads one file but keeps
+the conversation id in the directory name and nowhere inside it. Such a parser still keeps a
+reader-shaped core (<code>cline.ParseTask</code>, <code>agy.ParseTranscript</code>) that takes the id as an argument
+rather than deriving it, so the parsing stays testable against a fixture and hermetic; the
+file-oriented <code>Parse(io.Reader)</code> shape is the default and the one to reach for first.</p>
 <p><strong>While you work on a parser, run <code>assaio-agent backfill --full</code>.</strong> Ingest skips inputs it
 has already parsed unchanged, and the stored state is keyed on the build's identity — which
 stays constant for a local build, precisely so a rebuild does not force a re-parse of every
@@ -430,18 +435,26 @@ the diff on every future change — a golden mismatch is how you catch a vendor 
 their format out from under you.</p>
 </li>
 <li>
-<p><strong>Fixtures must be synthetic.</strong> Never commit a real transcript. Fabricate a minimal log
-that exercises the fields and edge cases you care about (dedupe, model switches mid-
-session, cache tokens, missing cwd). Synthetic fixtures keep prompts and code out of the
-repo and make the test's intent legible.</p>
+<p><strong>A fixture is synthetic, or a field-allowlist redaction of a real capture. Never a real
+transcript.</strong> Fabricating a minimal log that exercises the fields and edge cases you care
+about (dedupe, model switches mid-session, cache tokens, missing cwd) is the default and
+keeps the test's intent legible. A redaction is the stronger option where you have a real
+corpus, and it is only a redaction if it is by allowlist: every field the parser reads stays
+verbatim, every field it does not is replaced — a body by the same number of placeholder
+lines, an identifier or path by a stand-in — and nothing the parser never reads is copied at
+all. Either way the rule the fixture exists to keep is the same one, and it is absolute:
+no prompt, no code, no path, no name reaches the repository. <code>internal/calibration</code> records
+which of the two a trace is, in its <code>capture</code> field, because a constructed sample proves the
+reading and only a real one also proves the shape is still what the vendor writes.</p>
 </li>
 </ul>
 <p>Add a second, assertion-style test for behavior the golden file cannot make obvious —
 that duplicates collapse, that non-usage lines are filtered, that dimensions land on every
 record.</p>
 <h2 id="fuzzing">Fuzzing</h2>
-<p>Every parser must ship a native Go fuzz test — <code>FuzzParse</code> (Cline, whose unit is a task
-directory, uses <code>FuzzParseTask</code>). It seeds <code>f.Add</code> with the package's <code>testdata/</code> fixture
+<p>Every parser must ship a native Go fuzz test — <code>FuzzParse</code>, or a name saying which entry point
+it drives when the parser has more than one (<code>FuzzParseTask</code> for Cline, <code>FuzzParseTranscript</code>
+for Antigravity CLI). Add it to <code>make fuzz</code>, which names each fuzzer explicitly. It seeds <code>f.Add</code> with the package's <code>testdata/</code> fixture
 plus a few hand-written edge seeds (empty input, <code>{}</code>, a truncated JSON line, int64-max
 token values, invalid UTF-8), and asserts the parser's invariants on every returned
 record: <code>Parse</code> never panics (a non-nil error returns early, which is fine), <code>skipped &gt;= 0</code>,
@@ -452,12 +465,12 @@ non-empty. <code>make fuzz</code> runs each fuzzer for <code>FUZZTIME</code> (de
 crasher is committed as a corpus file under <code>testdata/fuzz/</code> so it becomes a permanent
 regression seed.</p>
 <h2 id="wire-it-in">Wire it in</h2>
-<p>Two touch points connect a finished parser to the CLI.</p>
+<p>Three touch points connect a finished parser to the CLI.</p>
 <ol>
 <li>
 <p><strong>Ingest</strong> — <a href="https://github.com/assaio/assaio/blob/main/internal/ingest/ingest.go"><code>internal/ingest/ingest.go</code></a>. Add your
 discovery call and append a <code>source</code> (tool name + discovered files + <code>Parse</code> function)
-to the <code>sources</code> slice. Directory-oriented sources follow the Cline branch instead.
+to the <code>sources</code> slice. Directory-oriented sources append a <code>dirSource</code> instead.
 Add the root resolver to <a href="https://github.com/assaio/assaio/blob/main/internal/paths/paths.go"><code>internal/paths</code></a>. If your
 source populates <code>Cwd</code>, project/subpath resolution happens automatically — every
 <code>source</code> and the Cline branch already run through
@@ -470,6 +483,16 @@ line so <code>assaio-agent doctor</code> reports how many files were found, and 
 caveat for any modeling assumption your parser makes (folded token classes, recomputed
 cost, shared directories). Every honesty compromise the parser makes belongs in
 <code>doctor</code> output.</p>
+</li>
+<li>
+<p><strong>Its size</strong> — measure what the source costs the store, on a real corpus, before you call
+it done. <code>SELECT name, pgsize FROM dbstat</code> before and after an ingest into a throwaway
+store gives the per-record and per-day figure; state both, and state whether any of it is
+reachable by a retention rule. <code>trace.horizon_days</code> prunes the step timeline and nothing
+else, so a source that emits no steps accumulates in <code>usage_record</code> forever and only
+<code>clear</code> plus <code>compact</code> frees it. AGENTS.md requires a bound with a cleanup path for every
+growth, and a parser is a growth: SQLite never shrinks on DELETE, so an unbounded source
+nobody measured is discovered as a full disk rather than as a number.</p>
 </li>
 </ol>
 <h2 id="the-intake-path-open-a-connector-issue-first">The intake path: open a connector issue first</h2>

@@ -4,13 +4,15 @@ title: assaio
 abstract: >-
   Open-source, offline-first CLI for measuring how an organization uses AI
   coding tools: token and cost accounting, and AI-output-versus-cost
-  effectiveness per project, across Claude Code, Codex CLI, Gemini CLI, and
-  Cline. Survival, bug-impact, and quality correlation are future server-stage
-  roadmap, not current scope.
+  effectiveness per project, across Claude Code, Codex CLI, Gemini CLI,
+  GitHub Copilot CLI, Cline, and agy CLI. agy is Google's Antigravity CLI, which
+  publishes no token counter, so it contributes sessions and activity and is
+  excluded from every cost figure. Survival, bug-impact, and quality correlation
+  are future server-stage roadmap, not current scope.
 authors:
   - name: The assaio Authors
 license: Apache-2.0
-version: 0.1.1
+version: 0.25.0
 repository-code: https://github.com/assaio/assaio
 url: https://github.com/assaio/assaio
-date-released: 2026-07-20
+date-released: 2026-09-02

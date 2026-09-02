@@ -47,7 +47,7 @@ exactly what an honesty-first tool must not do silently.
    | `discovery` | no files found where there used to be some, or fewer than half the recent median | a median of 20 files, for the partial-drop half |
    | `yield` | records per file read collapse to under a quarter of the historical median | 20 files read this pass |
    | `skipped` | skips average one or more per file read | 50 skipped inputs |
-   | `zero-token` | at least a quarter of parsed records carry no tokens at all | 50 records |
+   | `zero-token` | at least a quarter of parsed records carry no tokens at all | 50 records, **and** a source whose depth row declares a token counter |
    | `barren` | files are found and no run on record has read a usage record out of them | nothing — the condition is absolute |
 
    The design rules behind those numbers matter more than the numbers: the baseline is a
@@ -64,6 +64,14 @@ exactly what an honesty-first tool must not do silently.
    the real corpus fired nothing on either build. It reads the whole history rather than
    one run, because an ordinary incremental pass whose single changed input yields nothing
    is not a barren source.
+
+   `zero-token` carries a second floor the others do not, and it is a capability rather than a
+   sample size: a source whose depth row answers no token signal is exempt. Antigravity CLI
+   publishes no counter anywhere in its format, so 100% of its records are zero-token on a
+   perfectly healthy run — judged by the share it would fire on every backfill forever and fail
+   `doctor --strict` on data that is exactly right, which is how a canary stops being evidence.
+   A source the matrix has never heard of is still judged: not knowing a tool is not evidence
+   that it keeps no tokens.
 
    A breach prints `warning: possible format drift in <tool>` — or, for `barren`, `warning:
    nothing read from a detected source`, because a condition is not a diagnosis — and appears
@@ -82,13 +90,42 @@ exactly what an honesty-first tool must not do silently.
    a scratch store (`--db`); eyeball the counts. Cheap, and catches drift before users
    do.
 
+## The most brittle source, named
+
+Not all six are equally exposed, and pretending otherwise is the same mistake as a bare
+checkmark on a depth matrix. **Antigravity CLI (`agy`) is the most brittle of the six**, on
+three counts at once:
+
+- **The binary self-updates.** Antigravity CLI 1.1.23 was verified on 2026-09-02, with a `.old` copy of
+  the previous build sitting beside it from the day before — two versions from two consecutive
+  days on one machine. Nothing pins a user to the version this parser was read against, and the
+  depth matrix names Antigravity CLI 1.1.23 for exactly that reason.
+- **The schema is unpublished** and the format is under a directory shared with another tool.
+  `~/.gemini` holds Gemini CLI as well, which is why both discoverers glob narrowly and neither
+  scans the shared root.
+- **What accounting exists is in unnamed protobuf fields.** The parser deliberately reads none
+  of them (see [what each source's log carries](extending/source-fields.md)); the fields it does
+  read are named JSON keys, which is the single reason this source is readable at all.
+
+Which canary catches which failure here, and which does not:
+
+| If Antigravity CLI… | caught by |
+|---|---|
+| moves or renames `brain/<id>/.system_generated/logs/` | `discovery` — 500 conversations to none |
+| renames `source`, `created_at` or `step_index` | `barren` on a fresh store, `yield` on an existing one: entries still parse as JSON and stop producing records |
+| writes a `created_at` in another format | `skipped` — undatable turns are counted, not silently dropped |
+| renames `tool_calls` | **nothing.** The corpus holds 26 tool calls across 500 conversations, which is far too sparse to form a baseline any share could be judged against. Stated here rather than guarded, because a canary computed from 26 observations is not evidence. |
+
+The last row is the honest limit. It is also the reason `agy` is `activity-only` and not
+`standard`: the figures it feeds are few enough to check by eye, and none of them is a cost.
+
 ## Reaction — the fix loop
 
 1. **Label and confirm.** Tag the issue `format-drift`; reproduce from the redacted
    sample and the reported tool version.
-2. **Capture the new shape as a fixture.** Add a **new synthetic** fixture beside the
-   old one (never a real transcript) and regenerate goldens with `-update`. **Keep the
-   old fixture and keep parsing the old shape** — users' disks still hold months of
+2. **Capture the new shape as a fixture.** Add a new fixture beside the old one — synthetic,
+   or a field-allowlist redaction of a real capture, never a real transcript — and regenerate
+   goldens with `-update`. **Keep the old fixture and keep parsing the old shape** — users' disks still hold months of
    history in the previous format; a parser upgrade must handle both, additively.
 3. **Fix the parser.** Update mappings; add fuzz seeds for the new shape; `make fuzz`
    is mandatory on any parser change.

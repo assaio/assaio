@@ -27,10 +27,10 @@ on the maintainer's store it is the **larger of the two**, 102.0 MB of table and
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | `INTEGER PRIMARY KEY` | Row id. |
-| `tool` | `TEXT` | Source, e.g. `claude-code`, `codex`, `gemini-cli`, `copilot-cli`, `cline`. |
+| `tool` | `TEXT` | Source: `claude-code`, `codex`, `gemini-cli`, `copilot-cli`, `cline`, `agy` (Antigravity CLI), or `plugin:<name>` for an out-of-tree parser. |
 | `session_id` | `TEXT` | The tool's session/conversation ID. |
 | `ts` | `TEXT` | UTC RFC3339 timestamp. Day is `substr(ts,1,10)`. |
-| `model` | `TEXT` | Model name as recorded by the tool. |
+| `model` | `TEXT` | Model name as recorded by the tool, or `''` when the source records none — Antigravity CLI writes one nowhere in its format, and a source that learns the name later (Cline reads it from a sidecar) fills the blank on the next `backfill`. |
 | `input_tokens` | `INTEGER` | Non-cached input tokens. |
 | `output_tokens` | `INTEGER` | Output tokens. |
 | `cache_read_tokens` | `INTEGER` | Tokens served from cache. |
@@ -67,8 +67,24 @@ Codex parsers, and `lines_added`/`lines_removed` by GitHub Copilot CLI since v0.
 session, not per turn); `rejected` is Claude-Code-only. Gemini CLI and Cline record no line or
 edit signal at all, so they store `0` throughout — **absent, not zero**, which is why every
 figure over these columns filters by what a source can answer (ADR 0011). They hold **counts only** — never the code content of the lines
-they count. `report --format csv` covers tokens and cost; `effectiveness --format csv`
-adds the activity and `$`/100-lines columns.
+they count.
+
+**`agy` is that hazard inverted, and it is the one this page can hand you.** Antigravity CLI
+records `edits`, `tool_calls` and the five purpose counts and publishes **no token counter
+anywhere in its format**, so every token column on an `agy` row is a structural zero. A
+`SELECT tool, SUM(input_tokens) … GROUP BY tool` written off this page therefore reports a real
+source at zero tokens, and priced, at a fabricated `$0` — the figure the binary refuses to
+print, on the one surface that bypasses its withholding. Filter token and cost queries with
+`WHERE tool <> 'agy'`, or read the depth matrix (`assaio-agent doctor`, `signals coverage`)
+before summing a column across sources.
+
+`report --format csv` covers tokens and cost, with one gap tracked as `B197`: it carries `in`,
+`out`, `cache_read`, `cache_write` and `cost`, but **not `cache_write_1h`**, and the 1-hour
+cache-write tier bills at its own rate. Recomputing cost from the four published token columns
+therefore misses `cache_write_1h × (1h rate − standard write rate)` — measured against the
+maintainer's store that remainder is **$2,582.38** for `claude-opus-5` alone. Read
+`cache_write_1h` from the table above when a check has to reconcile. `effectiveness --format
+csv` adds the activity and `$`/100-lines columns.
 
 **Cost is not stored.** The database holds tokens only; dollar cost is computed at report
 time against the embedded price table, because prices change and unpriced models must stay

@@ -51,6 +51,11 @@ var toolClasses = map[string]toolClass{
 	"write":              classWrite,
 	"apply_patch":        classWrite,
 	"str_replace_editor": classWrite,
+	// Antigravity CLI names three tools in its captured corpus. finish is deliberately absent:
+	// it ends a conversation rather than doing anything to a file or a shell, so it belongs in
+	// classOther, which an unlisted name reaches by construction.
+	"run_command":   classCommand,
+	"write_to_file": classWrite,
 }
 
 // ToolCounts splits tool calls by purpose, mirroring usage.Record's ToolReads..ToolOther.

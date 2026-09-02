@@ -1,7 +1,7 @@
 // Package vcs reads a local git repository and reports what its commits changed, never what
 // they changed it to. It is a collector, not a parser: its output is canonical observations
-// (ADR 0007), so an analyzer reads commits the same way it reads AI usage and learns nothing
-// about where either came from.
+// (ADR 0007), so a consumer reads a commit without learning which reader produced it, and the
+// next non-AI domain arrives in the same shape rather than in a record of its own.
 //
 // The one path-shaped exception is TouchedFiles, which exists so a caller can read the
 // working tree; no observation this package emits carries a path, a branch name, a message

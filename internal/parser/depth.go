@@ -1,16 +1,23 @@
 package parser
 
 // The depth tiers, ordered by what a source can support. Deep is separated from Standard by
-// attribution; Standard from ImportOnly by whether the figures can be attributed to a
-// session at all. Granularity is a documented gap within Standard rather than a tier of its
-// own: a source that totals per session still answers session questions honestly, it just
-// cannot answer one asked per turn.
+// attribution; Standard from the two below it by what is missing -- the cost half in
+// ActivityOnly, the session half in ImportOnly. Those two are not ranked against each other:
+// one knows what happened and not what it cost, the other the reverse, and neither is the
+// deeper. Granularity is a documented gap within Standard rather than a tier of its own: a
+// source that totals per session still answers session questions honestly, it just cannot
+// answer one asked per turn.
 const (
 	// Deep carries tokens, per-turn activity, and the labels that say what the work was.
 	Deep = "deep"
 	// Standard carries reliable usage whose gaps -- missing activity signals, or a coarser
 	// record granularity -- are documented rather than implied.
 	Standard = "standard"
+	// ActivityOnly carries sessions and what was done in them and no token accounting at
+	// all. It is a tier rather than a Standard row with Tokens false because the summary is
+	// what a reader scans: "standard" beside a source whose every cost figure withholds its
+	// verdict would be read as a source that can be added to a cost report.
+	ActivityOnly = "activity-only"
 	// ImportOnly carries billing or aggregate figures that cannot support session-level
 	// conclusions.
 	ImportOnly = "import-only"
@@ -138,6 +145,22 @@ var depths = []Depth{
 			"no ordered step sequence, so the behaviour detectors exclude it",
 			"no line, edit or tool-call signals, so it contributes cost but no output figures",
 			"its own per-request cost is recorded but recomputed from tokens for cross-tool consistency",
+		},
+	},
+	{
+		Tool: "agy", Tier: ActivityOnly,
+		Tokens: false, Activity: true, Attribution: false,
+		// The inverse of every other row: turns and tool calls, and not one token. Verified
+		// against Antigravity CLI 1.1.23; the binary self-updates and the format is unpublished,
+		// so the version is part of the claim (docs/format-resilience.md).
+		Answers: answers(perTurnSignals, []string{SignalSessionsCount, SignalToolCallsCount, SignalEditsCount}),
+		Gaps: []string{
+			"no token counter of any kind: every token and cost figure withholds its verdict for it rather than counting a zero",
+			"no model name -- the one the vendor keeps sits in an unnamed protobuf field of a live SQLite database, on 218 of 500 captured conversations and several per conversation with nothing to choose between them",
+			"no working directory, so its sessions carry no project and are absent from every per-project figure",
+			"no changed-line, rework or compaction counter",
+			"no ordered step sequence: the transcript is ordered, but the captured corpus holds 26 tool calls across 500 conversations, so there is nothing for the behaviour detectors to read",
+			"delegation is unverified rather than absent: the vendor's has_subtrajectory column is false on all 1,975 steps of the captured corpus, which cannot separate 'no sub-agent ran' from 'this build never sets it', so this source claims neither",
 		},
 	},
 }

@@ -60,7 +60,12 @@ func VerifyMetric(ctx context.Context, cfg Config, in *analyze.Input) (analyze.R
 }
 
 func runMetric(ctx context.Context, cfg Config, in *analyze.Input) (analyze.Result, []string, error) {
-	envelope := buildMetricInput(in, cfg)
+	declared, violations, err := describeMetric(ctx, cfg)
+	if err != nil {
+		return analyze.Result{}, violations, err
+	}
+	projection := negotiate(declared, cfg.Allow)
+	envelope := buildMetricInput(in, projection)
 	stdin, err := envelope.marshal()
 	if err != nil {
 		return analyze.Result{}, nil, fmt.Errorf("metric plugin %s: encoding input: %w", cfg.Name, err)
@@ -70,13 +75,16 @@ func runMetric(ctx context.Context, cfg Config, in *analyze.Input) (analyze.Resu
 		return analyze.Result{}, nil, err
 	}
 	res, violations, err := parseMetricResult(doc, cfg.Name)
-	if err == nil && len(envelope.Withheld) > 0 {
+	if err == nil && len(projection.Withheld) > 0 {
 		// Deliberately a caveat and not Result.Withheld: that field means "this window could
 		// not supply what the analyzer declared it reads", and this is the opposite -- the
-		// window had it and the plugin did not ask. Putting the second into the first would
-		// make one JSON field carry two contradictory meanings, and recommend.enough already
-		// abstains on a non-empty Withheld.
-		res.Caveats = append(res.Caveats, notRequestedCaveat(cfg.Name, envelope.Withheld))
+		// window had it and the reader's own config refused to hand it over. Putting the second
+		// into the first would make one JSON field carry two contradictory meanings.
+		//
+		// The cost of that choice is that the denial is prose and nothing else: a consumer
+		// gating on Withheld (recommend.enough) cannot tell this verdict from one computed on
+		// everything the plugin asked for.
+		res.Caveats = append(res.Caveats, deniedCaveat(cfg.Name, projection.Withheld))
 	}
 	if err != nil {
 		return analyze.Result{}, violations, fmt.Errorf("metric plugin %s: %w%s", cfg.Name, err, violationSuffix(violations))
@@ -84,14 +92,14 @@ func runMetric(ctx context.Context, cfg Config, in *analyze.Input) (analyze.Resu
 	return res, nil, nil
 }
 
-// notRequestedCaveat states what the core did not send this plugin, and why. A reader looking
-// at a plugin verdict cannot otherwise tell a metric that read the timeline from one that was
-// never handed it.
-func notRequestedCaveat(name string, withheld []analyze.Capability) string {
+// deniedCaveat states what this install refused a plugin that declared it reads it. Without it a
+// reader cannot tell a metric that read the timeline from one whose local config line denied it,
+// and the two verdicts rest on different evidence.
+func deniedCaveat(name string, withheld []analyze.Capability) string {
 	names := make([]string, len(withheld))
 	for i, c := range withheld {
 		names[i] = string(c)
 	}
-	return "Prov.: the metric plugin " + name + " did not declare " + strings.Join(names, ", ") +
-		" in its `needs:`, so assaio did not send it. This verdict rests on the rest of the envelope."
+	return "Prov.: the metric plugin " + name + " declares that it reads " + strings.Join(names, ", ") +
+		", which this install's `needs:` entry for it does not allow. This verdict rests on less than the plugin asked for."
 }

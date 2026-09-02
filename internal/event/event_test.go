@@ -14,19 +14,27 @@ var (
 func validEvent() Event {
 	return Event{
 		SpecVersion: SpecVersion,
-		Type:        TypeUsage,
-		ID:          "turn-1",
-		Source:      Source{Name: "claude-code", Build: "v0.6.0"},
+		Type:        TypeCommit,
+		ID:          "0f1e2d3c4b5a",
+		Source:      Source{Name: "git", Build: "v0.24.0"},
 		OccurredAt:  occurred,
 		ObservedAt:  observed,
 		TimeSource:  TimeStated,
-		Grain:       GrainTurn,
-		Privacy:     Pseudonymous,
+		Grain:       GrainCommit,
+		Privacy:     LocalOnly,
 		Provenance:  Parsed,
-		Subject:     Subject{Project: "assaio", Session: "s1"},
-		Payload:     Usage{Model: "claude-opus-5", InputTokens: 10, OutputTokens: 20},
+		Subject:     Subject{Project: "assaio"},
+		Payload:     Commit{Parents: 1, FilesChanged: 1, LinesAdded: 3, Files: FileCategories{Source: 1}},
 	}
 }
+
+// mislabelled answers to a type it is not filed under. It exists because the contract registers
+// a single type today, so no pair of real payloads can reach the envelope-versus-payload check;
+// the check guards the release a second type lands in.
+type mislabelled struct{}
+
+func (mislabelled) eventType() string { return "vcs.tag.observed" }
+func (mislabelled) validate() error   { return nil }
 
 func TestValidateAcceptsAWellFormedEvent(t *testing.T) {
 	e := validEvent()
@@ -45,8 +53,8 @@ func TestValidateRejects(t *testing.T) {
 		{"unknown type", func(e *Event) { e.Type = "ai.vibes.observed" }, "unknown event type"},
 		{"no payload", func(e *Event) { e.Payload = nil }, "carries no payload"},
 		{"payload disagrees with type", func(e *Event) {
-			e.Type, e.Payload = TypeEdit, Usage{OutputTokens: 1}
-		}, "payload is ai.usage.observed but envelope says ai.edit.observed"},
+			e.Payload = mislabelled{}
+		}, "payload is vcs.tag.observed but envelope says vcs.commit.observed"},
 		{"no id", func(e *Event) { e.ID = "" }, "no id"},
 		{"no source name", func(e *Event) { e.Source.Name = "" }, "no source name"},
 		{"unknown grain", func(e *Event) { e.Grain = "hour" }, "unknown grain"},
@@ -56,8 +64,8 @@ func TestValidateRejects(t *testing.T) {
 		{"no occurrence time", func(e *Event) { e.OccurredAt = time.Time{} }, "no occurrence time"},
 		{"no observation time", func(e *Event) { e.ObservedAt = time.Time{} }, "no observation time"},
 		{"payload invalid", func(e *Event) {
-			e.Payload = Usage{OutputTokens: -1}
-		}, "outputTokens is negative"},
+			e.Payload = Commit{LinesAdded: -1}
+		}, "linesAdded is negative"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -74,13 +82,13 @@ func TestValidateRejects(t *testing.T) {
 	}
 }
 
-// A batch stamps one reading time, so a record parsed late in the pass can be newer than it.
+// A batch stamps one reading time, so an artifact read late in the pass can be newer than it.
 // Rejecting that dropped 51 of 324,289 real records, all from live sessions -- see ADR 0007.
-func TestValidateAcceptsARecordNewerThanTheBatchReadingTime(t *testing.T) {
+func TestValidateAcceptsAnObservationNewerThanTheBatchReadingTime(t *testing.T) {
 	e := validEvent()
 	e.OccurredAt = e.ObservedAt.Add(5 * time.Second)
 	if err := e.Validate(); err != nil {
-		t.Fatalf("a record written while the pass ran must still adapt: %v", err)
+		t.Fatalf("an artifact written while the pass ran must still be observable: %v", err)
 	}
 }
 

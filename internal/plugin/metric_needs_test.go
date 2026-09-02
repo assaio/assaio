@@ -24,82 +24,97 @@ func tracedInput() analyze.Input {
 	return in
 }
 
-// TestUndeclaredTraceIsWithheldNotSentEmpty is B168: the step timeline was measured at ~44 MB
-// on a real store and every metric plugin received it whether or not it read one. It is now
-// declared in config -- and a plugin that did not declare it is *told* the section is absent,
-// because an empty array it cannot tell apart from a window with no sequences is the
-// fabricated zero every other boundary here refuses.
-func TestUndeclaredTraceIsWithheldNotSentEmpty(t *testing.T) {
+// TestAnUndeclaredSectionIsAbsentNotEmpty is the protocol's central refusal: a section the
+// plugin did not ask for is not on the document at all. Sending it empty would be a window with
+// nothing in it, which is a measurement -- and the one thing a plugin must never read out of an
+// absence it did not cause.
+func TestAnUndeclaredSectionIsAbsentNotEmpty(t *testing.T) {
 	in := tracedInput()
+	doc := documentOf(&in, granting(analyze.CapUsage))
 
-	silent := buildMetricInput(&in, Config{Name: "quiet"})
-	if len(silent.Trace) != 0 {
-		t.Fatalf("Trace carried %d sequence(s) to a plugin that declared none", len(silent.Trace))
+	for _, key := range []string{"sessions", "trace", "skills", "agents", "turnSizing", "cacheMisses", "prices"} {
+		if _, present := doc[key]; present {
+			t.Errorf("%q is on the document of a plugin that declared only usage", key)
+		}
 	}
-	if len(silent.Withheld) != 1 || silent.Withheld[0] != analyze.CapTrace {
-		t.Fatalf("Withheld = %v, want [%s] so the plugin can tell absent from empty", silent.Withheld, analyze.CapTrace)
+	if _, present := doc["usage"]; !present {
+		t.Error("usage is absent from the document of a plugin that declared it")
 	}
-
-	asked := buildMetricInput(&in, tracingPlugin())
-	if len(asked.Trace) != 1 {
-		t.Fatalf("Trace carried %d sequence(s) to a plugin that declared it, want 1", len(asked.Trace))
-	}
-	if len(asked.Withheld) != 0 {
-		t.Fatalf("Withheld = %v for a plugin that got everything it asked for", asked.Withheld)
+	if _, present := doc["withheld"]; present {
+		t.Error("withheld names a capability nobody denied; it is only ever this install's own refusal")
 	}
 }
 
-// TestNothingIsWithheldFromAWindowWithNoTrace: a window holding no sequences had nothing kept
-// from it, and saying otherwise sends a plugin author after a `needs:` line that changes
-// nothing.
-func TestNothingIsWithheldFromAWindowWithNoTrace(t *testing.T) {
-	now := time.Date(2026, 7, 17, 10, 0, 0, 0, time.UTC)
-	in := analyze.BuildInput(
-		[]store.UsageRow{{Day: "2026-07-16", Tool: "claude-code", Model: "m", In: 10}},
-		nil, pricing.Table{}, now, 7*24*time.Hour, analyze.Delegation{},
-	)
-
-	envelope := buildMetricInput(&in, Config{Name: "quiet"})
-	if len(envelope.Withheld) != 0 {
-		t.Fatalf("Withheld = %v on a window that holds no sequences", envelope.Withheld)
-	}
-}
-
-// TestUndeclaredTraceShrinksThePayload is the reason the declaration exists at all.
-func TestUndeclaredTraceShrinksThePayload(t *testing.T) {
+// TestConfigDenialIsNamedAsWithheld: the veto stays with the reader, and the plugin is told by
+// name what it asked for and did not get. Without the naming its verdict over an absent section
+// is indistinguishable from one over a window that holds none.
+func TestConfigDenialIsNamedAsWithheld(t *testing.T) {
 	in := tracedInput()
-	quiet := buildMetricInput(&in, Config{Name: "quiet"})
-	silent, err := quiet.marshal()
-	if err != nil {
-		t.Fatal(err)
+	declared := Declaration{Needs: []analyze.Capability{analyze.CapUsage, analyze.CapTrace}}
+
+	p := negotiate(declared, []analyze.Capability{analyze.CapUsage})
+	doc := documentOf(&in, p)
+
+	if _, present := doc["trace"]; present {
+		t.Error("trace is on the document of a plugin whose config denies it")
 	}
-	loud := buildMetricInput(&in, tracingPlugin())
-	asked, err := loud.marshal()
-	if err != nil {
-		t.Fatal(err)
+	withheld, _ := doc["withheld"].([]analyze.Capability)
+	if len(withheld) != 1 || withheld[0] != analyze.CapTrace {
+		t.Fatalf("withheld = %v, want [%s]", doc["withheld"], analyze.CapTrace)
 	}
-	if len(silent) >= len(asked) {
-		t.Fatalf("withholding the timeline did not shrink the envelope: %d vs %d bytes", len(silent), len(asked))
+	if got := deniedCaveat("quiet", withheld); !strings.Contains(got, "trace") || !strings.Contains(got, "quiet") {
+		t.Fatalf("caveat = %q, want it to name both the plugin and the capability", got)
 	}
 }
 
-// TestAnUnknownNeedIsRejectedAtTheConfigBoundary keeps the capability set closed: a typo must
-// fail loudly rather than silently withhold a section the plugin thought it had asked for.
+// TestConfigAllowingMoreGrantsOnlyWhatWasDeclared: config constrains, it never defines. A
+// reader who permits everything still gets the plugin's own reading list, so widening the veto
+// cannot silently widen what a subprocess is handed.
+func TestConfigAllowingMoreGrantsOnlyWhatWasDeclared(t *testing.T) {
+	p := negotiate(Declaration{Needs: []analyze.Capability{analyze.CapUsage}}, analyze.Capabilities())
+	if len(p.Needs) != 1 || p.Needs[0] != analyze.CapUsage {
+		t.Fatalf("granted %v, want only the declared usage", p.Needs)
+	}
+	if len(p.Withheld) != 0 {
+		t.Fatalf("withheld = %v for a plugin that got everything it asked for", p.Withheld)
+	}
+}
+
+// TestNoAllowListIsNoConstraint: almost no `metrics:` entry carries the key, and reading that
+// silence as a denial would starve every plugin the moment this shipped.
+func TestNoAllowListIsNoConstraint(t *testing.T) {
+	declared := Declaration{Needs: []analyze.Capability{analyze.CapUsage, analyze.CapTrace}}
+	p := negotiate(declared, nil)
+	if len(p.Needs) != 2 || len(p.Withheld) != 0 {
+		t.Fatalf("negotiate with no allow list granted %v and withheld %v", p.Needs, p.Withheld)
+	}
+}
+
+// A denied capability's columns and predicates go with it: echoing a projection over a section
+// the document does not carry is a contradiction the plugin would have to resolve by guessing.
+func TestADeniedSectionTakesItsProjectionWithIt(t *testing.T) {
+	declared := Declaration{
+		Needs:  []analyze.Capability{analyze.CapUsage, analyze.CapTrace},
+		Fields: map[string][]string{"usage": {"day"}, "trace": {"scope"}},
+		Where:  map[string][]string{"trace.scope": {"interactive"}},
+	}
+	p := negotiate(declared, []analyze.Capability{analyze.CapUsage})
+	if _, echoed := p.Fields["trace"]; echoed {
+		t.Errorf("fields still projects a denied section: %v", p.Fields)
+	}
+	if len(p.Where) != 0 {
+		t.Errorf("where still filters a denied section: %v", p.Where)
+	}
+	if _, kept := p.Fields["usage"]; !kept {
+		t.Errorf("fields dropped the granted section's own projection: %v", p.Fields)
+	}
+}
+
+// TestAnUnknownNeedIsRejectedAtTheConfigBoundary keeps the capability set closed: a typo in the
+// reader's veto must fail loudly rather than silently deny a section the plugin asked for.
 func TestAnUnknownNeedIsRejectedAtTheConfigBoundary(t *testing.T) {
 	_, err := ResolveMetric(pluginNeeding("tracce"))
 	if err == nil || !strings.Contains(err.Error(), "unknown need") {
 		t.Fatalf("Resolve error = %v, want it to reject an unknown need", err)
-	}
-}
-
-// TestAPluginIsToldWhatItWasNotSent: without this the verdict of a plugin that never received
-// the timeline is indistinguishable from one that read it and found nothing.
-func TestAPluginIsToldWhatItWasNotSent(t *testing.T) {
-	in := tracedInput()
-	if !strings.Contains(notRequestedCaveat("quiet", buildMetricInput(&in, Config{Name: "quiet"}).Withheld), "trace") {
-		t.Fatal("the caveat does not name the withheld capability")
-	}
-	if got := notRequestedCaveat("quiet", nil); !strings.Contains(got, "quiet") {
-		t.Fatalf("caveat = %q, want the plugin named", got)
 	}
 }

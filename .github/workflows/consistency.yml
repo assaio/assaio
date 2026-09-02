@@ -87,3 +87,93 @@ jobs:
             fi
             echo "preparing $1 (latest tag $latest) -- allowed until the tag is pushed"
           fi
+
+      # Keep a Changelog is the format this file names in its own header, and that format
+      # defines a closed set of section types. "Compatibility" and "Internal" are not in it: a
+      # reader who knows the format cannot tell whether an entry under them is a break, a
+      # change, or a note, and a tool that reads the file by heading skips them in silence.
+      # "Breaking" is the one addition, because it is a section this project promises in
+      # RELEASING.md and Keep a Changelog has no equivalent for a pre-1.0 break.
+      - name: Changelog headings stay inside the format the file declares
+        run: |
+          set -euo pipefail
+          fail=0
+          while IFS=: read -r line heading; do
+            case "$heading" in
+              '### Breaking'|'### Added'|'### Changed'|'### Fixed'|'### Removed'|'### Deprecated'|'### Security') ;;
+              *)
+                echo "::error file=CHANGELOG.md,line=$line::$heading is not one of the sections this file's format defines."
+                echo "::error file=CHANGELOG.md,line=$line::Use Breaking, Added, Changed, Fixed, Removed, Deprecated or Security."
+                fail=1 ;;
+            esac
+          done < <(grep -nE '^### ' CHANGELOG.md || true)
+          exit $fail
+
+      # CITATION.cff is the published surface with no reader: nothing in review opens it, and
+      # it is in none of the other guards, so it sat at 0.1.1 for twenty-three releases and
+      # still named four parsers long after the fifth shipped. Both halves of it are mechanical,
+      # so neither has to depend on somebody remembering.
+      #
+      # The parser set is read from docs/reference.json rather than from a list written here.
+      # That file is the binary's own registry dump and `make test` fails when it differs from
+      # what this build would print, so a new parser reaches this check by being a parser rather
+      # than by being registered a second time. `assaio-agent docs` prints the same register,
+      # but reading it would make this job build the binary to learn something already committed.
+      - name: CITATION.cff names this release and every parser
+        run: |
+          set -euo pipefail
+          latest=$(git tag --list 'v*' --sort=-v:refname | head -1)
+          cited_version=$(sed -nE 's/^version: *(.+)$/\1/p' CITATION.cff)
+          test -n "$cited_version" || { echo "::error file=CITATION.cff::no version field"; exit 1; }
+          if [ "v$cited_version" = "$latest" ]; then
+            # date-released is the other half of the same claim, and drifts the same way: the
+            # file carried a July date for a version tagged in July while the binary was months
+            # past it.
+            tagged=$(git for-each-ref --format='%(creatordate:short)' "refs/tags/$latest")
+            released=$(sed -nE 's/^date-released: *(.+)$/\1/p' CITATION.cff)
+            if [ "$released" != "$tagged" ]; then
+              echo "::error file=CITATION.cff::date-released is $released; $latest was tagged $tagged."
+              exit 1
+            fi
+          else
+            # The same carve-out the changelog checks make, for the same reason: RELEASING.md
+            # updates the published surfaces in a commit that lands before the tag exists, so
+            # the release being prepared is allowed to sit ahead of the newest tag -- but only
+            # once CHANGELOG.md presents it as released, which is what makes it a preparation
+            # rather than a claim about a version nobody cut.
+            newest=$(printf '%s\n%s\n' "v$cited_version" "$latest" | sort -V | tail -1)
+            if [ "$newest" != "v$cited_version" ] || ! grep -qE "^## \[$cited_version\]" CHANGELOG.md; then
+              echo "::error file=CITATION.cff::version is $cited_version; the latest tag is $latest."
+              echo "::error file=CITATION.cff::Only the release being prepared may sit ahead, and only once CHANGELOG.md carries its section."
+              exit 1
+            fi
+            echo "preparing $cited_version (latest tag $latest) -- allowed until the tag is pushed"
+          fi
+          # Both sides are reduced to the same key -- lower-cased, punctuation dropped, and the
+          # words that are packaging rather than identity ("cli", "github", the list's "and")
+          # removed -- so that "GitHub Copilot CLI" and the source name "copilot-cli" compare
+          # equal without a translation table anybody has to maintain. "Cline" survives because
+          # only a whole word "cli" is dropped.
+          key() { printf '%s\n' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/ /g; s/(^| )(cli|github|and)( |$)/\1\3/g; s/ //g'; }
+          abstract=$(awk '/^abstract:/{f=1;next} f && /^[^ ]/{exit} f' CITATION.cff | tr '\n' ' ' | tr -s ' ')
+          # The abstract has to keep naming its tools as an "across A, B, and C." list. That
+          # shape is the whole reason the claim is checkable, so losing it fails here rather
+          # than silently comparing an empty set against five parsers.
+          list=$(printf '%s\n' "$abstract" | sed -nE 's/.*across ([^.]*)\..*/\1/p')
+          test -n "$list" || {
+            echo "::error file=CITATION.cff::the abstract no longer carries an 'across <tools>.' list, so its tool set cannot be read."
+            exit 1
+          }
+          cited_tools=$(printf '%s\n' "$list" | tr ',' '\n' | while IFS= read -r t; do key "$t"; done | sed '/^$/d' | sort -u)
+          shipped_tools=$(jq -r '.sources[].tool' docs/reference.json | while IFS= read -r t; do key "$t"; done | sed '/^$/d' | sort -u)
+          test -n "$shipped_tools" || {
+            echo "::error file=docs/reference.json::no sources listed; the abstract would be compared against nothing."
+            exit 1
+          }
+          if [ "$cited_tools" != "$shipped_tools" ]; then
+            echo "::error file=CITATION.cff::the abstract's tool list and the parsers the binary reports are not the same set."
+            echo "::error file=CITATION.cff::abstract names: $list"
+            echo "::error file=CITATION.cff::binary reports: $(jq -r '[.sources[].tool] | join(", ")' docs/reference.json)"
+            diff <(printf '%s\n' "$cited_tools") <(printf '%s\n' "$shipped_tools") || true
+            exit 1
+          fi

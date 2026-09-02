@@ -1,0 +1,167 @@
+name: fuzz
+
+# AGENTS.md requires `make fuzz` on any parser change, and until this file nothing enforced it:
+# fuzzing was a habit, and a habit leaves no evidence. The gap has a receipt -- an int64
+# overflow in the Gemini parser shipped in v0.22 while the input that triggers it was already
+# sitting in the seed corpus, because the target only asserted non-negativity and no run ever
+# pushed past it.
+#
+# Two budgets, one mechanism. A pull request gets 30s per target: enough to catch a panic the
+# change just introduced, cheap enough to sit in the required set. The nightly gets 10m, which
+# is where coverage is actually bought -- a fuzzer finds by accumulating, and a 30s budget
+# rediscovers the same shallow inputs every time.
+#
+# `on.pull_request.paths` gates the whole workflow, deliberately: a pull request touching none
+# of these packages does not fuzz at all, rather than fuzzing nothing and reporting a pass.
+on:
+  pull_request:
+    paths:
+      - 'internal/parser/**'
+      - 'internal/plugin/**'
+      - 'internal/reconcile/**'
+      - 'internal/runtime/openmetrics/**'
+      # The two files that decide what runs at all. A change to either can shrink coverage
+      # without touching a parser, which is the failure this workflow exists to make loud.
+      - 'Makefile'
+      - '.github/workflows/fuzz.yml'
+  schedule:
+    - cron: "20 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-${{ github.ref }}
+  # A pull request's earlier run is superseded by the push that follows it. A nightly is not
+  # superseded by anything, and cancelling one throws away the whole night's accumulation.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # The list of targets comes from the packages themselves, so a new FuzzXxx is fuzzed by CI on
+  # the day it lands rather than the day somebody remembers to register it. The Makefile is then
+  # held to the same set: `make fuzz` is the documented local gate, and a local gate that
+  # silently skips a target is worse than no gate, because it still reports success.
+  targets:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with: { go-version: "1.26.6" }
+      - id: discover
+        name: Every declared fuzz target, and make fuzz runs exactly those
+        run: |
+          set -euo pipefail
+          module=$(go list -m)
+          # `go test -list` prints a package's target names before that package's "ok" line, so
+          # the pairing is positional: collect the names, flush them when the package is named.
+          declared=$(go test -list '^Fuzz' ./... | awk -v prefix="$module/" '
+            $1 == "ok" { pkg = $2; sub(prefix, "", pkg); for (i = 1; i <= n; i++) print pkg, t[i]; n = 0; next }
+            /^Fuzz/    { t[++n] = $1 }
+          ' | sort)
+          recipe=$(sed -nE 's|^[[:space:]]+go test \./([^ ]+)/ -fuzz .\^([A-Za-z0-9_]+)\$\$. .*|\1 \2|p' Makefile | sort)
+          if [ "$declared" != "$recipe" ]; then
+            echo "::error file=Makefile::make fuzz and the packages disagree about which fuzz targets exist."
+            echo "::error file=Makefile::Lines marked < are in the Makefile recipe; lines marked > are what the packages declare."
+            diff <(printf '%s\n' "$recipe") <(printf '%s\n' "$declared") || true
+            exit 1
+          fi
+          if [ -z "$declared" ]; then
+            echo "::error file=Makefile::No fuzz targets found. An empty matrix would pass this workflow silently."
+            exit 1
+          fi
+          matrix=$(printf '%s\n' "$declared" | jq -Rsc '
+            split("\n") | map(select(length > 0) | split(" ")
+              | {pkg: .[0], name: .[1], slug: ((.[0] | gsub("/"; "-")) + "-" + .[1])})')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$declared"
+
+  fuzz:
+    needs: targets
+    runs-on: ubuntu-latest
+    name: ${{ matrix.target.pkg }} ${{ matrix.target.name }}
+    strategy:
+      # One crasher must not hide the other nine: every target runs to its own verdict.
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.targets.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with: { go-version: "1.26.6" }
+
+      - name: Fuzz
+        env:
+          EVENT: ${{ github.event_name }}
+          PKG: ${{ matrix.target.pkg }}
+          TARGET: ${{ matrix.target.name }}
+        run: |
+          set -euo pipefail
+          case "$EVENT" in
+            schedule) fuzztime=10m ;;
+            *)        fuzztime=30s ;;
+          esac
+          # Anchored, like the Makefile's: -fuzz refuses to run when its pattern matches more
+          # than one target, and FuzzParse is a prefix of FuzzParseSteps.
+          go test "./$PKG/" -fuzz "^$TARGET\$" -fuzztime "$fuzztime"
+
+      # Two different things are worth keeping, and only one of them is a bug. go test writes
+      # newly interesting inputs under GOCACHE -- that is the night's accumulated corpus, thrown
+      # away with the runner unless it is uploaded -- and writes a reproducer under the
+      # package's own testdata/fuzz, which is the finding itself.
+      - name: Collect the corpus
+        if: always() && github.event_name == 'schedule'
+        run: |
+          set -euo pipefail
+          mkdir -p fuzz-corpus
+          cache="$(go env GOCACHE)/fuzz"
+          if [ -d "$cache" ]; then
+            cp -R "$cache" fuzz-corpus/generated
+          fi
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always() && github.event_name == 'schedule'
+        with:
+          name: fuzz-corpus-${{ matrix.target.slug }}
+          path: |
+            fuzz-corpus
+            internal/**/testdata/fuzz/**
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # A nightly that fails into an empty inbox is a nightly nobody reads. One issue per finding,
+  # and a comment rather than a new issue while one is still open, so a crasher that reproduces
+  # for a week does not bury the queue under seven copies of itself.
+  report:
+    needs: fuzz
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the finding issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="Nightly fuzz run failed"
+          # Deliberately not "found a crasher": a build break or a toolchain change fails the
+          # same way, and the issue must not assert more than the signal carries.
+          body=$(printf '%s\n' \
+            "The nightly fuzz run failed: $RUN_URL" \
+            "" \
+            "Each failing job names its package and its target. An input it found is attached to" \
+            "that job as a fuzz-corpus artifact, under internal/<pkg>/testdata/fuzz/<Target>/;" \
+            "committing that file turns it into a seed the ordinary go test replays forever." \
+            "" \
+            "A build or toolchain failure lands here too. The run log says which this is.")
+          existing=$(gh issue list --repo "$REPO" --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" --body "$body"
+          else
+            gh issue create --repo "$REPO" --title "$title" --body "$body"
+          fi

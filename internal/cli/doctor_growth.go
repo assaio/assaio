@@ -46,7 +46,10 @@ func growthLine(ctx context.Context, st *store.Store, now time.Time) string {
 		"              stops growing at its horizon, together with the usage table, which does not.\n"+
 		"              An upper bound, not an estimate. One old record sets the span it divides by, and\n"+
 		"              `clear --older-than` can raise this figure rather than lower it -- it shortens the\n"+
-		"              span faster than it frees bytes, because the timeline was already horizon-bounded.",
+		"              span faster than it frees bytes, because the timeline was already horizon-bounded.\n"+
+		"              The bound holds only for a source older than the span: one ingested more recently\n"+
+		"              has contributed over fewer days than this rate divides by, so its own rate is higher\n"+
+		"              than its share of this figure suggests.",
 		humanize.Bytes(live), days, oldest.UTC().Format("2006-01-02"),
 		humanize.Bytes(int64(perDay)), humanize.Bytes(int64(perDay*365)))
 }

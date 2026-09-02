@@ -1,0 +1,98 @@
+// Command {{.Name}} is an assaio metric plugin (ADR 0004, protocol {{.Protocol}}).
+//
+// Two verbs, both with ASSAIO_METRIC_PROTOCOL=1 in the environment:
+//
+//	{{.Name}} describe   nothing on stdin; a handshake line and what this metric reads
+//	{{.Name}} analyze     the projected window on stdin; a handshake line and one Result
+//
+// The documents assaio accepts and refuses are published in docs/conformance/, which you can
+// run in your own CI without that binary.
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
+
+const (
+	name     = "{{.Name}}"
+	protocol = {{.Protocol}}
+)
+
+// declaration is what this metric reads, and nothing else is sent. Name a capability you do not
+// read and you pay for it on every run; read a column you did not project and it is simply
+// absent -- which is never a zero.
+func declaration() map[string]any {
+	return map[string]any{
+		"needs":  []string{"usage"},
+		"fields": map[string][]string{"usage": {"day", "tool", "in", "out"}},
+	}
+}
+
+type window struct {
+	Usage []struct {
+		Day string `json:"day"`
+		In  int64  `json:"in"`
+		Out int64  `json:"out"`
+	} `json:"usage"`
+}
+
+func analyze() {
+	var w window
+	if err := json.NewDecoder(os.Stdin).Decode(&w); err != nil {
+		fail(err)
+	}
+	// projection.rows says how many rows you were sent and how many the window held before your
+	// own predicates ran. Anything you publish as a share is a share of the first, not the
+	// second, and saying so is your job -- assaio cannot know which one your figure means.
+	var tokens int64
+	for _, r := range w.Usage {
+		tokens += r.In + r.Out
+	}
+	fig := map[string]string{"label": "tokens in window", "value": fmt.Sprintf("%d", tokens)}
+	emit(handshake())
+	emit(map[string]any{
+		"title": "TODO: name this metric",
+		"layer": "activity",
+		"read":  map[string]string{"key": "neutral", "label": "TODO"},
+		"howToRead": "TODO: one sentence telling a reader how to read the figure below, " +
+			"including what would make it mean nothing.",
+		"takeaway": "TODO: the one sentence a reader acts on. This skeleton has not decided " +
+			"anything yet, which is why its verdict is neutral.",
+		"figures":    []map[string]string{fig},
+		"confidence": map[string]any{"samples": len(w.Usage), "samplesUnit": "usage rows"},
+	})
+}
+
+func handshake() map[string]any {
+	return map[string]any{"assaio_metric": protocol, "name": name}
+}
+
+func main() {
+	verb := ""
+	if len(os.Args) > 1 {
+		verb = os.Args[1]
+	}
+	switch verb {
+	case "describe":
+		emit(handshake())
+		emit(declaration())
+	case "analyze":
+		analyze()
+	default:
+		fmt.Fprintf(os.Stderr, "usage: %s describe|analyze\n", os.Args[0])
+		os.Exit(64)
+	}
+}
+
+func emit(v any) {
+	if err := json.NewEncoder(os.Stdout).Encode(v); err != nil {
+		fail(err)
+	}
+}
+
+func fail(err error) {
+	fmt.Fprintln(os.Stderr, err)
+	os.Exit(70)
+}

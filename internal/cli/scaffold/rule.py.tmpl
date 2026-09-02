@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""{{.Name}}: an assaio rule plugin (ADR 0005, protocol {{.Protocol}}).
+
+Invoked as `{{.Name}} evaluate` with ASSAIO_RULE_PROTOCOL=1: the window's verdicts on stdin, a
+handshake line and one alerts document on stdout. A rule reasons over verdicts, never over raw
+usage. Only `error` fails `assaio-agent check`; `info` and `warn` are reported and pass.
+
+The documents assaio accepts and refuses are published in docs/conformance/rule-alerts.json.
+"""
+import json
+import sys
+
+NAME = "{{.Name}}"
+PROTOCOL = {{.Protocol}}
+
+
+def evaluate(verdicts):
+    """Return the alerts this rule raises. Returning [] is a real answer -- "nothing to flag" --
+    and is why the key is required rather than optional: a document with no `alerts` key is a
+    rule that did not run, which assaio fails the gate on instead of reading as a pass."""
+    alerts = []
+    for v in verdicts:
+        if v.get("read", {}).get("key") == "watch":
+            alerts.append({
+                "rule": "verdict-watch",
+                "severity": "warn",
+                "message": f"{v.get('title', v['name'])} reads WATCH in this window.",
+                "validator": v["name"],
+            })
+    return alerts
+
+
+def main():
+    if sys.argv[1:2] != ["evaluate"]:
+        sys.exit(f"usage: {sys.argv[0]} evaluate")
+    window = json.load(sys.stdin)
+    print(json.dumps({"assaio_rule": PROTOCOL, "name": NAME}))
+    print(json.dumps({"alerts": evaluate(window["verdicts"])}))
+
+
+if __name__ == "__main__":
+    main()

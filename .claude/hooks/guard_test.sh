@@ -49,6 +49,12 @@ t ALLOW 'make release VERSION=v0.22.0 CONFIRM=yes'
 t ALLOW 'XDG_DATA_HOME=$(mktemp -d) go run ./cmd/assaio-agent clear --all --yes'
 t ALLOW 'XDG_DATA_HOME=/tmp/assaio-ab go run ./cmd/assaio-agent clear --all --yes'
 t ALLOW 'assaio-agent report --since 30d | grep -c clear'
+t ALLOW 'cat > docs/x.md <<EOF
+Run the deletion subcommand: assaio-agent clear --all --yes
+EOF'
+t ALLOW 'echo "assaio-agent clear --all wipes the store"'
+t DENY 'make build && ./bin/assaio-agent clear --all --yes'
+t DENY 'env XDG_CONFIG_HOME=/tmp/x assaio-agent clear --all --yes'
 
 [ "$fails" -eq 0 ] || printf '\n%d case(s) failed\n' "$fails"
 exit $((fails > 0))

@@ -142,7 +142,13 @@ both protocols (<code>scan</code> and <code>analyze</code> argv):</p>
   - name: weekend-usage      # required, [a-z0-9-]+; appears as &quot;plugin:weekend-usage&quot;
     command: /path/to/assaio-metric-weekend   # required; PATH lookup if not absolute
     timeout: 30s             # optional, default 60s
+    needs: [usage]           # optional veto -- see &quot;Declare what you read&quot; below
 </code></pre>
+<p><strong>Start from a working skeleton.</strong> <code>assaio-agent plugins init --kind metric --lang python</code>
+prints a runnable metric plugin -- correct handshake, both verbs, one result the boundary
+accepts -- to stdout, and the next steps to stderr, so
+<code>assaio-agent plugins init --kind metric --lang python &gt; my-metric.py</code> writes only the program.
+<code>--lang go|python|sh</code> and <code>--kind parser|metric|rule</code> cover every combination.</p>
 <p><strong>One privacy note before the protocol.</strong> Unlike a parser plugin (which reads a tool's
 own logs), a metric plugin <strong>receives your usage data on stdin</strong>: project names, model
 names, member pseudonyms, and token/line counts — the same aggregate metadata the store
@@ -151,13 +157,22 @@ trust model is unchanged — a plugin is a local program you chose to run, with 
 privileges — but know what crosses the process boundary before pointing config at a
 binary you didn't write.</p>
 <h2 id="the-protocol">The protocol</h2>
-<p><code>assaio</code> invokes <code>&lt;command&gt; analyze</code> with <code>ASSAIO_METRIC_PROTOCOL=1</code> in the environment,
-writes one JSON envelope to the plugin's <strong>stdin</strong>, closes it, and reads stdout.</p>
+<p><code>assaio</code> runs your plugin <strong>twice per analysis</strong>, both times with
+<code>ASSAIO_METRIC_PROTOCOL=1</code> in the environment:</p>
+<ol>
+<li><code>&lt;command&gt; describe</code> — nothing on stdin. You write a handshake line and <strong>one
+Declaration</strong>: what this metric reads.</li>
+<li><code>&lt;command&gt; analyze</code> — the window on stdin, cut to exactly what you declared. You write a
+handshake line and <strong>one <code>Result</code></strong>.</li>
+</ol>
+<p>The extra process is what buys the envelope: on a real 30-day store the whole window is
+53 MB and an ordinary metric's projection of it is 43 KB (see below).</p>
 <p><strong>stdin</strong> — the prepared <code>Input</code>, versioned, camelCase (mirroring the public
 <code>analyze --format json</code> shapes; only the version keys stay snake_case, matching the
-parser protocol's <code>assaio_plugin</code>):</p>
+parser protocol's <code>assaio_plugin</code>). This is the envelope of a plugin that declared
+everything; a section you do not declare is <strong>not on the document at all</strong>:</p>
 <pre><code class="language-json">{
-  &quot;assaio_metric_input&quot;: 3,
+  &quot;assaio_metric_input&quot;: 4,
   &quot;now&quot;: &quot;2026-07-17T10:00:00Z&quot;,
   &quot;recentDays&quot;: 7,
   &quot;usage&quot;:    [{&quot;day&quot;:&quot;2026-07-16&quot;,&quot;tool&quot;:&quot;claude-code&quot;,&quot;model&quot;:&quot;...&quot;,&quot;project&quot;:&quot;...&quot;,
@@ -191,9 +206,110 @@ parser protocol's <code>assaio_plugin</code>):</p>
              &quot;project&quot;:&quot;…&quot;,&quot;scope&quot;:&quot;interactive&quot;,
              &quot;steps&quot;:[{&quot;ordinal&quot;:1,&quot;at&quot;:&quot;2026-08-12T09:00:00Z&quot;,&quot;kind&quot;:&quot;edit&quot;,&quot;outcome&quot;:&quot;ok&quot;,
                        &quot;model&quot;:&quot;claude-opus-5&quot;,&quot;tokens&quot;:0,&quot;targetRef&quot;:1}]}],
-  &quot;historyStart&quot;: &quot;2026-07-13T08:11:04Z&quot;
+  &quot;historyStart&quot;: &quot;2026-07-13T08:11:04Z&quot;,
+  &quot;projection&quot;: {&quot;needs&quot;:[&quot;usage&quot;,&quot;trace&quot;],
+                 &quot;fields&quot;:{&quot;usage&quot;:[&quot;day&quot;,&quot;in&quot;,&quot;out&quot;],&quot;trace.steps&quot;:[&quot;kind&quot;,&quot;outcome&quot;]},
+                 &quot;where&quot;:{&quot;trace.scope&quot;:[&quot;interactive&quot;]},
+                 &quot;rows&quot;:{&quot;usage&quot;:{&quot;sent&quot;:522,&quot;available&quot;:522},
+                         &quot;trace&quot;:{&quot;sent&quot;:471,&quot;available&quot;:4279}}}
 }
 </code></pre>
+<h3 id="declare-what-you-read-since-v025-protocol-4">Declare what you read (since v0.25, protocol 4)</h3>
+<p><code>describe</code> answers one question: what does this metric read? assaio sends that and nothing
+else.</p>
+<pre><code class="language-json">{&quot;assaio_metric&quot;: 4, &quot;name&quot;: &quot;weekend-usage&quot;}
+{&quot;needs&quot;: [&quot;usage&quot;], &quot;fields&quot;: {&quot;usage&quot;: [&quot;day&quot;, &quot;tool&quot;, &quot;in&quot;, &quot;out&quot;]}}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>needs</code></td>
+<td><strong>Required</strong>, at least one. The capability vocabulary a built-in validator declares: <code>usage</code>, <code>sessions</code>, <code>trace</code>, <code>attribution</code>, <code>turn-sizing</code>, <code>cache-misses</code>, <code>prices</code>. An empty list is refused — a metric that reads nothing has nothing to report, and treating it as &quot;everything&quot; would restore the pre-4 default under a name saying the opposite</td>
+</tr>
+<tr>
+<td><code>fields</code></td>
+<td>Optional. Columns of a section, keyed by the section's JSON key. A section you do not name arrives whole. <code>trace.steps</code> is addressable on its own, which is where the bytes are</td>
+</tr>
+<tr>
+<td><code>where</code></td>
+<td>Optional. Rows, keyed <code>&lt;section&gt;.&lt;column&gt;</code> with the values that column may hold. <strong>Grain is a column</strong>: <code>usage.granularity</code> picks <code>turn</code> or <code>session</code> rows, <code>trace.scope</code> picks <code>interactive</code>, <code>sub-agent</code>, <code>programmatic</code> or <code>unstated</code>. Only string columns, and only top-level rows — a predicate inside a sequence would leave its ordinals describing a set nobody declared</td>
+</tr>
+</tbody>
+</table>
+<p>Which sections each capability carries: <code>usage</code> carries <code>usage</code>, <code>byModel</code>, <code>byProject</code>,
+<code>totals</code> and <code>delegation</code>; <code>sessions</code> carries <code>sessions</code>; <code>prices</code> carries <code>prices</code> and
+<code>planMonthlyCost</code>; <code>attribution</code> carries <code>skills</code> and <code>agents</code>; <code>turn-sizing</code>, <code>cache-misses</code>
+and <code>trace</code> carry the sections of their own names. The prepared views ride with the rows they
+aggregate because they are bounded by model and project count, not by observation count —
+and only while those rows are the whole window. A <code>where</code> predicate declared against <code>usage</code>,
+<code>byModel</code> or <code>byProject</code> <strong>withholds <code>totals</code> and <code>delegation</code> entirely</strong>, because they span
+the window rather than the rows you asked for, and <code>sum(usage.in) / totals.tokens</code> would be a
+share of a population your rows do not describe. The window's own denominator stays reachable
+as <code>projection.rows[&lt;section&gt;].available</code>. The condition is your declaration, never the
+outcome, so the keys cannot be present on one window and absent on the next.
+<code>now</code>, <code>recentDays</code>, <code>windowStart</code>, <code>historyStart</code>, <code>answers</code>, <code>projection</code> and <code>withheld</code>
+are always sent: they are how you judge what you did receive.</p>
+<p><strong>A column you did not project is absent, and absent is not zero.</strong> <code>projection.fields</code> on
+the envelope is the list of keys you may read; decoding a missing key into a struct field
+gives you a <code>0</code> that no source ever recorded. Same for a section: read <code>projection.needs</code>
+before assuming a key exists.</p>
+<p><strong>A predicate changes your denominator, so the envelope states it.</strong>
+<code>projection.rows[section]</code> gives <code>sent</code> and <code>available</code> — how many rows you received, and how
+many the window held before your own predicate ran. A share over a filtered section is a
+share of <code>sent</code>; saying which of the two your figure means is your job, and
+<code>confidence.signalCoverage</code> is where it goes.</p>
+<p><strong>What this is worth.</strong> The same 30-day window on a real store — 522 usage rows, 3,376
+sessions, 4,279 step sequences, 424,310 steps — serialized under four declarations:</p>
+<table>
+<thead>
+<tr>
+<th>What the plugin gets</th>
+<th>Bytes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>protocol 3, no <code>needs:</code> line (everything except <code>trace</code>)</td>
+<td>1,237,872 (1.18 MB)</td>
+</tr>
+<tr>
+<td>protocol 3, <code>needs: [trace]</code> (everything)</td>
+<td>55,864,147 (53.28 MB)</td>
+</tr>
+<tr>
+<td>protocol 4, <code>needs: [usage]</code> with four columns</td>
+<td>43,779 (0.04 MB)</td>
+</tr>
+<tr>
+<td>protocol 4, <code>needs: [trace]</code>, three sequence and two step columns, <code>trace.scope = interactive</code></td>
+<td>7,531,004 (7.18 MB)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Your config entry is a veto, not the declaration.</strong> Before v0.25 the reader wrote
+<code>needs:</code> in <code>config.yaml</code>, which asked the person pasting a config entry to know what your
+plugin reads. Now you declare it and their <code>needs:</code> only <em>narrows</em> it: no key means no
+constraint, allowing more than you declared grants nothing extra, and allowing less sends the
+section absent, names the capability in the envelope's top-level <code>withheld</code>, and adds a
+caveat to your rendered verdict saying the verdict rests on less than you asked for.</p>
+<h3 id="migrating-a-protocol-3-plugin">Migrating a protocol-3 plugin</h3>
+<p>A protocol-3 plugin fails on the handshake, naming the version, before any window is
+serialized for it. Two edits:</p>
+<ol>
+<li>Change the handshake integer from <code>3</code> to <code>4</code>, in both verbs.</li>
+<li>Add a <code>describe</code> branch that prints that handshake and one declaration. To reproduce
+protocol 3's payload exactly:
+<code>{&quot;needs&quot;:[&quot;usage&quot;,&quot;sessions&quot;,&quot;trace&quot;,&quot;attribution&quot;,&quot;turn-sizing&quot;,&quot;cache-misses&quot;,&quot;prices&quot;]}</code>.</li>
+</ol>
+<p>Narrowing from there is optional and is where every byte in the table above comes from. A
+<code>needs:</code> line already in someone's <code>config.yaml</code> keeps working and now reads as a veto over
+your declaration rather than an extension of it.</p>
 <h3 id="cachewrite1h--a-subset-never-a-total-since-v014"><code>cacheWrite1h</code> — a subset, never a total (since v0.14)</h3>
 <p><code>cacheWrite1h</code> on a usage row is the portion of <code>cacheWrite</code> that bought a 1-hour cache
 lifetime, and <code>prices[model].cacheWrite1h</code> is that portion's own higher rate. It is a
@@ -245,9 +361,9 @@ reshapes it says so explicitly (see <code>RELEASING.md</code>).</p>
 <p><strong>stdout</strong> — a one-line handshake, then exactly <strong>one</strong> JSON <code>Result</code> document
 (pretty-printed is fine; anything after it is a violation):</p>
 <ol>
-<li><code>{&quot;assaio_metric&quot;: 3, &quot;name&quot;: &quot;&lt;name&gt;&quot;}</code> — version must be <code>3</code> (it was <code>2</code> before v0.24;
+<li><code>{&quot;assaio_metric&quot;: 4, &quot;name&quot;: &quot;&lt;name&gt;&quot;}</code> — version must be <code>4</code> (it was <code>3</code> before v0.25;
 see the breaking change in <a href="https://github.com/assaio/assaio/blob/main/CHANGELOG.md">CHANGELOG.md</a>), <code>name</code> must equal the
-configured name.</li>
+configured name. The same line opens <code>describe</code>.</li>
 <li>One <code>Result</code> in the same shape <code>analyze --format json</code> emits — see <a href="https://assaio.dev/docs/metric-validator#what-a-validator-returns-result">What a validator
 returns: Result</a>. The wire <code>name</code> field is ignored:
 assaio always stamps <code>plugin:&lt;name&gt;</code>, so a plugin can never shadow a built-in
@@ -348,11 +464,15 @@ with its reason.</p>
 </tr>
 <tr>
 <td><code>withheld</code></td>
-<td>the capabilities assaio did <strong>not</strong> put in this envelope, because your <code>metrics:</code> entry did not declare them. Present only when something was withheld. Read it: an absent section and a window that genuinely holds none of that evidence look identical otherwise, and dividing by one you were never sent is the fabricated zero this protocol exists to refuse. Today the only withholdable section is <code>trace</code>; everything else costs kilobytes and is sent unasked</td>
+<td>the capabilities you declared that this install's <code>needs:</code> entry refused. Present only when something was refused, and it is the <em>only</em> absence assaio decided — a section you never declared is simply not on the document, and <code>projection.needs</code> is what says so. Read both: an absent section and a window that genuinely holds none of that evidence look identical otherwise, and dividing by one you were never sent is the fabricated zero this protocol exists to refuse</td>
+</tr>
+<tr>
+<td><code>projection</code></td>
+<td>what this envelope carries and why: <code>needs</code> (the capabilities granted), <code>fields</code> and <code>where</code> (your own narrowing, echoed back after the config's veto), and <code>rows</code> — per section, how many rows you were <code>sent</code> out of how many were <code>available</code> before your predicate ran. It is what makes a projected document self-describing; nothing else on the wire says whether an absence was chosen or measured</td>
 </tr>
 <tr>
 <td><code>trace</code></td>
-<td>the window's step sequences: what each session did, in what order (ADR 0012). One entry per sequence — a session's main loop, or one sub-agent inside it — carrying the <code>scope</code> the core classified it as (<code>interactive</code>, <code>sub-agent</code>, <code>programmatic</code>, <code>unstated</code>). <strong>Read one scope, not the set:</strong> 89% of the sequences on the audited store are one-shot SDK calls holding 5.7% of its steps, so a rate spanning two scopes describes neither, and the share you excluded belongs beside your figure. <code>outcome</code> is <code>&quot;&quot;</code> when the source said nothing, which is never <code>ok</code>; <code>targetRef</code> stands for the file a step named and is comparable <strong>only inside its own sequence</strong>, never across sequences and never a path. This is by far the largest thing on the wire — 339,000 steps encode to about 44 MB — so it is the one section you have to <strong>ask for</strong>: add <code>needs: [trace]</code> to your <code>metrics:</code> entry. Without it the section is absent and <code>withheld</code> says so</td>
+<td>the window's step sequences: what each session did, in what order (ADR 0012). One entry per sequence — a session's main loop, or one sub-agent inside it — carrying the <code>scope</code> the core classified it as (<code>interactive</code>, <code>sub-agent</code>, <code>programmatic</code>, <code>unstated</code>). <strong>Read one scope, not the set:</strong> 89% of the sequences on the audited store are one-shot SDK calls holding 5.7% of its steps, so a rate spanning two scopes describes neither, and the share you excluded belongs beside your figure — declare <code>where: {&quot;trace.scope&quot;: [&quot;interactive&quot;]}</code> and <code>projection.rows.trace</code> tells you what you left out. <code>outcome</code> is <code>&quot;&quot;</code> when the source said nothing, which is never <code>ok</code>; <code>targetRef</code> stands for the file a step named and is comparable <strong>only inside its own sequence</strong>, never across sequences and never a path. By far the largest section — 424,000 steps encode to 53 MB — which is what projecting <code>trace.steps</code> down to the two columns you read is for</td>
 </tr>
 <tr>
 <td><code>historyStart</code></td>
@@ -365,7 +485,8 @@ absent means not recorded, and neither means zero.</strong> Before publishing a 
 them, check <code>answers</code> for whether the tools in this window record it at all, and declare the
 coverage you actually had.</p>
 <p>Those additions kept the envelope at <code>assaio_metric_input: 1</code>, because a plugin written
-against the earlier shape keeps working and simply ignores them.</p>
+against the earlier shape kept working and simply ignored them. Protocol 4 is the first
+change to the request rather than the answer, which is why it could not be additive.</p>
 <h2 id="what-the-boundary-enforces">What the boundary enforces</h2>
 <p>The honesty rules are enforced, not requested. A result that fails <strong>any</strong> check is
 rejected whole — assaio never renders a fabricated or partially-sanitized verdict. On a
@@ -373,6 +494,12 @@ bare <code>analyze</code>/<code>dashboard</code> run a failing plugin is skipped
 the built-ins still render; an explicitly selected one (<code>analyze plugin:&lt;name&gt;</code>) is a
 hard error.</p>
 <ul>
+<li>The <strong>declaration</strong> is refused whole, with every reason, before any window is serialized:
+<code>needs</code> must be present and non-empty and name only known capabilities, with no duplicate;
+every <code>fields</code> key must be a section whose capability you declared, and every column in it a
+column that section has; every <code>where</code> key must address <code>&lt;section&gt;.&lt;column&gt;</code>, on a top-level
+section you declared, on a string column, admitting at least one value. Nothing is repaired —
+a column assaio silently dropped from your projection is a column you read as absent.</li>
 <li><code>layer</code> must be <code>activity</code>, <code>output</code>, <code>outcome</code> or <code>impact</code> — which of the four measurement
 layers your verdict rests on (ADR 0013). Required, because a built-in metric cannot compile
 without stating it and an extension surface weaker than the core it extends is not a surface.
@@ -410,6 +537,15 @@ example</a> — one metric, both extension paths:</p>
 import json, sys
 from datetime import date
 
+HANDSHAKE = {&quot;assaio_metric&quot;: 4, &quot;name&quot;: &quot;weekend-usage&quot;}
+
+if sys.argv[1:2] == [&quot;describe&quot;]:
+    # Four columns of one section. Everything else -- sessions, the step timeline, the
+    # price table -- is never serialized for this plugin at all.
+    print(json.dumps(HANDSHAKE))
+    print(json.dumps({&quot;needs&quot;: [&quot;usage&quot;], &quot;fields&quot;: {&quot;usage&quot;: [&quot;day&quot;, &quot;in&quot;, &quot;out&quot;]}}))
+    sys.exit(0)
+
 inp = json.load(sys.stdin)
 weekend = total = 0
 for row in inp[&quot;usage&quot;]:
@@ -418,13 +554,13 @@ for row in inp[&quot;usage&quot;]:
     if date.fromisoformat(row[&quot;day&quot;]).weekday() &gt;= 5:
         weekend += tokens
 
-print(json.dumps({&quot;assaio_metric&quot;: 3, &quot;name&quot;: &quot;weekend-usage&quot;}))
+print(json.dumps(HANDSHAKE))
 
 if total == 0:
     print(json.dumps({
         &quot;title&quot;: &quot;Weekend Usage&quot;,
         &quot;layer&quot;: &quot;activity&quot;,
-        &quot;read&quot;: {&quot;key&quot;: &quot;neutral&quot;, &quot;label&quot;: &quot;—&quot;},
+        &quot;read&quot;: {&quot;key&quot;: &quot;neutral&quot;, &quot;label&quot;: &quot;\u2014&quot;},
         &quot;howToRead&quot;: &quot;A rising weekend share can mean crunch time or just flexible hours -- read it next to team sentiment, not as a verdict on its own.&quot;,
         &quot;takeaway&quot;: &quot;No usage in this window.&quot;,
     }))
@@ -463,6 +599,41 @@ weekend-usage     /path/to/assaio-metric-weekend  (timeout 30s)
 <code>assaio-agent analyze plugin:weekend-usage</code> runs it alone, <code>analyze --list</code> shows it
 (without executing it), and <code>assaio-agent dashboard</code> gives it a faceplate cell and
 ledger entry like any built-in's.</p>
+<h2 id="conformance-vectors--your-ci-without-this-binary">Conformance vectors — your CI without this binary</h2>
+<p><code>docs/conformance/</code> publishes every document this boundary accepts and refuses, with the
+verdict and the reason:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>The document it judges</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/assaio/assaio/blob/main/docs/conformance/metric-declaration.json"><code>metric-declaration.json</code></a></td>
+<td>what <code>describe</code> writes</td>
+</tr>
+<tr>
+<td><a href="https://github.com/assaio/assaio/blob/main/docs/conformance/metric-result.json"><code>metric-result.json</code></a></td>
+<td>what <code>analyze</code> writes</td>
+</tr>
+<tr>
+<td><a href="https://github.com/assaio/assaio/blob/main/docs/conformance/rule-alerts.json"><code>rule-alerts.json</code></a></td>
+<td>what a <a href="https://assaio.dev/docs/rule-plugin">rule plugin</a> writes</td>
+</tr>
+<tr>
+<td><a href="https://github.com/assaio/assaio/blob/main/docs/conformance/parser-record.json"><code>parser-record.json</code></a></td>
+<td>one record from a <a href="https://assaio.dev/docs/parser-plugin">parser plugin</a></td>
+</tr>
+</tbody>
+</table>
+<p>Each file is <code>{about, contract, protocol, vectors: [{id, doc, accept, expect, why}]}</code>. <code>doc</code>
+is the document as a <strong>string</strong>, so a malformed one — trailing data, a control character, text
+that is not JSON at all — is representable. Feed each <code>doc</code> to your decoder and assert
+<code>accept</code>; when it is <code>false</code>, your rejection reason should mention <code>expect</code>.</p>
+<p>These same files drive assaio's own tests and seed its fuzzers, so a vector that stops
+describing the boundary fails assaio's build rather than yours.</p>
 <p><strong>Where it deliberately does not run:</strong> the <a href="https://assaio.dev/docs/team-server">team server</a>'s served
 dashboard (<code>GET /</code> rebuilds per request — spawning
 config-declared subprocesses per request would be a denial-of-service vector), the

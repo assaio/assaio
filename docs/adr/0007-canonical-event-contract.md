@@ -1,7 +1,10 @@
 # 7. Canonical event contract for the evidence graph
 
 ## Status
-Accepted (2026-08-02)
+Accepted (2026-08-02). Amended by [ADR 0016](0016-usage-is-a-store-row-not-an-event.md), which
+withdraws the AI half of the vocabulary and the `usage.Record` adapter: AI usage stays a store
+row, and this contract covers the domains that have no store row of their own. The amendments
+are marked inline below; everything not marked stands.
 
 ## Context
 Everything assaio has stored for five releases is one shape: `usage.Record`, a per-turn or
@@ -25,7 +28,9 @@ migration history, and 119,896 rows on the maintainer's machine alone; reshaping
 ## Decision
 A canonical event is a small versioned envelope wrapping one closed payload. It is the shape
 collectors emit and the shape `AnalyzerContext` (`B90`) will serve. Today's `usage.Record`
-adapts into it; nothing else is rewritten.
+adapts into it; nothing else is rewritten. *Amended by
+[ADR 0016](0016-usage-is-a-store-row-not-an-event.md): the adapter is gone and `usage.Record`
+is not an event. What a collector emits is unchanged.*
 
 - **An event is an interface contract, not a storage format.** There is no event table and no
   migration in this decision. Storage stays per domain — the git collector (`B91`) gets its
@@ -43,9 +48,15 @@ adapts into it; nothing else is rewritten.
   correct now and expensive later. An *observation* is all any of these ever are — a claim
   about a link between two of them is an attribution edge (`B85`), a different thing with
   different fields.
+
+  *Amended by [ADR 0016](0016-usage-is-a-store-row-not-an-event.md):* the three `ai.*` names
+  are withdrawn, on the same "cheap now, expensive later" reasoning that renamed `ai.session`
+  here. AI usage has a canonical model already — `usage.Record` and `usage_record` — and a
+  second one had no caller for eighteen releases. The `vcs.*`, `scm.*`, `ci.*` and
+  `delivery.*` names stand.
 - **This document commits the vocabulary; the code registers what it can actually produce.**
-  `internal/event` today knows `ai.usage.observed` and `ai.edit.observed`, because those are
-  what the `usage.Record` adapter emits. Each remaining type lands with the collector that
+  `internal/event` today knows `vcs.commit.observed` alone (ADR 0016 removed the two `ai.*`
+  types this sentence originally named). Each remaining type lands with the collector that
   produces it — one registry line and one payload struct — rather than shipping now as an
   empty shape nobody fills. Declaring a name is a commitment; declaring a struct with no
   producer is speculative abstraction.
@@ -54,8 +65,9 @@ adapts into it; nothing else is rewritten.
   `occurred_at` and `observed_at`; `time_source`; `grain`; `privacy`; `provenance`; and a
   `subject` of `{project, session, member}`. Each payload is one closed struct per type.
 - **`id` is the source's own key, never a generated one.** Re-reading an artifact must
-  produce the same event, so the adapter derives it from the parser's existing dedupe key.
-  Idempotency is a property of the identifier, not of a de-duplicating consumer.
+  produce the same event, so a collector derives it from the artifact's own identity — the
+  commit hash, the pull request number. Idempotency is a property of the identifier, not of a
+  de-duplicating consumer.
 - **Two clocks, and a field saying how much to trust them.** `occurred_at` is when the thing
   happened per the source; `observed_at` is when assaio read it. `time_source` states which
   of `source-stated`, `file-mtime` or `ingest-time` produced `occurred_at`, because those are
@@ -81,6 +93,11 @@ adapts into it; nothing else is rewritten.
 - **Reuse, never a second source of truth.** `grain` extends `usage.Record.Granularity`
   rather than restating it; `source.build` is what `store.Provenance` already reports as
   `ParsedBy`; per-source capability stays in `parser.Depth` and is referenced, not copied.
+
+  *Amended by [ADR 0016](0016-usage-is-a-store-row-not-an-event.md):* the `grain` half of this
+  is now moot and the principle it served is what removed the AI payloads. `turn` and `session`
+  left with them, because a grain is the unit a payload counts in; the vocabulary holds
+  `commit`, and each collector adds the unit it observes.
 - **Versioned, and validated at the boundary.** `spec_version` is an integer; fields may be
   added within a version, and removing or retyping one is a new version. Every event is
   validated where it is constructed — unknown type, unknown vocabulary value, empty
@@ -119,6 +136,10 @@ Rejected alternatives:
   observation only when the record carries line, edit or tool-call activity. A source with no
   activity extraction therefore emits *no* edit observation rather than one full of zeros —
   which is the same honesty `parser.Depth` states, now structural.
+
+  *Amended by [ADR 0016](0016-usage-is-a-store-row-not-an-event.md):* there is no adapter. The
+  "absence is not a zero" rule it demonstrated survives in the commit payload's refusal to let
+  a category split disagree with the file count beside it (ADR 0009).
 - Nothing user-facing changes in this step. There is no new command, no new column, and no
   figure moves; the contract earns its keep only once `B90` serves it and `B91` fills it.
 - Events are in-process only today. Publishing them — over sync, to a plugin, or as OTel —

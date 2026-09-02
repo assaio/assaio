@@ -23,8 +23,16 @@ type SessionStats struct {
 	// Count is the number of sessions the stats were computed from.
 	Count int
 	// Turned, Paced, Edited and Compacting are how many of Count could answer each group:
-	// turn depth and peak context, focused minutes, edits, and context compaction.
+	// turn depth, focused minutes, edits, and context compaction.
 	Turned, Paced, Edited, Compacting int
+	// Tokened and Contexted are the two token-denominated groups. They are separate from
+	// Turned because a turn count and a token count are different capabilities and the first
+	// does not imply the second: Antigravity CLI records every turn of a session and not one
+	// token, so basing output tokens or peak context on Turned reported a median of zero for
+	// a figure its format does not contain. Contexted is narrower than either -- a peak is the
+	// largest of several turns, so a source that totals a whole session has no peak to state,
+	// only a sum that would read as one.
+	Tokened, Contexted int
 	// MedianTurns and P90Turns are conversation depth: the typical and tail turn count.
 	MedianTurns, P90Turns int64
 	// MedianOutputTokens is the median output tokens per session: work produced, not
@@ -59,6 +67,8 @@ func BuildSessionStats(rows []store.SessionRow, now time.Time) SessionStats {
 	paced := SessionsAnswering(rows, parser.SignalActiveMinutes)
 	edited := SessionsAnswering(rows, parser.SignalEditsCount)
 	compacting := SessionsAnswering(rows, parser.SignalCompactionsCount)
+	tokened := SessionsAnswering(rows, parser.SignalTokensTotal)
+	contexted := SessionsAnswering(turned, parser.SignalTokensTotal)
 	turns := fieldInt64(turned, func(r *store.SessionRow) int64 { return r.Turns })
 
 	return SessionStats{
@@ -67,10 +77,12 @@ func BuildSessionStats(rows []store.SessionRow, now time.Time) SessionStats {
 		Paced:                   len(paced),
 		Edited:                  len(edited),
 		Compacting:              len(compacting),
+		Tokened:                 len(tokened),
+		Contexted:               len(contexted),
 		MedianTurns:             percentileInt64(turns, 50),
 		P90Turns:                percentileInt64(turns, 90),
-		MedianOutputTokens:      percentileInt64(fieldInt64(rows, func(r *store.SessionRow) int64 { return r.OutputTokens }), 50),
-		MedianPeakContextTokens: percentileInt64(fieldInt64(turned, func(r *store.SessionRow) int64 { return r.PeakContextTokens }), 50),
+		MedianOutputTokens:      percentileInt64(fieldInt64(tokened, func(r *store.SessionRow) int64 { return r.OutputTokens }), 50),
+		MedianPeakContextTokens: percentileInt64(fieldInt64(contexted, func(r *store.SessionRow) int64 { return r.PeakContextTokens }), 50),
 		MedianActiveMinutes:     medianFloat(fieldFloat(paced, func(r *store.SessionRow) float64 { return r.ActiveMinutes })),
 		CodeSessionShare:        shareWhere(edited, func(r *store.SessionRow) bool { return r.Edits > 0 }),
 		CompactionRate:          shareWhere(compacting, func(r *store.SessionRow) bool { return r.Compactions > 0 }),

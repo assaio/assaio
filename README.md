@@ -4,12 +4,13 @@
 
 **Is your AI coding spend delivering? `assaio` shows which projects turn AI budget into
 code — and where the same spend would go further — fully offline today, across Claude
-Code, Codex, Gemini CLI, Copilot CLI, and Cline. The first piece of a self-hosted
-AI-engineering analytics platform.**
+Code, Codex, Gemini CLI, Copilot CLI, Cline, and Antigravity CLI. The first piece of a
+self-hosted AI-engineering analytics platform.**
 
 [![CI](https://github.com/assaio/assaio/actions/workflows/ci.yml/badge.svg)](https://github.com/assaio/assaio/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/assaio/assaio)](https://goreportcard.com/report/github.com/assaio/assaio)
 [![Go Reference](https://pkg.go.dev/badge/github.com/assaio/assaio.svg)](https://pkg.go.dev/github.com/assaio/assaio)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/assaio/assaio/badge)](https://scorecard.dev/viewer/?uri=github.com/assaio/assaio)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/assaio/assaio)](https://github.com/assaio/assaio/releases)
 
@@ -21,18 +22,20 @@ AI-engineering analytics platform.**
 
 Your coding assistant already ships stats. Claude Code has
 [`/usage`](https://support.claude.com/en/articles/14552983-models-usage-and-limits-in-claude-code)
-for plan consumption and `/insights` for a local 30-day report; GitHub
+for plan consumption and `/insights` for a local 30-day report; Codex CLI has its own
+[`/usage`](https://github.com/openai/codex/releases/tag/rust-v0.140.0), a year of token
+activity read from your OpenAI account; GitHub
 [Copilot](https://docs.github.com/en/copilot/concepts/copilot-usage-metrics) and
 [Claude Code analytics](https://support.claude.com/en/articles/12157520-claude-code-usage-analytics)
-publish adoption, accepted lines and cost per commit. They are good, and for one vendor over
-the last few weeks they are often enough.
+publish adoption, accepted lines and cost per commit. They are good, several of them get
+better every month, and for one vendor they are often enough.
 
 `assaio` is for the questions they structurally cannot answer — see
 [the comparison](#what-the-built-in-stats-cannot-do) below. It reads the session logs already
-on your machine, across Claude Code, Codex, Gemini CLI, Copilot CLI and Cline, and keeps them
-after the tools delete their own. Every figure is computed, not summarized: same window, same
-answer, with its provenance, its coverage and its error bars attached. No account, no upload,
-about 60 seconds.
+on your machine, across Claude Code, Codex, Gemini CLI, Copilot CLI, Cline and Antigravity
+CLI, and keeps them after the tools delete their own. Every figure is computed, not summarized:
+same window, same answer, with its provenance, its coverage and its error bars attached. No
+account, no upload, about 60 seconds.
 
 <p align="center">
   <img src="docs/assets/report-by-project.svg" alt="assaio-agent effectiveness --by project: AI lines produced, edits, rejections, cost, and $ per 100 AI lines for each project" width="720">
@@ -40,28 +43,88 @@ about 60 seconds.
 
 ## What the built-in stats cannot do
 
+Every vendor's own numbers get better every month, so a feature-by-feature comparison against
+them is worth about one release. These four limits are not a feature gap, and no release
+closes them:
+
+- **No vendor will put a competitor's cost on the same axis as its own.** The question a
+  budget actually turns on is which tool produced more per dollar — and that question only
+  exists on an axis nobody selling one of the tools has a reason to draw. `assaio` prices
+  every source it reads against one table and prints them in one report.
+- **No vendor will advise you to spend less with it.** `subscription-fit` weighs your
+  window's API-equivalent against the plan you actually pay for, and `model-right-sizing`
+  names the premium turns a cheaper model might have handled. Both are only worth reading
+  from something with nothing to sell you.
+- **A vendor's history is the vendor's to end.** Claude Code deletes its transcripts on its
+  own schedule and every reader of them goes blind at the same moment — on the machine below,
+  22 of 52 days now exist nowhere but this store. Codex shows a year of activity held on
+  OpenAI's side instead, which is more durable and still not yours to set. A store on your own
+  disk is the only copy whose retention is your decision.
+- **A number a language model produced cannot be trended.** `/insights` summarizes sessions
+  with a model, so two runs over one window need not agree — and a figure you cannot reproduce
+  is one you cannot compare against last month or defend in a budget meeting.
+
+**And the fifth, which is a refusal rather than a limit: `assaio` will not rank your
+engineers.** Vendor analytics reach the individual by design — GitHub's Copilot metrics APIs
+publish [data at the enterprise, organization, repository and *user*
+levels](https://docs.github.com/en/copilot/concepts/copilot-usage-metrics/copilot-metrics).
+That is the natural shape of a product sold by the seat, and it is the shape `assaio`
+declines. `--by member` is refused with a reason rather than caveated, in table, JSON and CSV
+alike; the dashboard's team panel shows a member's engagement while output and spend stay the
+team's total; and every export renders members as stable pseudonyms unless an operator passes
+`--identify`, which names individuals and says so in its own output. What that operator
+does next is theirs — the tool builds them no leaderboard.
+
+That is not a privacy footnote. For a whole class of organization it is the deciding property:
+where a works council, a co-determination agreement or a local data-protection regime has to
+sign off on a measurement tool, *it can rank individuals and we have promised not to* is a far
+harder sentence than *it does not*. This is not a legal opinion — every agreement and
+jurisdiction is its own question — only the answer that conversation asks for.
+[PRIVACY.md](PRIVACY.md) has the mechanism in full;
+[BACKLOG.md](BACKLOG.md#refusals-will-not-build-regardless-of-demand) lists it beside the other
+things this project will not build regardless of demand.
+
+### Then, this month, feature by feature
+
 Measured against one real machine — a Claude Max user's own store, 178,254 records over 52
-days — beside what Claude Code ships. The `/insights` column describes the command as
+days — beside what these tools ship. The `/insights` column describes the command as
 [documented](https://support.claude.com/en/articles/14553413-claude-code-cheatsheet) and as
-observed on Claude Code 2.1.238 in August 2026; it is a fast-moving product and this comparison
-carries the date for that reason.
+observed on Claude Code 2.1.238 in August 2026. The Codex column describes `/usage` as shipped
+in Codex CLI [0.140.0](https://github.com/openai/codex/releases/tag/rust-v0.140.0), read from
+that release's own source and wire contract in September 2026. Both are fast-moving products
+and this comparison carries its dates for that reason.
 
-| | Built-in `/insights` | `assaio` |
-|---|---|---|
-| **How far back** | 30 days, and only what the tool still keeps | Everything ever ingested. On that machine **22 days are older than Claude Code's own retention** — they exist nowhere else now |
-| **How much** | A capped sample of sessions per run | Every session the store holds |
-| **How** | An LLM summarizes the sessions, so two runs need not agree | Computed from the records. Same window, same number, every time |
-| **Which tools** | Claude Code | Claude Code, Codex CLI, Gemini CLI, Copilot CLI, Cline — normalized, one cost basis |
-| **What moved** | A snapshot | `digest` reports the delta since last run, and says when two runs are not comparable |
-| **When it was wrong** | Nothing restates a past report | A parser fix reaches stored history, and a re-read that *lowers* a figure is counted and reported |
-| **A team** | Not aggregated | `serve` + `sync`, pseudonymous by default, nothing ranked per person |
-| **Where the line is** | "Friction", "satisfaction" as scores | A verdict only where its line is derived from your data, cited, or set by you. Fourteen report their figure and refuse the grade |
+| | Claude Code `/insights` | Codex `/usage` | `assaio` |
+|---|---|---|---|
+| **How far back** | 30 days, and only what the tool still keeps | A lifetime token total and 12 months of daily activity, held by your OpenAI account rather than by the log | Everything ever ingested. On that machine **22 days are older than Claude Code's own retention** — they exist nowhere else now |
+| **How much** | A capped sample of sessions per run | Every day the account recorded | Every session the store holds |
+| **How** | An LLM summarizes the sessions, so two runs need not agree | Counted, not summarized — the same total twice | Computed from the records. Same window, same number, every time |
+| **Which tools** | Claude Code | Codex, on the account you are signed into | Claude Code, Codex CLI, Gemini CLI, Copilot CLI, Cline — normalized, one cost basis. Antigravity CLI joins for sessions and activity, and is excluded from every cost figure rather than counted at zero |
+| **What moved** | A snapshot | A 52-week heatmap of one number | `digest` reports the delta since last run, and says when two runs are not comparable |
+| **When it was wrong** | Nothing restates a past report | Nothing restates a past report | A parser fix reaches stored history, and a re-read that *lowers* a figure is counted and reported |
+| **A team** | Not aggregated | One account | `serve` + `sync`, pseudonymous by default, nothing ranked per person |
+| **Where the line is** | "Friction", "satisfaction" as scores | No verdict, and none claimed | A verdict only where its line is derived from your data, cited, or set by you. Fourteen report their figure and refuse the grade |
 
-**And what it cannot do that `/usage` can.** Claude Code's `/usage` reads your plan consumption
+**Every correction that row promises is written down.** [docs/corrections.md](docs/corrections.md) is the
+register: what was wrong, since when, what the wrong number showed a reader, and which release
+put it right — including the times a second review pass overturned the first fix.
+
+**What Claude Code's `/usage` does that no local reader can.** It reads your plan consumption
 from the API — the 5-hour and weekly percentages, and your extra-usage balance. No local
 transcript carries any of that (verified: zero limit-shaped fields), so `assaio` cannot report
 it and does not try. `subscription-fit` answers a different question — whether the plan beats
 the API-equivalent estimate of what you ran — and the two are worth reading together.
+
+**And what Codex's `/usage` does that no local reader can.** It draws a year of token activity
+— a lifetime total, your peak day, your current and longest streak, your longest single task,
+and a 52-week heatmap — from OpenAI's own record of the account rather than from `~/.codex`.
+That is not bounded by the rollout logs still on disk, so on a laptop set up last week it
+reaches back further than `assaio` possibly can, and it is counted rather than summarized.
+Two things are worth stating beside it, because they are the shape of the whole comparison
+rather than a knock: one day of that history is a single integer — a token total with no
+input/output/cache split, no model, no project and no `$` — and it is one account on one
+vendor. Codex's plan and rate-limit view lives in `/status`, and like Claude Code's it comes
+from the API. `assaio` fetches none of it, and does not try.
 
 ## Privacy first
 
@@ -83,11 +146,10 @@ Full detail, including the exact fields extracted: [PRIVACY.md](PRIVACY.md).
 
 **The optional team server** (`serve` + `sync`) pools a team's usage on infrastructure you
 stand up. It and the experimental `runtime inspect` are the only commands that touch the network, and
-only when you invoke them — the guarantee above is about the local analysis. Team views stay aggregated and pseudonymized by default, and the per-member row shows
-engagement only — output and spend are the team's. Nothing is ranked per named individual:
-`--by member` is refused rather than caveated, in table, JSON and CSV alike, and member names
-leave `report` as stable pseudonyms in every format — `--identify` is the one way to export raw
-names, and the export says which one it carries.
+only when you invoke them — the guarantee above is about the local analysis. Team views stay
+aggregated and pseudonymized by default, and the refusal above holds there too: the per-member
+row shows engagement only, output and spend are the team's, and nothing is ranked per named
+individual.
 
 ## Install
 
@@ -132,7 +194,7 @@ packages are on the [backlog](BACKLOG.md).
 
 </details>
 
-Every release artifact ships with checksums and a build-provenance attestation —
+Every release artifact ships with checksums, an SPDX SBOM and a build-provenance attestation —
 verify one with `gh attestation verify <archive> -o assaio`.
 
 New here? `assaio-agent demo` prints the full reports on bundled sample data — no logs
@@ -154,6 +216,7 @@ codex         files=1  records=1  inserted=1
 gemini-cli    files=0  records=0  inserted=0
 copilot-cli   files=0  records=0  inserted=0
 cline         files=0  records=0  inserted=0
+agy           files=0  records=0  inserted=0
 ```
 
 First, where the money goes — spend per project:
@@ -290,6 +353,7 @@ for something to hand a teammate, and `doctor` when a number looks wrong.
 | `serve`    | Run the self-hosted **team server**: collects usage pushed by teammates' `sync` and serves the aggregated, pseudonymized-by-default team dashboard. |
 | `sync`     | Push this machine's local usage to a team server — pseudonymous by default, `--member` is an explicit opt-in to a real name. |
 | `recommend` | The few experiments this window's evidence supports, each as a typed record: what triggered it, what it requires, what it risks, how to undo it, when to look again, and the figure that would show whether it worked. The rendered text projects the record and adds nothing to it. A thin window, a low-confidence verdict or a metric missing a declared input produces **nothing at all**, and says that is an abstention rather than a clean bill. |
+| `reprice`  | Re-price the window already in the store against another entry in the same price table: what this same set of turns would have cost on a different model, and how its projected monthly rate stands against a flat plan price you pass in. Arithmetic over observed events, never a counterfactual — it states what it holds fixed, what share it could not price, and that it claims nothing about another model's output. Ends in one `recommend` experiment with its rollback and follow-up. `--since`, `--against <model>`, `--plan "name=monthly-price"` (both repeatable), `--format text\|json`. assaio vendors no plan catalogue: a published price changes without notice, so the candidate is a figure you read off your vendor's page. |
 | `runtime`  | **Experimental.** `runtime inspect` snapshots a *self-hosted* vLLM server's or NVIDIA DCGM exporter's own metrics endpoint — by URL or from a saved file. Read-only: nothing stored, no cost model, no GPU advice. A counter is never shown as a rate and a missing metric is never shown as zero. A hosted vendor's accelerators stay `unknown`; no local signal reveals them. May be removed — see [ROADMAP.md](ROADMAP.md). |
 | `doctor`   | Show detected tools, log locations, store inventory and size, format-drift canaries, how much of your store the price table cannot cost, and accuracy caveats. `--strict` exits non-zero for cron/CI — including when too much of the store carries no model price for `$` to mean anything (`pricing.max_unpriced_share`, default 5%). |
 | `survival` | Read the local git history beside your AI usage: how much of a repository's recent work still lives in `HEAD`. Directional and age-dependent by construction — a short window reads near 100% because its commits have had no time to be rewritten — so it is a lead, never a productivity figure. `--since`, `--repo`. |
@@ -326,7 +390,7 @@ Environment variables take precedence over the file, using an `ASSAIO_` prefix:
 
 ## Supported tools and accuracy
 
-Today `assaio` reads five sources:
+Today `assaio` reads six sources:
 
 - **Claude Code** — session transcripts under `~/.claude/projects/**/*.jsonl`.
 - **OpenAI Codex CLI** — rollout logs under `~/.codex/sessions/**` and
@@ -337,6 +401,15 @@ Today `assaio` reads five sources:
   records are session-granularity.
 - **Cline** — task data under the VS Code extension's global storage
   (`saoudrizwan.claude-dev`) and the Cline CLI's `~/.cline/data/tasks`.
+- **Antigravity CLI** (`agy`) — conversation transcripts under
+  `~/.gemini/antigravity-cli/brain/<id>/.system_generated/logs/transcript.jsonl`. The one
+  source with **no token counter anywhere in its format**: it contributes sessions, turns,
+  tool calls and edits, and every token and cost figure withholds its verdict for it rather
+  than counting a zero. Its format records **no working directory** either, so its sessions
+  carry no project and are absent from every per-project figure — `report --by project`,
+  `effectiveness`, and the dashboard's project panels alike. In a tool whose unit of analysis
+  is the repository, that is the larger of its two absences. Verified against Antigravity CLI
+  1.1.23; `~/.gemini` is shared with Gemini CLI and the two are read as separate sources.
 
 Costs are computed from a vendored snapshot of the
 [LiteLLM](https://github.com/BerriAI/litellm) price table, and `doctor` reports how much of
@@ -356,14 +429,15 @@ prints these caveats every run, so this list is a preview, not the only place it
   against more real traces.
 - Cline stores its own per-request cost, but `assaio` recomputes cost from tokens for
   cross-tool consistency.
-- The price table is flat per model: long-context premiums (e.g. a 1M-context `[1m]`
-  rate) and the distinct 5-minute vs 1-hour cache-write rates are not modeled yet, so
-  cost for very long-context or heavy-caching sessions is an under-estimate.
+- The price table carries no long-context premium (e.g. a 1M-context `[1m]` rate), so cost
+  for a very long-context session is an under-estimate. The 5-minute and 1-hour cache-write
+  tiers are priced separately where a source records which one a write bought.
 - Days and week-over-week windows are bucketed in UTC, so late local-evening work can
   land on the next UTC day.
-- Activity counts (AI lines, edits, rework) — not tokens or cost — can be slightly off
-  if you back-fill a session while it is still being written; re-running `backfill` after
-  it ends does not restate an already-imported turn.
+- Activity counts (AI lines, edits, rework) — not tokens or cost — read low on a session
+  ingested while it was still being written; the next `backfill` restates them upward, never
+  downward, so a count that first came out too high stays. A parser fix that lowers a stored
+  figure is the other direction, and `backfill` reports those rows as `restated-down=`.
 - All on-disk log formats are vendor-internal and may change between tool versions.
 
 </details>
@@ -395,7 +469,7 @@ Go API, so they survive core refactors. An in-process Go API is still ahead; see
 
 ## Status and roadmap
 
-`assaio` is pre-1.0 and already reaches well past an offline token reporter: five parsers,
+`assaio` is pre-1.0 and already reaches well past an offline token reporter: six parsers,
 twenty-one metric validators that each carry a confidence envelope and state which measurement
 layer they sit on, format-drift canaries, a published source-depth matrix, offline
 reconciliation against a vendor's own export, the offline **Assay** dashboard, structured

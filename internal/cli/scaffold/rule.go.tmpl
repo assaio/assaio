@@ -1,0 +1,79 @@
+// Command {{.Name}} is an assaio rule plugin (ADR 0005, protocol {{.Protocol}}).
+//
+// Invoked as `{{.Name}} evaluate` with ASSAIO_RULE_PROTOCOL=1: the window's verdicts on stdin, a
+// handshake line and one alerts document on stdout. A rule reasons over verdicts, never over raw
+// usage. Only `error` fails `assaio-agent check`; `info` and `warn` are reported and pass.
+//
+// The documents assaio accepts and refuses are published in docs/conformance/rule-alerts.json.
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
+
+const (
+	name     = "{{.Name}}"
+	protocol = {{.Protocol}}
+)
+
+type verdict struct {
+	Name  string `json:"name"`
+	Title string `json:"title"`
+	Read  struct {
+		Key string `json:"key"`
+	} `json:"read"`
+}
+
+type alert struct {
+	Rule      string `json:"rule"`
+	Severity  string `json:"severity"`
+	Message   string `json:"message"`
+	Validator string `json:"validator,omitempty"`
+}
+
+// evaluate returns the alerts this rule raises. An empty slice is a real answer -- "nothing to
+// flag" -- and is why the key is required rather than optional: a document with no alerts key is
+// a rule that did not run, which assaio fails the gate on instead of reading as a pass.
+func evaluate(verdicts []verdict) []alert {
+	alerts := []alert{}
+	for _, v := range verdicts {
+		if v.Read.Key != "watch" {
+			continue
+		}
+		alerts = append(alerts, alert{
+			Rule:      "verdict-watch",
+			Severity:  "warn",
+			Message:   fmt.Sprintf("%s reads WATCH in this window.", v.Title),
+			Validator: v.Name,
+		})
+	}
+	return alerts
+}
+
+func main() {
+	if len(os.Args) < 2 || os.Args[1] != "evaluate" {
+		fmt.Fprintf(os.Stderr, "usage: %s evaluate\n", os.Args[0])
+		os.Exit(64)
+	}
+	var window struct {
+		Verdicts []verdict `json:"verdicts"`
+	}
+	if err := json.NewDecoder(os.Stdin).Decode(&window); err != nil {
+		fail(err)
+	}
+	emit(map[string]any{"assaio_rule": protocol, "name": name})
+	emit(map[string]any{"alerts": evaluate(window.Verdicts)})
+}
+
+func emit(v any) {
+	if err := json.NewEncoder(os.Stdout).Encode(v); err != nil {
+		fail(err)
+	}
+}
+
+func fail(err error) {
+	fmt.Fprintln(os.Stderr, err)
+	os.Exit(70)
+}

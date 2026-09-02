@@ -137,7 +137,11 @@ func BuildInventory(rows []store.UsageRow, t pricing.Table) Inventory {
 		} else {
 			inv.Unattributed++
 		}
-		models[r.Model] = struct{}{}
+		// A row naming no model is not a model. agy publishes none, and counting "" made the
+		// inventory line read "1 models" over a window in which nothing named one.
+		if r.Model != "" {
+			models[r.Model] = struct{}{}
+		}
 		tools[r.Tool] = struct{}{}
 		entrypoints[r.Entrypoint] = struct{}{}
 		days[r.Day] = struct{}{}
@@ -157,6 +161,9 @@ func BuildInventory(rows []store.UsageRow, t pricing.Table) Inventory {
 			inv.HasUnpriced = true
 			inv.Unpriced.Rows++
 			inv.Unpriced.Tokens += tokens
+			if !parser.Answers(r.Tool, parser.SignalTokensTotal) {
+				inv.Unpriced.Untokened++
+			}
 		}
 	}
 	inv.Projects, inv.Models, inv.Tools, inv.Entrypoints, inv.Days = len(projects), len(models), len(tools), len(entrypoints), len(days)

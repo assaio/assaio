@@ -13,8 +13,11 @@ const (
 	modelFitName     = "model-fit"
 	modelFitTitle    = "Model Fit"
 	modelFitDescribe = "Premium vs. cheaper model token share, lines-per-token contrast, and real sub-agent delegation share."
-	// modelFitHowToRead is Result.HowToRead for this validator -- see its doc comment.
-	modelFitHowToRead = "High premium-model share isn't wrong, but routine edits and boilerplate are often just as good on cheaper models -- a place to trim spend without losing output."
+	// modelFitHowToRead is Result.HowToRead for this validator -- see its doc comment. It names
+	// `reprice` because this metric states a share and stops there: what the mix would cost
+	// against another table is arithmetic that has to carry a span, an assumed cache mix and an
+	// unpriced margin, and that is the surface which carries them.
+	modelFitHowToRead = "High premium-model share isn't wrong, but routine edits and boilerplate are often just as good on cheaper models -- a place to trim spend without losing output. What that mix would cost against another price table is `assaio-agent reprice`, which states the arithmetic with its span and its refusals attached."
 	// modelFitUnknownWatchCeiling is the unpriced-token-share threshold above which the
 	// premium/cheaper split can no longer be read with confidence -- most of the window
 	// is invisible to pricing, so a favorable read would be unearned.
@@ -25,6 +28,13 @@ func init() { Register(modelFitValidator{}) }
 
 // modelFitValidator reads whether spend concentrates on premium-priced models or spreads
 // to cheaper ones (see modelTier), and contrasts AI-line output per token between tiers.
+//
+// It figures no saving. A saving is a claim about an alternative history, and this binary
+// refuses one in as many words: internal/reprice states what a window *cost* against another
+// table and never what would have been kept. Re-pricing the premium bundle onto the cheapest
+// tier in use is that same arithmetic, and it belongs there whole -- with the span it projects
+// over, the cache mix it carries forward and the unpriced margin it leaves -- rather than here
+// as a monthly figure carrying none of them.
 type modelFitValidator struct{}
 
 func (modelFitValidator) Name() string       { return modelFitName }
@@ -73,9 +83,6 @@ func (modelFitValidator) Analyze(in Input) Result {
 	r.Bars = modelBars(in.ByModel)
 	if unpriceable {
 		r.Caveats = []string{"Most tokens this window ran on a model absent from the price table -- the premium/cheaper split above is not a confident read."}
-	} else if s, ok := computeModelSavings(in.ByModel, in.Prices, &in); ok {
-		r.Figures = append(r.Figures, savingsFigure(s))
-		r.Caveats = append(r.Caveats, savingsCaveat(s))
 	}
 	if !unpriceable && known > 0 {
 		r.Caveats = append(r.Caveats, unsourcedLine("a premium-token share", ownHistoryWouldSettleIt))

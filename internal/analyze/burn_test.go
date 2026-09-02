@@ -84,7 +84,7 @@ func TestBurnShortWindowIsUndefined(t *testing.T) {
 	if got.Read != noDataRead {
 		t.Fatalf("Read = %+v, want the neutral read below the %d-day floor", got.Read, burnMinDays)
 	}
-	if !strings.Contains(got.Takeaway, "Too few active days") {
+	if !strings.Contains(got.Takeaway, "Too few days with token data") {
 		t.Fatalf("Takeaway = %q, want the short-window explanation", got.Takeaway)
 	}
 }
@@ -135,5 +135,63 @@ func TestBurnEmptyInputSafe(t *testing.T) {
 	got := mustGet(t, burnName).Analyze(Input{})
 	if got.Read != noDataRead || got.Takeaway != "No usage in this window." {
 		t.Fatalf("empty Input = %+v, want the no-data read and takeaway", got)
+	}
+}
+
+// TestBurnWithholdsForASourceThatCountsNoTokens: a day on which a token-less source was busy
+// is not a quiet day, it is a day nobody measured -- and every figure here is denominated in
+// tokens. Left ungated, thirty such days would print a typical day of 0 tokens and judge every
+// real spike against it.
+func TestBurnWithholdsForASourceThatCountsNoTokens(t *testing.T) {
+	usage := make([]store.UsageRow, 0, 30)
+	for i := range 30 {
+		usage = append(usage, store.UsageRow{
+			Day: fmt.Sprintf("2026-08-%02d", i+1), Tool: "agy", Project: "web", ToolCalls: 3,
+		})
+	}
+	got := mustGet(t, burnName).Analyze(
+		BuildInput(usage, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{}),
+	)
+	if got.Read != noDataRead {
+		t.Errorf("Read = %+v, want no verdict from a window with no token counter", got.Read)
+	}
+	if !strings.Contains(got.Takeaway, "counts tokens") {
+		t.Errorf("Takeaway = %q, want it to name the missing capture", got.Takeaway)
+	}
+	for _, f := range got.Figures {
+		if f.Label == "typical day" || f.Label == "heaviest day" {
+			t.Errorf("%s reads %q on a window whose source counts no tokens", f.Label, f.Value)
+		}
+	}
+}
+
+// TestBurnCoverageIsADayShareNotARowShare: every figure here is denominated in days, so the
+// reach has to be stated in days. A row share instead moves with how finely each source writes
+// its rows -- a token-less source emitting one row per turn beside a token-counting one active
+// on the very same days reported this metric as reaching 2% of a window it measured every day
+// of.
+func TestBurnCoverageIsADayShareNotARowShare(t *testing.T) {
+	var usage []store.UsageRow
+	for i := range 10 {
+		day := fmt.Sprintf("2026-07-%02d", i+1)
+		usage = append(usage, store.UsageRow{
+			Day: day, Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web", In: 1000,
+		})
+		for range 50 {
+			usage = append(usage, store.UsageRow{Day: day, Tool: "agy", ToolCalls: 1})
+		}
+	}
+	got := mustGet(t, burnName).Analyze(
+		BuildInput(usage, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{}),
+	)
+
+	if got.Confidence.Signal == nil || *got.Confidence.Signal != 1 {
+		t.Fatalf("coverage = %v, want the whole window: all 10 of its days carry token data", got.Confidence.Signal)
+	}
+	if f := findFigure(t, got.Figures, burnDayUnit); f.Value != "10" {
+		t.Fatalf("%s = %q, want 10", burnDayUnit, f.Value)
+	}
+	if got.Confidence.Unit != burnDayUnit {
+		t.Fatalf("Unit = %q, want %q: adoption prints active days over every row, and two labels reading different numbers is what a reader cannot resolve", got.Confidence.Unit, burnDayUnit)
 	}
 }

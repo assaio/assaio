@@ -42,6 +42,10 @@ Where everything lives, in one place.
   (`B01`–…): proposals and effort estimates, not commitments.
 - [`CHANGELOG.md`](../CHANGELOG.md) — what actually shipped, per release
   (Keep a Changelog format).
+- [`corrections.md`](corrections.md) — the corrections register: what was wrong, since when,
+  what the wrong number showed a reader, and what the fix changed. Newest first, grouped by
+  the release that shipped the correction. It exists because assaio restates history, and a
+  tool that silently improves its own past is indistinguishable from one that drifts.
 
 Lifecycle: an item graduates BACKLOG → CHANGELOG `[Unreleased]` → a row in FEATURES,
 all in the shipping PR.
@@ -50,14 +54,27 @@ all in the shipping PR.
 
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md) — the authoritative rules: code style, the
   local gate, git workflow, honesty rules.
+- [`SUPPORT.md`](../SUPPORT.md) — where a question, a bug, a vulnerability and an idea each
+  go, and what the binary already answers on its own.
 - [`GOVERNANCE.md`](../GOVERNANCE.md) — how decisions are made.
 - [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md) — Contributor Covenant 2.1.
 - [`SECURITY.md`](../SECURITY.md) — private vulnerability disclosure.
+- [`threat-model.md`](threat-model.md) — what each surface is trusted with, what is checked
+  at its boundary, what an attacker who controls it can and cannot reach; the data map of
+  everything that crosses the machine boundary; and the deletion procedure, run.
 - [`RELEASING.md`](../RELEASING.md) — maintainers only: versioning, the immutable-
   migrations rule, cutting a release.
 - [`format-resilience.md`](format-resilience.md) — how vendor log-format drift is
   detected and fixed: current defenses, known gaps, and the report → fixture → patch
   release loop (`format-drift` label).
+
+## Architecture
+
+- [`architecture.md`](architecture.md) — the whole path in order, from a log file on disk to
+  a rendered figure: discovery, parse, normalize, validate at the boundary, upsert, price,
+  aggregate, validator, render, export. Each step names the package and the function the
+  hand-off crosses on, and marks where an exec plugin attaches and where the team server
+  splits off. Read it before the decision records below, which each narrow one part of it.
 
 ## Architecture Decision Records
 
@@ -96,3 +113,10 @@ all in the shipping PR.
 - [ADR 0015](adr/0015-structured-recommendations.md) — advice is a **typed record**, not a
   sentence: evidence, risk, rollback, review window and the follow-up figure are required, the
   rendered text projects the record, and a thin window abstains rather than suggesting.
+- [ADR 0016](adr/0016-usage-is-a-store-row-not-an-event.md) — **AI usage is a store row, not
+  an event**: the observation contract covers the domains that have no store row of their own,
+  and the unused AI half is deleted rather than kept as a second canonical model.
+- [ADR 0017](adr/0017-a-source-without-a-token-counter.md) — a source with **no token counter**
+  is a tier (`activity-only`), not a row of zeros: the parser leaves the fields empty *and* the
+  matrix declares them unanswered, and every token- and dollar-denominated figure reads only
+  the sources that count.

@@ -1,6 +1,9 @@
 package parser
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestDepthTiersMatchWhatEachParserExtracts(t *testing.T) {
 	tests := []struct {
@@ -13,6 +16,7 @@ func TestDepthTiersMatchWhatEachParserExtracts(t *testing.T) {
 		{"gemini-cli", Standard, true, false, false},
 		{"copilot-cli", Standard, true, true, false},
 		{"cline", Standard, true, false, false},
+		{"agy", ActivityOnly, false, true, false},
 	}
 	for _, tt := range tests {
 		got, ok := DepthOf(tt.tool)
@@ -40,7 +44,7 @@ func TestAnythingLessThanDeepDocumentsItsGaps(t *testing.T) {
 func TestDepthTiersComeFromTheFixedVocabulary(t *testing.T) {
 	for _, d := range depths {
 		switch d.Tier {
-		case Deep, Standard, ImportOnly:
+		case Deep, Standard, ActivityOnly, ImportOnly:
 		default:
 			t.Errorf("%s has unknown tier %q", d.Tool, d.Tier)
 		}
@@ -135,5 +139,33 @@ func TestFullActivityIsStricterThanTheActivityAxis(t *testing.T) {
 		if HasFullActivity(tool) || HasLineOutput(tool) {
 			t.Errorf("%s contributes no line or edit signals", tool)
 		}
+	}
+}
+
+// TestTheTokenAxisIsNotAssumed: every source but one publishes token counts, which is exactly
+// how a figure over "all sources" comes to be written as if they all did. agy is the source
+// that makes the assumption fail, so the matrix has to state it and a reader has to be able to
+// ask for it.
+func TestTheTokenAxisIsNotAssumed(t *testing.T) {
+	d, ok := DepthOf("agy")
+	if !ok {
+		t.Fatal("agy missing from the matrix")
+	}
+	if d.Tokens {
+		t.Error("Antigravity CLI publishes no token counter at all")
+	}
+	for _, id := range answers(costSignals, cacheWriteSignals, reasoningSignals, cacheDetailSignals) {
+		if id == SignalSessionsCount {
+			continue
+		}
+		if Answers("agy", id) {
+			t.Errorf("agy claims %s, which it cannot answer", id)
+		}
+	}
+	if !Answers("agy", SignalSessionsCount) {
+		t.Error("a conversation is still a session, which is what it can answer")
+	}
+	if got := SourcesAnswering(SignalCostEstimated); slices.Contains(got, "agy") {
+		t.Errorf("SourcesAnswering(cost) = %v, want agy absent so every $ figure excludes it", got)
 	}
 }

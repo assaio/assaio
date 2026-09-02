@@ -1,0 +1,136 @@
+{
+  "about": "Conformance vectors for the assaio exec-plugin protocols. Each vector is one document exactly as a plugin would write it, plus the verdict assaio's own boundary gives it. Run them in your plugin's CI without the assaio binary: feed `doc` to your decoder and assert `accept`; when `accept` is false, your rejection reason should mention `expect`. assaio's own tests are driven by these same files (internal/plugin/conformance_test.go), so a vector that stops describing the boundary fails assaio's build rather than yours.",
+  "contract": "metric-result",
+  "description": "The single Result document a metric plugin writes after its handshake when invoked as `<command> analyze`.",
+  "protocol": 4,
+  "vectors": [
+    {
+      "id": "minimal",
+      "accept": true,
+      "why": "every required field and nothing else",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\"}"
+    },
+    {
+      "id": "full",
+      "accept": true,
+      "why": "the whole optional surface, within every cap",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\", \"describe\": \"D\", \"purity\": 0.4, \"figures\": [{\"label\": \"share\", \"value\": \"34.2%\", \"note\": \"of tokens\"}], \"bars\": [{\"label\": \"web\", \"value\": \"1\", \"frac\": 0.5}], \"barsPseudonym\": \"project\", \"caveats\": [\"Directional: a proxy for out-of-hours work.\"], \"confidence\": {\"samples\": 12, \"samplesUnit\": \"sessions\", \"signalCoverage\": 0.05}}"
+    },
+    {
+      "id": "legacy-bars-are-projects",
+      "accept": true,
+      "why": "the pre-rename key still pseudonymizes; dropping it would publish real project names",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\", \"bars\": [{\"label\": \"web\", \"value\": \"1\", \"frac\": 0.5}], \"barsAreProjects\": true}"
+    },
+    {
+      "id": "out-of-range-fractions-are-clamped",
+      "accept": true,
+      "why": "purity and every bar frac are clamped to [0,1] rather than rejected",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\", \"purity\": 9.0, \"bars\": [{\"label\": \"web\", \"value\": \"1\", \"frac\": -3}]}"
+    },
+    {
+      "id": "withheld-verdict",
+      "accept": true,
+      "why": "a metric with nothing to answer says neutral rather than certifying a silence",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"neutral\", \"label\": \"-\"}, \"howToRead\": \"H\", \"takeaway\": \"No source in this window records an undone line.\"}"
+    },
+    {
+      "id": "read-key-unknown",
+      "accept": false,
+      "expect": "read.key",
+      "why": "the verdict vocabulary is closed",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"great\", \"label\": \"GREAT\"}, \"howToRead\": \"H\", \"takeaway\": \"K\"}"
+    },
+    {
+      "id": "layer-absent",
+      "accept": false,
+      "expect": "layer",
+      "why": "a built-in cannot compile without stating its measurement layer (ADR 0013)",
+      "doc": "{\"title\": \"T\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\"}"
+    },
+    {
+      "id": "layer-unknown",
+      "accept": false,
+      "expect": "layer",
+      "why": "the layer vocabulary is closed",
+      "doc": "{\"title\": \"T\", \"layer\": \"velocity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\"}"
+    },
+    {
+      "id": "title-absent",
+      "accept": false,
+      "expect": "title is required",
+      "why": "a verdict with no name cannot be read",
+      "doc": "{\"title\": \"\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\"}"
+    },
+    {
+      "id": "how-to-read-absent",
+      "accept": false,
+      "expect": "howToRead is required",
+      "why": "a figure with no reading instruction is a number waiting to be misread",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"\", \"takeaway\": \"K\"}"
+    },
+    {
+      "id": "takeaway-absent",
+      "accept": false,
+      "expect": "takeaway is required",
+      "why": "the one sentence a reader acts on",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"\"}"
+    },
+    {
+      "id": "read-label-too-long",
+      "accept": false,
+      "expect": "exceeds 16 chars",
+      "why": "the label sits in a fixed faceplate cell",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"AAAAAAAAAAAAAAAAA\"}, \"howToRead\": \"H\", \"takeaway\": \"K\"}"
+    },
+    {
+      "id": "control-character",
+      "accept": false,
+      "expect": "control character",
+      "why": "a terminal escape in a rendered field is an injection, not a style",
+      "doc": "{\"title\": \"T\\u001b[31m\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\"}"
+    },
+    {
+      "id": "too-many-figures",
+      "accept": false,
+      "expect": "figures exceeds",
+      "why": "a plugin may not push an unbounded table onto the faceplate",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\", \"figures\": [{\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}, {\"label\": \"l\", \"value\": \"v\"}]}"
+    },
+    {
+      "id": "too-many-bars",
+      "accept": false,
+      "expect": "bars exceeds",
+      "why": "same cap, on the ledger",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\", \"bars\": [{\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}, {\"label\": \"l\", \"value\": \"v\", \"frac\": 0.1}]}"
+    },
+    {
+      "id": "too-many-caveats",
+      "accept": false,
+      "expect": "caveats exceeds",
+      "why": "eight caveats is already a verdict nobody reads",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\", \"caveats\": [\"c\", \"c\", \"c\", \"c\", \"c\", \"c\", \"c\", \"c\", \"c\"]}"
+    },
+    {
+      "id": "unknown-key",
+      "accept": false,
+      "expect": "unknown field",
+      "why": "a misspelled key must not quietly disarm a setting",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\", \"barsArePseudonym\": \"project\"}"
+    },
+    {
+      "id": "trailing-data",
+      "accept": false,
+      "expect": "trailing data",
+      "why": "exactly one result document, and a second is not a correction of the first",
+      "doc": "{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\"}\n{\"title\": \"T\", \"layer\": \"activity\", \"read\": {\"key\": \"good\", \"label\": \"OK\"}, \"howToRead\": \"H\", \"takeaway\": \"K\"}"
+    },
+    {
+      "id": "not-json",
+      "accept": false,
+      "expect": "decoding result",
+      "why": "a plugin that printed its own error text",
+      "doc": "Traceback (most recent call last):"
+    }
+  ]
+}

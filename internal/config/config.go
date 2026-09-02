@@ -65,6 +65,7 @@ type Sources struct {
 	Gemini  []string `koanf:"gemini"`
 	Cline   []string `koanf:"cline"`
 	Copilot []string `koanf:"copilot"`
+	Agy     []string `koanf:"agy"`
 }
 
 // Privacy holds settings for shareable exports, distinct from the interactive CLI
@@ -171,7 +172,10 @@ func (c Config) Validate() error {
 		}
 	}
 	for _, m := range c.Metrics {
-		if err := m.Validate(); err != nil {
+		// ValidateMetric, not Validate: `metrics:` is the one list whose entries may carry
+		// `needs:`, and holding them to the parser rule made every config declaring one fail to
+		// load -- so the key shipped in v0.24 unusable from the file it was defined in.
+		if err := m.ValidateMetric(); err != nil {
 			return fmt.Errorf("metric %q: %w", m.Name, err)
 		}
 	}

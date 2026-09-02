@@ -24,11 +24,36 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// tracingPlugin is the config a test uses when it asserts something about the trace section.
-// It is here rather than in one test file because several assert on it, and the alternative --
-// each spelling out the declaration -- is how they drift apart.
-func tracingPlugin() Config {
-	return Config{Name: "test", Needs: []analyze.Capability{analyze.CapTrace}}
+// everything is the projection a test uses when its subject is not the projection: every
+// capability granted, no column or row narrowed. It is here rather than in one test file
+// because most of them need it, and the alternative -- each spelling the grant out -- is how
+// they drift apart.
+func everything() Projection { return Projection{Needs: analyze.Capabilities()} }
+
+// granting is the projection of a plugin that declared exactly these capabilities and nothing
+// was denied it.
+func granting(caps ...analyze.Capability) Projection { return Projection{Needs: caps} }
+
+// documentOf is the document a plugin with this projection actually reads, before encoding.
+func documentOf(in *analyze.Input, p Projection) map[string]any {
+	envelope := buildMetricInput(in, p)
+	return envelope.document()
+}
+
+// envelopeOf is what crosses the pipe under this projection: the bytes every projection claim
+// is measured on, and the encoder run an accepted declaration promises will succeed.
+func envelopeOf(in *analyze.Input, p Projection) ([]byte, error) {
+	envelope := buildMetricInput(in, p)
+	return envelope.marshal()
+}
+
+func envelopeBytes(t *testing.T, in *analyze.Input, p Projection) []byte {
+	t.Helper()
+	out, err := envelopeOf(in, p)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	return out
 }
 
 // pluginNeeding builds a config entry declaring one need, for the boundary tests. The command

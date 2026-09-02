@@ -8,11 +8,20 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/event"
 	"github.com/assaio/assaio/internal/survival"
+	"github.com/assaio/assaio/internal/threshold"
 	"github.com/assaio/assaio/internal/vcs"
 	"github.com/assaio/assaio/internal/version"
 )
+
+// survivalMetric is the name internal/threshold registers this figure's citation under. survival
+// is not a registered validator -- no Result carries it -- so this command is the only place the
+// register's answer for it can be rendered, and a rate printed without it leaves exactly the
+// silence the register exists to fill: a survival percentage and a published churn percentage
+// invite a subtraction that is not defined.
+const survivalMetric = "survival"
 
 func newSurvivalCmd() *cobra.Command {
 	var since, repo string
@@ -106,6 +115,9 @@ func renderSurvival(cmd *cobra.Command, res *survival.Result, since string, skip
 	cmd.Println("  git reports no line counts for a merge, so a conflict resolution sits outside both")
 	cmd.Println("  the added and the surviving figure rather than inflating either.")
 	cmd.Println("  Age-matched bug/quality impact and team-wide DORA signals are the server stage.")
+	for _, line := range analyze.CitationLines(threshold.For(survivalMetric), time.Now()) {
+		cmd.Printf("\n  %s\n", line)
+	}
 	return nil
 }
 

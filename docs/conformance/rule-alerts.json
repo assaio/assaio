@@ -1,0 +1,82 @@
+{
+  "about": "Conformance vectors for the assaio exec-plugin protocols. Each vector is one document exactly as a plugin would write it, plus the verdict assaio's own boundary gives it. Run them in your plugin's CI without the assaio binary: feed `doc` to your decoder and assert `accept`; when `accept` is false, your rejection reason should mention `expect`. assaio's own tests are driven by these same files (internal/plugin/conformance_test.go), so a vector that stops describing the boundary fails assaio's build rather than yours.",
+  "contract": "rule-alerts",
+  "description": "The single alerts document a rule plugin writes after its handshake when invoked as `<command> evaluate`.",
+  "protocol": 1,
+  "vectors": [
+    {
+      "id": "one-alert",
+      "accept": true,
+      "why": "rule id, severity and message are the whole contract",
+      "doc": "{\"alerts\": [{\"rule\": \"rework-watch\", \"severity\": \"error\", \"message\": \"Churn is up.\"}]}"
+    },
+    {
+      "id": "alert-naming-a-verdict",
+      "accept": true,
+      "why": "the optional validator reference the reader sees",
+      "doc": "{\"alerts\": [{\"rule\": \"withheld\", \"severity\": \"warn\", \"message\": \"A verdict was withheld.\", \"validator\": \"cache-hygiene\"}]}"
+    },
+    {
+      "id": "explicit-empty",
+      "accept": true,
+      "why": "the only honest way to say a rule found nothing",
+      "doc": "{\"alerts\": []}"
+    },
+    {
+      "id": "alerts-key-absent",
+      "accept": false,
+      "expect": "\"alerts\"",
+      "why": "a document that never mentions the key is a rule that did not run, not one that passed",
+      "doc": "{}"
+    },
+    {
+      "id": "alerts-null",
+      "accept": false,
+      "expect": "\"alerts\"",
+      "why": "same reason: null is not an empty set",
+      "doc": "{\"alerts\":null}"
+    },
+    {
+      "id": "severity-unknown",
+      "accept": false,
+      "expect": "severity",
+      "why": "the severity vocabulary decides what gates a run",
+      "doc": "{\"alerts\": [{\"rule\": \"r\", \"severity\": \"critical\", \"message\": \"m\"}]}"
+    },
+    {
+      "id": "rule-id-absent",
+      "accept": false,
+      "expect": "rule is required",
+      "why": "an alert nobody can name cannot be silenced or tracked",
+      "doc": "{\"alerts\": [{\"rule\": \"\", \"severity\": \"warn\", \"message\": \"m\"}]}"
+    },
+    {
+      "id": "message-absent",
+      "accept": false,
+      "expect": "message is required",
+      "why": "a gate failure with no sentence is a gate nobody can act on",
+      "doc": "{\"alerts\": [{\"rule\": \"r\", \"severity\": \"warn\", \"message\": \"\"}]}"
+    },
+    {
+      "id": "too-many-alerts",
+      "accept": false,
+      "expect": "alerts exceeds",
+      "why": "fifty findings is a report, not a gate",
+      "doc": "{\"alerts\": [{\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}, {\"rule\": \"r\", \"severity\": \"info\", \"message\": \"m\"}]}"
+    },
+    {
+      "id": "unknown-key",
+      "accept": false,
+      "expect": "unknown field",
+      "why": "same posture as every other document here",
+      "doc": "{\"alerts\": [], \"summary\": \"all good\"}"
+    },
+    {
+      "id": "trailing-data",
+      "accept": false,
+      "expect": "trailing data",
+      "why": "exactly one document",
+      "doc": "{\"alerts\": []}\n{\"alerts\": []}"
+    }
+  ]
+}

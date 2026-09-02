@@ -14,8 +14,10 @@ Contributor rules (authoritative, shared with the community): `CONTRIBUTING.md`
 cost/tokens, how much AI-written code reaches production, quality/bug impact, DevEx.
 This repository ships one binary, `assaio-agent`: an offline-first CLI (Go, embedded
 SQLite) that reads the local session logs of Claude Code, Codex CLI, Gemini CLI, GitHub
-Copilot CLI, and Cline and turns them into reports (`report`, `effectiveness`), diagnostics (`analyze`,
-`check`, `doctor`, `status`), and the self-contained Assay HTML dashboard. Out-of-tree
+Copilot CLI, Cline, and Antigravity CLI (activity only — its format publishes no token counter,
+so every cost figure withholds for it) and turns them into reports (`report`, `effectiveness`,
+`reprice`), diagnostics (`analyze`, `check`, `doctor`, `status`), and the self-contained Assay
+HTML dashboard. Out-of-tree
 exec plugins extend it in any language — parsers via `plugins:` (ADR 0003), metrics via
 `metrics:` (ADR 0004), rules gating `check` via `rules:` (ADR 0005). A team-server MVP
 (`serve` + `sync`) pools a team's usage on
@@ -149,13 +151,15 @@ internal/docs/           the projection of every live register into one referenc
                          check that fails the build when a published surface disagrees with it
 internal/drift/          canaries judging each source against its own history, and one against
                          an absolute condition
-internal/event/          the canonical observation contract of the evidence graph (ADR 0007)
+internal/event/          the canonical observation contract of the evidence graph (ADR 0007),
+                         for the domains with no store row of their own (ADR 0016)
 internal/humanize/       shared count/money formatters every surface renders through
 internal/i18n/           the translatable catalog: dashboard chrome, statusline, explain
 internal/ingest/         discovers session files, parses them, upserts into the store
 internal/label/          the closed vocabularies for session annotations (ADR 0006)
 internal/layer/          the closed vocabulary of measurement layers every figure states (ADR 0013)
 internal/parser/         shared scanner + NonNeg; one package per tool below
+internal/parser/agy/     parses Antigravity CLI transcripts; activity only, no token counter
 internal/parser/claude/  parses Claude Code session logs into usage records
 internal/parser/cline/   parses Cline task directories into usage records
 internal/parser/codex/   parses Codex CLI rollout logs into usage records
@@ -170,12 +174,14 @@ internal/projectid/      resolves a session's cwd to its git repository root + s
 internal/recommend/      typed experiment records: evidence, rollback, follow-up (ADR 0015)
 internal/reconcile/      compares a vendor's own export against the local estimate
 internal/report/         aggregates stored usage into priced rows; renders table/JSON/CSV
+internal/reprice/        prices the window's own turns against another entry in the same table
 internal/runtime/        experimental read-only snapshot of a self-hosted vLLM/DCGM endpoint
 internal/server/         self-hosted team server: usage collection + served dashboard
 internal/share/          the postable artifact: structural redaction, quoted figures (ADR 0014)
 internal/signal/         the catalog of what assaio can report, and what data supports it
 internal/store/          embedded SQLite persistence for usage records
 internal/survival/       directional local outcome check against git blame
+internal/threshold/      published figures a verdict may rest on, each with its expiry
 internal/trace/          the stored step sequences, and the scope a detector declares over them
 internal/usage/          normalized representation of AI-tool usage events
 internal/vcs/            the local git evidence collector: content-free commit observations
