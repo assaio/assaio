@@ -490,7 +490,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
             <div><dt>Effect</dt><dd>AI lines added and removed, read from diff <code>+</code>/<code>-</code> markers and from the body of a file the tool created. The code text itself is never read or stored — only counts.</dd></div>
             <div><dt>Efficiency</dt><dd>Lines per token spent, cache reuse and what each write bought, premium-model fit, and cost per 100 lines as an estimate, never the headline.</dd></div>
             <div><dt>Friction</dt><dd>Churn that undoes the session's own work, tool calls that failed, and proposals a human declined.</dd></div>
-            <div><dt>Order of work</dt><dd>The sequence a session actually ran in, not just its totals: how often a file goes back for another pass after something ran, and what a failed call, a refusal or a lost context costs in the turns that follow. Steps are stored as kinds and positions — a file is an integer inside one sequence, never a path.</dd></div>
+            <div><dt>Order of work</dt><dd>The sequence a session actually ran in, not just its totals: how often a file goes back for another pass after something ran, and what a failed call, a refusal or a lost context costs in the turns that follow. Steps are stored as kinds and positions — a file is an integer inside one sequence, never a path. Read from Claude Code and, since v0.26, Codex — which records what it did and in what order, and says whether a patch applied but never whether a command worked, so a figure read off outcomes leaves its sessions out rather than counting their silence as a clean run.</dd></div>
           </dl>
         </div>
         <div class="panel not">

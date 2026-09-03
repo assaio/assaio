@@ -22,7 +22,7 @@ import (
 // checked rather than assumed.
 var parsers = map[string]func(path string) ([]usage.Record, []usage.Step, int, error){
 	"claude-code": fromFile(claude.ParseAll),
-	"codex":       recordsOnly(codex.Parse),
+	"codex":       fromFile(codex.ParseAll),
 	"gemini-cli":  recordsOnly(gemini.Parse),
 	"copilot-cli": recordsOnly(copilot.Parse),
 	"cline":       dirRecordsOnly(cline.ParseDir),

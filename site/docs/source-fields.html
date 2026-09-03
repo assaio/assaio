@@ -275,7 +275,9 @@ field is skipped for that reason.</p>
 </tbody>
 </table>
 <h2 id="codex-cli">Codex CLI</h2>
-<p><em>Corpus: 21 rollouts · 3,599 lines · 273 distinct key paths, plus <code>testdata/rollout.jsonl</code>.</em></p>
+<p><em>Corpus: 2,625 rollouts · 70,522 lines, taken 2026-09-03, plus <code>testdata/rollout.jsonl</code>.
+Re-audited in v0.26 against a current install; the first pass read 21 rollouts and predates three
+of the rows below.</em></p>
 <table>
 <thead>
 <tr>
@@ -294,6 +296,21 @@ field is skipped for that reason.</p>
 <td><code>payload</code> of <code>session_meta</code>: <code>id</code>, <code>cwd</code>, <code>model</code>, <code>timestamp</code></td>
 <td>extracted</td>
 <td>Session identity and dimensions.</td>
+</tr>
+<tr>
+<td><code>session_meta.source</code></td>
+<td>extracted</td>
+<td>How the run was started: <code>exec</code> for a scripted <code>codex exec</code> (2,604 rollouts), <code>cli</code> for the terminal UI (13), <code>vscode</code> for the desktop app (1). It is what the scope vocabulary reads a sequence under, and without it every Codex sequence is <code>unstated</code> and excluded from every behaviour detector. <strong>The field is a union</strong>: a bare string on 2,618 rollouts and an object — <code>{&quot;subagent&quot;:&quot;review&quot;}</code> — on 7, where Codex ran the session as a sub-agent of another. Typing it as a string made those 7 <code>session_meta</code> lines fail to unmarshal outright, costing the whole rollout its session id, project, model and cwd. A field read too confidently is a worse outcome than a field not read at all.</td>
+</tr>
+<tr>
+<td><code>response_item</code> → <code>type</code> = <code>reasoning</code> / <code>message</code> (+<code>role</code>)</td>
+<td>extracted</td>
+<td>Where a turn's model output begins, which is where its assistant step goes. <code>role</code> is what separates it from the turn's input: the harness's <code>developer</code> messages and the person's <code>user</code> messages outnumber <code>assistant</code> roughly three to one on this corpus, and opening a turn on one would place the model's response before the work it describes.</td>
+</tr>
+<tr>
+<td><code>response_item</code> → <code>call_id</code></td>
+<td>extracted</td>
+<td>A tool call's identity in its own sequence, stable across a re-read where a positional counter is only stable while the file ahead of it does not change.</td>
 </tr>
 <tr>
 <td><code>turn_context.model</code></td>
@@ -351,6 +368,21 @@ field is skipped for that reason.</p>
 <td>A turn the human interrupted (<code>B113</code>).</td>
 </tr>
 <tr>
+<td><code>event_msg/item_completed</code> → <code>payload.item.{type,status,id}</code>, <code>started_at_ms</code>, <code>completed_at_ms</code></td>
+<td><strong>skipped — measured, and deliberately not read</strong></td>
+<td>A second view of the same turn, added by Codex around 0.148 and present in <strong>1,614 of 1,614 September rollouts</strong> on this corpus, 833 of 1,001 August ones and none of the 10 July ones (first seen 2026-08-20). It carries a per-step wall-clock duration no other source publishes, and a <code>CommandExecution</code> status with a real <code>exit_code</code> — 57 of 840 commands exited non-zero under a call whose own <code>status</code> says <code>completed</code>. It is not read because it cannot be joined: its <code>exec-&lt;uuid&gt;</code> ids match no <code>call_id</code>, and it covers only a subset of calls (28 against 74 in one 10-file sample), so pairing it positionally would be a guess. Reading it as a second step source instead would count one call twice. This row is why <code>assaio</code> now names <strong>additive drift</strong> as its third silent failure mode (<a href="https://assaio.dev/docs/format-resilience">format-resilience.md</a>).</td>
+</tr>
+<tr>
+<td><code>event_msg/context_compacted</code></td>
+<td><strong>skipped — the same event under a second name</strong></td>
+<td>Newer builds write it beside the <code>compacted</code> line the compaction count already reads: present in 14 of the 18 rollouts that compacted at all, one for one, and in none that lack <code>compacted</code>. Reading both would report one overflow as two.</td>
+</tr>
+<tr>
+<td><code>payload.info.total_token_usage.cache_write_input_tokens</code> (re-measured)</td>
+<td><strong>skipped — worth extracting</strong></td>
+<td>Still worth reading, and the corpus is now larger: of the 5,809 <code>token_count</code> events carrying an <code>info</code> block, 518 omit the field and 5,291 report it as <strong>zero — with no event anywhere reporting anything else</strong>. The <code>B107</code> reasoning is unchanged — a zero nobody read and a zero the vendor reported are different facts — and the field's constancy across 2,625 rollouts is now evidence rather than a small sample.</td>
+</tr>
+<tr>
 <td><code>payload.thread_settings.reasoning_effort</code></td>
 <td>skipped — setting, not usage</td>
 <td>A configuration value; it belongs to the harness inventory (<code>B95</code>) rather than to a usage record.</td>
@@ -366,9 +398,19 @@ field is skipped for that reason.</p>
 <td>Prompts, completions, tool inputs and outputs, search queries, instruction files.</td>
 </tr>
 <tr>
-<td><code>payload.{id,call_id,turn_id,window_id,internal_chat_message_metadata_passthrough.turn_id}</code></td>
+<td><code>payload.{id,turn_id,window_id,internal_chat_message_metadata_passthrough.turn_id}</code></td>
 <td>skipped — identity, no measure</td>
-<td>Codex assigns its own turn id; assaio keys on a file fingerprint plus a positional counter, which is stable across a resumed session. Adopting the vendor's id would change a shipped dedupe contract for no new figure.</td>
+<td>Codex assigns its own turn id; assaio keys a record on a file fingerprint plus a positional counter, which is stable across a resumed session. Adopting the vendor's id would change a shipped dedupe contract for no new figure. <code>call_id</code> is the exception and is now read, above: a step's identity is not a record's.</td>
+</tr>
+<tr>
+<td><code>session_meta.{originator,thread_source,parent_thread_id,cli_version}</code></td>
+<td>skipped — restates or names what is not modelled</td>
+<td><code>originator</code> names the same three starting points <code>source</code> does, in display words (<code>codex_exec</code>, <code>codex-tui</code>, <code>Codex Desktop</code>); reading both would be two spellings of one fact. <code>thread_source: &quot;subagent&quot;</code> and <code>parent_thread_id</code> say a rollout ran as another's sub-agent — real, and 7 of 2,507 here — but a sub-agent needs a timeline of its own before it can be told apart from its parent, which this reading does not give it.</td>
+</tr>
+<tr>
+<td><code>session_meta.git.{branch,commit_hash,repository_url}</code></td>
+<td><strong>skipped — deliberate, pending a privacy decision</strong></td>
+<td>The commit a session started at. Same standing as Copilot's <code>data.context.baseCommit</code> below and blocked on the same decision (<code>B85</code>, <code>B100</code>), noted here because the first audit did not record that Codex carries it too.</td>
 </tr>
 <tr>
 <td><code>payload.{approval_policy,approvals_reviewer,sandbox_policy.writable_roots,phase}</code></td>

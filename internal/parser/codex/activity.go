@@ -88,6 +88,7 @@ func (st *parseState) applyPatchApplyEnd(payload json.RawMessage) {
 	// Counted on failure too: the write was attempted, and an error with no call to divide
 	// by makes every rate over the two meaningless.
 	st.pending.patchWrites++
+	st.steps.edits(st, changedPaths(p.Changes), p.Success)
 	if !p.Success {
 		st.pending.toolErrors++
 		return

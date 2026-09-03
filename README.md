@@ -212,7 +212,7 @@ log your AI coding tools have written — often months of data.
 ```console
 $ assaio-agent backfill
 claude-code   files=3  records=4  inserted=4  steps=9
-codex         files=1  records=1  inserted=1
+codex         files=1  records=1  inserted=1  steps=2
 gemini-cli    files=0  records=0  inserted=0
 copilot-cli   files=0  records=0  inserted=0
 cline         files=0  records=0  inserted=0

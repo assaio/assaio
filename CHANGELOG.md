@@ -33,6 +33,56 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+
+- **Codex sessions are read as sequences, not only as totals** (`B147`). A rollout now yields its
+  ordered steps beside its usage records, from one scan: the model response each turn opens with,
+  the calls it made, one step per file a patch touched, and each context compaction. Measured on
+  2,625 rollouts (2026-09-03) — 9,555 steps against 5,765 records, a **row multiplier of 1.66**
+  where Claude Code's is 1.88, measured on its own corpus rather than assumed from it. **In bytes,
+  which is the number that matters and which a row multiplier is not**: a store holding only Codex
+  steps carries 8,096 of them in 2.00 MB of table and indexes — 260 B per step, and +1.5% of the
+  step table on a store that also holds Claude Code's.
+- **Codex states how it was started, and its sequences are scoped by it.** `session_meta.source`
+  is read onto every record: `exec`, a scripted `codex exec` run, is 2,604 of those rollouts and
+  is `programmatic`; `cli`, the terminal UI, is 13 and is `interactive`. That corrects
+  `internal/trace`, which said Codex writes no entrypoint. The field is a union — a bare string
+  on 2,618 rollouts and an object, `{"subagent":"review"}`, on 7 — and is read tolerantly, so the
+  object form costs a rollout nothing rather than failing its whole `session_meta` line.
+- **`backfill` reports the steps it read and did not store** (`steps-past-horizon`). The first run
+  after a source gains a sequence reading parses its whole history and keeps the horizon's worth;
+  the rest was being dropped in silence, which is what skip-and-count exists to prevent.
+
+### Changed
+
+- **The Codex depth row claims two sequence signals, not three.** `ai.steps.count` and
+  `ai.step.target` are answered; `ai.step.outcome` is refused. Codex marks a call `completed` when
+  it returns — 57 of 840 commands in the audited corpus exited non-zero under that word — so only
+  a patch, which says whether it applied, carries an outcome, and 539 of the 9,555 steps do.
+- **`recovery` now reads only the sources that state how a step ended, and says so.** The refusal
+  above was declared and not enforced: a Codex sequence sat in the denominator of a failure rate
+  it could never enter the numerator of, and a Codex-only store would have been told "nothing
+  failed … so there was no recovery to measure". `trace.View.Answering` narrows a scope by what
+  its sources record and folds what it drops into the excluded share the caveat already prints.
+- **The scope a sequence is read under is not the whole population.** A scope says who ran a
+  session; it says nothing about what that session's source records. Both are now in one sentence
+  beside every figure that needs it.
+- **`docs/format-resilience.md` names a third silent failure mode: additive drift.** A vendor that
+  starts recording something new moves no canary — nothing shrinks, nothing errors — and the tool
+  quietly stops being as deep as its source allows. The worked example is Codex's
+  `event_msg/item_completed`: absent from all 10 July rollouts, in 833 of 1,001 August ones and in
+  **1,614 of 1,614** September ones, carrying a per-step duration and the only `exit_code` Codex
+  publishes. It is measured and deliberately not read — its ids join to no call and it covers a
+  subset of them, so pairing it would be a guess. The detector for this class is the field audit,
+  which decays and has to be re-taken.
+- **The Codex field audit was re-taken on 2,625 rollouts and 70,522 lines**, against the 21
+  rollouts the first pass read. Three of its rows predate the corpus it was written from.
+- **The step table's published size was re-measured**: 136.3 MB against `usage_record`'s 69.7 MB,
+  2.14 steps per record age-matched, and 4.54 MB/day with no horizon — the figure `doctor` prints
+  to say what `trace.horizon_days: 0` costs, and it was 33% low.
+- **The vendored price table was re-downloaded at the tag and is unchanged** from v0.25.0's
+  snapshot: 3,518 models, byte-identical upstream. `SnapshotDate` records the check.
+
 ## [0.25.0] - 2026-09-02
 
 ### Breaking

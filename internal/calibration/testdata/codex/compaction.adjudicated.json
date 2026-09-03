@@ -36,9 +36,9 @@
     "rejected": 0,
     "tool_errors": 0,
     "compactions": 1,
-    "steps": 0,
-    "step_outcomes": 0,
-    "step_targets": 0,
+    "steps": 2,
+    "step_outcomes": 1,
+    "step_targets": 1,
     "skipped": 0
   },
   "derivations": {
@@ -59,8 +59,8 @@
     "tool_errors": "Codex marks failures only for file edits, which its depth row excludes.",
     "compactions": "one top-level event of type 'compacted'. Unlike Claude Code, Codex writes a single line for the overflow, so the count is the count of lines here -- the two sources differ, which is why the number is adjudicated per source rather than assumed.",
     "skipped": "every line is valid JSON and every shape is one the parser knows.",
-    "steps": "0. No sequence is read from Codex rollout logs yet, which is what its depth row claims: absent, not a session that did nothing.",
-    "step_outcomes": "0. No sequence is read from Codex rollout logs yet, which is what its depth row claims: absent, not a session that did nothing.",
-    "step_targets": "0. No sequence is read from Codex rollout logs yet, which is what its depth row claims: absent, not a session that did nothing."
+    "steps": "2: the applied patch's one file, and the compaction itself. This trace carries no response_item line either, so no turn is opened.",
+    "step_outcomes": "1. The patch says it applied; a compaction is not something that succeeds or fails and states nothing.",
+    "step_targets": "1. The one patched file."
   }
 }

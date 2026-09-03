@@ -41,9 +41,9 @@ func discoverSources(home string, sources config.Sources) ([]source, error) {
 		copilotFiles = append(copilotFiles, found...)
 	}
 	return []source{
-		{tool: "codex", files: codexFiles, parse: codex.Parse},
-		{tool: "gemini-cli", files: geminiFiles, parse: gemini.Parse},
-		{tool: "copilot-cli", files: copilotFiles, parse: copilot.Parse},
+		{tool: "codex", files: codexFiles, parse: codex.ParseAll},
+		{tool: "gemini-cli", files: geminiFiles, parse: recordsOnly(gemini.Parse)},
+		{tool: "copilot-cli", files: copilotFiles, parse: recordsOnly(copilot.Parse)},
 	}, nil
 }
 

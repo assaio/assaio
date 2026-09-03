@@ -10,16 +10,6 @@ import (
 	"github.com/assaio/assaio/internal/usage"
 )
 
-func parseRecords(path string, parse func(io.Reader) ([]usage.Record, int, error)) ([]usage.Record, int, error) {
-	//nolint:gosec // paths come from local-home discovery globs
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, 0, fmt.Errorf("open %s: %w", path, err)
-	}
-	defer func() { _ = f.Close() }()
-	return parse(f)
-}
-
 // ingestParsed folds one file's (or cline directory's) parse outcome into res. parseErr
 // only ever marks the file Failed; it never discards recs, since a parser that hits a
 // fatal condition partway through (e.g. a scanner error on a corrupt trailing line)

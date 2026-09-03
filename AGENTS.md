@@ -162,7 +162,7 @@ internal/parser/         shared scanner + NonNeg; one package per tool below
 internal/parser/agy/     parses Antigravity CLI transcripts; activity only, no token counter
 internal/parser/claude/  parses Claude Code session logs into usage records
 internal/parser/cline/   parses Cline task directories into usage records
-internal/parser/codex/   parses Codex CLI rollout logs into usage records
+internal/parser/codex/   parses Codex CLI rollout logs into usage records and step sequences
 internal/parser/copilot/ parses GitHub Copilot CLI session events into usage records
 internal/parser/gemini/  parses Gemini CLI chat logs into usage records
 internal/paths/          resolves data/config/tool-log filesystem locations

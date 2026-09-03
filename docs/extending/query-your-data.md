@@ -19,8 +19,9 @@ file is the whole of your data.
 Two tables hold your data. `usage_record` is one row per API response
 ([`internal/store/migrations/0001_init.sql`](../../internal/store/migrations/0001_init.sql));
 `session_step` is one row per step of a session's sequence and is described after it — measured
-on the maintainer's store it is the **larger of the two**, 102.0 MB of table and indexes against
-`usage_record`'s 58.3 MB, which is why it is the one table with a retention horizon.
+on the maintainer's store it is the **larger of the two**, 136.3 MB of table and indexes against
+`usage_record`'s 69.7 MB (re-measured for v0.26), which is why it is the one table with a
+retention horizon.
 
 `usage_record`:
 

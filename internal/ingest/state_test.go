@@ -44,9 +44,9 @@ func runClaude(t *testing.T, st *store.Store, home string, opts Options) Result 
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, r := range results {
-		if r.Tool == "claude-code" {
-			return r
+	for i := range results {
+		if results[i].Tool == "claude-code" {
+			return results[i]
 		}
 	}
 	t.Fatal("no claude-code result")
@@ -168,7 +168,7 @@ func TestFailedInputIsNotRecorded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := ingestSource(ctx, st, sk, source{tool: "claude-code", files: []string{path}, parse: failing}, make(projectCache))
+	res, err := ingestSource(ctx, st, sk, source{tool: "claude-code", files: []string{path}, parse: recordsOnly(failing)}, make(projectCache), time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}

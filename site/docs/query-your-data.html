@@ -138,8 +138,9 @@ file is the whole of your data.</p>
 <p>Two tables hold your data. <code>usage_record</code> is one row per API response
 (<a href="https://github.com/assaio/assaio/blob/main/internal/store/migrations/0001_init.sql"><code>internal/store/migrations/0001_init.sql</code></a>);
 <code>session_step</code> is one row per step of a session's sequence and is described after it — measured
-on the maintainer's store it is the <strong>larger of the two</strong>, 102.0 MB of table and indexes against
-<code>usage_record</code>'s 58.3 MB, which is why it is the one table with a retention horizon.</p>
+on the maintainer's store it is the <strong>larger of the two</strong>, 136.3 MB of table and indexes against
+<code>usage_record</code>'s 69.7 MB (re-measured for v0.26), which is why it is the one table with a
+retention horizon.</p>
 <p><code>usage_record</code>:</p>
 <table>
 <thead>

@@ -18,18 +18,25 @@ const (
 	// Programmatic is an SDK caller's run -- scripted or one-shot, with nobody there to interrupt.
 	Programmatic = "programmatic"
 	// Unstated is a run whose source records no entrypoint at all. It is a scope of its own
-	// rather than a bucket the others absorb: Codex and Copilot CLI write none, and folding their
-	// interactive work into Programmatic would be a claim about them nothing measured.
+	// rather than a bucket the others absorb: Copilot CLI writes none, and folding its
+	// interactive work into Programmatic would be a claim about it nothing measured.
 	Unstated = "unstated"
 )
 
-// The entrypoints a source writes. Only "cli" is a person at a terminal; the sdk- prefixed ones
-// are libraries calling the tool, and this list is exhaustive across the audited store rather
-// than a guess (claude-code writes all three, no other source writes any).
+// The entrypoints a source writes. Only "cli" is a person at a terminal; the others are a
+// library or a script calling the tool. Claude Code writes the three sdk-/cli names; Codex
+// names the same distinction in its session_meta.source -- "exec" for a scripted `codex exec`
+// run, "cli" for its terminal UI, and the two words mean there what they mean here.
+//
+// "vscode", which Codex writes for its desktop app, is deliberately absent: a person drives it,
+// but not from a terminal, and Interactive is a claim about a terminal session. It falls to
+// Unstated with everything else this build has not been shown, which is 1 session of 2,500 on
+// the audited corpus -- an IDE scope for that is an abstraction with no demand behind it.
 const (
 	entrypointCLI      = "cli"
 	entrypointSDKPy    = "sdk-py"
 	entrypointSDKCLIRs = "sdk-cli"
+	entrypointExec     = "exec"
 )
 
 // Scope classifies one sequence. The sub-agent test comes first because it is a fact about the
@@ -41,7 +48,7 @@ func Scope(t *store.Timeline) string {
 		return SubAgent
 	case t.Entrypoint == entrypointCLI:
 		return Interactive
-	case t.Entrypoint == entrypointSDKPy || t.Entrypoint == entrypointSDKCLIRs:
+	case t.Entrypoint == entrypointSDKPy || t.Entrypoint == entrypointSDKCLIRs || t.Entrypoint == entrypointExec:
 		return Programmatic
 	case t.Entrypoint == "":
 		return Unstated

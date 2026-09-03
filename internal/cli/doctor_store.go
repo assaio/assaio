@@ -94,7 +94,7 @@ func traceHorizonNote(days int) string {
 			strconv.Itoa(config.DefaultTraceHorizonDays) + "-day default. Set a valid value."
 	default:
 		return "trace.horizon_days is 0, so nothing prunes this table and it has no upper bound" +
-			" — it grew at a measured 3.40 MB/day on the maintainer's store. Set a horizon to bound it;" +
+			" — it grew at a measured 4.54 MB/day on the maintainer's store. Set a horizon to bound it;" +
 			" `assaio-agent compact` then returns the freed pages."
 	}
 }

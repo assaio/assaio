@@ -66,7 +66,8 @@ func runBackfill(cmd *cobra.Command, opts ingest.Options) error {
 
 func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
 	pruned, lowered := false, 0
-	for _, r := range results {
+	for i := range results {
+		r := &results[i]
 		lowered += r.Lowered
 		cmd.Printf("%-12s  files=%d", r.Tool, r.Files)
 		if r.Unchanged != 0 {
@@ -75,6 +76,9 @@ func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
 		cmd.Printf("  records=%d  inserted=%d", r.Records, r.Inserted)
 		if r.Steps != 0 {
 			cmd.Printf("  steps=%d", r.Steps)
+		}
+		if r.HorizonSteps != 0 {
+			cmd.Printf("  steps-past-horizon=%d", r.HorizonSteps)
 		}
 		if r.PrunedSteps != 0 {
 			cmd.Printf("  steps-pruned=%d", r.PrunedSteps)
@@ -93,6 +97,7 @@ func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
 	}
 	// Deleting rows frees pages inside the file without shrinking it.
 	if pruned {
+		cmd.Println("steps-pruned is the whole run's, not that source's: the horizon is applied to the store in one pass, which cannot say whose history went")
 		cmd.Println("pruned steps free pages inside the store without shrinking it — run 'assaio-agent compact' to reclaim them")
 	}
 	if lowered > 0 {

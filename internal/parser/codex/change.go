@@ -18,6 +18,17 @@ type patchFileChange struct {
 	Content     string `json:"content"`
 }
 
+// changedPaths is the files one patch event touched. The map key is an absolute path; it scopes
+// rework tracking and a step's target integer in memory and is never copied onto a stored row
+// (PRIVACY.md).
+func changedPaths(changes map[string]json.RawMessage) []string {
+	paths := make([]string, 0, len(changes))
+	for path := range changes {
+		paths = append(paths, path)
+	}
+	return paths
+}
+
 // changeLineCounts returns one file change's added/removed lines. A malformed entry (not
 // even a valid patchFileChange) contributes 0 rather than aborting the whole event.
 func changeLineCounts(raw json.RawMessage) (added, removed int64) {

@@ -6,6 +6,7 @@ import (
 	"github.com/assaio/assaio/internal/layer"
 
 	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/trace"
 )
 
@@ -39,10 +40,18 @@ func (recoveryValidator) Needs() []Capability { return []Capability{CapTrace} }
 // aftermath to measure.
 func (recoveryValidator) TraceScope() string { return trace.Interactive }
 
+// statesOutcomes is the second half of this metric's population, and the scope above cannot
+// express it: every figure here is read off a step's outcome, and a source that marks a call
+// completed whether or not it worked would sit in the denominator of a failure rate it can
+// never enter the numerator of. Codex is that source, and its depth row already refuses the
+// signal -- this is where the refusal is enforced rather than only declared.
+func statesOutcomes(tool string) bool { return parser.Answers(tool, parser.SignalStepOutcome) }
+
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (v recoveryValidator) Analyze(in Input) Result {
 	r := Result{Name: recoveryName, Title: recoveryTitle, Describe: recoveryDescribe, HowToRead: recoveryHowToRead}
 	view := in.Trace.Scope(v.TraceScope())
+	view.Answering(statesOutcomes, "how a step ended")
 	scoped := &view
 	if view.Empty() {
 		r.noData("sessions", noSequencesTakeaway(&in.Trace))

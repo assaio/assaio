@@ -82,6 +82,13 @@ var (
 	// every edit and still say nothing about their order, which is what every source but Claude
 	// Code does today.
 	sequenceSignals = []string{SignalStepsCount, SignalStepOutcome, SignalStepTarget}
+	// orderedSignals are the sequence without its outcome half, for a source that records what
+	// it did and in what order but never whether a call worked. Codex marks a call "completed"
+	// when it returns, which is not the same word as succeeded -- 57 of the 840 commands in the
+	// audited corpus exited non-zero under it -- so claiming the outcome signal would publish
+	// "no failures" over a source that never states one. Same line the tool-error count below
+	// already holds, one reading further out.
+	orderedSignals = []string{SignalStepsCount, SignalStepTarget}
 )
 
 func answers(groups ...[]string) []string {
@@ -106,9 +113,11 @@ var depths = []Depth{
 		// tool_errors is absent deliberately: Codex marks failures only for file edits, so
 		// counting it would read partial coverage as a clean run -- the same reason the
 		// friction validator excludes it rather than treating silence as success.
-		Answers: answers(costSignals, reasoningSignals, perTurnSignals, lineSignals, editSignals, compactionSignals),
+		Answers: answers(costSignals, reasoningSignals, perTurnSignals, lineSignals, editSignals,
+			compactionSignals, orderedSignals),
 		Gaps: []string{
-			"no ordered step sequence is read from its logs yet, so the behaviour detectors have nothing to read for it",
+			"its sequence states an outcome only on a patched file, which says whether it applied; a command is marked completed whether or not what it ran worked",
+			"only a patched file gives a step a target, so a sequence shows which file was edited repeatedly and never which was read repeatedly",
 			"no cache-write counter, so a written cache is invisible where a read one is not",
 			"no skill or sub-agent labels, so its turns are absent from the attribution split",
 			"tool-use denials are not recorded, and call failures only for file edits",

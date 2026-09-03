@@ -135,7 +135,7 @@ var catalog = []Signal{
 		ID: "ai.step.outcome", Title: "Step outcome", Unit: "count",
 		Layer:  layer.Activity,
 		Status: Observed, Grains: []string{GrainStep, GrainSession, GrainWindow},
-		ZeroMeans: "no step in the window states how it ended, or this source marks no step outcomes -- the two are told apart by whether any sequence is stored at all",
+		ZeroMeans: "no step in the window states how it ended, or this source marks no step outcomes -- told apart by this source's own row in the depth matrix, not by whether a sequence is stored: Codex stores sequences and marks an outcome on a patch alone, which is why it does not answer this",
 		Describe:  "How one step ended, from a closed vocabulary of ok, error, denied and truncated. An unstated outcome is its own value and is never read as ok.",
 	},
 	{

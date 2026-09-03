@@ -188,12 +188,12 @@ gets caught, and the detect → triage → fix → release loop.</p>
 <tr>
 <td>Drift canaries</td>
 <td><code>internal/drift</code>, after every <code>backfill</code></td>
-<td>The two failure modes below: numbers that shrink without anything erroring.</td>
+<td>The first two failure modes below: numbers that shrink without anything erroring. The third, additive drift, no canary can see.</td>
 </tr>
 </tbody>
 </table>
-<h2 id="the-two-silent-failure-modes">The two silent failure modes</h2>
-<p>Everything above catches a parse that <em>fails</em>. Neither of these does — which is why they
+<h2 id="the-three-silent-failure-modes">The three silent failure modes</h2>
+<p>Everything above catches a parse that <em>fails</em>. None of these does — which is why they
 needed their own defense:</p>
 <ol>
 <li><strong>Semantic drift.</strong> If a vendor renames or moves a token field, the line often still
@@ -203,11 +203,69 @@ instead of failing loudly.</li>
 <li><strong>Discovery drift.</strong> If a tool moves its log directory or changes file naming,
 <code>Discover</code> finds fewer (or zero) files. <code>backfill</code> and <code>doctor</code> <em>show</em> the counts, but
 nothing flagged &quot;this used to be 300 files and is now 0&quot; as an anomaly.</li>
+<li><strong>Additive drift.</strong> If a vendor starts <em>recording something new</em>, every figure assaio
+already publishes stays exactly as correct as it was. Nothing shrinks, nothing errors,
+no canary can fire — and the tool silently stops being as deep as its source allows.</li>
 </ol>
-<p>Both share one property: the failure mode is <strong>plausible-looking underreporting</strong>, which is
-exactly what an honesty-first tool must not do silently.</p>
-<h2 id="detection--three-channels">Detection — three channels</h2>
-<ol>
+<p>The first two share one property: the failure mode is <strong>plausible-looking underreporting</strong>,
+which is exactly what an honesty-first tool must not do silently. The third is different in
+kind, and worth stating separately because the defenses above are all aimed at the first two.</p>
+<h3 id="additive-drift-has-no-canary-and-cannot-have-one">Additive drift has no canary, and cannot have one</h3>
+<p>Every canary below judges a source against <strong>its own history</strong>: fewer files, fewer records per
+file, more skips, more zero-token records. A vendor adding a field or an event moves none of
+those. The detection is a <strong>periodic field audit</strong> — enumerate every key path a current corpus
+holds, diff it against what the parser reads — and the audit's own currency is the risk:
+<a href="https://assaio.dev/docs/source-fields">source-fields.md</a> states each section's corpus and when it was
+taken, because a stale audit reports the absence of a field that has been on disk for months.</p>
+<p>The worked example is Codex's <code>event_msg/item_completed</code>, found in the v0.26 re-audit:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First seen</td>
+<td>2026-08-20 (Codex CLI ~0.148)</td>
+</tr>
+<tr>
+<td>Coverage when found</td>
+<td><strong>1,614 of 1,614</strong> September rollouts, 833 of 1,001 August ones, 0 of 10 July ones</td>
+</tr>
+<tr>
+<td>Volume</td>
+<td>14,268 events across 2,625 rollouts</td>
+</tr>
+<tr>
+<td>What it carries</td>
+<td>per-step wall-clock duration; a <code>CommandExecution</code> <code>exit_code</code> — the only place Codex says a command <em>failed</em> rather than <em>returned</em></td>
+</tr>
+<tr>
+<td>Canaries that fired</td>
+<td><strong>none, correctly</strong>: records per file, files found, skips and zero-token share were all unchanged</td>
+</tr>
+<tr>
+<td>Audit that would have found it</td>
+<td>the field audit — whose Codex section was taken on 21 rollouts, all of them older than the event</td>
+</tr>
+</tbody>
+</table>
+<p>The lesson is not that a canary was missing. It is that <strong>the field audit is a detector, not
+documentation</strong>, and it decays: re-take it against a current corpus on a cadence, or it reports
+last year's tool. What that particular finding changed in the code is recorded in the audit's
+own Codex section — it is measured, and deliberately <em>not</em> read, because its ids join to
+nothing.</p>
+<h2 id="detection--three-channels-and-a-fourth-that-is-not-automatic">Detection — three channels, and a fourth that is not automatic</h2>
+<ol start="0">
+<li>
+<p><strong>The field audit, by hand and on a cadence.</strong> Named first because it is the only detector
+additive drift has, and the only one nothing runs for you:
+<a href="https://assaio.dev/docs/source-fields">source-fields.md</a>, re-taken against a current corpus, each
+section stating the corpus it was taken from and when. The three below all judge a source
+against its own history and none of them can see a field that was never read.</p>
+</li>
 <li>
 <p><strong>Local canaries, automatic.</strong> After every <code>backfill</code>, four of the five judge a source
 against its own recent history, and one judges a condition:</p>
