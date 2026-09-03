@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"path/filepath"
 	"time"
 
 	"github.com/assaio/assaio/internal/parser"
@@ -22,13 +21,6 @@ type envelope struct {
 	Payload   json.RawMessage `json:"payload"`
 }
 
-type sessionMeta struct {
-	ID        string    `json:"id"`
-	Timestamp time.Time `json:"timestamp"`
-	Model     string    `json:"model"`
-	Cwd       string    `json:"cwd"`
-}
-
 type turnContext struct {
 	Model string `json:"model"`
 }
@@ -38,11 +30,12 @@ type turnContext struct {
 // the most recently seen line timestamp -- seeded from session_meta, then advanced by
 // every later line's own timestamp -- and is what each emitted record is stamped with.
 type parseState struct {
-	session string
-	ts      time.Time
-	model   string
-	project string
-	cwd     string
+	session    string
+	ts         time.Time
+	model      string
+	project    string
+	cwd        string
+	entrypoint string
 	// fileFP is a content fingerprint of this rollout's first line, prefixed onto every
 	// DedupeKey so a session id reused across two files (a resumed session) never
 	// collides; see parser.FileFingerprint.
@@ -57,6 +50,8 @@ type parseState struct {
 	// addedSoFar tracks AI-added lines per file path across the whole rollout, in memory
 	// only, to detect rework; the file path is never copied onto a Record.
 	addedSoFar map[string]int64
+	// steps is the second reading of the same scan: the sequence behind the records.
+	steps *stepRecorder
 }
 
 // Parse reads a Codex rollout (JSONL). token_count events carry cumulative totals, so
@@ -72,8 +67,21 @@ type parseState struct {
 // skipped counts lines that failed to unmarshal as JSON; a scanner-level error still
 // aborts the parse.
 func Parse(r io.Reader) ([]usage.Record, int, error) {
+	recs, _, skipped, err := ParseAll(r)
+	return recs, skipped, err
+}
+
+// ParseAll reads a rollout once and returns both readings of it: the usage records Parse
+// documents, and the step sequence behind them. One pass rather than two, for the reason
+// Claude's carries: two passes meant two orders of checks over the same line, and the readings
+// drifted apart in exactly the ways a shared state could not prevent. Parse is a wrapper so no
+//
+// The sequence records the model response each turn opens with, the calls it made, one step per
+// file a patch touched, and each context compaction. It states no outcome on a call Codex marks
+// "completed" -- see stepRecorder.toolCall for why that word is not a success.
+func ParseAll(r io.Reader) ([]usage.Record, []usage.Step, int, error) {
 	sc := parser.NewScanner(r)
-	st := &parseState{addedSoFar: make(map[string]int64)}
+	st := &parseState{addedSoFar: make(map[string]int64), steps: newStepRecorder()}
 	for sc.Scan() {
 		raw := sc.Bytes()
 		if len(raw) == 0 {
@@ -100,14 +108,19 @@ func Parse(r io.Reader) ([]usage.Record, int, error) {
 		case "response_item":
 			st.applyResponseItem(env.Payload)
 		case "compacted":
+			// Newer builds also write an event_msg/context_compacted for the same overflow --
+			// on the audited corpus it is present in 14 of the 18 rollouts that compacted at
+			// all, one for one, and in none that lack this line. Reading only this one keeps
+			// the sequence and the record counting the same event once.
 			st.pending.compactions++
+			st.steps.compaction(st)
 		}
 	}
 	if err := sc.Err(); err != nil {
-		return st.out, st.skipped, fmt.Errorf("scan codex rollout: %w", err)
+		return st.out, st.steps.stamp(st.session), st.skipped, fmt.Errorf("scan codex rollout: %w", err)
 	}
 	st.flushTrailingActivity()
-	return st.out, st.skipped, nil
+	return st.out, st.steps.stamp(st.session), st.skipped, nil
 }
 
 // flushTrailingActivity attributes activity that occurred after the last token_count to
@@ -118,28 +131,6 @@ func (st *parseState) flushTrailingActivity() {
 		return
 	}
 	st.pending.flushInto(&st.out[len(st.out)-1])
-}
-
-func (st *parseState) applySessionMeta(payload json.RawMessage) {
-	var m sessionMeta
-	if err := json.Unmarshal(payload, &m); err != nil {
-		st.skipped++
-		return
-	}
-	st.session = m.ID
-	// Parse already advanced st.ts from this line's envelope timestamp; only let the
-	// payload override it when the payload actually carries one, so a session_meta whose
-	// payload omits the timestamp does not reset st.ts to the zero time.
-	if !m.Timestamp.IsZero() {
-		st.ts = m.Timestamp
-	}
-	if st.model == "" {
-		st.model = m.Model
-	}
-	if m.Cwd != "" {
-		st.project = filepath.Base(m.Cwd)
-		st.cwd = m.Cwd
-	}
 }
 
 func (st *parseState) applyTurnContext(payload json.RawMessage) {

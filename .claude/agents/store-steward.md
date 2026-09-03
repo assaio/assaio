@@ -21,7 +21,9 @@ Check: does the change touch a file already present at the latest tag? `git log 
 
 A row multiplier is not a size measurement. `B147` guessed 1.88 step rows per usage record
 and was right about the ratio — and wrong about the cost, because in bytes the table and its
-indexes were **101.9 MB against `usage_record`'s 58.3 MB**. Every schema growth ships with:
+indexes were **101.9 MB against `usage_record`'s 58.3 MB** (136.3 against 69.7 when re-measured
+for v0.26 — the point is that only bytes answer this, not that either pair is the current one).
+Every schema growth ships with:
 
 1. a **measured** bound (`dbstat` or the store's own `Size()`, on a real corpus — not an
    estimate from row counts),

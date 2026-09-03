@@ -28,5 +28,20 @@ func (v *View) Caveat() string {
 		" sequence(s) holding " + humanize.Percent(1-v.ExcludedStepShare()) +
 		" of the window's steps. The other " + humanize.Int(int64(v.ExcludedSequences)) +
 		" sequence(s) are excluded from every figure here rather than averaged into it: a " +
-		"sub-agent's run and an SDK caller's are different work and share no rate with a person's."
+		"sub-agent's run and an SDK caller's are different work and share no rate with a person's." +
+		v.silentClause()
+}
+
+// silentClause names the sequences dropped for what their source does not record, separately from
+// the ones dropped for being different work. A reader acts on the two differently: the first says
+// the figure could not have seen those sessions at all, which is the difference between a rate
+// that is low and a rate that was never askable of half its population.
+func (v *View) silentClause() string {
+	if v.SilentSequences == 0 {
+		return ""
+	}
+	return " " + humanize.Int(int64(v.SilentSequences)) +
+		" of those are in scope and left out anyway, for coming from a source that does not record " +
+		v.SilentReading + ": this figure could never have seen them, so they are absent from it rather " +
+		"than counted as the clean run their silence would otherwise read as."
 }

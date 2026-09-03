@@ -14,7 +14,7 @@ mattering the moment a second release exists.
 |---------|-------|--------------|
 | `init` | v0.5 | A first run end to end: detects tools, prints the exact directories it will read before reading them, imports, writes the report, names what to run next. Writes no config when defaults work; `--non-interactive` for scripted setup. |
 | `demo` | v0.1 | Full reports on bundled sample data — no logs needed. |
-| `backfill` | v0.1 | Import all historical local session logs into the store. Since v0.4, incremental: an input already parsed unchanged by this build is skipped and reported as `unchanged=`; `--full` forces a complete re-parse. Since v0.20 it also stores each Claude Code session's step timeline and prints `steps=`, bounded by `trace.horizon_days` (default 30, `0` keeps everything). Since v0.24 it reports `restated-down=` — stored rows a re-read moved a figure *down* on, which is what a corrected attribution rule and a parser regression look like identically from the store's side. |
+| `backfill` | v0.1 | Import all historical local session logs into the store. Since v0.4, incremental: an input already parsed unchanged by this build is skipped and reported as `unchanged=`; `--full` forces a complete re-parse. Since v0.20 it also stores each Claude Code session's step timeline — and since v0.26 each Codex rollout's — and prints `steps=`, bounded by `trace.horizon_days` (default 30, `0` keeps everything); `steps-past-horizon=` says how many it read and did not store. Since v0.24 it reports `restated-down=` — stored rows a re-read moved a figure *down* on, which is what a corrected attribution rule and a parser regression look like identically from the store's side. |
 | `report` | v0.1 | Token/cost report; `--by day\|project\|tool\|model\|entrypoint` plus `task\|outcome\|difficulty` (v0.6; `member` withdrawn in v0.22 — see the refusal in BACKLOG.md), `--format table\|json\|csv`, `--compare` top movers. Since v0.15 table cells read at a glance: counts group thousands, costs round to cents from a dollar up and keep two significant digits below one, and a real amount under half a cent states a bound rather than rounding to zero. `json` and `csv` keep full precision. Since v0.24 a central store's member names leave every format as stable pseudonyms; `--identify` is the one way to export raw names and the export states which identity it carries. |
 | `effectiveness` | v0.1 | AI output vs cost — AI lines, edits, rejections, **`$`/100 AI lines** — per project by default; `--compare`. Since v0.6 also groupable by session label, so cost per line is comparable per kind of work. Since v0.15 the cost and `$`/100-lines cells use the same at-a-glance money formatting as `report`. |
 | `analyze` | v0.1 | Runs the metric validators below plus configured exec metric plugins; `--list`, `--format text\|json`, `[name...]` subset. Since v0.16 the report leads with the few findings **worth a week's attention**, ordered by evidence strength and how much of the window each subject reaches, with those reasons shown — and a window whose reads are all fine, withheld or thin promotes nothing rather than the least weak one. It is an ordering, never a score; expected impact stays out until the outcome link exists. `--format json` keeps its array shape and stamps `lead` on the promoted reads. Since v0.5 every result carries a confidence envelope (coverage, sample size and unit, data age, parsing build, and a `high\|medium\|low\|insufficient` label), and since v0.16 an `insufficient` verdict tells history the capture could not reach — which `backfill` repairs — from a subject no source records. Since v0.6, `--task\|--outcome\|--difficulty` recompute every validator over just the sessions carrying that label. Since v0.9 the envelope also carries **signal coverage** — how much of the window a metric's own subject reaches — so a figure read off a sliver cannot travel as a fully covered verdict. Since v0.14 a projected "per month" figure spans the window's real days rather than only its active ones, so a working week is no longer priced as a calendar month. Since v0.21 a validator whose figures compare one span against an earlier one is marked `Trending` and carries how far back the store's own history reaches, because a comparison against a span the store began inside reads as growth from a base it never held. Since v0.22 every read states its **measurement layer** — activity, output, outcome or impact (ADR 0013) — and a window of N days is N whole day-buckets rather than N+1. Since v0.24 a metric only carries a good/bad verdict when its line is derived from the window's own distribution, cited from a published definition, or set by you (a plan price); the other fourteen report their figures under a `REPORTED` read with no colour, no promotion and a gauge pinned at half rather than one that moves, each naming the authority a verdict would need. |
@@ -96,15 +96,15 @@ same questions as one that reports both. Every source therefore publishes its **
 (v0.5), which `doctor` prints for the tools it finds on your machine and which the
 `coverage` validator reads instead of keeping its own list.
 
-| Tool | Since | Depth | Tokens & cost | Activity (lines/edits/rework) | Attribution (skill / sub-agent) |
-|------|-------|-------|---------------|-------------------------------|---------------------------------|
-| Claude Code | v0.1 | **deep** | ✔ (incl. sub-agent turns) | ✔ full, incl. rejections | ✔ |
-| OpenAI Codex CLI | v0.1 | standard | ✔ (exact, delta-based) | ✔ except rejections; since v0.13 a created file contributes its lines, which it did not before | — |
-| Gemini CLI | v0.1 | standard | ✔ | — (cost only; `B39` / `B72` in [BACKLOG.md](BACKLOG.md)) | — |
-| GitHub Copilot CLI | v0.6 | standard | ✔ (exact, per model, incl. reasoning) | ✔ lines added/removed per session; edit and tool-call counts are in the log but not extracted yet ([audit](docs/extending/source-fields.md)) | — |
-| Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (cost only; `B39` / `B72` in [BACKLOG.md](BACKLOG.md)) | — |
-| Antigravity CLI (`agy`) | v0.25 | **activity-only** | — (no counter exists in the format; every token and cost figure withholds rather than counting zero) | ✔ turns, tool calls and edits per turn; no changed lines, rework or compaction | — |
-| Exec parser plugins | v0.1 | declared per record | ✔ (validated at the boundary) | — (protocol carries tokens only) | — |
+| Tool | Since | Depth | Tokens & cost | Activity (lines/edits/rework) | Ordered sequence | Attribution (skill / sub-agent) |
+|------|-------|-------|---------------|-------------------------------|------------------|---------------------------------|
+| Claude Code | v0.1 | **deep** | ✔ (incl. sub-agent turns) | ✔ full, incl. rejections | ✔ steps, outcomes and targets | ✔ |
+| OpenAI Codex CLI | v0.1 | standard | ✔ (exact, delta-based) | ✔ except rejections; since v0.13 a created file contributes its lines, which it did not before | ✔ since v0.26: steps and targets; the outcome *signal* is not claimed — only a patch states whether it applied, and a command is marked *completed* whether or not it worked | — |
+| Gemini CLI | v0.1 | standard | ✔ | — (cost only; `B39` / `B72` in [BACKLOG.md](BACKLOG.md)) | — | — |
+| GitHub Copilot CLI | v0.6 | standard | ✔ (exact, per model, incl. reasoning) | ✔ lines added/removed per session; edit and tool-call counts are in the log but not extracted yet ([audit](docs/extending/source-fields.md)) | — | — |
+| Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (cost only; `B39` / `B72` in [BACKLOG.md](BACKLOG.md)) | — | — |
+| Antigravity CLI (`agy`) | v0.25 | **activity-only** | — (no counter exists in the format; every token and cost figure withholds rather than counting zero) | ✔ turns, tool calls and edits per turn; no changed lines, rework or compaction | — | — |
+| Exec parser plugins | v0.1 | declared per record | ✔ (validated at the boundary) | — (protocol carries tokens only) | — | — |
 
 - **deep** — tokens, per-turn activity, and the labels that say what the work was.
 - **standard** — reliable per-turn usage whose activity gaps are documented, not implied.
@@ -122,7 +122,11 @@ so it is read from the records it emits rather than promised by a table assaio m
 Within a tier the answer is per signal, not per column: reasoning tokens are reported by
 Codex, Gemini CLI and Copilot CLI and by neither Claude Code nor Cline, a declined tool call
 only by Claude Code and a context compaction only by Claude Code and Codex, and Copilot's
-per-session totals carry changed lines but no edit, tool-call, turn or rework count. Run
+per-session totals carry changed lines but no edit, tool-call, turn or rework count. The
+sequence column splits the same way: Codex records what it did and in what order and which
+file it patched, and states an outcome only on a patch. Its commands offer one word, `completed`,
+which says a call returned rather than that what it ran worked — so the outcome signal is refused
+for it rather than computed over a source that can only ever look clean. Run
 `assaio-agent signals coverage` for what your own mix supports; that matrix row is also what
 makes a source syncable and targetable by `clear --tool`.
 

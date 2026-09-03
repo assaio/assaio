@@ -40,9 +40,9 @@ extract.
 
 One data source, one package. The contract is `Parse(io.Reader) ([]usage.Record, int, error)`
 — records, skipped-line count, error — with two documented shapes of the same thing:
-`cline.ParseDir` reads a task directory rather than a stream, and `claude.ParseAll` returns
-the records *and* the step sequence from a single scan, with `Parse`/`ParseSteps` as
-wrappers so no caller had to change.
+`cline.ParseDir` reads a task directory rather than a stream, and `claude.ParseAll` and
+`codex.ParseAll` return the records *and* the step sequence from a single scan, with
+`Parse` (and, for Claude, `ParseSteps`) as wrappers over it.
 
 The shared half lives in `internal/parser` itself and is what makes the parsers agree:
 `NewScanner` (bounded by `MaxLineBytes`, 16 MiB), `NonNeg` and `SumNonNeg` for counts a log

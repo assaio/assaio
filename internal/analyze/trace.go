@@ -80,7 +80,7 @@ func windowCoveredByTrace(in *Input, oldest time.Time) float64 {
 // of them and two wordings would eventually disagree about which case is which.
 func noSequencesTakeaway(set *trace.Set) string {
 	if set.Empty() {
-		return "No step sequence is stored for this window. Sequences are read from the tool's own transcripts by `backfill`, kept for `trace.horizon_days`, and only Claude Code records them today; a store filled by `sync` holds none at all, because the team-server contract carries usage records and not sequences (ADR 0012)."
+		return "No step sequence is stored for this window. Sequences are read from the tool's own transcripts by `backfill`, kept for `trace.horizon_days`, and only Claude Code and Codex record them today; a store filled by `sync` holds none at all, because the team-server contract carries usage records and not sequences (ADR 0012)."
 	}
 	return "Sequences are stored for this window, but none is a session someone ran from a terminal -- the only scope this reads."
 }

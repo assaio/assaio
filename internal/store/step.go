@@ -102,9 +102,10 @@ func (s *Store) InsertSteps(ctx context.Context, steps []usage.Step) (inserted, 
 }
 
 // PruneSteps drops steps older than before and reports how many went. This is the bound the
-// table ships with: 102.0 MB of table and indexes against usage_record's 58.3 MB, and 2.19 steps
-// per record over the 30 days both cover. The ratio must be age-matched -- session_step is pruned
-// and usage_record is not, so their raw totals compare a bounded table against an unbounded one.
+// table ships with, re-measured on the maintainer's store for v0.26: 136.3 MB of table and
+// indexes against usage_record's 69.7 MB, and 2.14 steps per record over the 30 days both cover.
+// The ratio must be age-matched -- session_step is pruned and usage_record is not, so their raw
+// totals compare a bounded table against an unbounded one.
 //
 // Deleting does not shrink the file -- only Vacuum does. That is why this returns a count the
 // caller can report rather than pretending the space came back.

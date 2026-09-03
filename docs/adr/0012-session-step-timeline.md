@@ -63,6 +63,14 @@ nothing reads it, so a member for it would be a bucket no code can fill — the 
 rules exist against. Codex's `turn_aborted` is the same case and arrives when Codex gains a step
 reading.
 
+> **Correction, v0.26.0.** The Codex reading landed and `turn_aborted` was not read with it, so the
+> sentence above predicted a trigger that fired and did nothing. It stays unread on purpose: 9
+> occurrences across 2,625 rollouts, all `reason: interrupted`, and the outcome vocabulary still
+> has no member they could fill. What the Codex reading did settle is that a source can store a
+> sequence and state an outcome on almost none of it — Codex marks one on a patched file and on
+> nothing else — so the vocabulary's gap is not the only reason a step's outcome is unstated, and
+> `ai.step.outcome` is refused per source rather than assumed from the presence of a sequence.
+
 **The timeline is bounded by a horizon, and the bound is load-bearing.** Measured on the
 maintainer's store after a full rebuild: 335,527 steps against 178,016 records (1.88 stored
 steps per record), and 101.9 MB of table and indexes against `usage_record`'s 58.3 MB — roughly
@@ -89,8 +97,10 @@ would be true, precise and worthless. Scope comes from what the tool itself reco
 
 ## Consequences
 
-The store grows by roughly 1.7x the usage table for anyone who ingests Claude Code transcripts,
-bounded by the horizon and erasable by `clear` under the same scope as the records. Widening the
+The store grows by roughly 1.7x the usage table for anyone who ingests Claude Code transcripts —
+and since v0.26 for anyone who ingests Codex rollouts, which add 1.66 steps per record and 260 B
+per step, +1.5% of the step table on the audited store — bounded by the horizon and erasable by
+`clear` under the same scope as the records. Widening the
 horizon later does not bring pruned steps back on its own: the ingest watermarks skip transcripts
 already read, so it takes a `backfill --full`, and only while the source still has the files.
 

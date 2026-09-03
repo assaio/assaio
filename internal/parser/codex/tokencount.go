@@ -27,11 +27,18 @@ type tokenCount struct {
 type totals struct{ input, cached, output, reasoning int64 }
 
 func (st *parseState) applyTokenCount(payload json.RawMessage) {
-	rec, ok, err := st.tokenCountRecord(payload)
-	if err != nil {
+	var tk tokenCount
+	if err := json.Unmarshal(payload, &tk); err != nil {
 		st.skipped++
 		return
 	}
+	if tk.Info == nil {
+		// A rate-limit-only update reports no totals and so ends no turn: the turn now open is
+		// still closed by the next token_count that carries any.
+		return
+	}
+	rec, ok := st.tokenCountRecord(&tk)
+	st.steps.closeTurn(&rec, ok)
 	if !ok {
 		return
 	}
@@ -40,19 +47,15 @@ func (st *parseState) applyTokenCount(payload json.RawMessage) {
 	st.turn++
 }
 
-func (st *parseState) tokenCountRecord(payload json.RawMessage) (usage.Record, bool, error) {
-	var tk tokenCount
-	if err := json.Unmarshal(payload, &tk); err != nil {
-		return usage.Record{}, false, err
-	}
-	if tk.Type != "token_count" || tk.Info == nil {
-		return usage.Record{}, false, nil
-	}
+// tokenCountRecord differences one token_count's cumulative totals into this turn's record. The
+// caller has already established that Info is present, which is what separates a turn reporting
+// no new tokens from an update reporting no tokens at all.
+func (st *parseState) tokenCountRecord(tk *tokenCount) (usage.Record, bool) {
 	cur := totals{tk.Info.Total.Input, tk.Info.Total.Cached, tk.Info.Total.Output, tk.Info.Total.Reasoning}
 	d := totals{cur.input - st.prev.input, cur.cached - st.prev.cached, cur.output - st.prev.output, cur.reasoning - st.prev.reasoning}
 	st.prev = cur
 	if d.input <= 0 && d.output <= 0 && d.cached <= 0 {
-		return usage.Record{}, false, nil
+		return usage.Record{}, false
 	}
 	// input_tokens is the whole prompt and cached_input_tokens the part of it served from
 	// cache, so the two stored classes have to add back up to the input delta. Clamping the
@@ -73,6 +76,7 @@ func (st *parseState) tokenCountRecord(payload json.RawMessage) (usage.Record, b
 		DedupeKey:       fmt.Sprintf("%s:%s:%d", st.fileFP, st.session, st.turn),
 		Cwd:             st.cwd,
 		Project:         st.project,
+		Entrypoint:      st.entrypoint,
 		Granularity:     "turn",
-	}, true, nil
+	}, true
 }

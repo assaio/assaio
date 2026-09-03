@@ -11,7 +11,7 @@ import (
 
 // TestExampleConfigNamesEveryTopLevelKey holds the gap that let `trace.horizon_days` was the one top-level
 // key absent from the file README.md calls "a documented starting point" -- and it is the knob
-// governing 102.0 MB of a measured 170.1 MB store. It was in the generated reference and in
+// governing 136.3 MB of a measured 208.6 MB store. It was in the generated reference and in
 // docs/reference.json, so nothing mechanical noticed; two reviewers found it independently.
 //
 // A key may appear commented out: the file's convention is that an optional section ships as a

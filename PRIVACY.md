@@ -135,6 +135,11 @@ command, edit, other, compaction), its position in the sequence, the model, its 
 and how it ended (from a closed list: ok, error, denied, truncated, or nothing when the log did
 not say).
 
+Two sources contribute one: Claude Code since v0.20.0, and Codex CLI since v0.26.0. The other
+four store no sequence at all — not an empty one — because their logs record no order to read.
+Codex's adds nothing to this list and states less of it: it marks how a step ended only for a
+file edit, and only a patched file gives a step the integer described next.
+
 One field there deserves its own paragraph, because it is the only one that stands for a file:
 
 - **target** — an **integer** assigned in first-seen order within a single sequence, and

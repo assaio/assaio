@@ -32,6 +32,12 @@ type Result struct {
 	// deletion nobody counts is the silent loss the whole skip-and-count policy exists against,
 	// and this one is assaio deleting the user's history on its own initiative.
 	PrunedSteps int64
+	// HorizonSteps is how many steps this run read and did not store, for being older than the
+	// horizon before they ever reached the store. Counted for the same reason PrunedSteps is,
+	// one moment earlier: the first run on a source that gains a sequence reading reads a whole
+	// history and keeps the horizon's worth of it, and evidence dropped in silence is the thing
+	// skip-and-count exists to prevent. It is not Skipped -- nothing failed to be read.
+	HorizonSteps int64
 	// Lowered is how many stored rows this run restated *downward*. Assigned columns exist so a
 	// corrected attribution rule can reach history, which means the store cannot tell a fix
 	// landing from a parser regression erasing evidence -- so the count is reported rather than
@@ -45,7 +51,19 @@ type Result struct {
 type source struct {
 	tool  string
 	files []string
-	parse func(io.Reader) ([]usage.Record, int, error)
+	// parse returns both readings of one file. A source with no sequence reading returns no
+	// steps; recordsOnly wraps the parsers that have one reading to give.
+	parse func(io.Reader) ([]usage.Record, []usage.Step, int, error)
+}
+
+// recordsOnly adapts a parser that reads usage alone to the two-reading shape. It exists so the
+// ingest path has one signature rather than two branches, and so a parser that later gains a
+// sequence reading is wired by dropping this wrapper.
+func recordsOnly(parse func(io.Reader) ([]usage.Record, int, error)) func(io.Reader) ([]usage.Record, []usage.Step, int, error) {
+	return func(r io.Reader) ([]usage.Record, []usage.Step, int, error) {
+		recs, skipped, err := parse(r)
+		return recs, nil, skipped, err
+	}
 }
 
 // dirSource is a source whose unit of work is a directory rather than a file: a Cline task
@@ -99,7 +117,7 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 		return results, err
 	}
 	for _, s := range discovered {
-		res, err := ingestSource(ctx, st, sk, s, cache)
+		res, err := ingestSource(ctx, st, sk, s, cache, horizon)
 		if err != nil {
 			return results, err
 		}
@@ -112,7 +130,7 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 		return results, err
 	}
 	for _, s := range dirSources {
-		res, err := ingestDirs(ctx, st, sk, s, cache)
+		res, err := ingestDirs(ctx, st, sk, s, cache, horizon)
 		if err != nil {
 			return results, err
 		}
@@ -137,6 +155,10 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 	}
 	results = append(results, pluginResults...)
 	if pruned > 0 {
+		// The prune is one delete over the whole store, so it belongs to the run rather than to
+		// any one source. It is reported on the first result because that is where backfill
+		// prints it; attributing it to that source would be a claim about which tool's history
+		// went, which this figure does not know.
 		results[0].PrunedSteps = pruned
 	}
 
@@ -168,12 +190,12 @@ func ingestInput(ctx context.Context, st *store.Store, sk *skipper, cache projec
 
 // ingestSource parses and inserts every file for one tool source, counting failed
 // files without aborting the rest. cache memoizes project resolution across files.
-func ingestSource(ctx context.Context, st *store.Store, sk *skipper, s source, cache projectCache) (Result, error) {
-	res := Result{Tool: s.tool, Files: len(s.files)}
+func ingestSource(ctx context.Context, st *store.Store, sk *skipper, s source, cache projectCache, horizon time.Time) (Result, error) {
+	res := Result{Tool: s.tool, Files: len(s.files), horizon: horizon}
 	for _, path := range s.files {
 		err := ingestInput(ctx, st, sk, cache, &res, fileInput(path, s.tool), func() (parsed, error) {
-			recs, skipped, err := parseRecords(path, s.parse)
-			return parsed{Records: recs, Skipped: skipped}, err
+			recs, steps, skipped, err := parseFile(path, s.parse)
+			return parsed{Records: recs, Steps: steps, Skipped: skipped}, err
 		})
 		if err != nil {
 			return res, err
@@ -184,8 +206,8 @@ func ingestSource(ctx context.Context, st *store.Store, sk *skipper, s source, c
 
 // ingestDirs parses and inserts every directory-shaped input for one tool, counting failed
 // directories without aborting the rest. cache memoizes project resolution across dirs.
-func ingestDirs(ctx context.Context, st *store.Store, sk *skipper, s dirSource, cache projectCache) (Result, error) {
-	res := Result{Tool: s.tool, Files: len(s.dirs)}
+func ingestDirs(ctx context.Context, st *store.Store, sk *skipper, s dirSource, cache projectCache, horizon time.Time) (Result, error) {
+	res := Result{Tool: s.tool, Files: len(s.dirs), horizon: horizon}
 	for _, dir := range s.dirs {
 		err := ingestInput(ctx, st, sk, cache, &res, dirInput(dir, res.Tool), func() (parsed, error) {
 			recs, skipped, err := s.parse(dir)

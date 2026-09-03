@@ -37,7 +37,17 @@ func ingestSteps(ctx context.Context, st *store.Store, res *Result, steps []usag
 			res.Skipped++
 			continue
 		}
+		// A step with no session belongs to no sequence, and the store groups sequences by
+		// session id: every orphan from every file would merge into one timeline whose ordinals
+		// restart per file and whose target integers -- comparable only within one timeline --
+		// would alias unrelated files onto each other. It happens when a transcript's opening
+		// line is read while it is still being written.
+		if steps[i].SessionID == "" {
+			res.Skipped++
+			continue
+		}
 		if !res.horizon.IsZero() && steps[i].Timestamp.Before(res.horizon) {
+			res.HorizonSteps++
 			continue
 		}
 		kept = append(kept, steps[i])

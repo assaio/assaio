@@ -239,7 +239,7 @@
         "session",
         "window"
       ],
-      "zeroMeans": "no step in the window states how it ended, or this source marks no step outcomes -- the two are told apart by whether any sequence is stored at all",
+      "zeroMeans": "no step in the window states how it ended, or this source marks no step outcomes -- told apart by this source's own row in the depth matrix, not by whether a sequence is stored: Codex stores sequences and marks an outcome on a patch alone, which is why it does not answer this",
       "describe": "How one step ended, from a closed vocabulary of ok, error, denied and truncated. An unstated outcome is its own value and is never read as ok.",
       "sources": [
         "claude-code"
@@ -258,7 +258,8 @@
       "zeroMeans": "no step in the window named a file, or the call naming it could not be read -- absent, not a session that touched nothing",
       "describe": "The integer standing for the file a step acted on, assigned in first-seen order within one sequence. Comparable only inside that sequence, and never a path or a digest of one: \"the same file nine times\" stays answerable while \"which file\" stays unanswerable.",
       "sources": [
-        "claude-code"
+        "claude-code",
+        "codex"
       ]
     },
     {
@@ -275,7 +276,8 @@
       "zeroMeans": "this source records no ordered sequence -- absent, not a session that did nothing",
       "describe": "Observations in a session's own order: model turns and tool calls, each with its position. Content-free -- no prompt, no code, no file name.",
       "sources": [
-        "claude-code"
+        "claude-code",
+        "codex"
       ]
     },
     {
@@ -534,6 +536,8 @@
         "ai.rework.lines",
         "ai.session.active_minutes",
         "ai.sessions.count",
+        "ai.step.target",
+        "ai.steps.count",
         "ai.tokens.cache_read",
         "ai.tokens.input",
         "ai.tokens.output",
@@ -543,7 +547,8 @@
         "ai.turns.count"
       ],
       "gaps": [
-        "no ordered step sequence is read from its logs yet, so the behaviour detectors have nothing to read for it",
+        "its sequence states an outcome only on a patched file, which says whether it applied; a command is marked completed whether or not what it ran worked",
+        "only a patched file gives a step a target, so a sequence shows which file was edited repeatedly and never which was read repeatedly",
         "no cache-write counter, so a written cache is invisible where a read one is not",
         "no skill or sub-agent labels, so its turns are absent from the attribution split",
         "tool-use denials are not recorded, and call failures only for file edits"

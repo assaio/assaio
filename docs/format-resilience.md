@@ -19,11 +19,11 @@ gets caught, and the detect → triage → fix → release loop.
 | Granularity rule | `usage.Record` contract | A format change that degrades detail must be re-labeled `session`, never silently kept as `turn` — and a report marks a mixed total rather than reading session data as per-turn. Re-reading a local file restates the label on rows already stored, so a correction reaches history instead of only new records. |
 | Capability gate on every metric | `parser.Depth.Answers` + `analyze` + the metric-plugin wire's `answers` | A figure is computed only over the sources that record its field — per-session figures and rates over stored columns alike — so a source that never writes one is absent from it rather than averaged in at zero. A generic test varies both row shapes, so a new validator reading an ungated column fails rather than shipping a quiet dilution. |
 | Deterministic dedupe keys | parser contract + golden tests | Re-importing after a fix never double-counts old records. |
-| Drift canaries | `internal/drift`, after every `backfill` | The two failure modes below: numbers that shrink without anything erroring. |
+| Drift canaries | `internal/drift`, after every `backfill` | The first two failure modes below: numbers that shrink without anything erroring. The third, additive drift, no canary can see. |
 
-## The two silent failure modes
+## The three silent failure modes
 
-Everything above catches a parse that *fails*. Neither of these does — which is why they
+Everything above catches a parse that *fails*. None of these does — which is why they
 needed their own defense:
 
 1. **Semantic drift.** If a vendor renames or moves a token field, the line often still
@@ -33,11 +33,47 @@ needed their own defense:
 2. **Discovery drift.** If a tool moves its log directory or changes file naming,
    `Discover` finds fewer (or zero) files. `backfill` and `doctor` *show* the counts, but
    nothing flagged "this used to be 300 files and is now 0" as an anomaly.
+3. **Additive drift.** If a vendor starts *recording something new*, every figure assaio
+   already publishes stays exactly as correct as it was. Nothing shrinks, nothing errors,
+   no canary can fire — and the tool silently stops being as deep as its source allows.
 
-Both share one property: the failure mode is **plausible-looking underreporting**, which is
-exactly what an honesty-first tool must not do silently.
+The first two share one property: the failure mode is **plausible-looking underreporting**,
+which is exactly what an honesty-first tool must not do silently. The third is different in
+kind, and worth stating separately because the defenses above are all aimed at the first two.
 
-## Detection — three channels
+### Additive drift has no canary, and cannot have one
+
+Every canary below judges a source against **its own history**: fewer files, fewer records per
+file, more skips, more zero-token records. A vendor adding a field or an event moves none of
+those. The detection is a **periodic field audit** — enumerate every key path a current corpus
+holds, diff it against what the parser reads — and the audit's own currency is the risk:
+[source-fields.md](extending/source-fields.md) states each section's corpus and when it was
+taken, because a stale audit reports the absence of a field that has been on disk for months.
+
+The worked example is Codex's `event_msg/item_completed`, found in the v0.26 re-audit:
+
+| | |
+|---|---|
+| First seen | 2026-08-20 (Codex CLI ~0.148) |
+| Coverage when found | **1,614 of 1,614** September rollouts, 833 of 1,001 August ones, 0 of 10 July ones |
+| Volume | 14,268 events across 2,625 rollouts |
+| What it carries | per-step wall-clock duration; a `CommandExecution` `exit_code` — the only place Codex says a command *failed* rather than *returned* |
+| Canaries that fired | **none, correctly**: records per file, files found, skips and zero-token share were all unchanged |
+| Audit that would have found it | the field audit — whose Codex section was taken on 21 rollouts, all of them older than the event |
+
+The lesson is not that a canary was missing. It is that **the field audit is a detector, not
+documentation**, and it decays: re-take it against a current corpus on a cadence, or it reports
+last year's tool. What that particular finding changed in the code is recorded in the audit's
+own Codex section — it is measured, and deliberately *not* read, because its ids join to
+nothing.
+
+## Detection — three channels, and a fourth that is not automatic
+
+0. **The field audit, by hand and on a cadence.** Named first because it is the only detector
+   additive drift has, and the only one nothing runs for you:
+   [source-fields.md](extending/source-fields.md), re-taken against a current corpus, each
+   section stating the corpus it was taken from and when. The three below all judge a source
+   against its own history and none of them can see a field that was never read.
 
 1. **Local canaries, automatic.** After every `backfill`, four of the five judge a source
    against its own recent history, and one judges a condition:

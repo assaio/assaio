@@ -110,6 +110,46 @@ type View struct {
 	// 5.7% of steps on the audited store -- and a figure quoting whichever flatters it is the
 	// trap this type exists to close.
 	ExcludedSequences, ExcludedSteps int
+	// SilentSequences and SilentSteps are what Answering dropped: sequences this scope holds
+	// whose source does not record the reading the figure beside them is made of. Counted apart
+	// from the scope exclusion above because they are a different sentence to a reader -- one
+	// says "different work", the other "this tool never says". SilentReading names what is
+	// missing, in a reader's words, and is "" when nothing was dropped.
+	SilentSequences, SilentSteps int
+	SilentReading                string
+}
+
+// Answering narrows the view to the sequences whose source can state the thing about to be
+// counted, folding what it drops into the excluded share this view already publishes.
+//
+// It exists because a scope is a claim about *who ran* a session and says nothing about what
+// that session's source records. Codex marks a call completed whether or not what it ran
+// worked, so a failure rate over a population holding its sequences has a denominator one of
+// its sources can never appear in the numerator of -- a share totalled in the wrong dimension,
+// and the "no failures" a source that publishes no failure word would otherwise be read as
+// reporting. The depth matrix already refuses the signal; this is what enforces the refusal.
+//
+// reading names what the dropped sources do not record, for the caveat. The predicate is passed
+// in rather than read here so this package keeps knowing nothing about the signal catalog. It
+// narrows in place because a View carries the window's sequences and is not cheap to copy.
+func (v *View) Answering(states func(tool string) bool, reading string) {
+	kept := make([]store.Timeline, 0, len(v.Sequences))
+	for i := range v.Sequences {
+		t := &v.Sequences[i]
+		if states(t.Tool) {
+			kept = append(kept, *t)
+			continue
+		}
+		v.SilentSequences++
+		v.SilentSteps += len(t.Steps)
+		v.Steps -= len(t.Steps)
+		v.ExcludedSequences++
+		v.ExcludedSteps += len(t.Steps)
+	}
+	if v.SilentSequences > 0 {
+		v.SilentReading = reading
+	}
+	v.Sequences = kept
 }
 
 // Scope returns the view of one scope. An unknown scope name yields an empty view rather than

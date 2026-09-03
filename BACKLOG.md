@@ -164,10 +164,9 @@ on, since a link to a merged pull request is only as good as the session it link
   **Landed** in v0.20.0: the step contract, the Claude reading, migration `0012`, the horizon and
   its prune. **Landed** in the release after it: the two detectors (`edit-loops`, `recovery`), the
   scope vocabulary and its shared denominator, the capability row and its three signals, the plugin
-  boundary, and the widened target that made a read and a failed edit nameable at all. What remains
-  is **the Codex reading** — a second deep source, whose row multiplier has to be measured on its
-  own 76 files rather than assumed from Claude's 1.88 — and the two detectors this substrate can now
-  carry but does not yet: the same file read N times (`docs/recipes/extensions.md` publishes it as a
+  boundary, and the widened target that made a read and a failed edit nameable at all. **Landed** in
+  v0.26.0: the Codex reading, and what it settled is below. What remains is the two detectors this
+  substrate can now carry but does not yet: the same file read N times (`docs/recipes/extensions.md` publishes it as a
   worked example rather than a built-in) and a large edit with nothing run after it, which needs a
   command *class* the store does not hold. A step carries no command identity, so "a command ran" is
   all any detector sees; making "was it a test" answerable is a closed vocabulary and its own ADR. Two things the readings do **not**
@@ -175,6 +174,26 @@ on, since a link to a merged pull request is only as good as the session it link
   `toolUseResult.interrupted`, `userModified` or Codex's `turn_aborted` (`B111`, `B113` — all
   measured at or near zero on the audited corpus), and the outcome vocabulary deliberately has
   no member they could fill.
+  **What the Codex reading settled (v0.26.0)**, measured on its own 2,625 rollouts and 70,522
+  lines rather than assumed from Claude's, none of it guessable from the 76 files this item was
+  written against. The row multiplier is **1.66** (9,555 steps against 5,765 records) and in bytes
+  **2.00 MB for 8,096 steps, 260 B each**, measured on a store built from Codex alone rather than
+  differenced across two runs — stated because this item's own correction above is that a row
+  multiplier is not a size. Codex *does* state how it was started (`session_meta.source`: `exec`
+  on 2,604 rollouts, `cli` on 13), so `internal/trace`'s claim that it writes no entrypoint was
+  wrong on a current install and its sequences are scoped rather than landing in `unstated`. Codex
+  states an outcome on a patch and on nothing else — `completed` means a call returned, and 57 of
+  840 commands exited non-zero under it — so the depth row claims `ai.steps.count` and
+  `ai.step.target`, refuses `ai.step.outcome`, and `recovery` now narrows to the sources that
+  answer it rather than counting Codex's silence as a clean run. A patch applies to 1.91 files at
+  once, so the sequence records one step per file where the record counts one write per call: two
+  answers to two questions, and the only way a repeat-edit reading sees the file that was returned
+  to. **The substrate is thinner than the corpus suggests**, and the honest figure is the second
+  one: 1,904 of Codex's 9,555 steps (19.9%) are a person's terminal session, and after the 30-day
+  horizon only 608 of them in 5 sequences reach a detector. Of the 34 rollouts that edit anything,
+  17 return to one file three or more times and the heaviest patches one file 36 times — a
+  measurement over the whole corpus, not a figure any shipped detector publishes, since most of
+  those rollouts are `exec` and out of every detector's declared scope.
 - [ ] **B107 · Codex cache-write tokens are never read** — S · solo —
   `payload.info.total_token_usage.cache_write_input_tokens` is reported on every Codex
   `token_count` and `usage.Record` gets no value for it. **Measure before claiming a
@@ -228,7 +247,8 @@ on, since a link to a merged pull request is only as good as the session it link
 - [ ] **B113 · how a turn ended** — S/M · both — **measured 2026-08-12; the "stopped" half is
   near-empty and the item is downgraded accordingly.** Across the whole corpus:
   `"interrupted":true` in **0 of 5,706** transcripts, `"stop_reason":"max_tokens"` in **5 of
-  5,706**, Codex `turn_aborted` **5 occurrences in 76 files** (all `reason: interrupted`). A
+  5,706**, Codex `turn_aborted` **9 occurrences across 2,625 rollouts** (all `reason: interrupted`; the
+  76-file figure this line carried is superseded by `B147`'s corpus). A
   signal promising to "distinguish a turn that finished from one that was stopped" would ship a
   permanently empty bucket. What does fire is `toolDenialKind` (automode-blocked, user-rejected,
   automode-unavailable, permission-rule) and `stop_reason` as a continuation-versus-finish
@@ -955,7 +975,8 @@ file-size norm.
 - [ ] **B173 · `usage_record` is unbounded and has no measured bound anywhere** — M · solo —
   measured on the maintainer's store: **1.31 MB/day over 44.7 days → ~476 MB/year**, with no
   horizon, no automatic prune, and only a manual `clear --older-than` to reduce it. Today's big
-  table is the *bounded* one — `session_step` is capped at 30 days ≈ 102.0 MB steady state — and
+  table is the *bounded* one — `session_step` is capped at 30 days ≈ 136.3 MB steady state,
+  re-measured for v0.26 — and
   the unbounded one crosses it in about 78 more usage-days and never comes back down. The rate is
   one machine's; the unboundedness is structural. What makes this hard rather than a second
   horizon: a usage record is the only thing a re-import can rebuild *and* the only thing a report
