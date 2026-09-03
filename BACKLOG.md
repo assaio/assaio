@@ -1051,6 +1051,101 @@ file-size norm.
   raise the per-target `-fuzztime` so the drain has room, treat "failed with no new corpus entry"
   as a retry rather than a finding in the workflow, or both.
 
+- [ ] **B199 · the opt-in commit hook is stricter than the gate it guards** — S · solo — measured
+  2026-09-02 while committing v0.25.0: `make fmt` (`golangci-lint fmt` v2.12.2) left three test
+  files that the pre-commit hook's standalone `gofumpt` 0.10.0 rejected, so the commit was refused
+  on code CI accepts. The embedded gofumpt inside the pinned golangci-lint does not enforce the
+  newer trailing-comma rule the standalone binary does. Anyone who runs `make hooks` inherits a
+  formatter stricter than `.golangci.yml`, and the disagreement is silent until a commit is
+  blocked. Pick one authority: pin the hook to the same gofumpt golangci-lint embeds, or raise
+  golangci-lint until the two agree. Do not fix it by loosening the hook — being stricter is not
+  the defect, disagreeing is.
+
+- [ ] **B200 · `internal/analyze/analyze.go` is over the file budget** — S · solo — 261 lines
+  against the ~200 the review norm sets, after the duplicate-name panic landed in v0.25.0. It is
+  three responsibilities in one file: the `Input`/`Result` contract, the registry, and the
+  `Validator` interface with its scoping rules. Splitting it is mechanical but touches the
+  package every validator imports, so it wants its own change rather than a ride-along.
+
+- [ ] **B201 · two per-record relationships are checked only at the server boundary** — S · solo
+  — `Sidechain ∈ {0,1}` and "the tool-purpose split sums to `ToolCalls`" live in
+  `internal/server/validate.go`, although `internal/usage/bounds.go`'s own header says it exists
+  because the plugin and sync boundaries were drifting. Not reachable today: the plugin wire
+  record carries neither field, so `CheckCounts` is never asked about them from that direction.
+  It is latent — the wire has grown before, and a field added to it would inherit no check.
+  Related: a rejection names the rule but not the offending field (`negative count field`), which
+  on a `sync` push tells a team member what was wrong but not where.
+
+- [ ] **B202 · `skill` and `agent` labels reach the store with no length bound** — S · solo —
+  they are the only log-sourced *text* that is stored, and on the local path they are taken
+  verbatim from the vendor's `attributionSkill`/`attributionAgent`. The 512-byte clamp exists
+  only where a record arrives from outside the process (`server.maxStringField`,
+  `plugin.maxWireStringLen`). PRIVACY.md calls them "short text labels", which describes vendor
+  behaviour rather than an enforced invariant. Note `parser.VocabularyToken` is the **wrong**
+  clamp here — its charset excludes `-`, so it would drop `code-review`; a plain length bound is
+  the fitting hardening.
+
+- [ ] **B203 · the codex yield canary cannot separate a format break from a changed habit** — S ·
+  solo — it fires today on the maintainer's store (`3.5 record(s)/file across 1170 file(s),
+  history is ~22.9`) and `doctor --strict` exits 1 on it. Investigated 2026-09-02 and it is **not
+  drift**: 4142 `token_count` events in the corpus against 4054 parsed records is 97.9% yield, and
+  1159 of 1170 files carry `originator=codex_exec` — hundreds of short one-shot batch runs instead
+  of a few long interactive sessions. The canary is right to fire, because it cannot tell the two
+  apart; what is missing is a second figure that can. Events-per-file beside records-per-file
+  would have answered it in one line.
+
+- [ ] **B204 · `codex` writes an ordered step timeline nobody reads** — M · solo — measured
+  2026-09-02: `item_completed` events appear in 984 of 1170 rollout files, up to 98 per file,
+  under the `codex exec` originator that now dominates this corpus. The depth matrix says "no
+  ordered step sequence is read from its logs yet, so the behaviour detectors have nothing to read
+  for it" — that gap is now closable without a new source. Wants a golden fixture and a fuzz seed
+  from a real capture, and a check that the sequence is genuinely ordered rather than emission
+  order.
+
+- [ ] **B205 · retention is reported for `claude-code` only** — S · solo —
+  `internal/cli/doctor_store.go` hardcodes it, so the line that tells a reader "35 of those days
+  came from transcripts already deleted and exist only here now" is silent about the other five
+  sources. Circumstantial evidence that `agy` rotates: `brain/` holds exactly 500 conversation
+  directories and the earliest transcript entry is 30 days after the installation id was created.
+  Not proof — but if it rotates, agy history older than the vendor's window exists only in the
+  store, and nothing says so before a deletion.
+
+- [ ] **B206 · README's `effectiveness` worked example prints a caveat the binary no longer
+  emits** — XS · solo — `README.md:252` shows "Not every source records changed lines; the ones
+  that do not contribute cost but no line counts". `effCoverageNote` now emits one of four
+  sentences and none of them is that one; for the all-`claude-code` data in the example it would
+  print "Every source in this table records changed lines." A worked example is the thing a reader
+  checks their own output against, so a stale one reads as a bug in their store. Left as an item
+  rather than fixed in the v0.25.0 tree deliberately: it is prose, not a wrong figure, and it
+  wants a pass over *every* sample block in README at once rather than a single line.
+
+- [ ] **B207 · the shared ingest path still documents itself as Cline-only** — XS · solo —
+  `internal/ingest/state.go:30` ("one discovered file or Cline task directory"), `:52` ("dirInput
+  signs a Cline task directory"), `internal/ingest/parse.go:23` ("one file's (or cline
+  directory's)"). `dirInput` now also signs an Antigravity conversation, whose tree includes
+  `transcript_full.jsonl` — a file the parser never reads, so a change to it invalidates the
+  signature. That is correct conservative behaviour, but the comment no longer names what it
+  signs. `docs/extending/data-source.md` was generalised when `agy` landed; the Go comments were
+  not.
+
+- [ ] **B208 · `adoption` asserts a capability where it measured the data** — S · solo —
+  `internal/analyze/adoption.go:62` derives `breadthKnown` from `inv.Unattributed < len(in.Usage)`
+  ("no row named a project") and then prints "no source here records a working directory". Those
+  are different statements, and the purity effect is real — a breadth of 0 is replaced by
+  `neutralPurity`. Not a live defect: only `claude-code`, `codex` and `copilot-cli` write `Cwd`,
+  so today every window where the two coincide really is one whose sources record no cwd. It
+  becomes one the day a cwd-carrying source is added, and the failure will be silent because the
+  note asserts the conclusion rather than the premise. The rest of v0.25.0 moved these decisions
+  onto `parser.Answers`; this one was left because it needs a project signal id that does not
+  exist yet.
+
+- [ ] **B209 · `CollapseForTable` is an invariant held by a doc comment and one caller** — XS ·
+  solo — `internal/cli/report.go` must call it before `RenderTable` or the day table prints the
+  duplicate rows v0.25.0 removed. `Aggregate` already returns rows unchanged for `by == "day"`, so
+  `RenderTable` could call it itself and the invariant would be unbreakable. Also worth noting:
+  `collapse_test.go`'s fixtures carry no `Tokened` row, so every token cell in them renders `—`
+  and a regression in the token columns would not show there.
+
 ## Refusals (will not build, regardless of demand)
 
 - No "estimated time saved" headline — the logs contain no counterfactual.
