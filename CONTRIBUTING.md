@@ -153,7 +153,7 @@ Coverage is reported in CI; there is no hard gate — reviewers look at the unco
 branches, not the number.
 
 Hooks are optional but recommended: `make hooks` installs the lefthook pre-commit hook
-(gofumpt on staged files + `go vet` + lint of new issues) and commit-msg hook
+(`golangci-lint fmt --diff` + `go vet` + lint of new issues) and commit-msg hook
 (Conventional Commits + `Signed-off-by` + no AI-assistant authorship trailers), so the
 gate runs before you push.
 

@@ -22,8 +22,8 @@ func NewRootCmd() *cobra.Command {
 		Short: "Offline reports, diagnostics, and dashboards for local AI-coding session logs",
 		Long: `assaio-agent reads the local session logs of AI coding tools (` + strings.Join(parser.Tools(), ", ") + `),
 stores normalized usage in an embedded SQLite database, and turns it into token/cost
-reports, effectiveness and analyze diagnostics, and a self-contained HTML dashboard. The local analysis is fully offline: no telemetry, no network calls, prompts
-are never read. The optional team server (serve/sync) is self-hosted and opt-in.`,
+reports, effectiveness and analyze diagnostics, and a self-contained HTML dashboard. The local analysis is fully offline: no telemetry or network calls, and prompt
+content is never extracted. The optional team server (serve/sync) is self-hosted and opt-in.`,
 		Example: `  assaio-agent demo            # the full reports on bundled sample data
   assaio-agent backfill        # import all historical local logs
   assaio-agent report --since 7d

@@ -33,11 +33,12 @@ All contributions go through the process in `CONTRIBUTING.md`:
 
 - One commit per pull request (squashed before review).
 - Every commit signed off per the [Developer Certificate of Origin](https://developercertificate.org/) (DCO).
-- `main` is protected: a pull request and green CI are required for every change.
-  External contributions additionally require an approving review from a maintainer.
-  While the project has a single maintainer, that maintainer self-merges their own
-  changes after green CI (GitHub does not permit self-approval); the review requirement
-  takes effect for everyone as soon as there is a second maintainer.
+- `main` is protected: a current pull request, green CI and resolved review threads are
+  required for every change. External contributions additionally require a code-owner
+  review after the latest push. While the project has one maintainer, the administrator
+  bypass is restricted to pull requests so that maintainer-authored changes can be merged
+  after green CI without permitting a direct push. The review requirement applies to the
+  maintainer too as soon as there is a second maintainer.
 
 ## Code of conduct
 

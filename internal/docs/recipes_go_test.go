@@ -18,7 +18,7 @@ import (
 func TestRecipeValidatorsMatchTheInterface(t *testing.T) {
 	recipes := docs.ExtractRecipes(read(t, repoRoot+"/docs/recipes/extensions.md"))
 
-	// Read out of internal/analyze/analyze.go rather than written down here. A hand-copied
+	// Read out of internal/analyze/validator.go rather than written down here. A hand-copied
 	// method set is how this stayed green while every published example failed to compile: the
 	// Validator interface gained a method and the copy did not.
 	want := validatorInterface(t)
@@ -118,8 +118,8 @@ func callsRegister(fn *ast.FuncDecl) bool {
 // because what a reader copies is text.
 func validatorInterface(t *testing.T) map[string]string {
 	t.Helper()
-	src := read(t, repoRoot+"/internal/analyze/analyze.go")
-	file, err := parser.ParseFile(token.NewFileSet(), "analyze.go", src, parser.SkipObjectResolution)
+	src := read(t, repoRoot+"/internal/analyze/validator.go")
+	file, err := parser.ParseFile(token.NewFileSet(), "validator.go", src, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func validatorInterface(t *testing.T) map[string]string {
 		return false
 	})
 	if len(out) == 0 {
-		t.Fatal("no Validator interface found in internal/analyze/analyze.go")
+		t.Fatal("no Validator interface found in internal/analyze/validator.go")
 	}
 	return out
 }

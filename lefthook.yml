@@ -2,10 +2,9 @@
 pre-commit:
   parallel: true
   jobs:
-    - name: gofumpt
-      glob: "*.go"
-      run: sh -c 'out=$(gofumpt -l {staged_files}); [ -z "$out" ] && exit 0; echo "$out"; exit 1'
-      fail_text: "gofumpt would reformat the files above — run `make fmt`"
+    - name: format
+      run: sh -c 'out=$(golangci-lint fmt --diff); [ -z "$out" ] && exit 0; echo "$out"; exit 1'
+      fail_text: "golangci-lint would reformat the files above — run `make fmt`"
     - name: go vet
       run: go vet ./...
     - name: golangci-lint (new issues)
