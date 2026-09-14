@@ -69,7 +69,7 @@ def main(out):
     d.line([(MARGIN, 528), (W - MARGIN, 528)], fill=RULE, width=1)
     foot = font(MENLO, 21)
     d.text((MARGIN, 566), "assaio.dev", font=foot, fill=INK, anchor="lm")
-    d.text((W - MARGIN, 566), "no telemetry  ·  prompts are never read",
+    d.text((W - MARGIN, 566), "no telemetry  ·  no prompt or code stored",
            font=foot, fill=FAINT, anchor="rm")
 
     img.save(out, "PNG", optimize=True)

@@ -89,7 +89,7 @@ brews:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: "https://github.com/assaio/assaio"
-    description: "Is your AI coding spend delivering? Offline, per-project analytics for Claude Code, Codex, Gemini CLI, and Cline."
+    description: "Offline usage, cost, and code-activity analytics for AI coding tools."
     license: "Apache-2.0"
     install: |
       bin.install "assaio-agent"

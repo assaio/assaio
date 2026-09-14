@@ -487,16 +487,17 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
           <h3>Measured today · offline</h3>
           <dl class="deflist">
             <div><dt>Adoption</dt><dd>Tool mix, sessions, active days, breadth across projects, and how much work is delegated to sub-agents.</dd></div>
-            <div><dt>Effect</dt><dd>AI lines added and removed, read from diff <code>+</code>/<code>-</code> markers and from the body of a file the tool created. The code text itself is never read or stored — only counts.</dd></div>
+            <div><dt>Effect</dt><dd>AI lines added and removed, read from diff <code>+</code>/<code>-</code> markers and from the body of a file the tool created or deleted. That content is read only to derive counts and is never stored.</dd></div>
             <div><dt>Efficiency</dt><dd>Lines per token spent, cache reuse and what each write bought, premium-model fit, and cost per 100 lines as an estimate, never the headline.</dd></div>
             <div><dt>Friction</dt><dd>Churn that undoes the session's own work, tool calls that failed, and proposals a human declined.</dd></div>
             <div><dt>Order of work</dt><dd>The sequence a session actually ran in, not just its totals: how often a file goes back for another pass after something ran, and what a failed call, a refusal or a lost context costs in the turns that follow. Steps are stored as kinds and positions — a file is an integer inside one sequence, never a path. Read from Claude Code and, since v0.26, Codex — which records what it did and in what order, and says whether a patch applied but never whether a command worked, so a figure read off outcomes leaves its sessions out rather than counting their silence as a clean run.</dd></div>
+            <div><dt>Local survival</dt><dd>A directional check of how much code changed by a repository's commits in the window remains in <code>HEAD</code>, without attributing those lines to individual AI sessions.</dd></div>
           </dl>
         </div>
         <div class="panel not">
-          <h3>Not measured yet · needs the server stage</h3>
+          <h3>Not measured yet · needs outcome correlation</h3>
           <ul>
-            <li><b>Survival</b> — whether AI-written code lived on in <code>main</code> after review, rewrites and reverts.</li>
+            <li><b>Attributable survival</b> — whether code linked to an AI session lived on in <code>main</code> after review, rewrites and reverts.</li>
             <li><b>Bug impact</b> — whether it caused bugs, only ever against age-matched human code.</li>
             <li><b>Quality</b> — maintainability, alongside DORA- and DX-style signals.</li>
           </ul>
@@ -535,9 +536,9 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
       <p class="intro">
         <code>assaio-agent dashboard</code> writes a single self-contained HTML file: a verdict
         faceplate, a bounded top-project drill-down by repository subpath, model and tool mix,
-        and a cost-basis colophon. Light and dark. Project and member names are
-        <strong>pseudonymized by default</strong>, so it is safe to hand to a teammate or paste
-        into a review — <code>--no-anonymize</code> for real names, which never leave your machine.
+        and a cost-basis colophon. Light and dark. Project names are
+        <strong>pseudonymized by default</strong>; <code>--no-anonymize</code> restores project
+        names, while member names remain pseudonyms on every dashboard.
       </p>
       <div class="cards">
         <div class="card"><h3>Self-contained</h3><p>No network, no CDN — one file you can open offline or attach to an email. The same posture as this page.</p></div>
@@ -600,7 +601,7 @@ td .g{color:var(--signal)} td .w{color:var(--amber)} td .m{color:var(--faint)}
         <div class="cmd"><b><span data-claim="command.survival">survival</span></b><span>Directional local outcome: how much of a repo's window still lives in <code>HEAD</code>, beside its AI lines, plus what those commits changed by category and how many were reverts. Merge commits are reported apart from the rate, and a file git could not read is counted and named rather than passed over.</span></div>
         <div class="cmd"><b><span data-claim="command.dashboard">dashboard</span></b><span>Write the self-contained offline HTML Assay report; pseudonymized by default.</span></div>
         <div class="cmd"><b><span data-claim="command.check">check</span></b><span>Exit non-zero over a token or API-equivalent $ budget — a CI or pre-push gate. Also runs your <b>rule plugins</b>: an <code>error</code> alert, or a rule that could not be evaluated, fails the gate.</span></div>
-        <div class="cmd"><b><span data-claim="command.share">share</span></b><span>Render one window as something postable: a square reel, a poster, and the text beside them. Redaction is the feature, not a flag — repositories are counted, never named, and prompts and code were never read. Nothing leaves your machine; posting is your own paste.</span></div>
+        <div class="cmd"><b><span data-claim="command.share">share</span></b><span>Render one window as something postable: a square reel, a poster, and the text beside them. Redaction is the feature, not a flag — repositories are counted, never named, and no prompt, response or repository content is stored. Nothing leaves your machine; posting is your own paste.</span></div>
         <div class="cmd"><b><span data-claim="command.digest">digest</span></b><span>What <em>moved</em> since the last run, in markdown for a weekly thread — and where the comparison itself is weak: overlapping windows, a different window length, a parser that changed between the two runs, a verdict that moved on thin confidence.</span></div>
         <div class="cmd"><b><span data-claim="command.explain">explain</span></b><span>The long-form page for a metric — what it measures, how to read it, what to do, and its limits. Needs no store.</span></div>
         <div class="cmd"><b><span data-claim="command.statusline">statusline</span></b><span>One ambient line for your status bar: today's tokens, AI lines, cost basis and data age. Read-only, never fails loudly.</span></div>
@@ -669,8 +670,9 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
       <div class="sec-head"><h2>Privacy first — and what it will never do</h2><p class="eyebrow">refusals</p></div>
       <p class="intro">
         Local analysis never touches the network — no account, no telemetry, no upload. assaio
-        reads token and line <strong>counts</strong>, never your prompts or your code. The store
-        holds a project basename, never a full path.
+        does not extract prompts or model responses. Repository content recorded in diffs and
+        file bodies is read only to derive counts and is never stored. The store holds a project
+        basename, never a full path.
       </p>
       <ul class="refuse">
         <li><b>No "estimated time saved."</b> The logs contain no counterfactual, so any such number is invented.</li>
@@ -690,8 +692,8 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
         can be reshaped or dropped when a bug report or a pull request makes the case — lives in
         <a href="https://github.com/assaio/assaio/blob/main/ROADMAP.md">ROADMAP.md</a>, next to the
         reasoning behind the ordering, the conditions <code>v1.0</code> has to meet, and the one
-        kind of version it does name: the release at which two experimental surfaces have their
-        kill criteria read. It used to
+        kind of version it does name: v0.30, when experimental <code>runtime inspect</code>
+        reaches its removal decision. It used to
         be copied onto this page as eight cards, which meant a section that had to be re-read at
         every tag and could describe things that do not exist. A promise is worth stating once, in
         the place it cannot fall behind.
@@ -729,7 +731,7 @@ assaio-agent dashboard  # one self-contained HTML file</pre><p class="ip">Prefer
     <div class="wrap">
       <div class="sec-head"><h2>Partner with us</h2><p class="eyebrow">early · Apache-2.0 core</p></div>
       <div class="partner">
-        <div class="p"><h3>Pilot organizations</h3><p>See what your AI coding spend produces per project today — and, next, whether that code survives. We'll build the server stage against your reality. No commitment beyond honest feedback.</p></div>
+        <div class="p"><h3>Pilot organizations</h3><p>See what your AI coding spend produces per project today — and, next, link sessions to PR, review and CI outcomes. We'll build that correlation against your reality. No commitment beyond honest feedback.</p></div>
         <div class="p"><h3>Tool vendors</h3><p>Build an AI coding tool and want it measured fairly? Help us get your connector right.</p></div>
         <div class="p"><h3>Contributors</h3><p>One tool = one package; one metric = one file. A small, readable codebase — a good place to make a first open-source contribution count.</p></div>
       </div>

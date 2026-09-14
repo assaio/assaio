@@ -171,8 +171,9 @@ discovered across VS Code, VS Code Insiders, VSCodium, and Cursor.
 
 ## Cross-cutting guarantees
 
-- No network at runtime for local analysis; no telemetry; prompts and code are never
-  read — counts only ([PRIVACY.md](PRIVACY.md)).
+- No network at runtime for local analysis; no telemetry; prompts and model responses are
+  not extracted, while repository content in recorded diffs and file bodies is read only
+  transiently to derive counts and is never stored ([PRIVACY.md](PRIVACY.md)).
 - A figure is computed only over the sources that record its field, states how much of the
   window that reaches, and withholds its verdict rather than averaging in a source's silence
   (v0.10, [ADR 0011](docs/adr/0011-capability-gated-metrics.md)). Since v0.11 that holds for

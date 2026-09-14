@@ -33,17 +33,25 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-09-14
+
 ### Changed
 
 - Replaced the feature-heavy README and stage-by-stage roadmap with one first-run path and a
   research-backed product sequence centred on session-to-outcome evidence and verified experiments.
 - Updated SQLite, Goldmark, Wrangler and their lockfiles; refreshed pinned GitHub Actions.
+- Refreshed the vendored LiteLLM price table to its 2026-09-14 snapshot: 3,518 to 3,923 table
+  entries (3,517 to 3,922 model keys), with 406 added and one removed. Rates used by assaio
+  changed for 114 existing entries; the 15 model keys found in the checked-in parser corpus
+  retain the same effective rates and availability.
 
 ### Fixed
 
 - Gave nightly fuzz targets a test timeout longer than their fuzz budget, so a completed
   ten-minute run no longer fails at Go's default ten-minute deadline.
 - Made the optional pre-commit formatter use the same `golangci-lint fmt` authority as `make fmt`.
+- Corrected citation, privacy, roadmap and package metadata to match the shipped local survival
+  command, content-retention boundary, supported sources and release artifacts.
 
 ### Security
 
@@ -1540,7 +1548,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.26.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.26.1...HEAD
+[0.26.1]: https://github.com/assaio/assaio/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/assaio/assaio/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/assaio/assaio/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/assaio/assaio/compare/v0.23.1...v0.24.0

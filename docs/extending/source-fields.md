@@ -31,6 +31,7 @@ field is skipped for that reason.
 | `message.id` | extracted (v0.12) | The API response a line belongs to. Claude writes one line per content block and repeats that response's usage on each, so keying a record on the line `uuid` counted one request once per block — 354,904 lines were 159,175 responses on the audited corpus, inflating output tokens 1.97x and cache-write 2.81x. A record is now keyed on this. |
 | `message.content[].type` = `tool_use` / `tool_result` + `.name` / `.is_error` | extracted | Tool-call count, the purpose split, and `ai.tool_errors.count`. |
 | `toolUseResult.structuredPatch[].lines` | extracted | `ai.lines.added` / `.removed` and, via the shared helper, `ai.rework.lines`. |
+| `toolUseResult.{type,content}` | extracted transiently for `type=create` | A created file carries its whole body instead of a structured patch. Its line count seeds `ai.lines.added` and rework; the body is discarded and never stored. |
 | `toolUseResult.{agentId,agentType,resolvedModel,usage,toolStats.linesAdded,toolStats.linesRemoved}` | extracted | The completed sub-agent's own record. |
 | `toolDenialKind` | extracted | `ai.rejected.count`. |
 | `isCompactSummary`, `subtype` = `compact_boundary` | extracted | `ai.compactions.count`. |
@@ -48,7 +49,7 @@ field is skipped for that reason.
 | `message.usage.server_tool_use.{web_search_requests,web_fetch_requests}` | skipped — undocumented billing | Server-side tool calls the vendor bills on its own terms; folding them into any token figure would state a price we cannot compute. |
 | `message.usage.{speed,inference_geo,iterations,service_tier}` | skipped — undocumented | No published meaning. `service_tier` reads `standard` on every line here, which is a constant, not a signal. |
 | `slug`, `promptId`, `requestId`, `messageId`, `leafUuid`, `parentUuid`, `sourceToolAssistantUUID` | skipped — identity, no measure | Threading and request identifiers. `parentUuid` would let a fork be detected; nothing measures forks yet, so it stays out rather than being stored speculatively. |
-| `attachment.*`, `snapshot.*`, `backup.*`, `trackingPath`, `lastPrompt`, `aiTitle`, `content`, `message.content[].text`, `toolUseResult.{file,content,oldString,newString,originalFile,stdout,stderr}` | skipped — content, by construction | Prompts, code, file contents, command output, editor backups and the file-history snapshots. These are what PRIVACY.md promises are never collected; they are read transiently at most (diff markers, a path used only to key rework in memory) and never stored. |
+| `attachment.*`, `snapshot.*`, `backup.*`, `trackingPath`, `lastPrompt`, `aiTitle`, `content`, `message.content[].text`, `toolUseResult.{file,oldString,newString,originalFile,stdout,stderr}` | skipped — content, by construction | Prompts, code, file contents, command output, editor backups and file-history snapshots. These are never retained; recorded diff and created-file content named above is read transiently only for counts and never stored. |
 | `attachment.type` = `hook_*`, `skill_listing`, `invoked_skills`, `mcp_instructions_delta`, `queued_command`, `max_turns_reached`, `plan_mode*` | skipped — harness inventory, not usage | Hook outcomes, skill and MCP availability, mode changes. These belong to the harness inventory (`B95`), which stores an artifact's *shape*, not a usage record. |
 
 ## Codex CLI
