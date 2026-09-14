@@ -78,8 +78,9 @@ func runInit(cmd *cobra.Command, nonInteractive bool) error {
 		return nil
 	}
 	cmd.Println()
-	cmd.Println("Only token counts and activity counts are extracted -- never prompts, model")
-	cmd.Println("output, or the content of any file. See PRIVACY.md.")
+	cmd.Println("Only accounting metadata and counts are stored. Prompts and model output are")
+	cmd.Println("not extracted; recorded diff and file content is read transiently for counts.")
+	cmd.Println("See PRIVACY.md.")
 	cmd.Println()
 
 	if !nonInteractive && !confirmed(cmd) {

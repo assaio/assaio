@@ -52,10 +52,11 @@ local path — the clamp exists only where a record arrives from outside the pro
 worth knowing on the writing side.
 
 **They cannot reach:** code execution — the parsers decode JSON and count, and nothing in a
-log is ever evaluated, expanded, or executed. Nor can they exfiltrate content, because no
-content is decoded: prompt text, model output, and the code on a diff line are never read
-past the `+`/`-` prefix. A path is read into memory to group edits and to resolve a project
-root, and discarded (`usage.Record.Cwd` is `json:"-"` and is not a column).
+log is ever evaluated, expanded, or executed. Nor can they make the core exfiltrate content:
+local analysis has no network path, prompt text and model output are not extracted, and
+recorded diff or file-body content is decoded only long enough to derive line and rework
+counts. Content and paths used in memory are discarded (`usage.Record.Cwd` is `json:"-"` and
+is not a column).
 
 ### The store — write
 
@@ -169,7 +170,7 @@ and it lands through `Store.Insert` (first-write-wins) rather than the restating
   environment variable, `ASSAIO_PLUGIN_PROTOCOL=1`, and the argument `scan`.
 - **Metric** ([ADR 0004](adr/0004-exec-metric-plugin-protocol.md)) — receives your stored
   aggregates on stdin: project names, model names, member pseudonyms, token and line counts.
-  Never prompts or code, which are never collected at all. Since protocol 4 it receives only
+  Never prompt, response or repository content, none of which is stored. Since protocol 4 it receives only
   what it declared in its own `describe` run — the sections, the columns inside them, and the
   rows its predicates admit — so the default disclosure is narrower than the plugin's
   self-declared reading list, not wider. `needs:` in `config.yaml` is your **veto** over that

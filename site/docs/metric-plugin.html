@@ -152,7 +152,7 @@ accepts -- to stdout, and the next steps to stderr, so
 <p><strong>One privacy note before the protocol.</strong> Unlike a parser plugin (which reads a tool's
 own logs), a metric plugin <strong>receives your usage data on stdin</strong>: project names, model
 names, member pseudonyms, and token/line counts — the same aggregate metadata the store
-holds, never prompts or code (those are never collected at all, see <code>PRIVACY.md</code>). The
+holds, never prompt, response or repository content (none is stored; see <code>PRIVACY.md</code>). The
 trust model is unchanged — a plugin is a local program you chose to run, with your own
 privileges — but know what crosses the process boundary before pointing config at a
 binary you didn't write.</p>

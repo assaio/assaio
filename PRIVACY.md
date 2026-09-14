@@ -1,7 +1,7 @@
 # Privacy
 
 `assaio-agent` is designed to be safe to run on a work machine. This document states
-exactly what it reads, what it stores, and what it never touches. If anything here is
+exactly what it reads, what it stores, and what it does not retain. If anything here is
 inaccurate, that is a bug — please report it.
 
 ## What it reads
@@ -47,7 +47,7 @@ plugin's output is validated at the boundary before storage, is stored under a
 Metric plugins (`metrics:` in `config.yaml`) follow the same opt-in rules with one
 difference in direction: `assaio` **sends** each one your stored usage aggregates on
 stdin — project names, model names, member pseudonyms, and token/line counts, exactly
-the fields listed below, never prompts or code (which are never collected at all) — so
+the fields listed below, never prompt, response, or repository content (none is stored) — so
 it can compute its metric. That data goes only to the local program you configured;
 know what a metric plugin does with it before declaring one.
 
@@ -87,8 +87,9 @@ From each session log, the parsers extract only usage accounting fields:
 - git branch name, when the log records it
 - entrypoint label — how the tool was invoked (e.g. `cli`)
 - granularity — whether a record is a single turn or a session-level aggregate
-- AI line counts — lines added and removed, **derived only from the `+`/`-` markers of
-  diff hunks.** The prefix is counted; the code on the line is never stored.
+- AI line counts — lines added and removed, derived from the `+`/`-` markers of diff hunks
+  or the line boundaries in a tool-recorded created or deleted file body. That content is
+  read only to count lines and is never stored.
 - edit and tool-call counts — how many file-editing tool calls (Edit/Write/…) and how
   many tool calls in total a turn made
 - rejection counts — how many tool proposals the human declined
@@ -110,8 +111,7 @@ From each session log, the parsers extract only usage accounting fields:
 - a sub-agent flag — whether the turn ran inside a sub-agent (`1` or `0`), read from the
   log's own marker
 
-Two fields on this list are **short text labels rather than counts**, and they are the only
-ones:
+Two additional fields on this list are **tool-assigned text labels**:
 
 - skill — the skill the tool itself attributed the turn to (e.g. `code-review`)
 - sub-agent type — the kind of sub-agent the turn ran as (e.g. `general-purpose`)
@@ -122,10 +122,10 @@ report treats them exactly like project names: `--anonymize` (the default for th
 server and the published dashboard) replaces them with stable pseudonyms.
 
 That is the complete list of what a usage record holds; the step timeline below adds its own,
-and nothing else is stored. Apart from those two labels, the fields are **numeric counts
-only** — how much AI produced, how efficiently, and with how much friction. No field
-carries prompt text, model output, or code content: a diff line contributes a `+1` or a
-`-1` and nothing else.
+and nothing else is stored. The record combines the identifiers and metadata named above with
+numeric counts of how much AI produced, how efficiently, and with how much friction. No field
+carries prompt text, model output, or code content: a diff line contributes a `+1` or a `-1`,
+and a created or deleted file contributes its line count, then the content is discarded.
 
 ### The step timeline
 
@@ -198,17 +198,17 @@ credential is asked for and no network call is made to fetch it; getting the fil
 vendor console is your step, deliberately, so the tool never holds an API key that could
 pull your account data.
 
-## What it never reads
+## What it never retains
 
 - Prompt text
 - Model responses / generated content
-- The **content** of any file, diff, or code from your project — a diff hunk is scanned
-  only to count its `+`/`-` line prefixes; the text after the prefix is never decoded or
-  stored
+- The **content** of any file, diff, or code from your project — recorded diff and file-body
+  content is used transiently for line and rework counts, then discarded
 - Anything in a session log beyond the usage-accounting fields above
 
-The parsers walk each log line and pull out token counts, identifiers, and activity
-counts. Message bodies and code are never decoded or stored.
+The parsers necessarily scan each log line. They decode the documented fields plus transient
+diff and file-body content needed to derive line and rework counts. Neither that content nor
+message bodies are placed in a usage record or the database.
 
 ## Where your data lives
 
@@ -276,9 +276,8 @@ a plain GET with no header, body or credential, bounded by `--timeout`, `--max-b
 no network at all. If you never run those three, `assaio` never touches the network.
 
 `assaio-agent share` is not an exception to this — it makes no request, and neither does the
-page it writes. It is the one command that **starts another program**: after writing the file
-it asks your desktop to open it (`open`, `xdg-open`, `rundll32`), which launches your browser.
-That is the only program `assaio` ever launches, and `--no-open` writes the file and stops.
+page it writes. After writing the file it can ask your desktop to open it (`open`, `xdg-open`,
+`rundll32`), which launches your browser; `--no-open` writes the file and stops.
 
 ## Sharing a dashboard, and sharing an assay
 

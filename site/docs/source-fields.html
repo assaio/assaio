@@ -178,6 +178,11 @@ field is skipped for that reason.</p>
 <td><code>ai.lines.added</code> / <code>.removed</code> and, via the shared helper, <code>ai.rework.lines</code>.</td>
 </tr>
 <tr>
+<td><code>toolUseResult.{type,content}</code></td>
+<td>extracted transiently for <code>type=create</code></td>
+<td>A created file carries its whole body instead of a structured patch. Its line count seeds <code>ai.lines.added</code> and rework; the body is discarded and never stored.</td>
+</tr>
+<tr>
 <td><code>toolUseResult.{agentId,agentType,resolvedModel,usage,toolStats.linesAdded,toolStats.linesRemoved}</code></td>
 <td>extracted</td>
 <td>The completed sub-agent's own record.</td>
@@ -263,9 +268,9 @@ field is skipped for that reason.</p>
 <td>Threading and request identifiers. <code>parentUuid</code> would let a fork be detected; nothing measures forks yet, so it stays out rather than being stored speculatively.</td>
 </tr>
 <tr>
-<td><code>attachment.*</code>, <code>snapshot.*</code>, <code>backup.*</code>, <code>trackingPath</code>, <code>lastPrompt</code>, <code>aiTitle</code>, <code>content</code>, <code>message.content[].text</code>, <code>toolUseResult.{file,content,oldString,newString,originalFile,stdout,stderr}</code></td>
+<td><code>attachment.*</code>, <code>snapshot.*</code>, <code>backup.*</code>, <code>trackingPath</code>, <code>lastPrompt</code>, <code>aiTitle</code>, <code>content</code>, <code>message.content[].text</code>, <code>toolUseResult.{file,oldString,newString,originalFile,stdout,stderr}</code></td>
 <td>skipped — content, by construction</td>
-<td>Prompts, code, file contents, command output, editor backups and the file-history snapshots. These are what PRIVACY.md promises are never collected; they are read transiently at most (diff markers, a path used only to key rework in memory) and never stored.</td>
+<td>Prompts, code, file contents, command output, editor backups and file-history snapshots. These are never retained; recorded diff and created-file content named above is read transiently only for counts and never stored.</td>
 </tr>
 <tr>
 <td><code>attachment.type</code> = <code>hook_*</code>, <code>skill_listing</code>, <code>invoked_skills</code>, <code>mcp_instructions_delta</code>, <code>queued_command</code>, <code>max_turns_reached</code>, <code>plan_mode*</code></td>

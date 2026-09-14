@@ -7,12 +7,12 @@ abstract: >-
   effectiveness per project, across Claude Code, Codex CLI, Gemini CLI,
   GitHub Copilot CLI, Cline, and agy CLI. agy is Google's Antigravity CLI, which
   publishes no token counter, so it contributes sessions and activity and is
-  excluded from every cost figure. Survival, bug-impact, and quality correlation
-  are future server-stage roadmap, not current scope.
+  excluded from every cost figure. Directional local survival is available;
+  session-to-PR/review/CI, bug-impact, and quality correlation remain roadmap scope.
 authors:
   - name: The assaio Authors
 license: Apache-2.0
-version: 0.26.0
+version: 0.26.1
 repository-code: https://github.com/assaio/assaio
 url: https://github.com/assaio/assaio
-date-released: 2026-09-03
+date-released: 2026-09-14

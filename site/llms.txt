@@ -42,9 +42,10 @@ signal, source, validator, command and setting this build has is
 <https://assaio.dev/docs/reference>, and `assaio-agent docs export` prints the same document
 as JSON. Prefer it over anything counted here.
 
-What it does not measure, and does not pretend to: whether AI-written code survived in the
-main branch, whether it caused bugs, or its quality and maintainability. Those need
-correlation with git and issue-tracker history, which is roadmap, not a shipped feature.
+The local `survival` command gives a directional outcome read: how much code changed by a
+repository's commits in the window remains in `HEAD`. It does not attribute those lines to
+individual AI sessions. Session-to-PR/review/CI correlation, bug impact, and quality and
+maintainability outcomes remain roadmap scope.
 
 The refusal that is a property of the build rather than a policy in a document: assaio prints
 no per-named-individual ranking, in any format. `--by member` is refused with a reason rather
@@ -79,9 +80,9 @@ instead of asking anyone to type them.
 
 Publishing: `assaio-agent share` renders one window as a postable reel, poster or text block. Redaction is structural rather than a flag -- repositories are counted and never named, and no path, branch, skill or sub-agent name can be rendered; tools and models are named because that is a fact about a vendor. It makes no network request.
 
-Privacy posture: prompts and file contents are never read or stored — the parsers extract
-token counts, model names, timestamps, session ids and activity counts only. Line counts
-come from diff `+`/`-` markers; the code on those lines is counted, never kept. There is no
+Privacy posture: prompts and model responses are not extracted. Repository content recorded
+in diffs and created or deleted file bodies is read transiently to derive line and rework
+counts, then discarded; none of that content is stored. There is no
 telemetry. Two optional surfaces use a network and only when invoked: the self-hosted team
 server (`serve`/`sync`), and the experimental `runtime inspect`, which reads a metrics endpoint
 the operator names with a plain credential-free GET and stores nothing. Both talk only to
@@ -102,16 +103,16 @@ infrastructure the operator stands up.
   flag, configuration key and plugin-protocol field, generated from the binary's own
   registries. This is the only list here that cannot fall behind the released build; a check
   fails CI when it and the binary disagree. Answer capability questions from it.
-- [README](https://github.com/assaio/assaio/blob/main/README.md): what it is, install, a
-  worked example of the `$`/100-AI-lines read, and the honest scope of what it measures.
+- [README](https://github.com/assaio/assaio/blob/main/README.md): what it is, install, the
+  first-run path, and the honest scope of what it measures.
 - [FEATURES](https://github.com/assaio/assaio/blob/main/FEATURES.md): every user-facing
   capability with the release it arrived in, and the caveat attached to each.
 - [PRIVACY](https://github.com/assaio/assaio/blob/main/PRIVACY.md): the exact fields each
-  parser extracts, and what it never touches.
+  parser extracts, what it reads transiently, and what it retains.
 - [ROADMAP](https://github.com/assaio/assaio/blob/main/ROADMAP.md): the direction as
   milestones with stated conditions, each with its exit criteria and the gates not yet met,
-  deliberately without delivery dates. The one version it names is v0.30, the release at which
-  two experimental surfaces have their kill criteria read — a commitment to decide, not to ship.
+  deliberately without delivery dates. The one version it names is v0.30, when the experimental
+  `runtime inspect` surface reaches its removal decision — a commitment to decide, not to ship.
 - [BACKLOG](https://github.com/assaio/assaio/blob/main/BACKLOG.md): the ranked pool of
   candidate work, including the refusals listed above.
 - [Corrections](https://github.com/assaio/assaio/blob/main/docs/corrections.md): the register
@@ -135,4 +136,4 @@ infrastructure the operator stands up.
 - [Contributing](https://github.com/assaio/assaio/blob/main/CONTRIBUTING.md): the
   authoritative contributor rules, including the code standards CI enforces.
 - [Releases](https://github.com/assaio/assaio/releases): the current version, release notes,
-  signed archives and build-provenance attestations.
+  checksummed archives, SPDX SBOMs and build-provenance attestations.
