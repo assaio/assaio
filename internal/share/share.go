@@ -17,7 +17,7 @@ package share
 type Assay struct {
 	// Window is the human label ("last 30 days"); Days is how many of them carried usage.
 	Window string
-	Days   int
+	Days   int64
 	// Layer names the measurement layers the card's figures rest on.
 	Layer string
 	// Limit is the one line every rendered frame carries. It exists because Fine lives on the

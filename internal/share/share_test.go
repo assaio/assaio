@@ -65,6 +65,22 @@ func buildSample(t *testing.T) (Assay, analyze.Input) {
 	return Build(in, results, "last 30 days", false), in
 }
 
+func TestBuildPreservesActiveDayWidth(t *testing.T) {
+	const want int64 = 1 << 32
+	results := []analyze.Result{{
+		Name: "adoption",
+		Figures: []analyze.Figure{{
+			Label: "active days",
+			Value: "4294967296",
+		}},
+	}}
+
+	a := Build(analyze.Input{}, results, "all history", false)
+	if a.Days != want {
+		t.Errorf("Days = %d, want %d", a.Days, want)
+	}
+}
+
 // TestNoProjectNameSurvivesAnySurface is the redaction rule as a test rather than as a
 // promise: it renders every output the command can produce and fails if a repository name
 // reaches any of them. Redaction being structural means there is no flag to get wrong,

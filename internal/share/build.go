@@ -23,7 +23,7 @@ func Build(in analyze.Input, results []analyze.Result, window string, sample boo
 
 	a := Assay{
 		Window:    window,
-		Days:      int(f.activeDays),
+		Days:      f.activeDays,
 		Layer:     windowLayer,
 		Hook:      pick(&f, sample),
 		Scale:     scaleStats(&f, v),
