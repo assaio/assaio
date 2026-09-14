@@ -24,7 +24,8 @@ Split the bar in two: enforce what tooling checks well, keep the rest a review n
 - **Coverage** is reported, never gated on a number — a percentage target is a Goodhart
   trap; reviewers read uncovered branches instead.
 - **Hooks** are opt-in lefthook (`make hooks`), never auto-installed: pre-commit runs
-  gofumpt + vet + lint of new issues, commit-msg checks Conventional Commits + DCO.
+  `golangci-lint fmt --diff` + vet + lint of new issues, commit-msg checks Conventional
+  Commits + DCO. The formatter command is the same authority as `make fmt`.
 - **Supply chain:** CI actions are SHA-pinned, workflows use minimal permissions,
   govulncheck runs on every push, dependabot tracks gomod + actions, OpenSSF Scorecard
   runs weekly, and releases carry build-provenance attestations.

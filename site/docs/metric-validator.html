@@ -128,7 +128,7 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
 <p><em>Part of <a href="https://assaio.dev/docs">Extending assaio</a>. Next: <a href="https://assaio.dev/docs/metric-validator-example">the worked example</a>.</em></p>
 <p>Every block <code>assaio analyze</code> prints — adoption, model fit, context health, throughput,
 rework — is a <code>Validator</code> under
-<a href="https://github.com/assaio/assaio/blob/main/internal/analyze/analyze.go"><code>internal/analyze/</code></a>. This is the in-tree,
+<a href="https://github.com/assaio/assaio/blob/main/internal/analyze/validator.go"><code>internal/analyze/</code></a>. This is the in-tree,
 available-today realization of &quot;one metric = one file&quot; from
 <a href="https://github.com/assaio/assaio/blob/main/AGENTS.md"><code>AGENTS.md</code></a> and <a href="https://github.com/assaio/assaio/blob/main/CONTRIBUTING.md"><code>CONTRIBUTING.md</code></a>: a new metric is
 one file, self-registering, with no central list to edit — and because the HTML

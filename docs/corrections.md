@@ -797,7 +797,7 @@ dimension v0.21 added.
 
 Adding `Layer()` broke all four, and the gate that exists to catch exactly that —
 `recipes_go_test.go` — was green, because it hand-copied the interface into a `want` map. It now
-reads the method set out of `internal/analyze/analyze.go`, so the copy cannot drift from the
+reads the method set out of `internal/analyze/validator.go`, so the copy cannot drift from the
 source again.
 
 <a id="guides-described-what-does-not-ship"></a>

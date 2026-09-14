@@ -24,7 +24,7 @@ var recommendedHelpers = map[string]string{
 	"UsageAnswering": "internal/report/answering.go",
 	"TokensIn":       "internal/report/answering.go",
 	"Answers":        "internal/parser/depth_query.go",
-	"Register":       "internal/analyze/analyze.go",
+	"Register":       "internal/analyze/registry.go",
 	"Stamp":          "internal/analyze/confidence.go",
 }
 

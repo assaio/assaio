@@ -76,8 +76,9 @@ is deliberate (see `docs/adr/0002-code-standards-and-enforcement.md`).
 - Fuzzing — `make fuzz` for any parser change. Every parser ships a native `FuzzParse`
   (Cline: `FuzzParseTask`) with a seed corpus under `testdata/`.
 - Vulnerabilities — `make vuln` (`govulncheck`); also a CI job.
-- Hooks — `make hooks` installs the opt-in lefthook hooks (pre-commit: gofumpt on staged
-  files + `go vet` + lint of new issues; commit-msg: Conventional Commits + `Signed-off-by`).
+- Hooks — `make hooks` installs the opt-in lefthook hooks (pre-commit: the same
+  `golangci-lint fmt` authority as `make fmt` + `go vet` + lint of new issues;
+  commit-msg: Conventional Commits + `Signed-off-by`).
 
 **Human-reviewed norms** (not lint gates — reviewers hold this line):
 - File size (~200 lines) and single-responsibility: split a file that grows past the
@@ -189,5 +190,5 @@ internal/version/        build-time version metadata
 docs/adr/                Architecture Decision Records
 ```
 
-Future stages (the deeper org-analytics server, the in-process `plugin/` architecture,
-a richer web UI) are described in ROADMAP.md.
+Future stages (the session-to-outcome evidence graph, verified experiments, production
+team mode and the eventual contract freeze) are described in ROADMAP.md.

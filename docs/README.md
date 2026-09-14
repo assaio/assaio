@@ -4,8 +4,8 @@ Where everything lives, in one place.
 
 ## Using assaio
 
-- [`README.md`](../README.md) — install, quick start, the command table, supported
-  tools and accuracy caveats.
+- [`README.md`](../README.md) — fit, install, one first-run path, supported tools and
+  accuracy boundaries.
 - [`FEATURES.md`](../FEATURES.md) — the maintained inventory of what exists today,
   with the release each capability arrived in.
 - [`extending.md`](extending.md) — the map of every extension surface and the honesty rules
@@ -38,7 +38,7 @@ Where everything lives, in one place.
   gates that have not been met, and what `v1.0` has to mean. Direction, not commitment.
 - [`compatibility.md`](compatibility.md) — what `v1.0` freezes, what it deliberately does not,
   and what is deferred. The single answer the roadmap and the release guide link to.
-- [`BACKLOG.md`](../BACKLOG.md) — the ranked pool of concrete candidate items
+- [`BACKLOG.md`](../BACKLOG.md) — the implementation pool of concrete candidate items
   (`B01`–…): proposals and effort estimates, not commitments.
 - [`CHANGELOG.md`](../CHANGELOG.md) — what actually shipped, per release
   (Keep a Changelog format).

@@ -33,6 +33,24 @@ Discussion.
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced the feature-heavy README and stage-by-stage roadmap with one first-run path and a
+  research-backed product sequence centred on session-to-outcome evidence and verified experiments.
+- Updated SQLite, Goldmark, Wrangler and their lockfiles; refreshed pinned GitHub Actions.
+
+### Fixed
+
+- Gave nightly fuzz targets a test timeout longer than their fuzz budget, so a completed
+  ten-minute run no longer fails at Go's default ten-minute deadline.
+- Made the optional pre-commit formatter use the same `golangci-lint fmt` authority as `make fmt`.
+
+### Security
+
+- Updated the site's development dependency `sharp` to 0.35.4, fixing GHSA-rgj7-g3m4-5g8c.
+- Added CodeQL analysis for Go, Python and GitHub Actions on pull requests, `main` and a weekly
+  schedule.
+
 ## [0.26.0] - 2026-09-03
 
 ### Added

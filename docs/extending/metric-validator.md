@@ -4,7 +4,7 @@
 
 Every block `assaio analyze` prints — adoption, model fit, context health, throughput,
 rework — is a `Validator` under
-[`internal/analyze/`](../../internal/analyze/analyze.go). This is the in-tree,
+[`internal/analyze/`](../../internal/analyze/validator.go). This is the in-tree,
 available-today realization of "one metric = one file" from
 [`AGENTS.md`](../../AGENTS.md) and [`CONTRIBUTING.md`](../../CONTRIBUTING.md): a new metric is
 one file, self-registering, with no central list to edit — and because the HTML

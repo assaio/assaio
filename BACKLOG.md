@@ -1,11 +1,9 @@
 # Backlog
 
-The ranked pool of concrete candidate work items — the finer-grained counterpart to
-[ROADMAP.md](ROADMAP.md)'s narrative direction. **Nothing here is a commitment or a
-schedule.** The milestones below are a working hypothesis of order — they mirror the
-promises in [ROADMAP.md](ROADMAP.md#the-next-milestones), and the pools after them hold
-everything not yet attached to one. Real feedback from people running `assaio` reorders all of it, and any item
-can be reshaped or dropped.
+The pool of concrete candidate work items behind [ROADMAP.md](ROADMAP.md). **Nothing here
+is a commitment or a schedule.** The roadmap owns product order and exit criteria; this
+file preserves implementation evidence and stable ids. Real feedback from people running
+`assaio` can reshape, reorder or drop any item.
 
 **How this file works**
 
@@ -50,8 +48,8 @@ later review finds opens a new pool below rather than reopening this one.
 
 ## Alongside everything — "Somebody outside this repository"
 
-[ROADMAP.md](ROADMAP.md#the-next-milestones)'s stage 0, and the only milestone in this file
-whose work is not this repository's to do. Two sources and the reconciler are calibrated
+The external-validation half of [roadmap milestone 1](ROADMAP.md#1-trust-and-activation),
+and the only milestone in this file whose work is not this repository's to do. Two sources and the reconciler are calibrated
 against a sample written in the source's own shape rather than a real one, and no amount of
 local work changes that: the missing input is a file somebody else has. `B144` is the half that
 already had an id; below are the door a capture arrives through, the half that never had an id,
@@ -83,7 +81,7 @@ and the reason a silence here would mean anything.
   here, and that is by definition the population that has not appeared. Take it once to where
   the users of the two uncalibrated tools are — those tools' own issue trackers and community
   channels, and the places the 2026-08-11 launch post already reached — and record, per channel,
-  what was asked and what came back. That record is what makes stage 0's kill criterion
+  what was asked and what came back. That record is what makes milestone 1's validation gate
   readable: "nobody contributed" decides nothing unless somebody was asked, and a silence with
   no attempt behind it is evidence about neither the ask nor the reach.
 
@@ -293,7 +291,8 @@ does not ship.
   — the git evidence collector (`B91`) — rather than being guessed at now. Ships with a
   deprecation window and a conformance fixture, and **lands with the protocol freeze (`B23`)**
   rather than before it — settled by [ADR 0016](docs/adr/0016-usage-is-a-store-row-not-an-event.md),
-  which put stage 2 behind the freeze rather than in front of stage 3. See [ADR 0008](docs/adr/0008-signal-catalog.md).
+  which puts that breaking type change behind the evidence graph and with the contract
+  freeze. See [ADR 0008](docs/adr/0008-signal-catalog.md).
   **Three requirements came out of building the git collector** rather than being guessed at:
   (1) a validator receives `[]store.UsageRow`, so there is no shape in which it could read a
   commit observation at all — the context has to serve *heterogeneous* observation streams
@@ -468,9 +467,9 @@ speak a standard rather than only its own dialect.
 The one milestone that keeps a version number, because there the number *is* the promise. It is
 **not** only the semver guarantee any more: after v0.12 the bar leads with calibration, because
 a frozen contract over an uncalibrated measurement is a stable wrong answer, which is worse than
-a breaking correct one. The six conditions are spelled out in
-[ROADMAP.md](ROADMAP.md#what-v10-has-to-mean); the contract freeze is the last of them, not the
-first. `B24` used to sit here and no longer does — its own entry says it is not a v1.0
+a breaking correct one. The release gates are summarized in
+[ROADMAP.md](ROADMAP.md#what-v10-has-to-mean); the contract freeze follows the outcome and
+operational proof rather than substituting for them. `B24` used to sit here and no longer does — its own entry says it is not a v1.0
 condition, so it moved to the reserved pool below rather than contradicting itself in place.
 
 - [ ] **B23 · protocol freeze** — M · both — declare the exec plugin protocols (parser,
@@ -792,7 +791,7 @@ a tool used by one organization is usually better served by an out-of-tree
   anywhere in the schema, on any machine**, so Cursor can never answer the token half — `B55`
   covers that through the Admin API instead. **What would change the answer:** a machine where
   `humanLinesAdded` and `tabLinesAdded` are populated across a real span. `scored_commits` is, in
-  shape, exactly what ROADMAP stage 3 wants — AI versus human lines *per commit*, already
+  shape, exactly what roadmap milestone 2 needs — AI versus human lines *per commit*, already
   attributed by the vendor — which makes it worth reading for the survival question the day
   somebody brings that corpus, and never for cost.
 - [ ] **B151 · what a plugin declares, and a badge that goes red when a vendor moves** — M ·
@@ -1072,22 +1071,6 @@ file-size norm.
   raise the per-target `-fuzztime` so the drain has room, treat "failed with no new corpus entry"
   as a retry rather than a finding in the workflow, or both.
 
-- [ ] **B199 · the opt-in commit hook is stricter than the gate it guards** — S · solo — measured
-  2026-09-02 while committing v0.25.0: `make fmt` (`golangci-lint fmt` v2.12.2) left three test
-  files that the pre-commit hook's standalone `gofumpt` 0.10.0 rejected, so the commit was refused
-  on code CI accepts. The embedded gofumpt inside the pinned golangci-lint does not enforce the
-  newer trailing-comma rule the standalone binary does. Anyone who runs `make hooks` inherits a
-  formatter stricter than `.golangci.yml`, and the disagreement is silent until a commit is
-  blocked. Pick one authority: pin the hook to the same gofumpt golangci-lint embeds, or raise
-  golangci-lint until the two agree. Do not fix it by loosening the hook — being stricter is not
-  the defect, disagreeing is.
-
-- [ ] **B200 · `internal/analyze/analyze.go` is over the file budget** — S · solo — 261 lines
-  against the ~200 the review norm sets, after the duplicate-name panic landed in v0.25.0. It is
-  three responsibilities in one file: the `Input`/`Result` contract, the registry, and the
-  `Validator` interface with its scoping rules. Splitting it is mechanical but touches the
-  package every validator imports, so it wants its own change rather than a ride-along.
-
 - [ ] **B201 · two per-record relationships are checked only at the server boundary** — S · solo
   — `Sidechain ∈ {0,1}` and "the tool-purpose split sums to `ToolCalls`" live in
   `internal/server/validate.go`, although `internal/usage/bounds.go`'s own header says it exists
@@ -1130,15 +1113,6 @@ file-size norm.
   directories and the earliest transcript entry is 30 days after the installation id was created.
   Not proof — but if it rotates, agy history older than the vendor's window exists only in the
   store, and nothing says so before a deletion.
-
-- [ ] **B206 · README's `effectiveness` worked example prints a caveat the binary no longer
-  emits** — XS · solo — `README.md:252` shows "Not every source records changed lines; the ones
-  that do not contribute cost but no line counts". `effCoverageNote` now emits one of four
-  sentences and none of them is that one; for the all-`claude-code` data in the example it would
-  print "Every source in this table records changed lines." A worked example is the thing a reader
-  checks their own output against, so a stale one reads as a bug in their store. Left as an item
-  rather than fixed in the v0.25.0 tree deliberately: it is prose, not a wrong figure, and it
-  wants a pass over *every* sample block in README at once rather than a single line.
 
 - [ ] **B207 · the shared ingest path still documents itself as Cline-only** — XS · solo —
   `internal/ingest/state.go:30` ("one discovered file or Cline task directory"), `:52` ("dirInput

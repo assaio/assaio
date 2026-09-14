@@ -117,24 +117,26 @@ func headerObservation(header, project string, observedAt time.Time, build strin
 	if err != nil {
 		return event.Event{}, event.Commit{}, false
 	}
-	return event.Event{
-			SpecVersion: event.SpecVersion,
-			Type:        event.TypeCommit,
-			ID:          fields[0],
-			Source:      event.Source{Name: sourceName, Build: build},
-			OccurredAt:  time.Unix(seconds, 0).UTC(),
-			ObservedAt:  observedAt,
-			TimeSource:  event.TimeStated,
-			Grain:       event.GrainCommit,
-			// Repository evidence stays on the machine until the correlation threat model (B100)
-			// decides what a team may share; local-only is the answer that needs no decision.
-			Privacy:    event.LocalOnly,
-			Provenance: event.Parsed,
-			Subject:    event.Subject{Project: project},
-		}, event.Commit{
-			Parents: int64(len(strings.Fields(fields[2]))),
-			Revert:  strings.HasPrefix(fields[3], revertPrefix),
-		}, true
+	observation := event.Event{
+		SpecVersion: event.SpecVersion,
+		Type:        event.TypeCommit,
+		ID:          fields[0],
+		Source:      event.Source{Name: sourceName, Build: build},
+		OccurredAt:  time.Unix(seconds, 0).UTC(),
+		ObservedAt:  observedAt,
+		TimeSource:  event.TimeStated,
+		Grain:       event.GrainCommit,
+		// Repository evidence stays on the machine until the correlation threat model (B100)
+		// decides what a team may share; local-only is the answer that needs no decision.
+		Privacy:    event.LocalOnly,
+		Provenance: event.Parsed,
+		Subject:    event.Subject{Project: project},
+	}
+	commit := event.Commit{
+		Parents: int64(len(strings.Fields(fields[2]))),
+		Revert:  strings.HasPrefix(fields[3], revertPrefix),
+	}
+	return observation, commit, true
 }
 
 // countNumstat folds one "added<TAB>removed<TAB>path" line into c. A binary edit, which git
