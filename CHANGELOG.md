@@ -50,6 +50,8 @@ Discussion.
 - Updated the site's development dependency `sharp` to 0.35.4, fixing GHSA-rgj7-g3m4-5g8c.
 - Added CodeQL analysis for Go, Python and GitHub Actions on pull requests, `main` and a weekly
   schedule.
+- Removed an architecture-dependent narrowing conversion from the Assay active-day count
+  reported by CodeQL.
 
 ## [0.26.0] - 2026-09-03
 
