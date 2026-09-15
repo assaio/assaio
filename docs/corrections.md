@@ -31,6 +31,35 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+<a id="subagent-project-depended-on-input-order"></a>
+
+### A completed sub-agent's project depended on transcript order
+
+*Corrected in v0.27.0, released 2026-09-15.*
+
+A completed Claude sub-agent aggregate is keyed by `agent:<id>`. On the 324,416-record
+corpus used to prove the event contract, 404 aggregates appeared under two project names
+while agreeing on tokens, timestamp and session. The unique store key correctly kept each
+aggregate's usage once, but chose one project: the first transcript won before v0.24, and
+the last won after v0.24 made project corrections reachable on re-read. In both cases input
+order decided where about 0.12% of records appeared. A project-scoped attribution edge would
+turn that ordering accident into a false link.
+
+The store now keeps a sticky conflict bit for this exact source identity and clears both
+project and subpath when two non-empty claims disagree. Token and activity counts remain
+deduplicated, and a later partial read cannot turn the conflict back into a project claim.
+Ordinary turns retain the correction path that lets a parser fix restate their project.
+Session aggregation also abstains when distinct rows in one session claim different
+projects.
+
+Migration `0013` adds one constant-default integer to the live usage table and aligns the
+unused pre-v0.12 archive when it still exists, without rewriting usage rows. Opening a database
+with 58,505 usage rows from a full v0.26.1 backfill left its 63,070,208-byte file and 15,398
+4 KiB pages unchanged. The upgrade test independently preserves 20,000 v0.26.1-shaped rows
+and enforces a 64 KiB upper bound. A release build has a new ingest identity, so its first
+backfill re-reads unchanged transcripts once and can discover conflicts stored by older
+versions.
+
 ## [0.25.0] - 2026-09-02
 
 <a id="cache-tier-caveat-outlived-its-defect"></a>

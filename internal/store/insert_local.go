@@ -72,14 +72,35 @@ import (
 // a repository root, so guarding subpath on itself discards exactly the correction that matters
 // -- a re-read resolving a deeper root (a `git init` in a subdirectory, a submodule) offers
 // (deeper-project, ""), the project moves and the path stays relative to a root it no longer
-// belongs to.
+// belongs to. A completed Claude sub-agent aggregate has a narrower rule: `agent:<id>` is its
+// source identity, so two non-empty projects on that identity are competing claims rather than
+// a correction. project_conflict is sticky and keeps both project and subpath empty; applying
+// that rule to ordinary turns would make the B116 correction path unreachable.
 const restateActivitySQL = `
         UPDATE usage_record SET
             granularity = ?,
             ts = ?,
             model = CASE WHEN model = '' THEN ? ELSE model END,
-            project = CASE WHEN ? <> '' THEN ? ELSE project END,
-            subpath = CASE WHEN ? <> '' THEN ? ELSE subpath END, -- guarded on project, see below
+            project_conflict = CASE
+                WHEN project_conflict = 1 THEN 1
+                WHEN tool = 'claude-code' AND dedupe_key LIKE 'agent:%'
+                     AND ? <> '' AND project <> '' AND project <> ? THEN 1
+                ELSE 0
+            END,
+            project = CASE
+                WHEN project_conflict = 1 THEN ''
+                WHEN tool = 'claude-code' AND dedupe_key LIKE 'agent:%'
+                     AND ? <> '' AND project <> '' AND project <> ? THEN ''
+                WHEN ? <> '' THEN ?
+                ELSE project
+            END,
+            subpath = CASE
+                WHEN project_conflict = 1 THEN ''
+                WHEN tool = 'claude-code' AND dedupe_key LIKE 'agent:%'
+                     AND ? <> '' AND project <> '' AND project <> ? THEN ''
+                WHEN ? <> '' THEN ?
+                ELSE subpath
+            END,
             entrypoint = CASE WHEN ? <> '' THEN ? ELSE entrypoint END,
             git_branch = CASE WHEN ? <> '' THEN ? ELSE git_branch END,
             input_tokens = MAX(input_tokens, ?), output_tokens = MAX(output_tokens, ?),
@@ -128,7 +149,8 @@ func activityRestateArgs(r *usage.Record) []any {
 		r.Timestamp.UTC().Format(time.RFC3339),
 		r.Model,
 		r.Project, r.Project,
-		r.Project, r.Subpath,
+		r.Project, r.Project, r.Project, r.Project,
+		r.Project, r.Project, r.Project, r.Subpath,
 		r.Entrypoint, r.Entrypoint,
 		r.GitBranch, r.GitBranch,
 		r.InputTokens, r.OutputTokens, r.CacheReadTokens, r.CacheWriteTokens, r.ReasoningTokens,

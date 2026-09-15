@@ -80,7 +80,8 @@ From each session log, the parsers extract only usage accounting fields:
   segment, so a monorepo's subdirectories (`apps/mobile`, `apps/web`, a worktree
   checkout, …) roll up into one project instead of fragmenting by leaf directory name.
   The full working-directory path is read only transiently to do that walk — it is
-  never written to the store.
+  never written to the store. If two transcripts assign the same completed sub-agent
+  aggregate to different projects, neither name is retained for that record.
 - subpath — the working directory's path **relative to the project's repository root**
   (e.g. `apps/mobile`), or empty when the session ran at the root. Always relative:
   never an absolute path, never the home directory.

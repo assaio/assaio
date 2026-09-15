@@ -62,6 +62,7 @@ retention horizon.
 | `agent` | `TEXT` | The sub-agent this turn was attributed to, `''` when none. |
 | `cache_write_1h` | `INTEGER` | The portion of `cache_write_tokens` that bought a 1-hour lifetime. A subset, never added to it. |
 | `cache_miss_reason` | `TEXT` | The vendor's own stated reason a cache read missed, `''` when unstated. |
+| `project_conflict` | `INTEGER` | `1` when the same completed Claude sub-agent aggregate carried competing non-empty projects. Its `project` and `subpath` stay empty; usage remains counted once. |
 
 The activity columns (`lines_added` … `rework_lines`) are populated by the Claude Code and
 Codex parsers, and `lines_added`/`lines_removed` by GitHub Copilot CLI since v0.6 (once per

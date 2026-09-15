@@ -31,6 +31,7 @@ var shippedMigrations = map[string]string{
 	"0010_duplicate_line_recount.sql": "1a5309b56bfee4cf3e62e5d2a5c0d56c36bf24f7af52fa6cda9a7b453b687800",
 	"0011_digest_snapshot.sql":        "05228f8d1d5c2e9f3de40e4334b800241418fa5050fa185cdd6bf480d7d54775",
 	"0012_session_step.sql":           "6639b5363c24a15f4055507cbac446988d52cae9d564fa39b358ea4857bfb7c7",
+	"0013_project_conflict.sql":       "d40e44cf6d847cff77b4e3016ec86c7f2eaa977382ef9b2dd07214f258c995a5",
 }
 
 // TestShippedMigrationsAreImmutableInNameAndContent is the guard RELEASING.md's hard rule never

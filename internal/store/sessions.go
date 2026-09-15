@@ -101,7 +101,11 @@ const (
             WHERE gap_min IS NOT NULL AND gap_min <= ?
             GROUP BY session_id, member
         )
-        SELECT r.session_id, MAX(r.project), MAX(r.tool), MAX(r.model), r.member,
+        SELECT r.session_id,
+               CASE WHEN MAX(r.project_conflict) = 1
+                          OR COUNT(DISTINCT NULLIF(r.project, '')) > 1
+                    THEN '' ELSE MAX(r.project) END,
+               MAX(r.tool), MAX(r.model), r.member,
                MIN(r.ts), MAX(r.ts),
                SUM(CASE WHEN r.granularity = 'turn' THEN 1 ELSE 0 END),
                SUM(r.output_tokens),
