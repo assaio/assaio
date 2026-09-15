@@ -33,6 +33,15 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+
+- Added the first local Evidence Graph slice: `evidence` compares stored sessions with
+  content-free commits reachable from a local repository and reports explicit population
+  coverage plus `matched`, `ambiguous`, and `unmatched` results. The document stamps its
+  algorithm version; every result carries method, confidence, provenance, candidates,
+  alternatives, and an abstention reason. Nothing is persisted or synced, and
+  PR/review/CI/merge outcomes remain future scope.
+
 ### Fixed
 
 - [Conflicting project claims for one completed Claude sub-agent aggregate now abstain](docs/corrections.md#subagent-project-depended-on-input-order)

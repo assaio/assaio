@@ -1,7 +1,7 @@
-// Package attribution holds the conformance corpus that defines what an honest
-// session-to-commit link is, before any engine or UI exists to make one. Each scenario
-// builds a real git repository and the sessions that ran against it, and states what any
-// engine must say about them -- most importantly, where it must refuse to choose.
+// Package attribution derives local session-to-commit candidates and holds the conformance
+// corpus that defines what an honest answer is. Each scenario builds a real git repository
+// and the sessions that ran against it, and states what the engine must say about them --
+// most importantly, where it must refuse to choose.
 //
 // The corpus deliberately speaks the smallest vocabulary that honesty can be judged in:
 // which commits a session may be linked to, and whether the link stayed ambiguous. An

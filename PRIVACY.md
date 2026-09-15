@@ -199,6 +199,27 @@ credential is asked for and no network call is made to fetch it; getting the fil
 vendor console is your step, deliberately, so the tool never holds an API key that could
 pull your account data.
 
+## Local repository evidence
+
+`assaio-agent evidence --repo <path>` and `assaio-agent survival --repo <path>` read a local
+git repository only when invoked. The collector returns one content-free observation per
+commit reachable from `HEAD`: commit hash and time, parent count, added/removed line counts,
+changed-file count, a test/source/docs/config/generated/other category split, and whether git
+itself gave the commit a generated revert subject.
+
+Git paths are read in memory only to choose a category. The commit subject is read only to
+recognize that revert prefix. Neither is returned, stored or printed, and branch names, diffs
+and file bodies are not part of the observation at all. Commit observations and derived
+session→commit results are recomputed in memory and never written to SQLite.
+
+`evidence` combines those observations with the local store's session id, tool, project
+basename and first/last timestamps. Its text and JSON output include the project basename,
+session id and commit hash for local inspection, plus method, confidence, provenance,
+ambiguity, alternatives and coverage. It has no `--db`, refuses member-bearing team rows and
+has no member, person, score or rank field. It is not a shareable artifact and is not intended
+for evaluating people. Prompt text, model responses, code, diffs, commit messages and branch
+names never enter its result.
+
 ## What it never retains
 
 - Prompt text
@@ -264,7 +285,7 @@ requirements.
 ## Network
 
 The core analysis commands — `backfill`, `report`, `effectiveness`, `analyze`, `status`,
-`dashboard`, `share`, `reconcile` — make **no network calls**. The model price table is embedded into the binary
+`dashboard`, `share`, `reconcile`, `evidence`, `survival` — make **no network calls**. The model price table is embedded into the binary
 at build time, so every report works fully offline; nothing is fetched, uploaded, or
 phoned home.
 

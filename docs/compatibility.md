@@ -20,7 +20,7 @@ compatibility test, and a written deprecation path; after it, a breaking change 
 | Signal ids and what a zero means for each | ADR [0008](adr/0008-signal-catalog.md), `assaio-agent signals` |
 | The recommendation record and its lifecycle | ADR [0015](adr/0015-structured-recommendations.md) |
 | The team sync protocol | [extending/team-server.md](extending/team-server.md) |
-| Machine-readable output — `analyze --format json`, `report --format json\|csv`, `docs export` | `docs/reference.json` |
+| Machine-readable output — `analyze --format json`, `report --format json\|csv`, `evidence --format json`, `docs export` | `docs/reference.json`, [evidence.md](evidence.md) |
 
 ## Not frozen, and guaranteed instead
 

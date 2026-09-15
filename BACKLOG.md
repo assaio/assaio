@@ -302,8 +302,9 @@ does not ship.
 - [ ] **B103 · commit observations that outlive one pass** — M · both — the half of `B91`
   deliberately not shipped: a configured repository list (rather than one `--repo` at a time),
   a keyed pseudonymous commit digest for the syncable case, and durable storage. Each waits
-  for the consumer that decides its shape — `B85` needs commits queryable *across* passes to
-  link a session to one, `B100` decides what identity may leave the machine — and each costs a
+  for the consumer that decides its shape — v0.27's first `B85` slice deliberately collects and
+  links in one pass, while replay across passes still needs a durable shape; `B100` decides what
+  identity may leave the machine — and each costs a
   migration, a size bound and a cleanup path, so none is worth guessing at. Path-level storage
   stays out entirely until something needs it: `B91` never records a path, so there is no
   opt-in to design yet. See [ADR 0009](docs/adr/0009-local-git-evidence-collector.md).
@@ -328,11 +329,20 @@ does not ship.
   `overlapping-users` scenario therefore *requires* ambiguity, and separating those sessions
   means changing what an observation carries — a privacy decision belonging with `B100`,
   not a better ranking. See [ADR 0010](docs/adr/0010-attribution-conformance-corpus.md).
+  **v0.27 ships the local session→commit portion, not this whole item**: algorithm
+  `session-commit/v1` emits confidence-bearing matched, ambiguous and unmatched results from
+  project plus bounded time evidence, keeps alternatives, honours the corpus's confirmed links,
+  and stores nothing. Explicit markers, branch, identity and file-category compatibility,
+  persisted corrections, PR edges and durable replay remain open.
 - [ ] **B94 · `outcomes` funnel + `evidence explain`** — M · both — the first visible path:
   sessions → sessions with edits → linked commits → linked PRs → passing CI → merged →
   surviving, sliced by tool, model, project, task annotation and confidence band, always
   showing the unattributed and insufficient-evidence share. `evidence explain <edge>` says why
   a link was or was not made. No causal language anywhere in it.
+  **v0.27 ships only the first visible row of this path**: `evidence` shows session→commit
+  population coverage, candidates, alternatives, method, provenance, confidence and abstention
+  reason in text or JSON. There is no edit-stage funnel, slicing, edge identifier or separate
+  `evidence explain`, and no PR/review/CI/merge/survival outcome join yet.
 - [ ] **B153 · what a change costs after it is written** — M/L · both — "AI lines" counts
   what was produced, never what it took to land. Once a session links to a pull request, the
   downstream burden becomes countable as named signals rather than adjectives: review rounds
@@ -357,6 +367,10 @@ does not ship.
   employee monitoring, and combined datasets can re-identify a pseudonym. Ships with the
   connector, not after it: local-only defaults, field-level sync policy, retention, minimum
   cohort for any server view, and a test asserting no ranking surface exists.
+  **v0.27 settles only the local slice**: commit observations and derived answers are
+  `local-only`, not persisted or synced; the command exposes no `--db`, rejects member-bearing
+  rows, and its result type has no person or ranking field. The connector's field-level sync,
+  retention, cohort and re-identification policy remain open.
 
 ## Then — "Harness intelligence & verified improvement"
 

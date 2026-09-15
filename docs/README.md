@@ -23,6 +23,8 @@ Where everything lives, in one place.
   [assaio.dev/docs/reference](https://assaio.dev/docs/reference) from falling behind.
 - [`runtime-inspect.md`](runtime-inspect.md) — the experimental self-hosted vLLM/DCGM
   snapshot: what it can and cannot see, and the gate that decides whether it survives.
+- [`evidence.md`](evidence.md) — the local session→commit Evidence Graph slice: methods,
+  confidence, ambiguity, population coverage, privacy boundary and what remains future scope.
 - [`automation.md`](automation.md) — running assaio from cron, launchd, CI, or a status line.
 - [`reconcile.md`](reconcile.md) — checking the `$` estimate against a vendor's own
   billing or usage export, offline: how columns bind, how to read the unexplained delta,
@@ -99,7 +101,7 @@ all in the shipping PR.
 - [ADR 0009](adr/0009-local-git-evidence-collector.md) — the local **git evidence
   collector** observes commits and stores none of their content.
 - [ADR 0010](adr/0010-attribution-conformance-corpus.md) — the **attribution conformance
-  corpus** defines an honest session→commit link before an engine exists.
+  corpus** defined an honest session→commit link before the engine existed.
 - [ADR 0011](adr/0011-capability-gated-metrics.md) — a metric reads only the sources that
   record its field, so a structural silence never averages in as a zero.
 - [ADR 0012](adr/0012-session-step-timeline.md) — the **session step timeline**: what a
@@ -120,3 +122,6 @@ all in the shipping PR.
   is a tier (`activity-only`), not a row of zeros: the parser leaves the fields empty *and* the
   matrix declares them unanswered, and every token- and dollar-denominated figure reads only
   the sources that count.
+- [ADR 0018](adr/0018-local-session-commit-evidence.md) — local **session→commit evidence** is
+  recomputed from content-free observations, preserves ambiguity and abstention, and stores no
+  edge; the connector-backed graph remains future scope.
