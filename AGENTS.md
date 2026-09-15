@@ -16,7 +16,8 @@ This repository ships one binary, `assaio-agent`: an offline-first CLI (Go, embe
 SQLite) that reads the local session logs of Claude Code, Codex CLI, Gemini CLI, GitHub
 Copilot CLI, Cline, and Antigravity CLI (activity only — its format publishes no token counter,
 so every cost figure withholds for it) and turns them into reports (`report`, `effectiveness`,
-`reprice`), diagnostics (`analyze`, `check`, `doctor`, `status`), and the self-contained Assay
+`reprice`), diagnostics (`analyze`, `check`, `doctor`, `status`), local session→commit
+evidence (`evidence`), and the self-contained Assay
 HTML dashboard. Out-of-tree
 exec plugins extend it in any language — parsers via `plugins:` (ADR 0003), metrics via
 `metrics:` (ADR 0004), rules gating `check` via `rules:` (ADR 0005). A team-server MVP
@@ -143,7 +144,7 @@ Nothing there restates guidance a capable model already follows.
 cmd/assaio-agent/        CLI entrypoint (report, analyze, dashboard, serve, sync, …)
 internal/analyze/        one-file-per-metric validator framework behind assaio analyze
 internal/calibration/    conservation and metamorphic checks over a real corpus
-internal/attribution/    the conformance corpus defining an honest session→commit link (ADR 0010)
+internal/attribution/    local session→commit candidates plus their conformance corpus (ADRs 0010, 0018)
 internal/cli/            command wiring and flag handling; one file per command
 internal/config/         defaults + YAML file + ASSAIO_-prefixed env vars
 internal/dashboard/      builds + renders the offline Assay HTML dashboard
@@ -190,5 +191,6 @@ internal/version/        build-time version metadata
 docs/adr/                Architecture Decision Records
 ```
 
-Future stages (the session-to-outcome evidence graph, verified experiments, production
-team mode and the eventual contract freeze) are described in ROADMAP.md.
+Future stages (extending the local session→commit slice through PR/review/CI/outcomes,
+verified experiments, production team mode and the eventual contract freeze) are described
+in ROADMAP.md.

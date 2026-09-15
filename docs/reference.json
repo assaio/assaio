@@ -1104,6 +1104,31 @@
       ]
     },
     {
+      "path": "evidence",
+      "short": "Local session-to-commit candidates with explicit ambiguity and coverage",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "format",
+          "type": "string",
+          "default": "text",
+          "usage": "output format: text|json"
+        },
+        {
+          "name": "repo",
+          "type": "string",
+          "default": ".",
+          "usage": "path to the local git repository"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "default": "30d",
+          "usage": "time window, e.g. 7d"
+        }
+      ]
+    },
+    {
       "path": "explain",
       "short": "Print a metric's long-form page: what it measures, how to read it, what to do about it",
       "hidden": false,

@@ -85,6 +85,27 @@ rule ([`RELEASING.md`](../RELEASING.md)). `store.Open` applies them on open.
 `trace.horizon_days` prunes (`ingest.pruneTrace`, counted and reported). `doctor` states
 size, growth rate and reclaimable space every run.
 
+### A local git repository — read
+
+**Trusted:** the repository path the user passes to `evidence` or `survival`, and nothing in
+its history. `internal/vcs` invokes the installed `git` binary with assaio-controlled
+arguments and bounds one output line to 1 MiB.
+
+**What crosses the boundary:** commit hash and time, parent and line counts, changed-file
+categories, and a revert indication. Git paths are held only while assigning a category and a
+commit subject only while checking git's generated revert prefix. No path, branch, subject,
+diff or file body enters `event.Event`. Invalid headers and events are skipped and counted.
+
+**What `evidence` adds:** the default local store's session id, tool, project basename and
+first/last timestamps. The command has no `--db`, rejects any member-bearing row, writes no
+observation or edge and exposes no person or ranking field. A repository can control commit
+hashes, timestamps and change counts and therefore distort its own candidate results; every
+answer is labelled as bounded proximity with confidence or abstention, never as causation.
+
+**Residual:** project identity is a basename. Two same-named repositories cannot be separated,
+and commit observations carry no author, so overlapping users cannot be separated. Both limits
+are reported instead of repaired by inspecting content or identity.
+
 ### The team server — network
 
 This is the largest exception to assaio's offline posture, and it is opt-in twice: you run
@@ -265,6 +286,9 @@ The store at `~/.local/share/assaio/assaio.db` (`XDG_DATA_HOME`-aware), includin
 `mark` — `sync` does not send them, and no other path does — and the per-install
 pseudonymization key at `pseudonym.key` (mode `0600`), which is what makes a `project-xxxx`
 label unreproducible by anyone who does not hold it.
+
+Local commit observations and session→commit results also never leave the machine and are not
+stored; `evidence` prints them only to its local stdout.
 
 ### Where the network is, exactly
 

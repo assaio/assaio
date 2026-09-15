@@ -1,7 +1,8 @@
 # 9. The local git evidence collector observes commits, and stores none of them
 
 ## Status
-Accepted (2026-08-03)
+Accepted (2026-08-03). Extended by [ADR 0018](0018-local-session-commit-evidence.md), whose
+session→commit consumer still recomputes observations in one pass rather than storing them.
 
 ## Context
 [ADR 0007](0007-canonical-event-contract.md) committed `vcs.commit.observed` as a name and
@@ -49,16 +50,15 @@ A collector, not a store. `internal/vcs` reads a repository and returns
 - **Skip and count, like every parser.** A commit whose header this build cannot read is
   counted and skipped rather than aborting the pass, and the count is printed — a short
   history is never quietly short.
-- **No observation table yet.** ADR 0007 expected one; nothing needs it. `survival` collects
-  and consumes in one pass, and persisting commits would mean a migration, a size bound and a
-  cleanup path (the store-size discipline `compact` exists for) in exchange for nothing a user
-  can see. The requirement that decides the shape is `B85`'s: attribution edges need commits
-  queryable across passes, and that is when the table gets designed — against a consumer,
-  not ahead of one.
+- **No observation table yet.** ADR 0007 expected one. `survival` and v0.27's first `evidence`
+  slice both collect and consume in one pass, while persisting commits would mean a migration,
+  a size bound and a cleanup path. Durable replay and connector-backed attribution decide that
+  shape; the local session→commit consumer does not need to guess it.
 - **`survival` becomes the first consumer.** It no longer shells out to git for its commit
   set: it reads observations, and reports what the window changed by category beside the
   survival rate. Paths still exist for the blame pass — `vcs.TouchedFiles` is documented as
   local-only and its output never reaches a `Result` — because blame has to name a file.
+  `evidence` becomes the second consumer in v0.27 and retains the same one-pass boundary.
 
 Rejected alternatives:
 - **Store paths behind an opt-in flag.** `B91` allows it; nothing needs it. A flag that

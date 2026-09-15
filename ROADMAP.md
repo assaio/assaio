@@ -105,8 +105,9 @@ Build the differentiating outcome path before expanding the UI or connector coun
 
 - Add content-free commit, pull-request, review and check-run observations, with GitHub as
   the first end-to-end connector and an importable contract for other forges.
-- Link a session to a change only through evidence the attribution corpus can grade.
-- Report coverage and competing candidates for every join.
+- Extend the shipped local session→commit slice — already graded by the attribution corpus and
+  already reporting coverage, competing candidates and abstention — to shipped changes.
+- Report coverage and competing candidates for every additional join.
 - Add outcome signals only when their populations are comparable: merged changes, review
   rounds, CI result, batch size and survival at a fixed age.
 - Prefer cost per merged or surviving change over cost per generated line.
@@ -179,7 +180,7 @@ The release decision should use these gates, not feature count:
 | --- | --- | --- |
 | Local usage and cost | pilot-ready, pre-1.0 | external captures confirm source shapes and first-run activation repeats |
 | Local output diagnostics | directional and useful | outcome language never leaks into output-only metrics |
-| Evidence graph | not shipped | attribution and unmatched populations pass conformance corpora |
+| Evidence graph | first local session→commit slice; no persisted graph or outcome joins | PR/review/CI/merge joins and unmatched populations pass their conformance corpora |
 | Recommendations | proposed-only | interventions can be accepted, measured and closed |
 | Team server | MVP | milestone 4 security, recovery and scale gates pass |
 | Managed cloud | not built | repeated self-hosted demand justifies operating it |

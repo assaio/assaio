@@ -42,10 +42,18 @@ signal, source, validator, command and setting this build has is
 <https://assaio.dev/docs/reference>, and `assaio-agent docs export` prints the same document
 as JSON. Prefer it over anything counted here.
 
+The local `evidence` command is the first Evidence Graph slice. It compares sessions carrying
+a repository's stored project basename with content-free commits from local git and reports
+population coverage plus `matched`, `ambiguous`, and `unmatched` results. Each result carries
+its method, confidence, provenance, candidates, alternatives and abstention reason; the
+document stamps the algorithm version.
+A match is an observation from project and bounded time proximity, not proof that the session
+caused the commit. It stores nothing, has no team-store mode and never ranks people.
+
 The local `survival` command gives a directional outcome read: how much code changed by a
 repository's commits in the window remains in `HEAD`. It does not attribute those lines to
-individual AI sessions. Session-to-PR/review/CI correlation, bug impact, and quality and
-maintainability outcomes remain roadmap scope.
+individual AI sessions. Session-to-PR/review/CI/merge correlation, attributable survival,
+bug impact, and quality and maintainability outcomes remain roadmap scope.
 
 The refusal that is a property of the build rather than a policy in a document: assaio prints
 no per-named-individual ranking, in any format. `--by member` is refused with a reason rather
@@ -83,7 +91,9 @@ Publishing: `assaio-agent share` renders one window as a postable reel, poster o
 Privacy posture: prompts and model responses are not extracted. Repository content recorded
 in diffs and created or deleted file bodies is read transiently to derive line and rework
 counts, then discarded; none of that content is stored. There is no
-telemetry. Two optional surfaces use a network and only when invoked: the self-hosted team
+telemetry. `evidence` reads local git and the local store only; commit messages, paths, branch
+names, diffs and code are absent from its result, and neither observations nor edges are stored.
+Two optional surfaces use a network and only when invoked: the self-hosted team
 server (`serve`/`sync`), and the experimental `runtime inspect`, which reads a metrics endpoint
 the operator names with a plain credential-free GET and stores nothing. Both talk only to
 infrastructure the operator stands up.
