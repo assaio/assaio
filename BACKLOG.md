@@ -270,18 +270,6 @@ change it produced — commit, pull request, review, CI, merge, survival — car
 confidence and the ambiguity of every link. Everything here ships with its error bars or it
 does not ship.
 
-- [ ] **B101 · a sub-agent aggregate's project is decided by parse order** — S/M · solo — a
-  completed Claude sub-agent is keyed `agent:<id>` alone, and `usage_record` is
-  `UNIQUE(tool, dedupe_key)` with `ON CONFLICT DO NOTHING`, so when the same sub-agent id is
-  seen with two different projects the first file ingested wins and the second is dropped
-  silently. Found while proving the canonical event contract against 324,416 real records:
-  **404** of them collide, identical in tokens, timestamp and session but disagreeing on
-  `project`. Cost is neither lost nor double-counted — only the project attribution wobbles,
-  on ~0.12% of records — but attribution edges (`B85`) link by project, so this becomes a
-  wrong answer rather than a rounding error. Fixing it means deciding what the key should be
-  (adding the project changes a shipped dedupe contract) and whether the parser should even
-  emit the aggregate twice; the event contract deliberately mirrors today's store behaviour
-  rather than diverging from it, so this is one fix in one place, not two.
 - [ ] **B102 · AnalyzerContext: retire the store types from the analyzer surface** — L · both
   — the half of `B90` deliberately not shipped with the catalog. Validators already do not
   query SQLite; what leaks is *types*, since `analyze.Input` carries `[]store.UsageRow`,

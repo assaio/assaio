@@ -326,6 +326,11 @@ retention horizon.</p>
 <td><code>TEXT</code></td>
 <td>The vendor's own stated reason a cache read missed, <code>''</code> when unstated.</td>
 </tr>
+<tr>
+<td><code>project_conflict</code></td>
+<td><code>INTEGER</code></td>
+<td><code>1</code> when the same completed Claude sub-agent aggregate carried competing non-empty projects. Its <code>project</code> and <code>subpath</code> stay empty; usage remains counted once.</td>
+</tr>
 </tbody>
 </table>
 <p>The activity columns (<code>lines_added</code> … <code>rework_lines</code>) are populated by the Claude Code and

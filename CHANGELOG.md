@@ -33,6 +33,12 @@ Discussion.
 
 ## [Unreleased]
 
+### Fixed
+
+- [Conflicting project claims for one completed Claude sub-agent aggregate now abstain](docs/corrections.md#subagent-project-depended-on-input-order)
+  `(correction)`: the stored project and subpath stay empty rather than depending on which
+  transcript was parsed last, while token and activity totals remain deduplicated.
+
 ## [0.26.1] - 2026-09-14
 
 ### Changed
