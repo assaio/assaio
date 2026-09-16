@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-09-16
+
 ### Added
 
 - Added the first local Evidence Graph slice: `evidence` compares stored sessions with
@@ -42,11 +44,21 @@ Discussion.
   alternatives, and an abstention reason. Nothing is persisted or synced, and
   PR/review/CI/merge outcomes remain future scope.
 
+### Changed
+
+- Refreshed the vendored LiteLLM price table to its 2026-09-16 snapshot: 3,923 to
+  3,958 table entries (3,922 to 3,957 model keys), with 37 added and two removed.
+  Rates used by assaio changed for 17 existing entries; no existing token limit changed,
+  and the 15 model keys found in the checked-in parser corpus retain the same effective
+  rates and availability.
+
 ### Fixed
 
 - [Conflicting project claims for one completed Claude sub-agent aggregate now abstain](docs/corrections.md#subagent-project-depended-on-input-order)
   `(correction)`: the stored project and subpath stay empty rather than depending on which
   transcript was parsed last, while token and activity totals remain deduplicated.
+- Corrected the v0.26.1 citation date to the tag's actual 2026-09-15 publication date;
+  the historical tag and its failed consistency run remain unchanged.
 
 ## [0.26.1] - 2026-09-14
 
@@ -1563,7 +1575,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.26.1...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.27.0...HEAD
+[0.27.0]: https://github.com/assaio/assaio/compare/v0.26.1...v0.27.0
 [0.26.1]: https://github.com/assaio/assaio/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/assaio/assaio/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/assaio/assaio/compare/v0.24.0...v0.25.0
