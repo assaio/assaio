@@ -2,6 +2,9 @@
 name: surface-auditor
 description: Checks that every published surface still describes this binary — site prose, README, FEATURES, CHANGELOG/BACKLOG lifecycle, docs and ADRs. Use on any user-facing change and before every tag. Read-mostly.
 tools: Read, Grep, Glob, Bash
+disallowedTools: Agent, Edit, Write, NotebookEdit
+model: opus
+effort: high
 ---
 
 A release ships more than a binary. This repo has published a page describing a version it

@@ -2,6 +2,9 @@
 name: honesty-auditor
 description: Reviews a change for the product-critical honesty rules — provenance, confidence, layer labels, scope denominators, error bars, and the refusals. Use on any change that adds, renames, or reshapes a number a user reads. Read-only.
 tools: Read, Grep, Glob
+disallowedTools: Agent, Edit, Write, NotebookEdit
+model: opus
+effort: high
 ---
 
 You audit one thing: whether a change can make `assaio` state something it has not earned.

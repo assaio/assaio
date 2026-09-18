@@ -1,6 +1,14 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "attribution": { "commit": "", "pr": "" },
+  "enabledPlugins": {
+    "atlassian@claude-plugins-official": false,
+    "sentry@claude-plugins-official": false,
+    "railway@claude-plugins-official": false,
+    "cloudflare@claude-plugins-official": false,
+    "chrome-devtools-mcp@claude-plugins-official": false,
+    "github@claude-plugins-official": false
+  },
   "permissions": {
     "allow": [
       "Bash(make build)",
@@ -11,6 +19,12 @@
       "Bash(make test)",
       "Bash(make tidy)",
       "Bash(make vuln)",
+      "Bash(bash .claude/checks/gate.sh:*)",
+      "Bash(bash .claude/checks/checks_test.sh)",
+      "Bash(bash .claude/hooks/guard_test.sh)",
+      "Bash(python3 .claude/checks/setup.py:*)",
+      "Bash(python3 .claude/checks/ops_catalogue.py:*)",
+      "Bash(python3 .claude/scripts/text_model.py --detect)",
       "Bash(go build:*)",
       "Bash(go doc:*)",
       "Bash(go list:*)",
@@ -29,9 +43,14 @@
       "Bash(git shortlog:*)",
       "Bash(git show:*)",
       "Bash(git status:*)",
+      "Bash(git symbolic-ref:*)",
       "Bash(git tag --list:*)",
+      "Bash(git worktree list:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)",
       "Bash(gh pr list:*)",
       "Bash(gh pr view:*)",
+      "Bash(gh pr checks:*)",
       "Bash(gh release list:*)",
       "Bash(gh release view:*)",
       "Bash(gh run list:*)",
@@ -53,13 +72,39 @@
       "Bash(git tag v:*)",
       "Bash(make release:*)",
       "Bash(make release-minor:*)",
-      "Bash(make release-patch:*)"
+      "Bash(make release-patch:*)",
+      "Bash(python3 .claude/scripts/text_model.py:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/*.p12)",
+      "Read(**/id_rsa)",
+      "Read(**/id_ed25519)",
+      "Read(~/.netrc)",
+      "Read(~/.codex/auth.json)",
+      "Read(~/.claude/.credentials.json)"
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/session_start.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",

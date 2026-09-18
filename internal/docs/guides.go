@@ -69,6 +69,8 @@ var unpublished = map[string]string{
 	"docs/corrections.md": "a register of figures that were wrong, quoting the command lines and flags " +
 		"of the releases it describes -- which the invocation check would read as claims about " +
 		"today's binary",
+	"docs/operations.md": "every entry point a maintainer can run and what it writes -- for the " +
+		"maintainer and the agent harness, like site.md",
 }
 
 // Guides reads the published set from the repository and returns it in reading order.
@@ -114,7 +116,8 @@ func guide(source, title string) Guide {
 
 // documents finds every Markdown file under docs/ that could be published, mapped to its title.
 // ADRs are excluded as a directory: they are decision records addressed to contributors, and
-// each one names commitments in terms only the codebase gives meaning to.
+// each one names commitments in terms only the codebase gives meaning to. docs/work/ holds
+// tasks in progress and parked plans, addressed to whoever picks them up next.
 func documents(repoRoot string) (map[string]string, error) {
 	out := map[string]string{}
 	root := filepath.Join(repoRoot, "docs")
@@ -123,7 +126,7 @@ func documents(repoRoot string) (map[string]string, error) {
 		case err != nil:
 			return err
 		case d.IsDir():
-			if name := d.Name(); name == "adr" || name == "superpowers" || name == "assets" {
+			if name := d.Name(); name == "adr" || name == "work" || name == "assets" {
 				return filepath.SkipDir
 			}
 			return nil
