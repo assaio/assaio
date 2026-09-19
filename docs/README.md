@@ -66,6 +66,10 @@ all in the shipping PR.
   everything that crosses the machine boundary; and the deletion procedure, run.
 - [`RELEASING.md`](../RELEASING.md) — maintainers only: versioning, the immutable-
   migrations rule, cutting a release.
+- [`operations.md`](operations.md) — maintainers only: every entry point (Makefile target,
+  workflow, script, hook, store-writing command) with what it writes and what guards it.
+- `work/` — one file per task in progress (spec, plan, journal, handoff), deleted when the
+  work ships; `work/parked/` for plans that wait. Never published.
 - [`format-resilience.md`](format-resilience.md) — how vendor log-format drift is
   detected and fixed: current defenses, known gaps, and the report → fixture → patch
   release loop (`format-drift` label).

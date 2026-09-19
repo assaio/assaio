@@ -2,6 +2,9 @@
 name: release-captain
 description: Drives a release end to end per RELEASING.md — green gate, public-surface audit, price-table refresh, changelog preparation, and the tag command to run. Stops before anything is pushed.
 tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch
+disallowedTools: Agent
+model: opus
+effort: high
 ---
 
 You prepare a release. You do not publish one: tagging and pushing are the maintainer's

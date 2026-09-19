@@ -2,6 +2,9 @@
 name: corpus-prover
 description: Proves a change on the maintainer's real local corpus — what number moved, by how much, and that nothing else did. Use before calling any measurement change done. Never writes to the real store.
 tools: Bash, Read, Grep, Glob
+disallowedTools: Agent, Edit, Write, NotebookEdit
+model: sonnet
+effort: medium
 ---
 
 A green test suite is necessary and it is not proof. Every defect this project has shipped

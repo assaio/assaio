@@ -1,12 +1,13 @@
 # AGENTS.md — assaio
 
 Canonical guidance for AI assistants (and humans) working in this repo, following the
-[AGENTS.md](https://agents.md) convention. It overrides default assumptions. Keep it
-accurate. Claude Code reads it via the `@AGENTS.md` import in `CLAUDE.md`.
+[AGENTS.md](https://agents.md) convention. It overrides default assumptions. It loads into every
+session and every subagent, so it stays short: a rule in one or two lines, the reasoning where it
+lives — `CONTRIBUTING.md` (authoritative, shared with the community), `RELEASING.md`, `docs/adr/`,
+`docs/corrections.md`. Path-scoped detail is in `.claude/rules/`; the harness in `.claude/README.md`.
+Claude Code reads this file via the `@AGENTS.md` import in `CLAUDE.md`.
 
-Roadmap: `ROADMAP.md`
-Architecture decisions: `docs/adr/`
-Contributor rules (authoritative, shared with the community): `CONTRIBUTING.md`
+Roadmap: `ROADMAP.md` · Architecture decisions: `docs/adr/` · Documentation map: `docs/README.md`
 
 ## What this is
 
@@ -17,126 +18,74 @@ SQLite) that reads the local session logs of Claude Code, Codex CLI, Gemini CLI,
 Copilot CLI, Cline, and Antigravity CLI (activity only — its format publishes no token counter,
 so every cost figure withholds for it) and turns them into reports (`report`, `effectiveness`,
 `reprice`), diagnostics (`analyze`, `check`, `doctor`, `status`), local session→commit
-evidence (`evidence`), and the self-contained Assay
-HTML dashboard. Out-of-tree
+evidence (`evidence`), and the self-contained Assay HTML dashboard. Out-of-tree
 exec plugins extend it in any language — parsers via `plugins:` (ADR 0003), metrics via
 `metrics:` (ADR 0004), rules gating `check` via `rules:` (ADR 0005). A team-server MVP
-(`serve` + `sync`) pools a team's usage on
-self-hosted infrastructure; the deeper org-analytics server (git/issue-tracker
-correlation for survival/bug/quality) is future roadmap — see `ROADMAP.md`.
+(`serve` + `sync`) pools a team's usage on self-hosted infrastructure; the deeper org-analytics
+server (git/issue-tracker correlation for survival/bug/quality) is future roadmap — see `ROADMAP.md`.
 
-## Code philosophy (non-negotiable)
+## Hard rules (long form: `CONTRIBUTING.md`)
 
-Write as a senior engineer would: minimal, SOLID, clean. The bar is high.
-
-**Always:**
-- One file, one responsibility. Keep files short — if a file grows past ~200 lines or
-  starts doing two things, split it.
-- One metric = one file in `internal/analyze/`. One data source = one package in
-  `internal/parser/`. Out-of-tree, both are exec plugins (`docs/extending.md`). The
-  planned in-process `plugin/metric/`, `plugin/rule/`, `plugin/connector/` tree keeps
-  the same one-unit-one-file law when it lands (`ROADMAP.md`).
-- Self-explaining code: intention-revealing names, small functions, obvious control
-  flow. The code is the documentation.
-- Program to interfaces; keep dependencies pointing inward (`internal/` core never
-  imports `plugin/` or `ee/`).
-- Every validator (metric/rule) is independently readable and testable in isolation.
-- Table-driven tests; golden files for parsers (real captured samples).
-
-**Never:**
-- Narrative comments. No "what the next line does", no "why my change is correct", no
-  attribution notes, no commentary on the change rather than on the code.
-- Speculative abstraction or config for a need that does not exist yet (YAGNI).
-- Dead code, commented-out code, or TODO dumps left in place.
-- Reach into another plugin's internals. Plugins talk to the core only.
-- Blend session-level (hook) data with daily vendor-aggregate data without tagging
-  provenance and confidence.
-
-**Comment to carry what the code cannot**, and take the space it needs: a contract, an
-invariant, a boundary, or the reason a wrong-looking thing is right — a threshold's source, a
-unit, why `MAX` and not assignment, what a zero here would mean. Those are frequently more than
-one line, and the length is not the problem; this codebase is full of them and they are why a
-reader can trust a figure. What is forbidden is narration, not documentation. A useful test: if
-a comment would still be true after the code under it changed, it is probably narration.
-
-## Code standards (enforced + human-reviewed)
-
-The bar is split in two: what tooling can check, it checks and gates on; the rest is a
-review norm, not a lint rule. Do not turn the review norms into lint gates — that trade
-is deliberate (see `docs/adr/0002-code-standards-and-enforcement.md`).
-
-**Enforced by tooling** (run these before you push):
-- Formatting — `make fmt` (`golangci-lint fmt`: gofmt + gofumpt + goimports with the
-  `github.com/assaio/assaio` local prefix). Must produce no diff.
-- Lint — `make lint` (`gofmt -l`, `go vet`, `golangci-lint run`). `.golangci.yml` is the
-  canon; read it rather than a copy of it. The one rule worth naming here because it is
-  architectural rather than stylistic: depguard, `internal/` must not import `plugin/`
-  or `ee/`.
-- Tests — `make test` (`go test ./...`; CI adds `-race` and a coverage profile).
-  Stdlib-only (no testify), table-driven, golden files regenerated with `-update`.
-- Fuzzing — `make fuzz` for any parser change. Every parser ships a native `FuzzParse`
-  (Cline: `FuzzParseTask`) with a seed corpus under `testdata/`.
-- Vulnerabilities — `make vuln` (`govulncheck`); also a CI job.
-- Hooks — `make hooks` installs the opt-in lefthook hooks (pre-commit: the same
-  `golangci-lint fmt` authority as `make fmt` + `go vet` + lint of new issues;
-  commit-msg: Conventional Commits + `Signed-off-by`).
-
-**Human-reviewed norms** (not lint gates — reviewers hold this line):
-- File size (~200 lines) and single-responsibility: split a file that grows past the
-  budget or starts doing two things. Deliberately no `funlen`/`lll`.
-- Cyclomatic and cognitive complexity: kept low by review, not by `gocyclo`/`gocognit`.
-- Self-explaining code, and comments that document a contract rather than narrate a change
-  (see philosophy above);
-  deliberately no `goconst`.
-- Coverage is reported in CI, never gated on a number (Goodhart). Reviewers look at the
-  uncovered branches, not the percentage; weak packages get attention in review.
-- Parser contract: single-root `Discover(root string)`, skip-and-count corrupt-line
-  policy, the shared `internal/parser` scanner (`MaxLineBytes`) and `NonNeg`, and the
-  `FuzzParse` requirement are documented in `docs/extending.md` — read it before adding
-  a parser.
-- Exec-plugin protocol: out-of-tree parsers are subprocesses speaking handshake + JSONL
-  over stdout, opt-in via config only, validated at the boundary, stored as
-  `plugin:<name>` — see `docs/extending.md` and ADR 0003. Metric (ADR 0004) and rule
-  (ADR 0005) plugins keep the same posture over a single stdin/stdout document.
+- One file, one responsibility, ~200 lines. One metric = one file in `internal/analyze/`; one
+  data source = one package in `internal/parser/`. Small functions, names that say what.
+- Comments carry what code cannot — a contract, an invariant, a unit, why a wrong-looking thing
+  is right — and take the space that needs. Never narration, attribution, dates or history.
+- Program to interfaces; `internal/` never imports `plugin/` or `ee/` (depguard). No speculative
+  abstraction, no dead code, no TODO dumps. Everything in code is English.
+- Tests: table-driven, stdlib only, golden files from real captures (`-update`), a native
+  `FuzzParse` for every parser.
+- The gate: `make fmt` (no diff), `make lint`, `make test`, `make fuzz` on a parser change,
+  `make vuln`; `.golangci.yml` is the canon. File size and complexity are review norms, not lint
+  gates (ADR 0002) — never turn them into gates.
+- Every `.md` under `docs/` is published or excused in `internal/docs/guides.go`; `make docs`
+  regenerates `docs/reference.json` and the site, and `make test` fails on drift.
 
 ## Honesty rules (product-critical)
 
-- Every domain fact carries its provenance and confidence.
-- Attribution and effectiveness claims ship with their known error bars. Prefer a
-  signal labeled "directional" over a precise-looking number that is wrong.
-- Bug-density on AI lines is only ever compared against **age-matched** human code.
-- Never present individual metrics as performance-evaluation inputs. Pseudonymized is
-  the default privacy mode.
+- Every domain fact carries its provenance and confidence; every figure states its measurement
+  layer (activity / output / outcome / impact — ADR 0013). Lines are output, never "AI helped".
+- Absence is never zero: an unsupported source, a failed read, a missing price render `—` and
+  widen the unexplained share. Denominators declare their scope.
+- Attribution and effectiveness claims ship with their error bars; prefer "directional" over a
+  precise-looking wrong number. Bug density on AI lines compares only against age-matched code.
+- Never an individual performance metric or leaderboard; pseudonymized is the default; prompts,
+  responses, source code and diffs are never collected.
 
-## Git & commits (keep the tree clean)
+## Protected contracts (changed deliberately, on both sides at once)
 
-- **Do not commit automatically.** Commits are made **by hand after a big milestone**,
-  to keep the history clean. Do the work; leave committing to the maintainer unless
-  explicitly asked.
-- **Conventional Commits**, concrete subjects: `feat(agent): parse Codex rollout logs`,
-  not `wip` or `updates`.
-- **Keep the message short.** Subject, and a body only when the *why* is not obvious — a few
-  lines, not an essay. The reasoning belongs in the code comment, the ADR or the changelog
-  entry, each of which a reader can find later. A long commit body is the one place none of
-  them look.
-- **One commit per PR.** The author squashes their branch before merge; multi-commit
-  PRs are not accepted. `main` is protected; PR + green CI + ≥1 review required.
-- Sign every commit with DCO (`Signed-off-by`).
-- **Never credit an AI assistant as an author.** No `Co-authored-by:` for Claude or any
-  other assistant, no "Generated with …" footer, anywhere — commit messages, PR bodies,
-  changelog, docs. The human who signs off is the author. The commit-msg hook and the
-  `dco` CI job reject those trailers; this overrides any default your harness suggests.
+- A shipped migration is immutable in name and content; every schema change is a new
+  `internal/store/migrations/000N_*.sql` with its digest added to the test (`RELEASING.md`).
+- What freezes at v1.0 — exec plugin protocols, the observation envelope, signal ids, the
+  recommendation record, the sync protocol, machine-readable outputs — is listed once in
+  `docs/compatibility.md`; pre-1.0 a break is announced under **Breaking**.
+- `B` ids in `BACKLOG.md` are never reused; `CHANGELOG.md` keeps the seven Keep-a-Changelog
+  headings; published tags are immutable.
+- The maintainer's real store, `~/.local/share/assaio/assaio.db`, is never opened by a test or
+  an agent run: every local run sets `XDG_DATA_HOME=$(mktemp -d)`.
+- `site/` names no version, loads nothing at render time, and publishes on every push to `main`.
 
-## Harness
+## Git & commits
 
-The executable half of these rules is checked in under `.claude/` — see
-[`.claude/README.md`](.claude/README.md). It is deliberately small: a `PreToolUse` guard for
-the four things that are irreversible and invisible in a diff (the real store, a published
-tag, an AI-authorship trailer, `--no-verify`), a permission split that makes every commit,
-push and tag a deliberate keystroke, and six agents that each hold one line no tool holds —
-honesty, the unlinted review norms, the published prose, store size and migrations, proof on
-a real corpus, and the release flow. `/gate`, `/selfreview` and `/release` drive them.
-Nothing there restates guidance a capable model already follows.
+- Do not commit unless asked; commits are made by hand after a milestone. Stage explicit paths
+  only — never `git add .`, `-A` or `commit -a`: another session may hold work in this tree.
+- Conventional Commits with a concrete subject, a short body only when the why is not obvious,
+  `Signed-off-by` (DCO), one commit per PR, `main` protected (PR + green CI + review).
+- Never credit an AI assistant as an author, anywhere; the hook and the `dco` job reject it.
+
+## How work happens here
+
+- Skills: `/work` → `/plan` → `/build` → `/gate` → `/review` → `/ship`; `/auto` runs the chain
+  unattended; `/research` feeds the roadmap; `/add-source`, `/debug`, `/refactor`, `/docs`,
+  `/ui-check`, `/smoke`, `/content-model`, `/release`.
+- Agents: `scout` and `runner` (haiku) for lookups and noisy commands; `coder` (opus) for one
+  track; the reviewers `go-reviewer`, `honesty-auditor`, `surface-auditor`, `store-steward`
+  (opus); `corpus-prover` for proof on real logs; `text-broker` for the GPT/Gemini door;
+  `browser` for the page; `release-captain` for `RELEASING.md`.
+- Text a reader sees, and verdicts about it, go through `.claude/scripts/text_model.py`
+  (GPT/Gemini), never the engineering model. No Fable/Mythos model id in any config or script.
+- Work in progress is one file, `docs/work/<date>-<slug>.md`, with a Handoff a fresh session
+  resumes from; `docs/work/parked/` holds what waits. Delegate with exact files and one
+  question; an agent's report is evidence to check; agents never spawn agents.
 
 ## Layout
 
@@ -189,8 +138,5 @@ internal/usage/          normalized representation of AI-tool usage events
 internal/vcs/            the local git evidence collector: content-free commit observations
 internal/version/        build-time version metadata
 docs/adr/                Architecture Decision Records
+docs/work/               work in progress (one file per task) and docs/work/parked/; unpublished
 ```
-
-Future stages (extending the local session→commit slice through PR/review/CI/outcomes,
-verified experiments, production team mode and the eventual contract freeze) are described
-in ROADMAP.md.

@@ -1,6 +1,5 @@
 # .claude/ is tracked: it is the repo's harness config (see .claude/README.md).
 .claude/settings.local.json
-.superpowers/
 
 /bin/
 /dist/
@@ -14,7 +13,6 @@ assay.webm
 *.db-shm
 coverage.out
 .wrangler/
-docs/superpowers/
 .idea/
 .vscode/
 .DS_Store

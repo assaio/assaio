@@ -169,9 +169,9 @@ is not `main` has no business publishing this page either way.
 No repository secrets are needed on this path: Cloudflare authenticates through its own Git
 connection.
 
-**3. Verify.** Push to `main` and load <https://assaio.dev/>. The footer of a release is the
-last check in [RELEASING.md](../RELEASING.md#after-the-workflow-finishes): the live page must
-name the version just published.
+**3. Verify.** Push to `main` and load <https://assaio.dev/>. The page names no version, so
+the last check in [RELEASING.md](../RELEASING.md#after-the-workflow-finishes) compares bytes:
+`diff <(curl -fsSL https://assaio.dev/) site/index.html` must print nothing.
 
 **Optional.** `www.assaio.dev` serves the same assets, so nothing is broken without this — but
 the page's `<link rel="canonical">` points at the apex, so a zone-level *Redirect Rule* sending
