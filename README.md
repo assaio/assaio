@@ -1,12 +1,10 @@
 <div align="center">
 
-# assaio
+# assaio: offline AI coding usage and cost analysis
 
-**Vendor-neutral evidence for AI-assisted software engineering.**
+**Compare AI coding cost, token usage and code-producing activity from local logs.**
 
-Measure cost, usage and code-producing activity from local coding-agent logs today;
-connect that evidence to review, CI and durable outcomes next. Offline-first, reproducible
-and designed to measure systems rather than rank people.
+`assaio-agent` is an offline-first Go CLI with embedded SQLite for Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Cline and Antigravity CLI. It reports available cost, usage and activity evidence without collecting prompts, responses or code. It measures systems, never ranks people.
 
 [![CI](https://github.com/assaio/assaio/actions/workflows/ci.yml/badge.svg)](https://github.com/assaio/assaio/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/assaio/assaio)](https://goreportcard.com/report/github.com/assaio/assaio)
@@ -14,16 +12,13 @@ and designed to measure systems rather than rank people.
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/assaio/assaio)](https://github.com/assaio/assaio/releases)
 
-[Website](https://assaio.dev) · [Roadmap](ROADMAP.md) · [Features](FEATURES.md) ·
-[Documentation](docs/README.md) · [Privacy](PRIVACY.md)
+[assaio website](https://assaio.dev) · [Product roadmap](ROADMAP.md) · [Shipped features](FEATURES.md) · [Documentation](docs/README.md) · [Privacy model](PRIVACY.md)
 
 </div>
 
 ---
 
-AI coding vendors now provide useful usage dashboards of their own. They are the right
-place for plan limits and vendor-specific administration. `assaio` is for the questions
-that cross those boundaries:
+Vendor dashboards remain the right place for plan limits and vendor-specific administration. `assaio` adds a local, cross-vendor view for these questions:
 
 - What did Claude Code, Codex, Gemini CLI, Copilot CLI and Cline cost on one basis?
 - Which repositories turn that spend into accepted edits, and where is there friction?
@@ -31,34 +26,26 @@ that cross those boundaries:
 - Did a change survive review and CI, rather than merely produce more lines?
 - Can the result be reproduced without uploading prompts, code or conversations?
 
-The first three are available now. The local `evidence` command now makes the first narrow
-part of the fourth visible: content-free session→commit candidates with explicit confidence,
-ambiguity, abstention and population coverage. PR, review, CI, merge and durable-outcome
-correlation remain the next product milestone; they are not claimed as shipped. The research
-and product choices behind that focus are in the [roadmap](ROADMAP.md).
+Today, `assaio` answers the first three questions. The local `evidence` command also finds content-free session→commit candidates and reports confidence, ambiguity, abstention and population coverage. PR, review, CI, merge and durable-outcome correlation are the next product milestone and are not shipped. See the [roadmap](ROADMAP.md) for the research and product choices behind that focus.
 
 <p align="center">
-  <img src="docs/assets/report-by-project.svg" alt="assaio effectiveness report by project" width="720">
+  <img src="docs/assets/report-by-project.svg" alt="assaio AI coding effectiveness report by project" width="720">
 </p>
 
-## Is assaio a fit?
+## Who assaio is for
 
-Use it when you are an individual, platform team or engineering-enablement group that:
+`assaio` is for individual developers, platform teams and engineering-enablement groups that:
 
-- uses more than one coding assistant;
-- needs a local, inspectable baseline before granting a server access to repositories;
-- wants cost and output evidence with explicit provenance and missing-data handling;
-- wants to test an improvement without turning telemetry into an employee leaderboard.
+- use more than one coding assistant
+- need a local, inspectable baseline before granting a server access to repositories
+- want cost and output evidence with explicit provenance and missing-data handling
+- want to test an improvement without turning telemetry into an employee leaderboard
 
-It is not a fit when you need live quota bars, prompt replay, a general LLM observability
-backend, or a production-ready multi-tenant service. Vendor tools cover quota data better;
-`assaio` deliberately does not extract or store prompt or response bodies; the team server
-is an MVP.
+`assaio` is not a fit if you need live quota bars, prompt replay, a general LLM observability backend or a production-ready multi-tenant service. Vendor tools are better for quota data. `assaio` does not extract or store prompt or response bodies, and the team server is an MVP.
 
-## Install
+## Install assaio-agent
 
-`assaio-agent` is a single binary with embedded SQLite. Releases cover macOS, Linux and
-Windows on amd64 and arm64.
+`assaio-agent` is a single Go binary with embedded SQLite. Prebuilt releases support macOS, Linux and Windows on amd64 and arm64.
 
 Homebrew:
 
@@ -76,9 +63,9 @@ Or download an archive from [GitHub Releases](https://github.com/assaio/assaio/r
 Each release includes checksums, an SPDX SBOM and build-provenance attestations. See
 [RELEASING.md](RELEASING.md) for verification.
 
-## A 60-second first look
+## Try assaio in 60 seconds
 
-See the product without reading your logs:
+Preview `assaio` without reading your logs:
 
 ```console
 $ assaio-agent demo
@@ -90,8 +77,7 @@ Then run the guided import:
 $ assaio-agent init
 ```
 
-`init` shows what it will read, imports the history and writes the first report. It does
-not send anything over the network.
+`init` shows which local logs it will read, imports their history and writes the first report. It does not send anything over the network.
 
 The normal loop is intentionally short:
 
@@ -112,7 +98,7 @@ For automation or a narrower question, use `report`, `effectiveness`, `analyze`,
 [command reference](https://assaio.dev/docs/reference) is authoritative; the README no
 longer duplicates every flag.
 
-## What is measured
+## What assaio measures
 
 | Layer | Available now | Claim |
 | --- | --- | --- |
@@ -121,9 +107,9 @@ longer duplicates every flag.
 | Outcome | directional local `survival` check only | a defined test was met |
 | Impact | not shipped | a delivery, quality or business result changed |
 
-Every metric result carries its source coverage, sample size, freshness and parser version. A
-source that does not record a field is excluded from that denominator; it is never counted
-as zero. A missing model price renders `—`/`null`, not `$0`. Run:
+Every metric includes source coverage, sample size, freshness and parser version. If a source does not record a field, `assaio` excludes that source from the denominator instead of counting it as zero. A missing model price appears as `—`/`null`, not `$0`.
+
+Run:
 
 ```console
 $ assaio-agent signals coverage
@@ -138,9 +124,9 @@ only a stored project basename and bounded time proximity, labels its answers `m
 `ambiguous` or `unmatched`, and keeps competing commits visible. A match does not prove that
 the session caused the commit. See [how to read the result](docs/evidence.md).
 
-## Sources
+## Supported AI coding tools
 
-`assaio` discovers the existing local logs of:
+`assaio` reads existing local logs from these tools:
 
 | Source | Tokens/cost | Activity | Important limit |
 | --- | --- | --- | --- |
@@ -151,18 +137,13 @@ the session caused the commit. See [how to read the result](docs/evidence.md).
 | Cline | yes | limited | calibration still needs an external real capture |
 | Antigravity CLI (`agy`) | no | yes | its format publishes neither tokens nor working directory |
 
-The [source-depth matrix](https://assaio.dev/docs/reference#sources) names every field and
-its provenance. Log formats are vendor-internal and can change; golden files, fuzzing,
-calibration checks and `doctor` canaries make drift visible, but cannot prevent it.
+The [source-depth matrix](https://assaio.dev/docs/reference#sources) lists every field and where it comes from. Vendor log formats can change. Tests, calibration checks and `doctor` make format drift visible, but cannot prevent it.
 
-Costs are API-equivalent estimates from a vendored LiteLLM price snapshot. They are not a
-vendor invoice or a reconstruction of subscription quota consumption. `reconcile` compares
-an export you downloaded with the local estimate and leaves the unexplained remainder
-visible.
+Cost figures are API-equivalent estimates based on a vendored LiteLLM price snapshot. They are not vendor invoices and do not reconstruct subscription quota use. `reconcile` compares a downloaded export with the local estimate and shows any unexplained remainder.
 
-## Privacy model
+## Privacy: local and offline
 
-The normal offline analysis path:
+On the normal offline analysis path, `assaio`:
 
 - makes no network request and has no telemetry;
 - does not extract or store prompt text, response text or repository file contents;
@@ -178,17 +159,13 @@ The exact field map, retention behavior and deletion commands are in [PRIVACY.md
 
 ## Team mode
 
-`serve` and `sync` can pool pseudonymous usage on infrastructure you operate. This is a
-tested MVP, not a production claim. It has authentication, request bounds and an aggregated
-dashboard, but still needs RBAC, token rotation, resumable sync, retention controls, a
-backup/restore drill and a measured operating envelope. Those are explicit gates in the
-[roadmap](ROADMAP.md).
+`serve` and `sync` can pool pseudonymous usage on infrastructure you operate. Team mode is a tested MVP, not a production-ready service.
+
+It includes authentication, request bounds and an aggregated dashboard. It still needs RBAC, token rotation, resumable sync, retention controls, a backup/restore drill and a measured operating envelope. These are explicit gates in the [roadmap](ROADMAP.md).
 
 ## Extension points
 
-Out-of-tree executables can add a parser, metric or `check` rule in any language. Each
-protocol has a handshake, a versioned JSON contract, boundary validation and a `verify`
-command. The core never imports plugin internals.
+External executables written in any language can add a parser, metric or `check` rule. Each protocol provides a handshake, versioned JSON contract, boundary validation and `verify` command. The core does not import plugin internals.
 
 Start with [docs/extending.md](docs/extending.md). The complete machine-readable reference
 can also be exported by the binary:
@@ -201,24 +178,23 @@ The in-process Go packages remain under `internal/` until the public contracts f
 
 ## Project status
 
-The local CLI is suitable for evaluation and design-partner pilots. It has cross-platform
-CI, race tests, native parser fuzzers, an 86% statement-coverage snapshot at v0.26 audit
-time, vulnerability scanning and correction lineage. It remains pre-1.0 because two things
-are not yet true:
+The local CLI is suitable for evaluation and design-partner pilots. At the v0.26 audit, the project had an 86% statement-coverage snapshot. It also has cross-platform CI, race tests, native parser fuzzers, vulnerability scanning and a published correction record.
 
-1. the outcome join beyond local session→commit candidates — PR/review/CI and durable
-   outcomes — is not shipped;
-2. the contracts and calibration have not been proven across several external teams and
-   release cycles.
+It remains pre-1.0 because:
+
+1. PR, review, CI and durable-outcome correlation beyond local session→commit candidates is not shipped;
+2. the contracts and calibration have not yet been proven across several external teams and release cycles.
 
 The [roadmap](ROADMAP.md) defines the evidence needed for v1.0. The detailed candidate pool
 is in [BACKLOG.md](BACKLOG.md); it is not a schedule.
 
+## Collaboration
+
+To discuss a design partnership, pilot or consulting on measuring AI-assisted engineering, email [contact@assaio.dev](mailto:contact@assaio.dev) or use the [contact form](https://karauda.com/contact).
+
 ## Contributing and security
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR. Changes use one Conventional
-Commit with DCO sign-off and must pass `make fmt`, `make lint` and `make test`. Parser changes
-also run `make fuzz`.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR. Each change must use one Conventional Commit, include DCO sign-off, and pass `make fmt`, `make lint` and `make test`. Parser changes must also pass `make fuzz`.
 
 Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/assaio/assaio/security/advisories/new),
 not a public issue; see [SECURITY.md](SECURITY.md).
