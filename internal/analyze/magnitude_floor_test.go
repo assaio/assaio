@@ -42,6 +42,7 @@ func TestThroughputTrivialLinesIsNotConfidentlyRamping(t *testing.T) {
 	usage := []store.UsageRow{
 		{Day: "2026-07-13", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web", In: 10, Out: 10, LinesAdded: 2},
 		{Day: "2026-07-02", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web", In: 10, Out: 10, LinesAdded: 1},
+		{Day: "2026-06-25", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web", In: 10, Out: 10},
 	}
 	in := BuildInput(usage, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
 	v, ok := Get(throughputName)

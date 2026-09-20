@@ -56,6 +56,7 @@ func writeText(out io.Writer, a *Assay) error {
 			}
 		}
 	}
+	writeTrend(w, &a.Trend)
 	if len(a.Profile.Axes) > 0 {
 		row(w, "")
 		for _, ax := range a.Profile.Axes {
@@ -85,6 +86,24 @@ func writeText(out io.Writer, a *Assay) error {
 	}
 	w.printf("\n%s\n", a.Post)
 	return w.err
+}
+
+// writeTrend renders the week-over-week block: each move on its own line with its layer, the note
+// analyze published under it, and the card's reason in place of both when it withholds them.
+func writeTrend(w *lines, t *Trend) {
+	row(w, "")
+	for _, line := range wrap(strings.ToUpper(t.Title)+" · "+t.Clause, textWidth-4) {
+		row(w, "  "+line)
+	}
+	for _, m := range []Move{t.Tokens, t.Lines} {
+		row(w, fmt.Sprintf("  %-10s %-8s %s", m.Label, m.Value, m.Layer))
+		for _, line := range wrap(m.Note, textWidth-6) {
+			row(w, "    "+line)
+		}
+	}
+	for _, line := range wrap(t.Withheld, textWidth-4) {
+		row(w, "  "+line)
+	}
 }
 
 func row(w *lines, s string) {

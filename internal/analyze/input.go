@@ -24,7 +24,8 @@ type Delegation struct {
 // remain for anything the prepared views don't cover, e.g. day-level or session-grain
 // signals (see model_fit.go for a validator built entirely on ByModel, and throughput.go,
 // context.go, or rework.go for ones that still need Usage/Sessions directly). Recent is
-// the recent-vs-prior window (e.g. 7d) validators use for trend and staleness signals.
+// the recent-vs-prior window (e.g. 7d) validators use for trend and staleness signals; the
+// week-over-week figures are labelled for a week, and every caller passes one.
 type Input struct {
 	// WindowStart is the --since boundary Usage was queried with. It is what a monthly
 	// projection divides by: a window is a span of real days, and the days inside it that

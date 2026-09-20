@@ -21,8 +21,8 @@ const (
 	// adoptionMinSessionsForBroad is the minimum total session count "broad" (more than
 	// one project) requires before it can carry a favorable Strong read on its own --
 	// 2 projects with 1 session each is not yet broad usage, just two data points.
-	// Growing (a real week-over-week trend) is not subject to this floor: trendOK
-	// already requires a nonzero prior window, its own evidence-of-activity guard.
+	// Growing is not subject to this floor: a readable trend already carries its own
+	// (linesTrendFloor, a nonzero earlier week, both weeks inside the window and the store).
 	adoptionMinSessionsForBroad = 3
 )
 
@@ -37,8 +37,8 @@ func (adoptionValidator) Title() string      { return adoptionTitle }
 func (adoptionValidator) Describe() string   { return adoptionDescribe }
 func (adoptionValidator) Layer() layer.Layer { return layer.Activity } // sessions, active days and breadth
 
-// Trending: both figures below compare the recent span against the one before it, so the history
-// behind that earlier span is part of the claim (analyze.Trending).
+// Trending: the week-over-week figure compares the recent span against the one before it, so the
+// history behind that earlier span is part of the claim (analyze.Trending).
 func (adoptionValidator) Trending() {}
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
@@ -51,14 +51,14 @@ func (adoptionValidator) Analyze(in Input) Result {
 	// topN=0: dormant counts must reflect every stale project/tool, never a top-N cap.
 	r.restsOn(activeDays(&in), "active days")
 	insights := report.BuildInsights(in.Usage, in.Prices, in.Now, in.Recent, 0)
-	recent, prior, changePct, trendOK := weekOverWeek(in.Usage, in.Now, in.Recent)
+	tr := readTrend(&in, linesTrend, linesTrendFloor)
 	inv := insights.Inventory
 
-	growing := trendOK && changePct > 0
+	growing := tr.readable() && tr.change() > 0
 	// Breadth is a count of projects, and a project comes from a session's working directory.
 	// A source that records none -- Antigravity CLI writes no cwd anywhere -- leaves every row
 	// unattributed, and "0 projects" then reads as usage that has spread nowhere rather than a
-	// breadth nothing measured. The trend half still stands: it counts sessions, not projects.
+	// breadth nothing measured. The trend half still stands: it sums lines, not projects.
 	breadthKnown := inv.Unattributed < len(in.Usage)
 	broadSignal := breadthKnown && inv.Projects > 1
 	sufficientSample := len(in.Sessions) >= adoptionMinSessionsForBroad
@@ -66,17 +66,17 @@ func (adoptionValidator) Analyze(in Input) Result {
 	strong := growing || broad
 
 	r.Read = readFor(strong, "Strong")
-	if !breadthKnown && !trendOK {
+	if !breadthKnown && !tr.readable() {
 		r.Read = noDataRead
 	}
-	r.Purity = adoptionPurity(inv.Projects, changePct, trendOK, breadthKnown)
+	r.Purity = adoptionPurity(inv.Projects, tr.change(), tr.readable(), breadthKnown)
 	r.Figures = []Figure{
 		{Label: "sessions", Value: humanize.Int(int64(len(in.Sessions)))},
 		{Label: "active days", Value: strconv.Itoa(inv.Days)},
 		projectsFigure(inv.Projects, breadthKnown),
 		{Label: "sessions/active-day", Value: perActiveDay(int64(len(in.Sessions)), int64(inv.Days))},
 		dormantFigure(len(insights.GoingStale), len(insights.DormantTools), breadthKnown),
-		trendFigure(recent, prior, changePct, trendOK),
+		tr.figure(linesTrend),
 	}
 	r.Takeaway = adoptionTakeaway(strong, growing, broadSignal, sufficientSample, breadthKnown)
 	return r

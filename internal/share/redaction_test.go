@@ -44,7 +44,7 @@ func TestNoUserChosenNameReachesAnySurface(t *testing.T) {
 	for _, v := range analyze.Validators() {
 		results = append(results, analyze.Evaluate(v, &in))
 	}
-	a := Build(in, results, "last 30 days", false)
+	a := Build(in, results, "last 30 days", Basis{ReadThrough: in.Now})
 
 	var html bytes.Buffer
 	if err := RenderHTML(&html, &a); err != nil {
@@ -99,13 +99,13 @@ func TestEmptyWindowRendersWithoutNulls(t *testing.T) {
 	for _, v := range analyze.Validators() {
 		results = append(results, analyze.Evaluate(v, &in))
 	}
-	a := Build(in, results, "last 30 days", false)
+	a := Build(in, results, "last 30 days", Basis{})
 
 	payload, err := json.Marshal(a)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	for _, field := range []string{`"Models":null`, `"Tools":null`, `"Rays":null`, `"Axes":null`, `"Ledger":null`, `"Caveats":null`} {
+	for _, field := range []string{`"Models":null`, `"Tools":null`, `"Rays":null`, `"Axes":null`, `"Ledger":null`, `"Caveats":null`, `"Trend":null`} {
 		if bytes.Contains(payload, []byte(field)) {
 			t.Errorf("payload carries %s; the renderer walks it unguarded", field)
 		}

@@ -1,6 +1,6 @@
 # 0014 — What a publicly postable artifact may say
 
-Status: accepted · 2026-08-17 · shipped in v0.23.0 (`B149`)
+Status: accepted · 2026-08-17 · shipped in v0.23.0 (`B149`) · Amended (2026-09-19, `B184`): public movements carry their evidence and withholding rules
 
 ## Context
 
@@ -84,6 +84,25 @@ unconditionally and prunes trace steps past the horizon before it parses anythin
 accepting the flag turned "read from somewhere else" into an unrequested and irreversible
 delete here. `init` refuses the flag for the same reason; a test now fails on the pairing
 rather than on either command by name.
+
+### 6. A movement travels with its span, its bases and its layer
+
+*Amended in v0.28.0:*
+
+A card draws a movement only as quoted from `analyze`. It travels with its two date
+ranges, both sums and its layer. Two movements never share a clause, and neither
+appears on the achievement half of the post.
+
+The card withholds the block, showing `—` and a reason, for sample data; when the store
+cannot state its history start, parser build or last-read time; when it records more than
+one parser build; when one of the window's counting sources was last read before the
+recent week ended; or when a counting source's latest import found no log files after an
+earlier import did.
+
+This prevents an unsupported movement from becoming a public claim. On the maintainer's
+corpus, the shipped trend read -47% where the two complete weeks read -37% because the
+recent span included a day that was not over. The failure is recorded at
+[the corrections register](../corrections.md#week-over-week-partial-day).
 
 ## Consequences
 

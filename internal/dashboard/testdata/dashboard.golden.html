@@ -508,13 +508,13 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   
   <section class="faceplate" aria-label="Assay verdict, 21 dimensions">
     
-<div class="cell cell--good">
+<div class="cell cell--watch">
   <span class="cell__label">01 · Adoption &amp; Usage Breadth</span>
   <div class="cell__read-row">
-    <span class="cell__read cell__read--good">STRONG</span>
+    <span class="cell__read cell__read--watch">WATCH</span>
     <span class="prov">Prov.</span>
   </div>
-  <div class="gauge"><span class="gauge__fill" style="--fill:70.0%"></span></div>
+  <div class="gauge"><span class="gauge__fill" style="--fill:45.0%"></span></div>
 </div>
 
 <div class="cell cell--neutral">
@@ -706,7 +706,15 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
   <section class="lead">
     
-    <p class="lead__none">Nothing this window. Every read is either fine, withheld, or resting on too little to act on — so nothing is promoted rather than leading with the least weak one.</p>
+    <ol class="lead__list">
+      
+      <li class="lead__item">
+        <span class="lead__title">Adoption &amp; Usage Breadth</span>
+        <span class="lead__why">flagged for a closer look · high confidence · 3 active days · covers the whole window</span>
+      </li>
+      
+    </ol>
+    <p class="lead__rule">Order is these reasons, not a score; findings whose reasons match are ordered by name. Every read is below.</p>
     
   </section>
 
@@ -717,12 +725,12 @@ table.subpath tbody tr:hover td{background:var(--bg);}
 
   <section class="ledger">
     
-<article class="entry entry--good">
+<article class="entry entry--watch">
   <div class="entry__gutter">
     <span class="entry__num">01</span>
     <span class="entry__label">Adoption &amp; Usage Breadth</span>
     <div class="cell__read-row">
-      <span class="entry__read entry__read--good">STRONG</span>
+      <span class="entry__read entry__read--watch">WATCH</span>
       <span class="prov">Prov.</span>
     </div>
     <span class="entry__layer" title="Which measurement layer this verdict rests on: activity (what happened), output (what was produced), outcome (whether it held) or impact (value delivered). assaio never relabels one as another.">activity</span>
@@ -763,17 +771,17 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       </div>
       
       <div class="stat">
-        <span class="stat__value">&#43;40724%</span>
+        <span class="stat__value">—</span>
         <span class="stat__label">week-over-week AI lines</span>
-        <span class="stat__note">20,412 recent vs 50 prior</span>
+        <span class="stat__note">Jun 30–Jul 6 → Jul 7–13 · no source has a row by Jun 30 in this window</span>
       </div>
       
     </div>
     
     
-    <p class="entry__caveat">Prov.: this store&#39;s history begins 2026-05-15, which reaches past the earlier span this trend compares against (2026-07-01). That the store reaches back is not that the span holds data: a source added later starts where it was first read, and a quiet fortnight leaves a real gap.</p>
+    <p class="entry__caveat">Prov.: this store&#39;s history begins 2026-05-15, which reaches past the earlier span this trend compares against (2026-06-30). That the store reaches back is not that the span holds data: a source added later starts where it was first read, and a quiet fortnight leaves a real gap.</p>
     <p class="entry__conf entry__conf--high">Confidence — high · 3 active days</p>
-    <p class="entry__takeaway">Usage is broad and trending up week over week.</p>
+    <p class="entry__takeaway">Usage spans more than one project, but too few sessions this window to call it broad with confidence.</p>
   </div>
 </article>
 
@@ -816,6 +824,12 @@ table.subpath tbody tr:hover td{background:var(--bg);}
         
       </div>
       
+      <div class="stat">
+        <span class="stat__value">—</span>
+        <span class="stat__label">week-over-week tokens</span>
+        <span class="stat__note">Jun 30–Jul 6 → Jul 7–13 · no source has a row by Jun 30 in this window</span>
+      </div>
+      
     </div>
     
     
@@ -825,7 +839,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       
     </div>
     
-    <p class="entry__caveat">Prov.: days are bucketed in UTC, so an evening that runs past midnight UTC is split across two of them — inflating the active-day count and halving the typical day it is measured against.</p>
+    <p class="entry__caveat">Prov.: days are bucketed in UTC, so an evening that runs past midnight UTC is split across two of them — inflating the active-day count and halving the typical day it is measured against.</p><p class="entry__caveat">Prov.: this store&#39;s history begins 2026-05-15, which reaches past the earlier span this trend compares against (2026-06-30). That the store reaches back is not that the span holds data: a source added later starts where it was first read, and a quiet fortnight leaves a real gap.</p>
     <p class="entry__conf entry__conf--high">Confidence — high · 3 days with token data</p>
     <p class="entry__takeaway">Too few days with token data this window to tell an unusual day from an ordinary one.</p>
   </div>
@@ -1611,9 +1625,9 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       </div>
       
       <div class="stat">
-        <span class="stat__value">&#43;40724%</span>
+        <span class="stat__value">—</span>
         <span class="stat__label">week-over-week AI lines</span>
-        <span class="stat__note">20,412 recent vs 50 prior</span>
+        <span class="stat__note">Jun 30–Jul 6 → Jul 7–13 · no source has a row by Jun 30 in this window</span>
       </div>
       
     </div>
@@ -1639,9 +1653,9 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       
     </div>
     
-    <p class="entry__caveat">No verdict on purpose: a rising line count is an output measure, and promoting one to a claim about value is the most likely way this project starts lying (B180). The direction is here; what it is worth is not something a line count knows.</p><p class="entry__caveat">Prov.: this store&#39;s history begins 2026-05-15, which reaches past the earlier span this trend compares against (2026-07-01). That the store reaches back is not that the span holds data: a source added later starts where it was first read, and a quiet fortnight leaves a real gap.</p>
+    <p class="entry__caveat">No verdict on purpose: a rising line count is an output measure, and promoting one to a claim about value is the most likely way this project starts lying (B180). The direction is here; what it is worth is not something a line count knows.</p><p class="entry__caveat">Prov.: this store&#39;s history begins 2026-05-15, which reaches past the earlier span this trend compares against (2026-06-30). That the store reaches back is not that the span holds data: a source added later starts where it was first read, and a quiet fortnight leaves a real gap.</p>
     <p class="entry__conf entry__conf--high">Confidence — high · 3 active days</p>
-    <p class="entry__takeaway">20,462 AI-added lines in this window. Week over week the count is up 40724%.</p>
+    <p class="entry__takeaway">20,462 AI-added lines in this window. Week-over-week direction cannot be stated: no source has a row by Jun 30 in this window.</p>
   </div>
 </article>
 

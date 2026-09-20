@@ -1,77 +1,172 @@
 package analyze
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/store"
 )
 
-// weekOverWeekLabel is the shared Figure label for the recent-vs-prior AI-lines trend --
-// used identically by adoption and throughput so the same signal reads the same way in
-// both reports.
-const weekOverWeekLabel = "week-over-week AI lines"
-
-// recentCutoff is the "YYYY-MM-DD" day string marking the start of the window ending at
-// now: a row's Day >= recentCutoff falls inside it. A window of N days spans exactly N
-// day-buckets ending today (today-(N-1) .. today), so the cutoff is today-(N-1), not
-// today-N -- the latter admits N+1 buckets and made the recent window one day wider than
-// the prior one it is compared against. Rows compare Day as a string, so no per-row time
-// parsing is needed.
-func recentCutoff(now time.Time, window time.Duration) string {
-	days := int(window.Hours() / 24)
-	if days < 1 {
-		days = 1
-	}
-	return now.UTC().AddDate(0, 0, -(days - 1)).Format("2006-01-02")
+// trendQty is what a week-over-week figure sums: its published label, the signal a source must
+// answer to be counted at all, the quantity per row, and how the two sums print.
+type trendQty struct {
+	label  string
+	unit   string
+	signal string
+	of     func(*store.UsageRow) int64
+	count  func(int64) string
 }
 
-// weekOverWeek splits rows into two equal, adjacent windows ending at now -- recent is
-// [now-window, now) and prior is [now-2*window, now-window) -- and sums LinesAdded in
-// each. changePct is recent/prior - 1; ok is false when prior has zero lines, so a trend
-// is never computed against a zero base.
-func weekOverWeek(rows []store.UsageRow, now time.Time, window time.Duration) (recent, prior int64, changePct float64, ok bool) {
-	recentFrom := recentCutoff(now, window)
-	priorFrom := recentCutoff(now, 2*window)
-	for i := range rows {
-		switch day := rows[i].Day; {
-		case day >= recentFrom:
-			recent += rows[i].LinesAdded
-		case day >= priorFrom:
-			prior += rows[i].LinesAdded
+var (
+	// linesTrend is published under one label by adoption and throughput, so the same signal
+	// reads the same way in both.
+	linesTrend = trendQty{
+		label: "week-over-week AI lines", unit: "lines", signal: parser.SignalLinesAdded,
+		of: func(r *store.UsageRow) int64 { return r.LinesAdded }, count: humanize.Int,
+	}
+	tokensTrend = trendQty{
+		label: "week-over-week tokens", unit: "tokens", signal: parser.SignalTokensTotal,
+		of: rowTokens, count: humanize.Count,
+	}
+)
+
+// linesTrendFloor is the line count the busier span must reach before a direction is stated:
+// 1 to 2 lines is a 100% swing on a trivial sample. The busier span rather than both, so output
+// collapsing from thousands of lines to none stays readable.
+const linesTrendFloor = 20
+
+// trendGap is why a trend states no direction; trendRead means it states one.
+type trendGap int
+
+const (
+	trendRead trendGap = iota
+	gapWindow
+	gapHistory
+	gapNoSource
+	gapZeroBase
+	gapThin
+)
+
+// trend is one week-over-week comparison: the two sums over the sources already running when the
+// earlier span began, or the gap that stops a direction being read.
+type trend struct {
+	recent, prior span
+	now, was      int64
+	gap           trendGap
+	// excluded counts the sources with rows in either span that were left out of both sums, and
+	// left is what those rows held across the two spans: a count alone cannot say whether the
+	// sums cover most of the machine's volume or a sliver of it, and the sign can turn on that.
+	excluded    int
+	left        int64
+	historyFrom time.Time
+}
+
+// leftShare is the share of the two spans' volume the sums leave out, 0..1.
+func (t *trend) leftShare() float64 {
+	if total := t.left + t.now + t.was; total > 0 {
+		return float64(t.left) / float64(total)
+	}
+	return 0
+}
+
+// TrendCloses is the moment every week-over-week comparison of in is over: the midnight after the
+// recent span's last day. A surface that must know whether the store was read after it asks here
+// rather than re-deriving the spans.
+func TrendCloses(in *Input) time.Time {
+	recent, _ := trendSpans(in.Now, in.Recent)
+	return recent.endsAt()
+}
+
+func (t *trend) readable() bool { return t.gap == trendRead }
+
+// change is (now-was)/was as a fraction, and zero whenever the trend is not readable.
+func (t *trend) change() float64 {
+	if !t.readable() {
+		return 0
+	}
+	return float64(t.now-t.was) / float64(t.was)
+}
+
+// readTrend compares in.Usage across the two spans. floor is the smallest sum the busier span
+// must reach for a direction to mean anything.
+func readTrend(in *Input, q trendQty, floor int64) trend {
+	t := trend{}
+	t.recent, t.prior = trendSpans(in.Now, in.Recent)
+	// Usage is queried WHERE ts >= start, so a window opening after the earlier span began holds
+	// only part of it, while the store-wide horizon below would still call it covered.
+	if !in.WindowStart.IsZero() && in.WindowStart.After(t.prior.startsAt()) {
+		t.gap = gapWindow
+		return t
+	}
+	if covers, known := horizonCovers(in); known && !covers {
+		t.gap, t.historyFrom = gapHistory, in.HistoryStart.UTC()
+		return t
+	}
+	counted := t.sources(in, q)
+	if len(counted) == 0 {
+		t.gap = gapNoSource
+		return t
+	}
+	for i := range in.Usage {
+		r := &in.Usage[i]
+		if !t.recent.holds(r.Day) && !t.prior.holds(r.Day) || !parser.Answers(r.Tool, q.signal) {
+			continue
+		}
+		switch {
+		case !counted[r.Tool]:
+			t.left += q.of(r)
+		case t.recent.holds(r.Day):
+			t.now += q.of(r)
+		default:
+			t.was += q.of(r)
 		}
 	}
-	if prior == 0 {
-		return recent, prior, 0, false
+	switch {
+	case t.was == 0:
+		t.gap = gapZeroBase
+	case max(t.now, t.was) < floor:
+		t.gap = gapThin
 	}
-	return recent, prior, float64(recent-prior) / float64(prior), true
+	return t
 }
 
-// trendLabel renders a week-over-week change as "+35%", "-12%", or "—" when undefined.
-func trendLabel(changePct float64, ok bool) string {
-	if !ok {
-		return "—"
+// sources picks what the two sums may count: the sources answering q's signal with rows in either
+// span that this window already shows in use when the earlier span began -- a row of theirs
+// falls on or before its first day. The evidence is the window's rows, not the source's history,
+// so a source quiet on those days is left out as if new; the Note states the share of volume that
+// leaves out, and a narrow --since leaves few days to show a source in use. A source that stopped
+// still counts, because its silence is the store's to state. One first seen inside the comparison
+// is left out of both sides and counted: its first week would otherwise read as growth in how
+// much the tools were used, and a source idle until then is left out with it, which can understate
+// a rise but never invent one.
+func (t *trend) sources(in *Input, q trendQty) map[string]bool {
+	running, inSpans := map[string]bool{}, map[string]bool{}
+	for i := range in.Usage {
+		r := &in.Usage[i]
+		if !parser.Answers(r.Tool, q.signal) {
+			continue
+		}
+		if r.Day <= t.prior.from {
+			running[r.Tool] = true
+		}
+		if t.recent.holds(r.Day) || t.prior.holds(r.Day) {
+			inSpans[r.Tool] = true
+		}
 	}
-	sign := "+"
-	if changePct < 0 {
-		sign = ""
+	counted := map[string]bool{}
+	for tool := range inSpans {
+		if running[tool] {
+			counted[tool] = true
+		} else {
+			t.excluded++
+		}
 	}
-	return sign + strconv.FormatFloat(changePct*100, 'f', 0, 64) + "%"
+	return counted
 }
 
-// trendFigure builds the shared week-over-week AI-lines Figure that adoption and
-// throughput both render, so the same trend reads identically in each report.
-func trendFigure(recent, prior int64, changePct float64, ok bool) Figure {
-	return Figure{
-		Label: weekOverWeekLabel,
-		Value: trendLabel(changePct, ok),
-		Note:  humanize.Int(recent) + " recent vs " + humanize.Int(prior) + " prior",
-	}
-}
-
-// trendPurity scores a week-over-week change 0..1 for the dashboard gauge: 0.5 (neutral)
-// when the trend is unknown, saturating toward 1 at +100% or more and 0 at -100% or less.
+// trendPurity scores a week-over-week change 0..1 for the dashboard gauge: 0.5 (neutral) when
+// the trend is unknown, saturating toward 1 at +100% or more and 0 at -100% or less.
 func trendPurity(changePct float64, ok bool) float64 {
 	if !ok {
 		return 0.5
