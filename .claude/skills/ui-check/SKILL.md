@@ -18,6 +18,9 @@ Target: $ARGUMENTS (empty = both).
 
 ## Delegate to `browser`
 
+Playwright refuses `file://`: tell the agent to serve the directory over localhost
+(`python3 -m http.server`) and to ignore the favicon 404 that causes; one artifact per run.
+
 Give it the file paths, the sections the change touched, and the checklist it carries: every
 section present, `—`/unmeasured for absence, no console errors, no network request, 400 px and
 default width, keyboard focus on the toggle and links, both themes, the faceplate scrolled into
