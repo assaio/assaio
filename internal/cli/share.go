@@ -165,7 +165,13 @@ func shareFrom(cmd *cobra.Command, st *store.Store, start time.Time, o shareOpts
 		cmd.Printf("No usage in the %s window, so there is nothing to render. Try a wider --since.\n", windowLabel(o.since))
 		return nil
 	}
-	assay := share.Build(in, runValidatorResults(analyze.Validators(), &in), windowLabel(o.since), sample)
+	basis := share.Basis{Sample: sample}
+	if !sample {
+		if basis, err = shareBasis(cmd, st, in.Usage, in.Now); err != nil {
+			return err
+		}
+	}
+	assay := share.Build(in, runValidatorResults(analyze.Validators(), &in), windowLabel(o.since), basis)
 	if o.format == "text" {
 		cmd.Print(share.Text(&assay))
 		return nil

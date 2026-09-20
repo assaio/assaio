@@ -659,7 +659,7 @@
     {
       "name": "burn-anomaly",
       "title": "Burn Anomaly",
-      "describe": "Days whose token burn stands far outside this window's typical day.",
+      "describe": "Token outlier days in this window, plus token-volume movement between the last two complete UTC weeks.",
       "layer": "activity",
       "scope": "project"
     },

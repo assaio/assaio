@@ -73,6 +73,12 @@ const explainThroughput = `Throughput
 What it measures
   Total AI-added lines, lines per active day, the top projects by lines, and the
   week-over-week trend.
+  'week-over-week AI lines' compares the last two complete UTC weeks. Its note gives
+  both date ranges and both sums. It prints '—' with a reason when the window or store
+  history cannot support the comparison, or when the busier week has fewer than 20
+  lines.
+  Tools with no row in the window on or before the first day of the earlier week are
+  left out. The note states the share of volume left out.
 
 How to read it
   Lines added is an output-volume signal, not a quality score. More lines is not better
@@ -85,8 +91,8 @@ What to do about it
 Limits
   Only sources that record changed lines contribute here; the rest show cost without
   lines, so any per-project reading depends on which tool was used --
-  'assaio-agent signals coverage' says what your own data supports. This is never ranked per named individual -- that refusal holds
-  regardless of demand.`
+  'assaio-agent signals coverage' says what your own data supports. This is never
+  ranked per named individual -- that refusal holds regardless of demand.`
 
 const explainIntent = `Task Intent Coverage
 

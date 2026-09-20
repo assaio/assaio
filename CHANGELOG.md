@@ -33,6 +33,33 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+
+- `share` adds a week-over-week block (`B184`) for the last two complete UTC weeks. Token
+  volume (activity) and AI-written lines (output) each get a line, layer, dates and sums, or
+  `—` and a reason. It withholds the block for samples, unreadable history, mixed parser
+  builds, reads predating the weeks' end, or a latest import that found no log files after an
+  earlier one did.
+- `burn-anomaly` publishes `week-over-week tokens` under the same rules as the lines
+  trend. The anomaly read never uses that direction.
+
+### Changed
+
+- `week-over-week AI lines` now prints `—` with a reason when the window starts after the
+  earlier week's first day, history begins after that same day (inside either week), or the
+  busier week has under 20 lines. It leaves out tools with no row in the window on or before
+  the earlier week's first day; its note gives both ranges, sums and the share of volume left
+  out.
+- The `digest` snapshot version moved to 3. The first digest after upgrading reports a
+  first run instead of reading this build's trend as a change in the work.
+
+### Fixed
+
+- [The week-over-week trend no longer counts a day that is not over](docs/corrections.md#week-over-week-partial-day) `(correction)`: both weeks now end yesterday.
+- [A window shorter than the two weeks compared no longer yields a trend](docs/corrections.md#week-over-week-short-window) `(correction)`: it prints `—` and says why.
+- A change whose magnitude would round to zero (at most 0.5%) no longer prints as `-0%` or
+  `+0%`; it reads `-<1%` or `+<1%`, and only equal weeks read `0%`.
+
 ## [0.27.0] - 2026-09-18
 
 ### Added

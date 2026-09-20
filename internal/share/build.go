@@ -12,11 +12,11 @@ import (
 // Build shapes one window into the card, the reel and the post beside them. results is
 // the same analyze output the text report and the dashboard render, and every figure here
 // is read from it or from the prepared aggregates those validators read -- nothing is
-// computed for the card alone. sample marks a run on bundled demo usage, which the first
+// computed for the card alone. basis.Sample marks a run on bundled demo usage, which the first
 // frame then says out loud.
 //
 //nolint:gocritic // Input is the value bundle the validator framework threads everywhere; taking it the same way keeps this one more reader of it.
-func Build(in analyze.Input, results []analyze.Result, window string, sample bool) Assay {
+func Build(in analyze.Input, results []analyze.Result, window string, basis Basis) Assay {
 	v := index(results)
 	f := gather(&in, v)
 	f.perHundred = perHundred(&f)
@@ -25,7 +25,7 @@ func Build(in analyze.Input, results []analyze.Result, window string, sample boo
 		Window:    window,
 		Days:      f.activeDays,
 		Layer:     windowLayer,
-		Hook:      pick(&f, sample),
+		Hook:      pick(&f, basis.Sample),
 		Scale:     scaleStats(&f, v),
 		Models:    modelSlices(in.ByModel),
 		Tools:     toolSlices(in.Usage),
@@ -33,8 +33,9 @@ func Build(in analyze.Input, results []analyze.Result, window string, sample boo
 		Rays:      fingerprint(in.Sessions, in.ByModel),
 		Profile:   buildProfile(&f),
 		Ledger:    ledgerStats(&f),
-		Fine:      fine(&f, v, sample),
-		Limit:     limitLine(&f, sample),
+		Trend:     buildTrend(&in, v, basis),
+		Fine:      fine(&f, v, basis.Sample),
+		Limit:     limitLine(&f, basis.Sample),
 		Hashtag:   Hashtag,
 		Install:   InstallCommand,
 		ShareCmd:  ShareCommand,

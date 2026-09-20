@@ -34,6 +34,8 @@ func TestThroughputTrendDirectionIsAShareNotAPercentage(t *testing.T) {
 func TestThroughputReadsACollapseAsADirection(t *testing.T) {
 	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
 	rows := []store.UsageRow{
+		// The source was already running before the earlier week, so that week is whole.
+		{Day: "2026-08-01", Tool: "claude-code", Model: "m", Project: "p", In: 100},
 		{Day: "2026-08-10", Tool: "claude-code", Model: "m", Project: "p", In: 100, LinesAdded: 201347},
 	}
 	in := BuildInput(rows, nil, testPrices(), now, 7*24*time.Hour, Delegation{})
@@ -44,8 +46,9 @@ func TestThroughputReadsACollapseAsADirection(t *testing.T) {
 	}
 }
 
-// TestThroughputSaysWhyThereIsNoDirection separates a young store from a trivial comparison:
-// "too few lines" over a window holding plenty of them sends a reader after the wrong thing.
+// TestThroughputSaysWhyThereIsNoDirection separates a source with no earlier week from a trivial
+// comparison: "too few lines" over a window holding plenty of them sends a reader after the
+// wrong thing.
 func TestThroughputSaysWhyThereIsNoDirection(t *testing.T) {
 	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
 	rows := []store.UsageRow{
@@ -54,7 +57,7 @@ func TestThroughputSaysWhyThereIsNoDirection(t *testing.T) {
 	in := BuildInput(rows, nil, testPrices(), now, 7*24*time.Hour, Delegation{})
 	got := mustGet(t, throughputName).Analyze(in)
 
-	if !strings.Contains(got.Takeaway, "no earlier span") {
+	if !strings.Contains(got.Takeaway, "has a row by") {
 		t.Fatalf("Takeaway = %q, want the missing prior span named rather than a line shortage", got.Takeaway)
 	}
 }

@@ -33,6 +33,7 @@ type Assay struct {
 	Rays      Fingerprint
 	Profile   Profile
 	Ledger    []Stat
+	Trend     Trend
 
 	// Post is the ready-to-paste text; Fine is the card's own small print, every line of
 	// which is a claim limit rather than a decoration.

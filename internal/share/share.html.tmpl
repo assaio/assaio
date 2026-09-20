@@ -448,6 +448,35 @@ function scLedger(pRaw) {
   ], 0, t, b);
 }
 
+// scTrend is the week-over-week movement, each move on its own line under its own layer. It is not
+// part of the ledger because that scene is headed "what came out" and tokens are not output; the
+// dates, the reason for a dash and the clause are drawn because the video leaves without the page.
+function scTrend(pRaw) {
+  const p = q(pRaw); bg(); chrome(A.Trend.Title);
+  const T = A.Trend, moves = [T.Tokens, T.Lines];
+  const [t, b] = band();
+  fitColumn(k => {
+    const notes = moves.map(m => fitText(m.Note || '', u(COLW), 3, ts(25) * k, ts(17) * k, 400));
+    const why = fitText(T.Withheld || '', u(COLW), 3, ts(30) * k, ts(20) * k, 400);
+    const clause = fitText(T.Clause, u(COLW), 2, ts(26) * k, ts(18) * k, 400);
+    const blocks = moves.map((m, i) => ({
+      h: ts(150) * k + notes[i].lines.length * notes[i].size * 1.35,
+      draw: y => {
+        const a = ease((p - i * .15) / .45); if (a <= 0) return;
+        x.save(); x.globalAlpha = a;
+        at((m.Label + ' · ' + m.Layer).toUpperCase(), M, y + ts(26) * k, DIM, ts(24) * k, 500);
+        atFit(m.Value, M, y + ts(126) * k, COLW, m.Value === '—' ? FAINT : FG, ts(100) * k, 600);
+        drawFit({ ...notes[i], weight: 400 }, M, y + ts(150) * k + notes[i].size, DIM, notes[i].size * 1.35);
+        x.restore();
+      },
+    }));
+    const settle = d => y => { x.globalAlpha = ease((p - .3) / .45); d(y); x.globalAlpha = 1; };
+    if (T.Withheld) blocks.push({ h: why.lines.length * why.size * 1.35, draw: settle(y => drawFit({ ...why, weight: 400 }, M, y + why.size, FG, why.size * 1.35)) });
+    blocks.push({ h: clause.lines.length * clause.size * 1.35, draw: settle(y => drawFit({ ...clause, weight: 400 }, M, y + clause.size, FAINT, clause.size * 1.35)) });
+    return blocks;
+  }, ts(40), t, b);
+}
+
 // scInvite is its own frame because it is the only one with a job to do. Crowded into the
 // corner of the ledger it was the smallest thing on the busiest card; alone it gets the
 // full frame and the seconds the loop ends on.
@@ -494,6 +523,14 @@ function scPoster() {
     const reserve = fitText(A.Profile.Line || '', u(COLW), 2, 34 * k, 22 * k, 600);
     const models = A.Models.slice(0, 4).map(m => m.Label + ' ' + m.Value).join('  ·  ');
     const modelFit = fitText(models, u(COLW), 2, 24 * k, 15 * k, 400);
+    const T = A.Trend;
+    const trendHead = fitText(T.Title.toUpperCase() + ' · ' + T.Clause, u(COLW), 2, 20 * k, 13 * k, 500);
+    const trendRows = (T.Withheld
+      ? [T.Tokens.Label + ' — · ' + T.Lines.Label + ' — · ' + T.Withheld]
+      : [T.Tokens, T.Lines].map(m => m.Label + ' ' + m.Value + ' · ' + m.Layer + ' · ' + m.Note)
+    ).map(r => fitText(r, u(COLW), 2, 23 * k, 14 * k, 400));
+    const trendH = trendHead.lines.length * trendHead.size * 1.3 + 8 * k +
+      trendRows.reduce((n, f) => n + f.lines.length * f.size * 1.35, 0);
     return [
       { h: hook.lines.length * hook.size * 1.18 + 42 * k, draw: y => {
           drawFit(hook, M, y + hook.size, FG, hook.size * 1.18);
@@ -515,6 +552,16 @@ function scPoster() {
             const px = M + i * (COLW / 3);
             at(s2.Value, px, y + 60 * k, i === 1 ? '#4F9E8B' : FG, 54 * k, 600);
             at(s2.Label, px, y + 90 * k, DIM, 21 * k, 400);
+          });
+        } },
+      // Its own block rather than a fourth ledger column: a movement is not a quantity that came
+      // out, and its dates, bases and layer have to be legible on the one image that travels.
+      { h: trendH, draw: y => {
+          drawFit(trendHead, M, y + trendHead.size, FAINT, trendHead.size * 1.3);
+          let yy = y + trendHead.lines.length * trendHead.size * 1.3 + 8 * k;
+          trendRows.forEach(f => {
+            drawFit({ ...f, weight: 400 }, M, yy + f.size, FG, f.size * 1.35);
+            yy += f.lines.length * f.size * 1.35;
           });
         } },
       { h: 38 * k + flavor.lines.length * flavor.size * 1.35, draw: y => {
@@ -542,8 +589,8 @@ function scPoster() {
 }
 
 // ── the loop ─────────────────────────────────────────────────────────────────
-const SCENES = [scHook, scModels, scArchetype, scRays, scProfile, scLedger, scInvite];
-const CUES = [0, 3200, 6800, 10400, 14200, 18200, 21800], END = 25400;
+const SCENES = [scHook, scModels, scArchetype, scRays, scProfile, scLedger, scTrend, scInvite];
+const CUES = [0, 3200, 6800, 10400, 14200, 18200, 21800, 25400], END = 29000;
 const ticksBox = document.getElementById('ticks');
 ticksBox.innerHTML = SCENES.map(() => '<i><b></b></i>').join('');
 const ticks = [...ticksBox.querySelectorAll('b')];

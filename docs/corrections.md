@@ -31,11 +31,37 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+<a id="week-over-week-partial-day"></a>
+
+### The recent week included a day that was not over
+
+*Corrected in v0.28.0.*
+
+On the maintainer's corpus on 2026-09-19 at 21:10 UTC, the shipped `week-over-week AI lines` read -47%: 153,181 lines in Sep 13–19, including 27,247 from Sep 19 while that day was not over, against 286,415 in Sep 6–12. The two complete weeks before it read -37% (266,987 → 167,182).
+
+The recent span used the 7 day-buckets ending today. Because today was not over, the recent side could be short by up to a seventh early in the UTC day.
+
+Both spans now end yesterday, and the figure's note names both date ranges and both sums. The error had shipped since the week-over-week trend existed in v0.1, in both `adoption` and `throughput`.
+
+<a id="week-over-week-short-window"></a>
+
+### A short window supplied only part of the earlier week
+
+*Corrected in v0.28.0.*
+
+Usage was queried from the window's own start. A window shorter than the two weeks compared therefore held only part of the earlier week, while the horizon check read the store's whole history and called that week covered.
+
+On the maintainer's corpus, `analyze --since 10d` read -8%: 153,181 lines against 166,499 in an earlier week that the window held only from Sep 9. It now reads `—` with the reason 'window starts after Sep 5'.
+
+`digest --weekly`, with its 7-day window, never had a real trend and now says so. Its first run after upgrading reports a first run because the digest snapshot version moved to 3.
+
+## [0.27.0] - 2026-09-18
+
 <a id="subagent-project-depended-on-input-order"></a>
 
 ### A completed sub-agent's project depended on transcript order
 
-*Corrected in v0.27.0, released 2026-09-15.*
+*Corrected in v0.27.0, released 2026-09-18.*
 
 A completed Claude sub-agent aggregate is keyed by `agent:<id>`. On the 324,416-record
 corpus used to prove the event contract, 404 aggregates appeared under two project names

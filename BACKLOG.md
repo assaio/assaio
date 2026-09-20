@@ -98,15 +98,13 @@ depends on `B116` and `B118`, which live in the code-health pool below because t
 corrections to a shipped mechanism rather than calibration work; `B116` is additionally a v1.0
 condition.
 
-- [ ] **B184 · a trend on the shared card** — S · both — the shipped `share` renders point
-  figures only: tokens, lines, `$`/100 lines, the model mix, the archetype and the one reserve.
-  `B149` also asked for the token/cost *trend*, and that half did not ship. It is the half that
-  makes a second card worth posting — "down 12% and the same output" is a story, while a second
-  month of point figures is the same picture again. The data is already there (`report --compare`
-  and `internal/digest` both compute it), so this is a renderer change, not a measurement one.
-  The honesty constraint travels with it: `digest` already declares when a comparison is weak —
-  overlapping windows, unequal lengths, a parser that changed between the two runs — and a card
-  that shows a delta without that declaration would publish a movement the store cannot support.
+- [ ] **B210 · week-over-week cost movement** — S · both — `B184` shipped the
+  share card's week-over-week block with token volume and AI lines, but the cost ($)
+  movement requested by `B149` did not ship. A $ delta over two weeks is a delta of
+  two floors unless both weeks are fully priced: the price table can miss models,
+  cache reads cost a fraction, and model mix moves price per token by an order of
+  magnitude. Show the movement only when both weeks are 100% priced, or state the
+  unpriced share on the image.
 
 - [ ] **B144 · calibrate Gemini CLI and Cline against a real capture** — S · both — both are
   calibrated today against a *constructed* sample in the source's shape, because the maintainer's
@@ -127,7 +125,7 @@ deliberately rather than deferred: the item asked for repositories as a count *a
 spend distribution* ("5 repositories, the heaviest 43% of spend"), and that distribution is a
 re-identification surface — the ordering and proportions are exactly what somebody who knows
 the setup reads a pseudonym back out of, which is the reason the same item refuses pseudonyms.
-The count ships; the distribution does not, and will not. What is still missing is `B184`.
+The count ships; the distribution does not, and will not.
 
 ## Then — "Everything the logs already say"
 

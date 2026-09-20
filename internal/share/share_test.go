@@ -20,7 +20,7 @@ func sampleInput(t *testing.T) analyze.Input {
 	now := time.Date(2026, 8, 17, 12, 0, 0, 0, time.UTC)
 	var usage []store.UsageRow
 	var sessions []store.SessionRow
-	for i := range 12 {
+	for i := range 21 {
 		day := now.AddDate(0, 0, -i)
 		usage = append(usage,
 			store.UsageRow{
@@ -52,6 +52,7 @@ func sampleInput(t *testing.T) analyze.Input {
 	in.WindowStart = now.AddDate(0, 0, -30)
 	in.PlanMonthlyCost = 195
 	in.HistoryStart = now.AddDate(0, 0, -40)
+	in.ParsedBy = "0.27.0"
 	return in
 }
 
@@ -62,7 +63,7 @@ func buildSample(t *testing.T) (Assay, analyze.Input) {
 	for _, v := range analyze.Validators() {
 		results = append(results, analyze.Evaluate(v, &in))
 	}
-	return Build(in, results, "last 30 days", false), in
+	return Build(in, results, "last 30 days", Basis{ReadThrough: in.Now}), in
 }
 
 func TestBuildPreservesActiveDayWidth(t *testing.T) {
@@ -75,7 +76,7 @@ func TestBuildPreservesActiveDayWidth(t *testing.T) {
 		}},
 	}}
 
-	a := Build(analyze.Input{}, results, "all history", false)
+	a := Build(analyze.Input{}, results, "all history", Basis{})
 	if a.Days != want {
 		t.Errorf("Days = %d, want %d", a.Days, want)
 	}
@@ -117,6 +118,8 @@ func TestCardQuotesWhatAnalyzePublished(t *testing.T) {
 		{"model-fit", "premium (>=$20/1M out)"},
 		{"session-taxonomy", "conversational"},
 		{"rework", "rework"},
+		{"burn-anomaly", "week-over-week tokens"},
+		{"throughput", "week-over-week AI lines"},
 	} {
 		published := v.value(want.validator, want.label)
 		if published == "" {

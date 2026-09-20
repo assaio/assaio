@@ -9,10 +9,13 @@ What it measures
   The days whose token burn stands far outside this window's typical day, found with a
   median/MAD outlier test rather than a mean. A median-based test is used because one
   runaway day would drag a mean far enough to hide itself.
+  'week-over-week tokens' compares token volume in the last complete UTC week with
+  the week before it.
 
 How to read it
   A spike is a prompt to go look, not a fault. A migration, a long refactor, or a big
   one-off analysis legitimately burns more than a normal day, and none of that is waste.
+  A rise in week-over-week tokens is a direction, not an anomaly or a cost figure.
 
 What to do about it
   Open the flagged day and ask what ran. The findings worth catching are the ones nobody
@@ -23,7 +26,11 @@ Limits
   Days are bucketed in UTC, so late local-evening work can land on the next day and split
   one working session across two buckets. A window with very few active days has no
   stable "typical day" to compare against, and the test stays quiet rather than inventing
-  one.`
+  one.
+  Tools with no row in the window on or before the first day of the earlier week are
+  left out of both sums. The note states the share of volume left out. The trend
+  prints '—' with a reason when the window, the store's history, or the volume cannot
+  support a direction; its floor is one typical day of this window.`
 
 const explainCacheHygiene = `Cache Hygiene
 

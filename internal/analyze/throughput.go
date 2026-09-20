@@ -15,12 +15,6 @@ const (
 	throughputHowToRead = "Lines added is an output-volume signal and nothing more. More lines is not better work and fewer is not worse, so this reports the count and its direction and grades neither -- read it beside rework and model fit before deciding what a change in it means."
 	// throughputTopN caps the top-projects bars shown in the report.
 	throughputTopN = 5
-	// throughputMinLinesForTrend is the line count either side of the comparison must reach
-	// before a week-over-week change is worth stating -- a change from 1 to 2 lines is a 100%
-	// swing on a trivial sample, not a direction. Either side, not the recent one: output
-	// collapsing from thousands of lines to none is exactly the direction worth reading, and
-	// requiring the recent side to be large would report it as unreadable.
-	throughputMinLinesForTrend = 20
 )
 
 func init() { Register(throughputValidator{}) }
@@ -34,8 +28,8 @@ func (throughputValidator) Title() string      { return throughputTitle }
 func (throughputValidator) Describe() string   { return throughputDescribe }
 func (throughputValidator) Layer() layer.Layer { return layer.Output } // the verdict is a line count and its trend
 
-// Trending: both figures below compare the recent span against the one before it, so the history
-// behind that earlier span is part of the claim (analyze.Trending).
+// Trending: the week-over-week figure compares the recent span against the one before it, so the
+// history behind that earlier span is part of the claim (analyze.Trending).
 func (throughputValidator) Trending() {}
 
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
@@ -56,41 +50,32 @@ func (throughputValidator) Analyze(in Input) Result {
 	// is the same sum as the prepared in.Totals.Lines, so figures read that instead.
 	r.restsOn(activeDays(&in), "active days")
 	inv := report.BuildInventory(in.Usage, in.Prices)
-	recent, prior, changePct, trendOK := weekOverWeek(in.Usage, in.Now, in.Recent)
-	// Two different reasons a direction cannot be read, kept apart because they send a reader
-	// to different places: no earlier span to compare against (a young store), and a comparison
-	// too small to mean anything either way.
-	sufficientVolume := max(recent, prior) >= throughputMinLinesForTrend
+	tr := readTrend(&in, linesTrend, linesTrendFloor)
 
 	r.Read = reportedRead
 	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "AI lines total", Value: humanize.Int(in.Totals.Lines)},
 		{Label: "lines/active-day", Value: perActiveDay(in.Totals.Lines, int64(inv.Days))},
-		trendFigure(recent, prior, changePct, trendOK),
+		tr.figure(linesTrend),
 	}
 	r.Bars = topProjectBars(in.ByProject, throughputTopN)
 	r.BarsPseudonym = PseudonymProject
-	r.Takeaway = throughputTakeaway(in.Totals.Lines, changePct, trendOK, sufficientVolume)
+	r.Takeaway = throughputTakeaway(in.Totals.Lines, &tr)
 	r.Caveats = append(r.Caveats,
 		"No verdict on purpose: a rising line count is an output measure, and promoting one to a claim about value is the most likely way this project starts lying (B180). The direction is here; what it is worth is not something a line count knows.")
 	return r
 }
 
 // throughputTakeaway states the count and its direction without colouring either, and names
-// which of the two reasons stopped it when there is no direction to state. "Too few lines" over
-// a window with plenty of them and no earlier span sends the reader looking for the wrong
-// thing.
-func throughputTakeaway(lines int64, changePct float64, trendOK, sufficientVolume bool) string {
+// the reason when there is no direction to state. "Too few lines" over a window with plenty of
+// them and no earlier week sends the reader looking for the wrong thing.
+func throughputTakeaway(lines int64, t *trend) string {
 	head := humanize.Int(lines) + " AI-added lines in this window. "
-	switch {
-	case !trendOK:
-		return head + "There is no earlier span with AI lines to compare it against, so week over week reads nothing yet."
-	case !sufficientVolume:
-		return head + "Both sides of the week-over-week comparison are too small for a direction to mean anything."
-	default:
-		return head + "Week over week the count is " + trendDirection(changePct) + "."
+	if !t.readable() {
+		return head + "Week-over-week direction cannot be stated: " + t.reason() + "."
 	}
+	return head + "Week over week the count is " + trendDirection(t.change()) + "."
 }
 
 // trendDirection names the direction in words that carry no verdict: "up" and "down" describe a

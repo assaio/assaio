@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -94,6 +95,9 @@ func (s *Store) IngestFreshness(ctx context.Context) (map[string]time.Time, erro
 	return out, rows.Err()
 }
 
+// mixedBuilds leads Provenance's answer when more than one build read the stored data.
+const mixedBuilds = "mixed"
+
 // Provenance answers what the stored data is, not what it says: when the newest of it was
 // read, and by which parsing build. A figure can be perfectly covered and still be a week
 // stale, or come from a parser that did not yet extract a field the metric reading it
@@ -126,6 +130,12 @@ func (s *Store) Provenance(ctx context.Context) (newest time.Time, build string,
 	case 1:
 		return newest, builds[0], nil
 	default:
-		return newest, fmt.Sprintf("mixed (%d builds)", len(builds)), nil
+		return newest, fmt.Sprintf("%s (%d builds)", mixedBuilds, len(builds)), nil
 	}
+}
+
+// ReadByOneBuild reports whether a Provenance build answer names one known build: neither unknown
+// nor mixed. Kept beside the format it reads so no caller parses that answer for itself.
+func ReadByOneBuild(build string) bool {
+	return build != "" && !strings.HasPrefix(build, mixedBuilds+" (")
 }

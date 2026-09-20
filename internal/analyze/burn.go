@@ -13,7 +13,7 @@ import (
 const (
 	burnName     = "burn-anomaly"
 	burnTitle    = "Burn Anomaly"
-	burnDescribe = "Days whose token burn stands far outside this window's typical day."
+	burnDescribe = "Token outlier days in this window, plus token-volume movement between the last two complete UTC weeks."
 	// burnHowToRead is Result.HowToRead for this validator -- see its doc comment.
 	burnHowToRead = "A spike is a prompt to go look, not a fault: a migration or a long refactor legitimately burns more. What it rules out is a spike nobody noticed -- a runaway loop, a re-ingested backfill, or an agent left running."
 	// burnMinDays is the day floor below which a baseline is meaningless: a handful of
@@ -39,6 +39,11 @@ func (burnValidator) Title() string      { return burnTitle }
 func (burnValidator) Describe() string   { return burnDescribe }
 func (burnValidator) Layer() layer.Layer { return layer.Activity } // a day's token burn against the window's typical day
 
+// Trending: the week-over-week figure compares the recent span against the one before it, so the
+// history behind that earlier span is part of the claim (analyze.Trending). Read and Purity never
+// read it: a burn that rose is a direction, not an anomaly.
+func (burnValidator) Trending() {}
+
 //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
 func (burnValidator) Analyze(in Input) Result {
 	r := Result{Name: burnName, Title: burnTitle, Describe: burnDescribe, HowToRead: burnHowToRead}
@@ -62,6 +67,9 @@ func (burnValidator) Analyze(in Input) Result {
 	sufficient := len(days) >= burnMinDays
 	spikes := burnSpikes(days, median)
 	steady := sufficient && len(spikes) == 0
+	// The floor is one typical day of this window: a week that burned less than a single
+	// ordinary day holds too little for its direction to mean anything.
+	tr := readTrend(&in, tokensTrend, median)
 
 	r.Read = burnRead(sufficient, steady)
 	r.Purity = burnPurity(sufficient, len(spikes), len(days))
@@ -70,6 +78,7 @@ func (burnValidator) Analyze(in Input) Result {
 		{Label: "typical day", Value: humanize.Count(median), Note: "median tokens"},
 		burnPeakFigure(days, median),
 		burnSpikeFigure(sufficient, len(spikes)),
+		tr.figure(tokensTrend),
 	}
 	r.Bars = burnBars(spikes, median, burnTopN)
 	r.Takeaway = burnTakeaway(sufficient, steady)

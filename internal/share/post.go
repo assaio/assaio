@@ -41,6 +41,11 @@ func post(a *Assay, f *facts) string {
 	// composers that strip blank lines on paste turn a block layout into one wall of text.
 	fmt.Fprintf(&b, "FAME — %s\n", fameLine(f))
 	fmt.Fprintf(&b, "SHAME — %s\n\n", shameLine(a, f))
+	// Its own paragraph, never a clause of FAME: a direction beside the achievement half reads
+	// as a result, and two directions in one clause read as a ratio nobody measured.
+	if a.Trend.readable() {
+		fmt.Fprintf(&b, "%s\n\n", trendPost(&a.Trend))
+	}
 	if a.Hook.Family != "scale" && a.Hook.Family != "money" && a.Hook.Line != "" {
 		fmt.Fprintf(&b, "%s\n\n", a.Hook.Line)
 	}
@@ -52,6 +57,14 @@ func post(a *Assay, f *facts) string {
 	fmt.Fprintf(&b, "%s\n\n", Site)
 	fmt.Fprintf(&b, "%s — what are your numbers of fame or shame? ;)", Hashtag)
 	return b.String()
+}
+
+func trendPost(t *Trend) string {
+	lines := []string{"Week over week, " + t.Clause + ":"}
+	for _, m := range []Move{t.Tokens, t.Lines} {
+		lines = append(lines, m.Label+" "+m.Value+" · "+m.Layer+" ("+m.Note+")")
+	}
+	return strings.Join(lines, "\n")
 }
 
 func fameLine(f *facts) string {
