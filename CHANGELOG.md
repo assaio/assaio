@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-09-20
+
 ### Added
 
 - `share` adds a week-over-week block (`B184`) for the last two complete UTC weeks. Token
@@ -52,6 +54,11 @@ Discussion.
   out.
 - The `digest` snapshot version moved to 3. The first digest after upgrading reports a
   first run instead of reading this build's trend as a change in the work.
+- Refreshed the vendored LiteLLM price table to its 2026-09-20 snapshot: 3,958 to
+  4,326 table entries (3,957 to 4,325 model keys), with 371 added and three removed.
+  Rates used by assaio changed for 144 existing entries and a token limit changed for
+  136; the 16 model keys found in the checked-in parser corpus retain the same effective
+  rates and availability.
 
 ### Fixed
 
@@ -1602,7 +1609,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.27.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.28.0...HEAD
+[0.28.0]: https://github.com/assaio/assaio/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/assaio/assaio/compare/v0.26.1...v0.27.0
 [0.26.1]: https://github.com/assaio/assaio/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/assaio/assaio/compare/v0.25.0...v0.26.0
