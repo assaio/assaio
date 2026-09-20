@@ -98,14 +98,6 @@ depends on `B116` and `B118`, which live in the code-health pool below because t
 corrections to a shipped mechanism rather than calibration work; `B116` is additionally a v1.0
 condition.
 
-- [ ] **B210 · week-over-week cost movement** — S · both — `B184` shipped the
-  share card's week-over-week block with token volume and AI lines, but the cost ($)
-  movement requested by `B149` did not ship. A $ delta over two weeks is a delta of
-  two floors unless both weeks are fully priced: the price table can miss models,
-  cache reads cost a fraction, and model mix moves price per token by an order of
-  magnitude. Show the movement only when both weeks are 100% priced, or state the
-  unpriced share on the image.
-
 - [ ] **B144 · calibrate Gemini CLI and Cline against a real capture** — S · both — both are
   calibrated today against a *constructed* sample in the source's shape, because the maintainer's
   machine holds neither a Gemini chat log carrying token counts nor a Cline install. A
@@ -461,6 +453,14 @@ speak a standard rather than only its own dialect.
   Schemas, typed SDKs for a couple of languages, a fixture redaction helper, a depth-manifest
   validator, parser-drift tests and a privacy manifest. What makes a community connector
   possible without touching core packages. Supersedes the "more parsers in core" reflex.
+
+- [ ] **B210 · week-over-week cost movement** — S · both — `B184` shipped the
+  share card's week-over-week block with token volume and AI lines, but the cost ($)
+  movement requested by `B149` did not ship. A $ delta over two weeks is a delta of
+  two floors unless both weeks are fully priced: the price table can miss models,
+  cache reads cost a fraction, and model mix moves price per token by an order of
+  magnitude. Show the movement only when both weeks are 100% priced, or state the
+  unpriced share on the image.
 
 ## v1.0 — "Measurements worth depending on"
 
