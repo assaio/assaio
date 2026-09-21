@@ -2,10 +2,12 @@ module github.com/assaio/assaio
 
 go 1.25.0
 
-// The language version stays at 1.25 so `go install` works on it; the toolchain floor is
-// 1.26.6, the patch that closes the six reachable standard-library advisories govulncheck
-// reports against 1.26.5. `make vuln` is the check, and CI builds releases on it.
-toolchain go1.26.6
+// The language version stays at 1.25 so `go install` works on it. The toolchain floor is
+// 1.27.1: below it, `go test -fuzz` reports `context deadline exceeded` as a failure when
+// -fuzztime expires (go.dev/issue/75804), which makes a clean nightly fuzz run indistinguishable
+// from a finding. `make vuln` holds the floor against standard-library advisories, and CI
+// builds releases on it.
+toolchain go1.27.1
 
 require (
 	github.com/jedib0t/go-pretty/v6 v6.8.3

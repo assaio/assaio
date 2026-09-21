@@ -33,6 +33,14 @@ Discussion.
 
 ## [Unreleased]
 
+### Changed
+
+- The supported build toolchain is now **Go 1.27.1 or newer** (was 1.26.6), pinned as the
+  `go.mod` floor and in every CI and release workflow. Below it `go test -fuzz` reports the
+  expired `-fuzztime` deadline as a failure ([go.dev/issue/75804](https://go.dev/issue/75804)),
+  which makes a clean nightly fuzz run indistinguishable from a real finding. The language
+  version stays at 1.25, so `go install` is unaffected.
+
 ## [0.28.0] - 2026-09-20
 
 ### Added
