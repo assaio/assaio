@@ -31,11 +31,13 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-09-23
+
 <a id="week-over-week-partial-day"></a>
 
 ### The recent week included a day that was not over
 
-*Corrected in v0.28.0.*
+*Corrected in v0.28.0, released 2026-09-23.*
 
 On the maintainer's corpus on 2026-09-19 at 21:10 UTC, the shipped `week-over-week AI lines` read -47%: 153,181 lines in Sep 13–19, including 27,247 from Sep 19 while that day was not over, against 286,415 in Sep 6–12. The two complete weeks before it read -37% (266,987 → 167,182).
 
@@ -47,7 +49,7 @@ Both spans now end yesterday, and the figure's note names both date ranges and b
 
 ### A short window supplied only part of the earlier week
 
-*Corrected in v0.28.0.*
+*Corrected in v0.28.0, released 2026-09-23.*
 
 Usage was queried from the window's own start. A window shorter than the two weeks compared therefore held only part of the earlier week, while the horizon check read the store's whole history and called that week covered.
 

@@ -324,6 +324,14 @@ vendor, not about you. The preview page is self-contained — inline CSS, one in
 external font, image or request — and the PNG, MP4 or WebM it offers are produced in your own
 browser from a canvas and saved by your own download. Nothing is transmitted at any point.
 
+Since v0.28.0 the card also carries a week-over-week block, and its note is dated. It names the
+two UTC week ranges compared and, where a direction is stated, the two volume sums behind it.
+Where none is stated, it gives the reason in the words every surface uses, and some of those
+reasons carry a date from your own machine: the day your store's history begins, or the day a
+source was last read. It also says how many sources the sums leave out and what share of the
+volume they held. None of that is a name and none of it is a path, but all of it describes your
+store rather than a vendor — and it is on the image, so read the note before you post it.
+
 ## Telemetry
 
 None. No usage pings, no analytics, no crash reporting. The agent does not know we
