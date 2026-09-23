@@ -101,7 +101,8 @@ how an honesty-first product starts making false claims about itself:
 - `site/llms.txt` — the same page's machine-readable companion, deployed from the same commit
   and covered by none of those annotations. Its source list, its refusals and its index of
   documents are judgement every time.
-- `README.md` — the "Every command" table, the caveat list under what it cannot measure, and the
+- `README.md` — the short command list under the normal loop, the caveat list under what it
+  cannot measure, and the
   source list. All three have gone stale before, and once together: a shipped command missing
   from the table, a caveat that had been false for twenty minors, and a source whose second
   structural absence it never named.

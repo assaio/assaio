@@ -33,15 +33,7 @@ Discussion.
 
 ## [Unreleased]
 
-### Changed
-
-- The supported build toolchain is now **Go 1.27.1 or newer** (was 1.26.6), pinned as the
-  `go.mod` floor and in every CI and release workflow. Below it `go test -fuzz` reports the
-  expired `-fuzztime` deadline as a failure ([go.dev/issue/75804](https://go.dev/issue/75804)),
-  which makes a clean nightly fuzz run indistinguishable from a real finding. The language
-  version stays at 1.25, so `go install` is unaffected.
-
-## [0.28.0] - 2026-09-20
+## [0.28.0] - 2026-09-23
 
 ### Added
 
@@ -67,6 +59,13 @@ Discussion.
   Rates used by assaio changed for 144 existing entries and a token limit changed for
   136; the 16 model keys found in the checked-in parser corpus retain the same effective
   rates and availability.
+- The supported build toolchain is now **Go 1.27.1 or newer** (was 1.26.6), pinned in `go.mod` as the
+  `toolchain` floor and in every CI and release workflow. Below it `go test -fuzz` reports the
+  expired `-fuzztime` deadline as a failure ([go.dev/issue/75804](https://go.dev/issue/75804)),
+  which makes a clean nightly fuzz run indistinguishable from a real finding. The language
+  version stays at 1.25, so `go install` is unaffected.
+- Updated `modernc.org/sqlite` to 1.59.0 and its `modernc.org/libc` dependency; refreshed the
+  pinned `github/codeql-action` steps to v4.38.1 and the pinned golangci-lint to 2.13.2.
 
 ### Fixed
 

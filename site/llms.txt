@@ -121,7 +121,8 @@ infrastructure the operator stands up.
   parser extracts, what it reads transiently, and what it retains.
 - [ROADMAP](https://github.com/assaio/assaio/blob/main/ROADMAP.md): the direction as
   milestones with stated conditions, each with its exit criteria and the gates not yet met,
-  deliberately without delivery dates. The one version it names is v0.30, when the experimental
+  deliberately without delivery dates beyond `v1.0`'s conditions. The one numbered milestone it
+  dates a decision to is v0.30, when the experimental
   `runtime inspect` surface reaches its removal decision — a commitment to decide, not to ship.
 - [BACKLOG](https://github.com/assaio/assaio/blob/main/BACKLOG.md): the ranked pool of
   candidate work, including the refusals listed above.
