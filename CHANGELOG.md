@@ -45,6 +45,11 @@ Discussion.
   `reprice` excludes models kept at their last listed price from proposed moves.
 - `make lint` and `make fmt` require golangci-lint 2.13.2, pinned in the `Makefile`.
   CI reads that version from the same line, so CI and `make lint` use the same version.
+- Nightly fuzz opens 'Nightly fuzz found a failing input' with a `fuzz-finding-<target>` artifact,
+  or 'Nightly fuzz failed without a failing input' for build, toolchain, runner, or timeout
+  failures. Together with the Go 1.27.1 toolchain floor from 0.28.0, this closes `B198`.
+
+### Fixed
 
 ### Fixed
 

@@ -4,7 +4,10 @@
 # stopped matching looks exactly like a guard that was never needed.
 cd "$(dirname "$0")/../.." || exit 1
 fails=0
-export CLAUDE_PROJECT_DIR="$PWD"
+# An empty project dir: no case may depend on the runner's branch or open work file.
+CLAUDE_PROJECT_DIR=$(mktemp -d) || exit 1
+export CLAUDE_PROJECT_DIR
+trap 'rm -rf "$CLAUDE_PROJECT_DIR"' EXIT
 
 decision() {
 	out=$(printf '{"tool_name":"%s","tool_input":%s}' "$1" "$2" | bash .claude/hooks/guard.sh)

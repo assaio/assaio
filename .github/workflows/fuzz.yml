@@ -109,8 +109,9 @@ jobs:
 
       # Two different things are worth keeping, and only one of them is a bug. go test writes
       # newly interesting inputs under GOCACHE -- that is the night's accumulated corpus, thrown
-      # away with the runner unless it is uploaded -- and writes a reproducer under the
-      # package's own testdata/fuzz, which is the finding itself.
+      # away with the runner unless it is uploaded -- and writes a failing input under the
+      # package's own testdata/fuzz, which is the finding itself. Committed seeds live there
+      # too, so only an untracked file is a finding.
       - name: Collect the corpus
         if: always() && github.event_name == 'schedule'
         run: |
@@ -125,41 +126,71 @@ jobs:
         if: always() && github.event_name == 'schedule'
         with:
           name: fuzz-corpus-${{ matrix.target.slug }}
-          path: |
-            fuzz-corpus
-            internal/**/testdata/fuzz/**
+          path: fuzz-corpus
           if-no-files-found: ignore
           retention-days: 30
 
-  # A nightly that fails into an empty inbox is a nightly nobody reads. One issue per finding,
-  # and a comment rather than a new issue while one is still open, so a crasher that reproduces
-  # for a week does not bury the queue under seven copies of itself.
+      - name: Collect a failing input
+        if: failure() && github.event_name == 'schedule'
+        run: |
+          set -euo pipefail
+          mkdir -p fuzz-finding
+          git ls-files --others --exclude-standard | { grep '/testdata/fuzz/' || true; } \
+            | while IFS= read -r f; do cp --parents "$f" fuzz-finding/; done
+
+      # The report job reads this artifact's existence as the verdict, so it is uploaded only
+      # when a failing input exists.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure() && github.event_name == 'schedule'
+        with:
+          name: fuzz-finding-${{ matrix.target.slug }}
+          path: fuzz-finding
+          if-no-files-found: ignore
+          retention-days: 90
+
+  # A nightly that fails into an empty inbox is a nightly nobody reads. One issue per kind of
+  # failure, and a comment rather than a new issue while one is still open, so a crasher that
+  # reproduces for a week does not bury the queue under seven copies of itself. A failing input
+  # and a failure without one get different titles: only the first is a bug in assaio.
   report:
     needs: fuzz
     if: failure() && github.event_name == 'schedule'
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       issues: write
     steps:
-      - name: Open or update the finding issue
+      - name: Open or update the issue
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          title="Nightly fuzz run failed"
-          # Deliberately not "found a crasher": a build break or a toolchain change fails the
-          # same way, and the issue must not assert more than the signal carries.
-          body=$(printf '%s\n' \
-            "The nightly fuzz run failed: $RUN_URL" \
-            "" \
-            "Each failing job names its package and its target. An input it found is attached to" \
-            "that job as a fuzz-corpus artifact, under internal/<pkg>/testdata/fuzz/<Target>/;" \
-            "committing that file turns it into a seed the ordinary go test replays forever." \
-            "" \
-            "A build or toolchain failure lands here too. The run log says which this is.")
-          existing=$(gh issue list --repo "$REPO" --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          findings=$(gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/artifacts" \
+            --jq '.artifacts[].name | select(startswith("fuzz-finding-")) | ltrimstr("fuzz-finding-")')
+          if [ -n "$findings" ]; then
+            title="Nightly fuzz found a failing input"
+            body=$(printf '%s\n' \
+              "The nightly fuzz run found a failing input: $RUN_URL" \
+              "" \
+              "Targets with a finding:" \
+              "$(printf '%s\n' "$findings" | sed 's/^/- /')" \
+              "" \
+              "Each is attached to the run as a fuzz-finding-<target> artifact, under" \
+              "internal/<pkg>/testdata/fuzz/<Target>/; committing that file turns it into a seed" \
+              "the ordinary go test replays forever.")
+          else
+            title="Nightly fuzz failed without a failing input"
+            body=$(printf '%s\n' \
+              "The nightly fuzz run failed, and no target wrote a failing input: $RUN_URL" \
+              "" \
+              "So this is not a crasher: a build, toolchain or runner failure, or a target that ran" \
+              "past its timeout. The failing job's log says which.")
+          fi
+          existing=$(gh issue list --repo "$REPO" --state open --search "$title in:title" --json number,title \
+            | jq -r --arg t "$title" 'map(select(.title == $t)) | .[0].number // empty')
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --repo "$REPO" --body "$body"
           else
