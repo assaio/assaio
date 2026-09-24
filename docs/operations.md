@@ -30,6 +30,7 @@ tools beyond Go.
 |---|---|---|---|---|---|
 | `make fmt` | `golangci-lint fmt` (gofumpt + goimports) | source files in place | lefthook `format` job checks `--diff` | no | golangci-lint |
 | `make tidy` | `go mod tidy` | `go.mod`, `go.sum` | — | no | network (module proxy) |
+| `make prices` | downloads LiteLLM prices, sets `SnapshotDate` to today (UTC), folds unprefixed ids into `retained.json` | `internal/pricing/litellm.json`, `internal/pricing/snapshot.go`, `internal/pricing/retained.json` | `make test` fails on missing or mispriced ids | no | network (raw.githubusercontent.com), curl |
 | `make docs` | regenerates `docs/reference.json`, `site/reference.html`, `site/docs.html`, `site/docs/` from the binary's registries | those files | `make test` fails on drift | no | — |
 | `docs/assets/make-og.py` | redraws `site/og.png`; upload the same image by hand to the repository's Social preview | the PNG named as argument | `sharecard` job | no | python3 + Pillow, macOS fonts |
 | `make hooks` | installs the opt-in lefthook hooks | `.git/hooks/` | — | no | lefthook |

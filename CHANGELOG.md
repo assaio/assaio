@@ -33,6 +33,22 @@ Discussion.
 
 ## [Unreleased]
 
+### Changed
+
+- The 2026-09-23 LiteLLM snapshot prices 17 new unprefixed ids, including `claude-opus-5-5`,
+  `gpt-6-sol`, `gpt-6-luna`, and `moonshotai.kimi-k3`.
+- The same snapshot reprices 5: `jp.anthropic.claude-opus-4-7`,
+  `eu.anthropic.claude-opus-4-5-20251101-v1:0`, `cohere.command-text-v14`,
+  `mistral.mistral-large-2402-v1:0` and `gemini-live-2.5-flash-preview-native-audio-09-2025`.
+- The last listed prices of 66 dropped unprefixed ids remain available and count in `doctor`.
+- `make prices` refreshes and retains dropped unprefixed prices; other refreshes fail `make test`.
+  `reprice` excludes models kept at their last listed price from proposed moves.
+
+### Fixed
+
+- Models with no token rate show `—`, not $0.00; totals exclude them and the unpriced share grows
+  ([correction](docs/corrections.md#models-with-no-token-rate-were-priced-at-0)).
+
 ## [0.28.0] - 2026-09-23
 
 ### Added

@@ -56,8 +56,8 @@ func routes(b *Basis, in *analyze.Input, against []string) (found []Route, unpri
 }
 
 // targets is the model list a route may be priced onto, in a deterministic order: the
-// window's own priced models outside the premium slice, heaviest first as ByModel already
-// sorts them, then whatever the caller named. A model already in the slice is not proposed on
+// window's own priced models outside the premium slice and still listed by LiteLLM, heaviest
+// first as ByModel already sorts them, then whatever the caller named. A model already in the slice is not proposed on
 // its own -- re-pricing the slice onto one of its members answers nothing -- but the caller
 // may still name one explicitly, which asks a different question: what if all of this ran on
 // that one.
@@ -76,7 +76,7 @@ func targets(b *Basis, in *analyze.Input, against []string) []string {
 		out = append(out, name)
 	}
 	for i := range in.ByModel {
-		if m := &in.ByModel[i]; m.Priced && !inSlice[m.Model] {
+		if m := &in.ByModel[i]; m.Priced && !inSlice[m.Model] && !in.Prices.Retained(m.Model) {
 			add(m.Model)
 		}
 	}

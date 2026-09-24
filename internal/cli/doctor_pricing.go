@@ -69,3 +69,16 @@ func modelsPhrase(models []string) string {
 	}
 	return fmt.Sprintf("%s: %s and %d more", noun, strings.Join(models[:shown], ", "), len(models)-shown)
 }
+
+// doctorPricingLine states the table, never the store: retained counts the models priced at
+// the last rate a LiteLLM snapshot listed, because a later snapshot dropped them.
+func doctorPricingLine(models, retained int, snapshotDate string, err error) string {
+	if err != nil {
+		return fmt.Sprintf("pricing:      Price table parse failed; all costs are unpriced: %v", err)
+	}
+	line := fmt.Sprintf("pricing:      %d models, snapshot %s", models, snapshotDate)
+	if retained > 0 {
+		line += fmt.Sprintf(", %d models dropped by LiteLLM priced at last listed prices", retained)
+	}
+	return line + " (refresh ships with releases)"
+}

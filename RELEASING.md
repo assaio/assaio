@@ -128,16 +128,18 @@ how an honesty-first product starts making false claims about itself:
   It is on this list at all because it is the one published surface nothing in review opens —
   it sat at 0.1.1 for twenty-three releases, still naming four parsers a release after the
   fifth shipped.
-- `internal/pricing/litellm.json` — re-download LiteLLM's
-  `model_prices_and_context_window.json` and bump `SnapshotDate` in
-  `internal/pricing/snapshot.go`. **This is the release's job, not a background chore**: every
-  `$` assaio prints is a token count times this table, and a table that has fallen behind is
-  indistinguishable from a complete one from the inside — five weeks of drift once left 45.5%
-  of the maintainer's tokens unpriced and a window's estimate $15,452.42 short. Two guards
-  catch the cases they can — `TestEveryCalibratedModelHasAPrice` fails when a trace in this
-  repo names a model the table cannot cost, and `doctor --strict` fails on a reader's own
-  store above `pricing.max_unpriced_share` — but neither sees a model the vendor shipped that
-  nobody here has run yet. That gap is why this line is on the list.
+- `internal/pricing/litellm.json` — run `make prices` before release. It downloads LiteLLM's
+  `model_prices_and_context_window.json`, sets `SnapshotDate` in
+  `internal/pricing/snapshot.go`, and folds every id without a '/' into
+  `internal/pricing/retained.json`, preserving the last price of models LiteLLM drops.
+  Review the `retained.json` diff for every repriced and new id. A refresh that skips the
+  fold fails `make test` (`TestRetainedHoldsEveryUnprefixedKey`). **This is the release's
+  job, not a background chore**: every `$` assaio prints is a token count times this table.
+  A stale table can look complete: five weeks of drift left 45.5% of the maintainer's
+  tokens unpriced and a window's estimate $15,452.42 short.
+  `TestEveryCalibratedModelHasAPrice` catches missing prices for models in repo traces,
+  and `doctor --strict` checks a reader's store against `pricing.max_unpriced_share`.
+  Neither sees a vendor model nobody here has run yet.
 
 This list exists because it was skipped: `site/index.html` still advertised v0.2 while
 v0.5.0 was being tagged, listing an already-shipped connector as a roadmap item. The

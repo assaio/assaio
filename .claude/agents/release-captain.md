@@ -24,8 +24,10 @@ new feature, new command, or any record-schema / plugin-protocol change is minor
 
 ## 2. The price table — this is the release's job, not a chore
 
-Re-download LiteLLM's `model_prices_and_context_window.json` into
-`internal/pricing/litellm.json` and bump `SnapshotDate` in `internal/pricing/snapshot.go`.
+Run `make prices`: it downloads LiteLLM's `model_prices_and_context_window.json`, sets
+`SnapshotDate`, and folds every unprefixed key into `internal/pricing/retained.json`, so a model
+LiteLLM dropped keeps its last price. Never download the file by hand. Report the
+`retained.json` diff (repriced and new keys) and the count `doctor` prints as retained.
 Every `$` assaio prints is a token count times this table, and a table that has fallen behind
 is indistinguishable from a complete one from the inside: five weeks of drift once left 45.5%
 of the maintainer's tokens unpriced and a window's estimate $15,452.42 short. The two guards

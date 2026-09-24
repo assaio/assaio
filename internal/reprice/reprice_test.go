@@ -148,6 +148,21 @@ func TestAgainstNamesAModelTheWindowNeverRan(t *testing.T) {
 	}
 }
 
+// A model priced only by the retained ledger is one the vendor no longer lists: its price is
+// the right estimate for past usage and no route to move work onto.
+func TestNoRouteOntoAModelLiteLLMNoLongerLists(t *testing.T) {
+	in := input([]store.UsageRow{
+		row("big", 1_000_000, 100_000, 10_000_000, 1_000_000),
+		row("small", 100_000, 10_000, 0, 0),
+	}, 0)
+	dropped := table["small"]
+	dropped.Retained = true
+	in.Prices = pricing.Table{"big": table["big"], "small": dropped}
+	if w := Compute(&in, Options{}); len(w.Routes) != 0 {
+		t.Fatalf("routes = %+v, want none onto a model only the ledger prices", w.Routes)
+	}
+}
+
 // TestFlatPlanIsAnAssumptionNotAPrerequisite: once a flat subscription is configured, this
 // binary knows the reader's bill does not move with the delta it prints. The sentence that says
 // so used to fire only inside a recommendation gated on three other conditions.

@@ -1,13 +1,14 @@
 package pricing
 
-// SnapshotDate is the date the vendored litellm.json was downloaded; update when refreshing the file.
-const SnapshotDate = "2026-09-20"
+// SnapshotDate is the date the vendored litellm.json was downloaded; `make prices` sets it.
+const SnapshotDate = "2026-09-23"
 
-// Info loads the embedded price table and returns its model count and snapshot date.
-func Info() (models int, snapshotDate string) {
+// Info reports the embedded table: how many keys the LiteLLM snapshot prices, how many more
+// only retained.json prices because a later snapshot dropped them, and the snapshot date.
+func Info() (models, retained int, snapshotDate string, err error) {
 	t, err := Load()
 	if err != nil {
-		return 0, SnapshotDate
+		return 0, 0, SnapshotDate, err
 	}
-	return len(t), SnapshotDate
+	return len(t) - cachedRetained, cachedRetained, SnapshotDate, nil
 }

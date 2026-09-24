@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"strings"
 	"testing"
 
@@ -55,6 +56,35 @@ func TestUnpricedSectionNamesRowsNoRefreshCanPrice(t *testing.T) {
 				if strings.Contains(got, absent) {
 					t.Errorf("unpriced section = %q, want it not to say %q", got, absent)
 				}
+			}
+		})
+	}
+}
+
+func TestDoctorPricingLine(t *testing.T) {
+	tests := []struct {
+		name     string
+		retained int
+		err      error
+		want     string
+	}{
+		{
+			"none retained", 0, nil,
+			"pricing:      4000 models, snapshot 2026-09-23 (refresh ships with releases)",
+		},
+		{
+			"some retained", 73, nil,
+			"pricing:      4000 models, snapshot 2026-09-23, 73 models dropped by LiteLLM priced at last listed prices (refresh ships with releases)",
+		},
+		{
+			"table failed to load", 0, errors.New("unexpected EOF"),
+			"pricing:      Price table parse failed; all costs are unpriced: unexpected EOF",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := doctorPricingLine(4000, tt.retained, "2026-09-23", tt.err); got != tt.want {
+				t.Errorf("line = %q\nwant   %q", got, tt.want)
 			}
 		})
 	}

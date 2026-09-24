@@ -31,6 +31,20 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+<a id="models-with-no-token-rate-were-priced-at-0"></a>
+
+### Models with no token rate were priced at $0
+
+*Corrected in v0.29.0.*
+
+Since assaio first priced usage, it treated entries in the vendored LiteLLM table with no usable per-token rate as priced at $0.00. Every dollar amount comes from token counts multiplied by that table’s rates at read time.
+
+The table includes models priced per image, second or call, and placeholders with zero rates (800 entries in the 2026-09-20 table; examples include `anthropic.claude-mythos-preview`, `kimi-k2-thinking-251104`, and `command-a-plus-05-2026`). Sessions on these models showed $0.00 and entered priced totals. Their tokens were missing from the unpriced share, so the `*` footnote and `doctor --strict` understated the gap.
+
+An entry whose input and output token rates are both zero or absent now shows `—`, stays out of totals, and counts toward the unpriced share. Truly free models also show `—`, leaving a visible gap.
+
+On the maintainer’s corpus (2026-09-03 to 2026-09-23), no models were affected; every model has a real token rate.
+
 ## [0.28.0] - 2026-09-23
 
 <a id="week-over-week-partial-day"></a>
