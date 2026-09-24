@@ -60,7 +60,7 @@ Everything below is Met unless the Answer column says otherwise.
 |---|---|---|
 | `report_process` / `report_tracker` | Met | `.github/ISSUE_TEMPLATE/` (bug, feature, connector) + `SUPPORT.md` |
 | `report_archive` | Met | <https://github.com/assaio/assaio/issues> |
-| `report_responses` / `enhancement_responses` | **Answer yourself** | Asks whether the majority of reports in the last 2–12 months got a response. You know the true answer; do not overclaim. |
+| `report_responses` / `enhancement_responses` | **Choose: N/A or Met** | Measured 2026-09-23: no issue, pull request or discussion from anyone outside the project since the repository went public (2026-07-17). The only issues, #40 and #50, were opened by the nightly fuzz workflow; both are closed. Justify: "No bug reports or enhancement requests from outside the project to date." Pick N/A if the form offers it; Met with that sentence claims nothing more. |
 | `vulnerability_report_process` | Met | <https://github.com/assaio/assaio/blob/main/SECURITY.md> |
 | `vulnerability_report_private` | Met | Private reporting is enabled; `SECURITY.md` names the advisories form and a contact form |
 | `vulnerability_report_response` | **N/A** | No vulnerability report received yet. `SECURITY.md` commits to 3 business days. |
@@ -72,7 +72,7 @@ Everything below is Met unless the Answer column says otherwise.
 | `build` / `build_common_tools` / `build_floss_tools` | Met | `make build`; Go toolchain and make, both FLOSS |
 | `test` / `test_invocation` | Met | `make test` → `go test ./...`, documented in `CONTRIBUTING.md` |
 | `test_continuous_integration` | Met | `.github/workflows/ci.yml` on every PR and push, with `-race` |
-| `test_most` | **Measure first** | Asks for substantial coverage. Run `go test ./... -cover` and answer from the number, not from impression. |
+| `test_most` | Met | 86.0% of statements (`go test ./... -coverprofile`, 2026-09-23). Lowest package: `internal/parser` (shared scanner) 59.1%; every parser package is above 82%. |
 | `test_policy` / `tests_are_added` / `tests_documented_added` | Met | `CONTRIBUTING.md` **Tested.** — table-driven, golden files from real captures, `FuzzParse` per parser |
 | `warnings` / `warnings_fixed` / `warnings_strict` | Met | `.golangci.yml`; `make lint` is a required status check, so a warning cannot merge |
 
@@ -80,7 +80,7 @@ Everything below is Met unless the Answer column says otherwise.
 
 | Criterion | Answer | Evidence |
 |---|---|---|
-| `know_secure_design` / `know_common_errors` | **Assert yourself** | Self-assessment by the primary developer. |
+| `know_secure_design` / `know_common_errors` | **Assert yourself** | Self-assessment by the primary developer; the evidence a justification can cite: `docs/threat-model.md` (trust surfaces, data map, deletion test); offline by default, the network reached only by `sync`, `serve` and `runtime inspect`; least-privilege workflow tokens (`permissions: contents: read`) and SHA-pinned actions; untrusted input (session logs, plugin output, CSV exports) parsed behind validation and fuzzed; HTML rendered through `html/template`; no SQL built by string formatting; bearer token compared in constant time; gosec, CodeQL and govulncheck in CI. |
 | `crypto_published` / `crypto_floss` / `crypto_working` / `crypto_weaknesses` | Met | Go standard library only: HMAC-SHA256 (`internal/pseudonym`), `crypto/subtle` constant-time compare (`internal/server/identity.go`) |
 | `crypto_keylength` | Met | SHA-256, 256-bit secrets |
 | `crypto_call` | Met | No cryptography is reimplemented |
@@ -104,9 +104,9 @@ Everything below is Met unless the Answer column says otherwise.
 
 ## Handoff
 
-Nothing in the repository is blocking. Two answers need a number or a judgement only the
-maintainer has — `test_most` (run `go test ./... -cover` first) and `report_responses` — and two
-are self-assessments (`know_secure_design`, `know_common_errors`). Everything else is answerable
-from the table above.
+Nothing in the repository is blocking. `test_most` is measured (Met, 86.0%) and
+`report_responses` has its facts (no outside reports yet; choose N/A or Met). What is left is the
+maintainer's own: the two self-assessments (`know_secure_design`, `know_common_errors`) and the
+registration itself. Everything else is answerable from the table above.
 
 After the badge is live: paste the badge markdown into `README.md` and delete this file.
