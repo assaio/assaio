@@ -165,7 +165,7 @@ discovered across VS Code, VS Code Insiders, VSCodium, and Cursor.
 | Capability | Since |
 |-----------|-------|
 | Every `$` disclosed as an estimate at public pay-as-you-go API prices | v0.1 |
-| Unpriced models: `—` / `null` / excluded from totals — never a fake `$0` | v0.1 |
+| Unpriced models: `—` / `null` / excluded from totals — never a fake `$0` | v0.1; entries with no token rate since v0.29 ([correction](docs/corrections.md#models-with-no-token-rate-were-priced-at-0)) |
 | `config.pricing` — subscription / negotiated-rate basis shown alongside the estimate | v0.1 |
 | Token-first budgets in `check` (plan-independent), `$` budgets labeled API-equivalent | v0.1 |
 | No counterfactual saving anywhere: a re-price states what the observed window costs against another table, never what you would have saved | v0.25 |
