@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-09-24
+
 ### Changed
 
 - The 2026-09-23 LiteLLM snapshot prices 17 new unprefixed ids, including `claude-opus-5-5`,
@@ -1645,7 +1647,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.28.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.29.0...HEAD
+[0.29.0]: https://github.com/assaio/assaio/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/assaio/assaio/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/assaio/assaio/compare/v0.26.1...v0.27.0
 [0.26.1]: https://github.com/assaio/assaio/compare/v0.26.0...v0.26.1

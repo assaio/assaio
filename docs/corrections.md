@@ -31,11 +31,13 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-09-24
+
 <a id="models-with-no-token-rate-were-priced-at-0"></a>
 
 ### Models with no token rate were priced at $0
 
-*Corrected in v0.29.0.*
+*Corrected in v0.29.0, released 2026-09-24.*
 
 Since assaio first priced usage, it treated entries in the vendored LiteLLM table with no usable per-token rate as priced at $0.00. Every dollar amount comes from token counts multiplied by that table’s rates at read time.
 
