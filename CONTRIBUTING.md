@@ -143,7 +143,7 @@ Run the full local gate:
 
 ```bash
 make fmt              # gofumpt + goimports; must produce no diff
-make lint             # gofmt -l, go vet, golangci-lint run
+make lint             # gofmt -l, go vet, golangci-lint run; pinned version
 make test             # go test ./... (CI adds -race)
 make fuzz             # only when you touch a parser
 make vuln             # govulncheck; optional locally, gated in CI

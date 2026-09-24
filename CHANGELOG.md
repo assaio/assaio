@@ -43,6 +43,8 @@ Discussion.
 - The last listed prices of 66 dropped unprefixed ids remain available and count in `doctor`.
 - `make prices` refreshes and retains dropped unprefixed prices; other refreshes fail `make test`.
   `reprice` excludes models kept at their last listed price from proposed moves.
+- `make lint` and `make fmt` require golangci-lint 2.13.2, pinned in the `Makefile`.
+  CI reads that version from the same line, so CI and `make lint` use the same version.
 
 ### Fixed
 

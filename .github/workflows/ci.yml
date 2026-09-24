@@ -20,10 +20,13 @@ jobs:
             exit 1
           fi
       - run: go vet ./...
+      - id: golangci-lint
+        name: golangci-lint version pinned in the Makefile
+        run: echo "version=v$(sed -n 's/^GOLANGCI_LINT_VERSION := //p' Makefile)" >> "$GITHUB_OUTPUT"
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
-        # Built with Go 1.27; golangci-lint refuses a module whose toolchain targets a
-        # language version newer than its own.
-        with: { version: v2.13.2 }
+        # Must be built with Go 1.27 or newer; golangci-lint refuses a module whose toolchain
+        # targets a language version newer than its own.
+        with: { version: "${{ steps.golangci-lint.outputs.version }}" }
       - run: go test -race -coverprofile=coverage.out ./...
       - run: CGO_ENABLED=0 go build ./...
 

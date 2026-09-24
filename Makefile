@@ -1,6 +1,11 @@
 BIN := bin/assaio-agent
 LDFLAGS := -X github.com/assaio/assaio/internal/version.Version=$(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 FUZZTIME := 20s
+# The one golangci-lint pin; ci.yml reads it from this line. Two versions disagree about the
+# same tree, so lint and fmt refuse any other.
+GOLANGCI_LINT_VERSION := 2.13.2
+GOLANGCI_LINT_PINNED = @v=$$(golangci-lint version --short 2>/dev/null); v=$${v\#v}; [ "$$v" = "$(GOLANGCI_LINT_VERSION)" ] || \
+	{ echo "golangci-lint $(GOLANGCI_LINT_VERSION) required (CI runs it), found $${v:-none}: https://golangci-lint.run/docs/welcome/install/"; exit 1; }
 
 .PHONY: build test lint fmt tidy snapshot hooks vuln fuzz docs prices
 build:
@@ -24,6 +29,7 @@ fuzz:
 	go test ./internal/plugin/ -fuzz '^FuzzMetricDeclaration$$' -fuzztime $(FUZZTIME)
 	go test ./internal/runtime/openmetrics/ -fuzz '^FuzzParse$$' -fuzztime $(FUZZTIME)
 lint:
+	$(GOLANGCI_LINT_PINNED)
 	gofmt -l .
 	go vet ./...
 	golangci-lint run
@@ -33,6 +39,7 @@ lint:
 docs:
 	go test ./internal/docs/ -run 'TestCommitted' -update
 fmt:
+	$(GOLANGCI_LINT_PINNED)
 	golangci-lint fmt
 tidy:
 	go mod tidy

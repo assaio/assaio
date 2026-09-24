@@ -13,7 +13,7 @@ tools beyond Go.
 
 | Entry point | Does | Writes | Guard | Paid | Needs |
 |---|---|---|---|---|---|
-| `make lint` | `gofmt -l`, `go vet`, `golangci-lint run` | nothing | — | no | golangci-lint |
+| `make lint` | `gofmt -l`, `go vet`, `golangci-lint run` | nothing | Requires `Makefile`-pinned golangci-lint version | no | golangci-lint |
 | `make test` | `go test ./...` (CI adds `-race`, coverage) | test caches | — | no | — |
 | `make build` | static binary to `bin/assaio-agent`, version from `git describe` | `bin/` (ignored) | — | no | — |
 | `make fuzz` | every parser, reconciler, plugin and openmetrics fuzzer for `FUZZTIME` (20s) | a crasher under `testdata/fuzz/` — keep it | — | no | — |
@@ -28,7 +28,7 @@ tools beyond Go.
 
 | Entry point | Does | Writes | Guard | Paid | Needs |
 |---|---|---|---|---|---|
-| `make fmt` | `golangci-lint fmt` (gofumpt + goimports) | source files in place | lefthook `format` job checks `--diff` | no | golangci-lint |
+| `make fmt` | `golangci-lint fmt` (gofumpt + goimports) | source files in place | lefthook `format` job checks `--diff`; requires `Makefile`-pinned golangci-lint version | no | golangci-lint |
 | `make tidy` | `go mod tidy` | `go.mod`, `go.sum` | — | no | network (module proxy) |
 | `make prices` | downloads LiteLLM prices, sets `SnapshotDate` to today (UTC), folds unprefixed ids into `retained.json` | `internal/pricing/litellm.json`, `internal/pricing/snapshot.go`, `internal/pricing/retained.json` | `make test` fails on missing or mispriced ids | no | network (raw.githubusercontent.com), curl |
 | `make docs` | regenerates `docs/reference.json`, `site/reference.html`, `site/docs.html`, `site/docs/` from the binary's registries | those files | `make test` fails on drift | no | — |
