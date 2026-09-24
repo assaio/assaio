@@ -44,8 +44,9 @@ You do not review style, performance, or architecture. Other reviewers do that.
 9. **A correction can reach history.** If the change fixes a parser or a derivation, ask what
    happens to rows already stored under the wrong rule. `MAX`-style restate paths silently
    refuse to lower a figure — that was `B116`, and it is a v1.0 condition.
-10. **Prices.** Any new `$` depends on `internal/pricing/litellm.json`. A model the table
-    cannot cost must widen the unpriced share, not round to zero.
+10. **Prices.** Any new `$` depends on `internal/pricing/litellm.json` plus `retained.json`. A
+    model the table cannot cost, or one it lists with no token rate, must widen the unpriced
+    share, not round to zero.
 
 ## How to report
 

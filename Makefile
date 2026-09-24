@@ -2,7 +2,7 @@ BIN := bin/assaio-agent
 LDFLAGS := -X github.com/assaio/assaio/internal/version.Version=$(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 FUZZTIME := 20s
 
-.PHONY: build test lint fmt tidy snapshot hooks vuln fuzz docs
+.PHONY: build test lint fmt tidy snapshot hooks vuln fuzz docs prices
 build:
 	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/assaio-agent
 test:
@@ -36,6 +36,16 @@ fmt:
 	golangci-lint fmt
 tidy:
 	go mod tidy
+# Refreshes the vendored LiteLLM price table. The -update folds every unprefixed key into
+# retained.json, so a model LiteLLM stops listing keeps its last price instead of going unpriced.
+LITELLM_URL := https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json
+prices:
+	curl -sSfL -o internal/pricing/litellm.json.tmp $(LITELLM_URL)
+	mv internal/pricing/litellm.json.tmp internal/pricing/litellm.json
+	sed -i.bak -E "s/^const SnapshotDate = \"[0-9-]+\"/const SnapshotDate = \"$$(date -u +%F)\"/" internal/pricing/snapshot.go
+	rm internal/pricing/snapshot.go.bak
+	grep -q "^const SnapshotDate = \"$$(date -u +%F)\"" internal/pricing/snapshot.go
+	go test ./internal/pricing/ -run '^TestRetainedHoldsEveryUnprefixedKey$$' -update -v
 # Requires goreleaser installed locally (https://goreleaser.com/install/).
 snapshot:
 	goreleaser release --snapshot --clean

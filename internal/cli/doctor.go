@@ -68,8 +68,7 @@ reach it.`,
 			}
 			warnings, storeFailures := doctorStore(cmd, home, dbPath, since, cfg.Since, cfg.Pricing.UnpricedCeiling(), cfg.Trace.HorizonDays)
 
-			models, snapshotDate := pricing.Info()
-			cmd.Printf("pricing:      %d models, snapshot %s (refresh ships with releases)\n", models, snapshotDate)
+			cmd.Println(doctorPricingLine(pricing.Info()))
 			cmd.Print(doctorDepthSection(scans))
 
 			cmd.Println("\ncaveats:")

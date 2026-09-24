@@ -2,6 +2,7 @@ package pricing
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/assaio/assaio/internal/usage"
@@ -112,5 +113,29 @@ func TestModelWithoutALongTierBillsBothAtOneRate(t *testing.T) {
 	}
 	if want := 100 * 1.25e-6; long != want {
 		t.Fatalf("cost = %.12f, want %.12f", long, want)
+	}
+}
+
+func TestLoadReaderLeavesAModelWithNoTokenRateUnpriced(t *testing.T) {
+	tbl, err := LoadReader(strings.NewReader(`{
+		"image-model": {"output_cost_per_image": 0.04},
+		"placeholder": {"input_cost_per_token": 0, "output_cost_per_token": 0},
+		"output-only": {"output_cost_per_token": 1e-05}
+	}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		model string
+		want  bool
+	}{
+		{"image-model", false},
+		{"placeholder", false},
+		{"output-only", true},
+	}
+	for _, tt := range tests {
+		if _, ok := tbl.Cost(&usage.Record{Model: tt.model, InputTokens: 10}); ok != tt.want {
+			t.Errorf("Cost(%s) ok = %v, want %v", tt.model, ok, tt.want)
+		}
 	}
 }

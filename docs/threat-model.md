@@ -309,7 +309,7 @@ internal/server/server.go
 `runtime inspect`. Everything else — `backfill`, `report`, `effectiveness`, `analyze`,
 `status`, `check`, `doctor`, `dashboard`, `share`, `reconcile`, `digest`, `mark`, `compact`,
 `clear` — has no way to reach a network. The model price table is embedded at build time
-(`//go:embed litellm.json`), so pricing is offline too. There is no telemetry, no analytics,
+(`//go:embed litellm.json retained.json`), so pricing is offline too. There is no telemetry, no analytics,
 and no crash reporting anywhere in the repository.
 
 ### What crosses the machine boundary, and under whose control

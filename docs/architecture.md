@@ -131,12 +131,14 @@ rendered.
 
 ## 6. Price — `internal/pricing`
 
-`pricing.Load()` parses the LiteLLM snapshot embedded at build time (`//go:embed
-litellm.json`) once per process. `Table.Cost(*usage.Record)` and
-`Table.CostTokens(model, Tokens)` try the exact model name, then `pricing.NormalizeModel`,
-and return `ok=false` when neither matches — which becomes `Priced: false` and a nil `Cost`,
-never a zero. A cache write is split at its 1-hour portion and each part billed at its own
-rate.
+`pricing.Load()` parses the build-time embedded LiteLLM snapshot (`//go:embed litellm.json`) and
+`retained.json` once per process. It fills only ids absent from the snapshot with retained prices.
+`retained.json` holds the latest price for every id without a '/' priced by any snapshot since it was added; LiteLLM
+drops models past deprecation, and pricing happens at read time.
+`Table.Cost(*usage.Record)` and `Table.CostTokens(model, Tokens)` try the exact model name, then
+`pricing.NormalizeModel`, and return `ok=false` when neither matches. That yields `Priced: false`
+and a nil `Cost`, never a zero. A cache write is split at its 1-hour portion and each part is
+billed at its own rate.
 
 Pricing is a read-time operation. The store has no cost column, so refreshing the table
 re-prices all of history and no stored row can disagree with the table the binary carries.

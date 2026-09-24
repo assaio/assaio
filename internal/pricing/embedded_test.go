@@ -13,8 +13,11 @@ func TestLoadEmbedded(t *testing.T) {
 	if len(tbl) == 0 {
 		t.Fatal("expected non-empty table")
 	}
-	if _, ok := tbl["claude-opus-4-5"]; !ok {
-		t.Fatal("expected claude-opus-4-5 to be priced")
+	// claude-opus-4-1 is one of the keys LiteLLM dropped past its deprecation date.
+	for _, model := range []string{"claude-opus-4-5", "claude-opus-4-1"} {
+		if _, ok := tbl[model]; !ok {
+			t.Fatalf("expected %s to be priced", model)
+		}
 	}
 }
 
