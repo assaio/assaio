@@ -1060,17 +1060,6 @@ file-size norm.
   Found while building an independent check for `reprice`, which had to bypass the export and
   price straight from `internal/pricing/litellm.json` to verify anything.
 
-- [ ] **B198 · `make fuzz` flakes on `agy` at the `-fuzztime` boundary** — S · solo — measured
-  2026-09-02: `internal/parser/agy FuzzParseTranscript` fails roughly one run in three with
-  `context deadline exceeded` at exactly the deadline, writing **no crasher** — three consecutive
-  25s runs passed with zero new corpus entries, and replaying the seed corpus takes 0.269s, so
-  there is no slow input. It is Go's worker-shutdown race, and it grows likelier as the cached
-  corpus does (487 baseline inputs and climbing). This matters because the nightly CI fuzz job
-  added this cycle opens an issue on a finding: a target that fails without producing one will
-  file noise, and a gate that cries wolf gets muted, which is worse than not having it. Options:
-  raise the per-target `-fuzztime` so the drain has room, treat "failed with no new corpus entry"
-  as a retry rather than a finding in the workflow, or both.
-
 - [ ] **B201 · two per-record relationships are checked only at the server boundary** — S · solo
   — `Sidechain ∈ {0,1}` and "the tool-purpose split sums to `ToolCalls`" live in
   `internal/server/validate.go`, although `internal/usage/bounds.go`'s own header says it exists
