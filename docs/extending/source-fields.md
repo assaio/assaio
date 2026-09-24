@@ -1,23 +1,22 @@
 # What each source's log carries, and what assaio reads
 
-*Part of [Extending assaio](../extending.md). The per-signal summary of this audit is the source-depth matrix in the [generated reference](https://assaio.dev/docs/reference).*
+*Part of [Extending assaio](../extending.md). The [generated
+reference](https://assaio.dev/docs/reference) has the source-depth matrix summarizing each signal in
+this audit.*
 
-Every parser turns a rich log into one fixed record and drops the rest. This is the inventory
-of that drop, source by source: each field a source writes ends in exactly one of two states —
-**extracted**, meaning a signal in the catalog is computed from it and a golden covers it, or
-**skipped**, with the reason written down. A field whose meaning the vendor does not document
-is skipped *with that stated*; it is never guessed at from its name.
+Each parser reduces a rich log to one fixed record. This inventory tracks every field found per
+source as either **extracted**, meaning a catalog signal uses it and a golden test covers it, or
+**skipped**, with a stated reason. If the vendor does not document a field's meaning, it is skipped
+with that reason, never guessed from its name.
 
-**How it was produced.** Key paths were inventoried from real logs on one machine plus each
-parser's synthetic fixture — names and counts only, never a value, except for discriminator
-keys (`type`, `say`, `role`, `status`, `stop_reason`, …) whose values are the format's own
-vocabulary. The corpus is stated per source below, because it is the honest limit of this
-table: **a field that does not appear in the corpus is exactly the one most likely to be
-missing from it.** Re-run the audit when a vendor ships a major version.
+**How it was produced.** The inventory uses key paths from real logs on one machine and each
+parser's synthetic fixture. It records names and counts, never values, except format vocabulary for
+discriminator keys (`type`, `say`, `role`, `status`, `stop_reason`, …). Each source lists its corpus
+below. **Fields absent from that corpus may also be absent from this table.** Re-run the audit after
+a vendor's major release.
 
-None of these formats is documented as an interface. Every "meaning" below is either stated by
-the vendor or inferred from a name that leaves no room — and where it does leave room, the
-field is skipped for that reason.
+None of these formats is documented as an interface. Each "meaning" below is vendor-stated or
+inferred from an unambiguous name. Ambiguous fields are skipped for that reason.
 
 ## Claude Code
 
@@ -54,9 +53,9 @@ field is skipped for that reason.
 
 ## Codex CLI
 
-*Corpus: 2,625 rollouts · 70,522 lines, taken 2026-09-03, plus `testdata/rollout.jsonl`.
-Re-audited in v0.26 against a current install; the first pass read 21 rollouts and predates three
-of the rows below.*
+*Corpus: 2,625 rollouts · 70,522 lines, captured 2026-09-03, plus `testdata/rollout.jsonl`.
+Re-audited in v0.26 against a current install; the first pass covered 21 rollouts and predates three
+rows below.*
 
 | Field | State | Notes |
 |---|---|---|
@@ -89,8 +88,8 @@ of the rows below.*
 
 ## GitHub Copilot CLI
 
-*Corpus: 3 sessions · 43 lines · 145 distinct key paths, plus `testdata/session.jsonl`. This is
-the thinnest corpus of the six and the table should be read as provisional.*
+*Corpus: 3 sessions · 43 lines · 145 distinct key paths, plus `testdata/session.jsonl`. This is the
+thinnest of the six corpora; treat its table as provisional.*
 
 | Field | State | Notes |
 |---|---|---|
@@ -111,23 +110,22 @@ the thinnest corpus of the six and the table should be read as provisional.*
 
 ## Gemini CLI
 
-*Corpus: 355 files under `~/.gemini` · 2,045 lines · 27 distinct key paths — of which only **2
-files** match the discovery glob, and neither contains a token field.*
+*Corpus: 355 files under `~/.gemini` · 2,045 lines · 27 distinct key paths. Only **2 files** match
+the discovery glob, and neither has a token field.*
 
 | Field | State | Notes |
 |---|---|---|
 | `sessionId`, `timestamp`, `model`, `tokens.{input,output,cached,thoughts,tool,total}` | extracted | Every token signal, per the shape `testdata/session.jsonl` captures. |
 | `type`, `source`, `status`, `step_index`, `content`, `thinking`, `error`, `error_code`, `truncated_fields`, `projectHash`, `startTime`, `workspace`, `$set.*` | **not classified — the corpus does not contain the parsed shape** | The chat files this install writes carry none of the token fields above. Either the recording moved, or these files were never the token source. Until that is settled the fields are not classified, because guessing which of two formats is current is exactly what this audit refuses to do (`B110`). |
 
-The honest reading of that second row is a warning about assaio, not about Gemini: this source
-produces **2 discovered files and 0 records** here, and no drift canary fires, because every
-canary needs a sample floor (20 files) a two-file source can never reach. `B110` covers both
-halves.
+The second row warns about assaio, not Gemini: this source yields **2 discovered files and 0
+records** here. No drift canary fires because each needs at least 20 files, which a two-file source
+cannot provide. `B110` covers both issues.
 
 ## Cline
 
-*Corpus: no Cline install on the audited machine — `testdata/ui_messages.json` and
-`testdata/task_metadata.json` only. This table is the weakest of the six and says so.*
+*Corpus: no Cline install on the audited machine; only `testdata/ui_messages.json` and
+`testdata/task_metadata.json`. This is the weakest of the six tables.*
 
 | Field | State | Notes |
 |---|---|---|
@@ -142,12 +140,12 @@ halves.
 ## Antigravity CLI (`agy`)
 
 *Corpus: 500 conversations · 1,537 transcript lines · 9 distinct key paths, plus 500
-`conversations/<uuid>.db` SQLite databases holding 1,975 steps and 638 `gen_metadata` blobs.
+`conversations/<uuid>.db` SQLite databases with 1,975 steps and 638 `gen_metadata` blobs.
 Antigravity CLI 1.1.23, captured 2026-09-02.*
 
-The one source with a rich local corpus and no token counter in it. The audit below is why the
-depth matrix answers no token signal for it rather than reporting zeros: the search for a
-counter was exhaustive and is recorded here so nobody repeats it.
+This is the only source with a rich local corpus but no token counter. The audit below records an
+exhaustive search for one. That is why the depth matrix reports no token signal instead of zeros,
+and why the search need not be repeated.
 
 | Field | State | Notes |
 |---|---|---|
@@ -170,9 +168,8 @@ counter was exhaustive and is recorded here so nobody repeats it.
 
 ## What this audit is not
 
-It does not claim the six formats have no other fields — only that these are the fields the
-corpus above contains. Two of the six tables rest on a corpus too thin to be conclusive and
-say so in their own heading. Widening that is the same work as widening the golden corpus
-(`B20`), and the two should be re-run together.
+This inventory covers fields in the corpora above, not necessarily every field in the six formats.
+Two tables have corpora too thin for firm conclusions and say so in their headings. Widen them
+alongside the golden corpus (`B20`), then re-run both audits.
 
 ---

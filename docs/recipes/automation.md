@@ -1,18 +1,16 @@
 # Running it without being asked
 
-*Part of [Extending assaio](../extending.md). The full scheduling reference: [Automation](../automation.md).*
+*Part of [Extending assaio](../extending.md). For scheduling, see [Automation](../automation.md).*
 
-[Automation](../automation.md) covers the schedulers themselves — cron, launchd, editor status
-lines. This page is the half it deliberately leaves out: what to do with the output once
-something is running unattended, and which failures to make loud.
+[Automation](../automation.md) covers cron, launchd, and editor status lines. This page covers
+unattended output and failures that should be visible.
 
-Every command here is checked against the binary's own command tree, so a renamed flag fails
-the build rather than a Monday morning.
+Every command here is checked against the binary's command tree, so a renamed flag fails the build.
 
 ## The weekly loop, in the order it has to happen
 
-Import, then read, then report what moved. Running `digest` against a store nothing refreshed
-produces a confident summary of a stale window, which is the one outcome worth designing away.
+Import, read, then report changes. If nothing refreshes the store before `digest`, it confidently
+summarizes a stale window.
 
 ```sh #weekly-loop
 #!/usr/bin/env sh
@@ -23,15 +21,14 @@ assaio-agent doctor --strict          # stop if a source drifted or the price ta
 assaio-agent digest --weekly          # markdown: what moved, and where the comparison is weak
 ```
 
-`doctor --strict` before `digest` is the point of the recipe. It exits non-zero on suspected
-format drift, on a configured source with no inputs, and above `pricing.max_unpriced_share` of
-stored tokens carrying no price — each of which makes the digest below it a description of
-something other than your week.
+Run `doctor --strict` before `digest`. It exits non-zero on suspected format drift, a configured
+source with no inputs, or stored tokens without prices exceeding `pricing.max_unpriced_share`. Any
+of these can make the digest misrepresent the week.
 
 ## Delivering the digest
 
-`digest` writes markdown to stdout and stops there, on purpose: delivery is a decision about
-your infrastructure, not about measurement. Two shapes cover most of it.
+`digest` writes markdown to stdout but does not deliver it; delivery depends on your infrastructure.
+Two approaches cover most cases.
 
 ```sh #digest-to-file
 # Keep a dated archive; the digest compares against its own last run, not against these.
@@ -49,21 +46,20 @@ curl -fsS -X POST -H 'Content-Type: application/json' \
   "$WEBHOOK_URL"
 ```
 
-**`--dry-run` is the flag that matters while you are still iterating.** Every real run records a
-comparison basis, so three test runs in an afternoon leave the next genuine digest comparing
-against an afternoon rather than against last week.
+**Use `--dry-run` while iterating.** Each real run records the basis for the next comparison. Three
+test runs in one afternoon would make the next weekly digest compare against that afternoon instead
+of last week.
 
 ## When the schedule itself is the thing that broke
 
-A scheduled job that stops running produces no output, and no output is indistinguishable from a
-quiet week. The cheap guard is to let the *store's* age answer instead of the job's:
+A stopped scheduled job produces no output, which looks like a quiet week. Check the *store's* age
+to catch it:
 
-`statusline` is the wrong tool: it prints today's tokens, AI lines, cost basis and how fresh the
-data is, and it **never fails loudly** — every path exits 0, which is what makes it right for a
-prompt and useless as an alarm.
+`statusline` shows today's tokens, AI lines, cost basis, and data age. It **never fails loudly**:
+every path exits 0. That suits a prompt, not an alarm.
 
-`doctor` is the one that exits non-zero, and the condition it exits on is a configured source
-with no inputs — which is what a schedule that stopped running eventually looks like.
+`doctor` exits non-zero when a configured source has no inputs, which a stopped schedule eventually
+causes.
 
 ```sh #freshness
 # Exits non-zero on suspected drift, on a configured source with no inputs, on a store it
@@ -71,14 +67,13 @@ with no inputs — which is what a schedule that stopped running eventually look
 assaio-agent doctor --strict
 ```
 
-For staleness specifically, read the data age yourself and decide: assaio will not invent a
-threshold, because how stale is too stale depends on how often your team actually runs an agent.
+For staleness, read the data age and choose your own limit. assaio sets none because the right limit
+depends on how often your team runs an agent.
 
 ## What not to automate
 
-Nothing on this page writes a label. `mark --accept-suggested` is safe to schedule in a
-repository whose conventions you wrote and trust — but a scheduled labeller in a repository
-without a convention writes nothing at all, and a scheduled labeller in a repository whose
-convention you guessed writes the wrong thing everywhere at once. Run
-[`--suggest`](label-rules.md) by hand until its output is boring.
+Nothing here writes a label. You can schedule `mark --accept-suggested` in a repo with conventions
+you defined and trust. Without conventions, it writes nothing; with guessed conventions, it can
+write wrong labels everywhere. Run [`--suggest`](label-rules.md) manually until its output is
+predictable.
 

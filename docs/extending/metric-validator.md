@@ -2,15 +2,12 @@
 
 *Part of [Extending assaio](../extending.md). Next: [the worked example](metric-validator-example.md).*
 
-Every block `assaio analyze` prints — adoption, model fit, context health, throughput,
-rework — is a `Validator` under
-[`internal/analyze/`](../../internal/analyze/validator.go). This is the in-tree,
-available-today realization of "one metric = one file" from
-[`AGENTS.md`](../../AGENTS.md) and [`CONTRIBUTING.md`](../../CONTRIBUTING.md): a new metric is
-one file, self-registering, with no central list to edit — and because the HTML
-dashboard renders every registered validator's `Result` generically (see
-[Verified](#verified-it-appears-in-the-cli-and-the-dashboard-automatically) below), it is
-also a new dashboard section for free.
+Every block in `assaio analyze`—adoption, model fit, context health, throughput, and rework—is a
+`Validator` under [`internal/analyze/`](../../internal/analyze/validator.go). This implements the
+in-tree "one metric = one file" design from [`AGENTS.md`](../../AGENTS.md) and
+[`CONTRIBUTING.md`](../../CONTRIBUTING.md). Each metric self-registers, with no central list to
+edit. The HTML dashboard renders each registered validator's `Result` as a new section (see
+[Verified](#verified-it-appears-in-the-cli-and-the-dashboard-automatically)).
 
 **How you actually ship one today — two ways.** An **in-tree validator** (this section)
 is compiled into the `assaio-agent` binary: add your file under `internal/analyze/` in
@@ -49,11 +46,10 @@ type Input struct {
 }
 ```
 
-`Input` is a read-only bundle; use only the fields your metric needs. `Analyze` must stay
-a **pure function of `Input`** — no `time.Now()`, no file or network I/O, no reaching
-into the store yourself — which is what makes it trivial to unit test and safe to run
-identically from the CLI, the dashboard, and (see [The team
-server](team-server.md)) the served endpoint.
+`Input` is read-only; use only the fields you need. `Analyze` must be a **pure function of
+`Input`**: no `time.Now()`, file or network I/O, or direct store access. That makes it easy to unit
+test and safe to run the same way in the CLI, dashboard, and served endpoint (see [The team
+server](team-server.md)).
 
 | Field | Type | What it is |
 |-------|------|------------|
@@ -77,14 +73,14 @@ server](team-server.md)) the served endpoint.
 
 ### Reading a field only the sources that record it carry
 
-Most fields on `Usage` and `Sessions` are optional at the parser (see [Activity fields are
-optional](data-source.md#activity-fields-are-optional-honesty-note)), which means a zero has two meanings:
-nothing happened, or nothing was written down. Averaging the two produces a number nobody
-measured — the mistake that made a Cline-only window read as *100% conversational sessions*,
-because Cline records no edit count and every session sat at zero edits.
+Most `Usage` and `Sessions` fields are optional in the parser (see [Activity fields are
+optional](data-source.md#activity-fields-are-optional-honesty-note)). Zero can mean nothing happened
+or nothing was recorded. Mixing those cases invents a measurement: a Cline-only window appeared to
+have *100% conversational sessions* because Cline records no edit count, leaving every session at
+zero edits.
 
-The rule for any metric over such a field: **keep the rows whose source answers the signal,
-compute over those, and declare the reach.**
+For metrics on optional fields, **keep rows whose source answers the signal, compute over those, and
+declare the reach.**
 
 ```go
 // sessionsAnswering keeps the sessions whose source can answer the signal, and the share of
@@ -98,46 +94,41 @@ if len(edited) == 0 {
 }
 ```
 
-Three consequences worth stating: a figure whose subset is empty prints `—` rather than `0`;
-the verdict is withheld rather than earned from a silence; and `covering()` makes the
-confidence envelope say how much of the window the figure describes. Spell the signal with
-the `parser.Signal*` constant, and if the field you need has no signal id yet, add one — a
-catalog entry plus the matrix rows that answer it ([ADR 0008](../adr/0008-signal-catalog.md)) —
-rather than testing the tool name.
+An empty subset prints `—`, not `0`; silence withholds a verdict; and `covering()` reports how much
+of the window the figure covers in the confidence envelope. Use a `parser.Signal*` constant for the
+signal. If none exists, add a catalog entry and the matrix rows that answer it ([ADR
+0008](../adr/0008-signal-catalog.md)); do not test the tool name.
 
-**Both row shapes need it.** `report.UsageAnswering` is `SessionsAnswering` for
-`[]store.UsageRow`, and the same rule applies to a rate over a stored column: a source
-recording changed lines but no rework contributed its whole output to the churn denominator
-against a structural zero, which lowered the rate with code nobody watched being undone. The
-generic test in `internal/analyze/capability_test.go` varies both shapes for exactly that
-reason — a hole on either grain is the same bug.
+**Both row shapes need it.** `report.UsageAnswering` does for `[]store.UsageRow` what
+`SessionsAnswering` does for sessions. The same rule applies to rates over stored columns. A source
+that records changed lines but no rework otherwise adds all its output to the churn denominator
+against a structural zero, lowering the rate with code whose rework was never observed. The generic
+test in `internal/analyze/capability_test.go` varies both shapes because a gap in either has the
+same effect.
 
 ### Opting a metric out of the project drill
 
-The dashboard re-runs every validator over the top project's rows alone. A metric whose
-answer belongs to the whole window — a flat plan price, attribution pooled across projects,
-per-model turn counts — cannot honestly be narrowed that way: re-run against a slice it
-compares a window-wide constant with part of the usage and prints a verdict that contradicts
-the window-level one on the same page. Declare it window-scoped and the drill skips it:
+The dashboard reruns each validator on the top project's rows. Some answers apply only to the whole
+window: a flat plan price, attribution pooled across projects, or per-model turn counts. Rerunning
+those on one project compares a window-wide constant with partial usage and can contradict the
+window-level verdict on the same page. Mark such metrics as window-scoped so the drill skips them:
 
 ```go
 // WindowScoped: the plan price covers the whole window, not one project's share of it.
 func (myValidator) WindowScoped() {}
 ```
 
-Nothing else changes — the metric still renders normally at window level.
+The metric still renders at window level.
 
 ### Read these first: `ByModel`, `ByProject`, `Totals`
 
-`BuildInput` (`internal/analyze/prepared_build.go`) computes these three once, before any
-validator runs, from the same `Usage` rows above. **Most validators — built-in or
-custom — should read one of these instead of re-grouping `Usage` by hand or importing
-`internal/report`.** `model-fit` is the reference: it used to call
-`report.BuildEffectiveness(in.Usage, in.Prices, "model")` and then loop over the result to
-classify each model's tier by price; it now reads `in.ByModel` directly and imports
-neither `internal/report` nor `internal/pricing` at all (compare
-[`internal/analyze/model_fit.go`](../../internal/analyze/model_fit.go) to the description
-above — the whole re-derivation is gone).
+`BuildInput` (`internal/analyze/prepared_build.go`) computes these three from `Usage` once before
+any validator runs. **Most built-in and custom validators should use them instead of regrouping
+`Usage` or importing `internal/report`.** For example, `model-fit` reads `in.ByModel` to classify
+each model's price tier. Its earlier implementation called
+`report.BuildEffectiveness(in.Usage, in.Prices, "model")` and looped over the result; it no longer
+imports `internal/report` or `internal/pricing` (see
+[`internal/analyze/model_fit.go`](../../internal/analyze/model_fit.go)).
 
 **`ModelStat`** (`in.ByModel`, sorted by `Tokens` descending):
 
@@ -173,11 +164,10 @@ above — the whole re-derivation is gone).
 | `Priced` | `bool` | `false` when at least one usage row's model has no known price — `Cost` then undercounts real spend (but is still non-`nil` as long as at least one row priced). |
 | `CacheEfficiency` | `float64` | `CacheRead / (CacheRead + Input)`, `0` when that sum is zero. |
 
-A custom "which model is eating the budget" metric needs no grouping helpers at all —
-just the prepared fields. `Cost` is `*float64` precisely so this comparison cannot
-silently prefer an unpriced model: `top` only advances to a model that is `Priced`, so a
-big, unpriced model never loses to a smaller priced one just because its zero-value `Cost`
-would otherwise compare as "less" — and never panics dereferencing a `nil` `Cost` either:
+A "which model is eating the budget" metric can use the prepared fields without grouping helpers.
+`Cost` is `*float64` so comparisons cannot silently favor an unpriced model. `top` advances only to
+a `Priced` model; a large unpriced model cannot lose to a smaller priced one because its zero-value
+`Cost` looks lower. The pointer also prevents dereferencing a `nil` `Cost`:
 
 ```go
 top := in.ByModel[0] // ByModel is already sorted by Tokens descending
@@ -196,22 +186,19 @@ r.Figures = []Figure{
 }
 ```
 
-Run for real against a seeded store, that prints real figures like `top model by cost:
-claude-opus-4-8 (premium)` and `its share of window cost: 74.7%` — no dimension grouping,
-no `pricing.Table` handling, no `internal/report` import.
+Run against a seeded store, it prints real figures such as
+`top model by cost: claude-opus-4-8 (premium)` and `its share of window cost: 74.7%`, without
+dimension grouping, `pricing.Table` handling, or an `internal/report` import.
 
-`Usage` and `Sessions` remain available for signals the prepared views don't cover — a
-day-level split (`weekend-usage` below), a session-grain signal (`context`'s compaction
-rate), or a friction count the prepared views deliberately leave out (`rework`'s rejection
-rate). Reach for them, or `internal/report`'s own aggregations (`BuildInsights`,
-`BuildSessionStats`, `BuildChurn`), only when `ByModel`/`ByProject`/`Totals` above don't
-already have what you need.
+Use `Usage` and `Sessions` for signals the prepared views lack: a day-level split (`weekend-usage`
+below), a session-grain signal (`context`'s compaction rate), or a friction count (`rework`'s
+rejection rate). Use those rows or `internal/report` aggregations (`BuildInsights`,
+`BuildSessionStats`, `BuildChurn`) only when `ByModel`/`ByProject`/`Totals` lack the needed data.
 
-A metric that needs domain data `Input` doesn't carry yet (per-file paths, for instance —
-deliberately never persisted; see [Parsers stay
-hermetic](data-source.md#parsers-stay-hermetic--project-resolution-is-ingests-job)) can't be built from
-stored data today. Open an issue describing the signal; that is exactly the kind of
-request that shapes `Input` before an out-of-tree interface is ever frozen.
+A metric needing data absent from `Input` cannot use the store today. For example, per-file paths
+are deliberately never persisted (see [Parsers stay
+hermetic](data-source.md#parsers-stay-hermetic--project-resolution-is-ingests-job)). Open an issue
+describing the signal so it can shape `Input` before the out-of-tree interface freezes.
 
 ## What a validator returns: `Result`
 
@@ -229,12 +216,10 @@ type Result struct {
 }
 ```
 
-One `Result` value feeds every surface — the CLI text report
-(`analyze.RenderResultText`, `internal/analyze/format.go`), JSON
+One `Result` feeds CLI text (`analyze.RenderResultText`, `internal/analyze/format.go`), JSON
 (`analyze --format json`), and the HTML dashboard (`dashboard.html.tmpl`'s
-`faceplateCell`/`ledgerEntry` templates). The table below is field-by-field, including
-exactly how each one renders on each surface — the mechanics behind the "new dashboard
-section for free" claim.
+`faceplateCell`/`ledgerEntry` templates). The table below shows how each field renders on each
+surface, including the automatic dashboard section.
 
 | Field | Meaning | CLI text | HTML dashboard |
 |-------|---------|----------|-----------------|
@@ -264,26 +249,24 @@ type Validator interface {
 }
 ```
 
-Add a file under `internal/analyze/`, implement `Validator`, and register it from that
-file's own `init()`:
+Add a file under `internal/analyze/`, implement `Validator`, and register it in that file's
+`init()`:
 
 ```go
 func init() { Register(myMetricValidator{}) }
 ```
 
-Nothing else to wire up. `assaio analyze --list` and a bare `assaio analyze` (no
-arguments) both call `analyze.Validators()`, which returns every self-registered
-validator, name-sorted — your new metric appears in both automatically, and so does the
-dashboard, per below.
+No other wiring is needed. `assaio analyze --list` and `assaio analyze` with no arguments both call
+`analyze.Validators()`, which returns every self-registered validator sorted by name. Your metric
+appears in both and on the dashboard.
 
 ## Verified: it appears in the CLI and the dashboard automatically
 
-This is not a claim taken on faith — it was verified end to end while writing this
-document, using a throwaway `weekend-usage` validator (the same metric turned into the
-[worked example](metric-validator-example.md) below), then deleted so the tree stays
-clean. With the validator registered and `assaio-agent` rebuilt (the list is elided here — the
-shipped set is in the [generated reference](https://assaio.dev/docs/reference#validators), which
-cannot fall behind the way a pasted transcript does):
+This was verified end to end with a temporary `weekend-usage` validator, then removed to keep the
+tree clean. The same metric appears in the [worked example](metric-validator-example.md). After
+registering it and rebuilding `assaio-agent`, it appeared as shown below. The shipped list is in the
+[generated reference](https://assaio.dev/docs/reference#validators), rather than an excerpt that
+could go stale:
 
 ```console
 $ assaio-agent analyze --list
@@ -321,9 +304,8 @@ $ assaio-agent dashboard --output assaio-dashboard.html
 Wrote dashboard to assaio-dashboard.html (window: last 30 days, project/member names pseudonymized).
 ```
 
-And the generated HTML — **with zero edits to `internal/dashboard/dashboard.go`,
-`render.go`, or `dashboard.html.tmpl`** — contains a new faceplate cell and a full ledger
-entry:
+The generated HTML contains a new faceplate cell and full ledger entry, **with zero edits to
+`internal/dashboard/dashboard.go`, `render.go`, or `dashboard.html.tmpl`**:
 
 ```html
 <div class="cell">
@@ -354,46 +336,40 @@ entry:
 </article>
 ```
 
-This generic rendering is why `internal/dashboard/dashboard.go` and `.html.tmpl` both
-carry an `EXTENSIBILITY SEAM` comment at the exact loop that walks `Data.Verdicts`: it is
-generic over `analyze.Validators()`'s registration order, on purpose.
+`internal/dashboard/dashboard.go` and `.html.tmpl` mark the loops over `Data.Verdicts` with
+`EXTENSIBILITY SEAM` comments. Those loops render validators generically in `analyze.Validators()`
+registration order.
 
-One gap *was* found and fixed while verifying this: `Bars` pseudonymization used to be
-hardcoded to the validator named `"throughput"`, which meant a **custom** validator
-ranking `Bars` by project would leak real project names under `--anonymize`. It is now
-driven by the `Result.BarsPseudonym` field described above, applied generically by
-`internal/dashboard.anonymizeVerdicts` to any validator — see [Honesty
-constraints](../extending.md#honesty-constraints-for-every-extension).
+Verification found and fixed a gap: `Bars` pseudonymization applied only to the validator named
+`"throughput"`. A **custom** validator ranking `Bars` by project could therefore expose real project
+names under `--anonymize`. The `Result.BarsPseudonym` field now directs
+`internal/dashboard.anonymizeVerdicts` for any validator (see [Honesty
+constraints](../extending.md#honesty-constraints-for-every-extension)).
 
 ## Conventions and lint
 
-- File name: snake_case matching the metric, e.g. `weekend_usage.go` for `Name()`
-  `"weekend-usage"` (mirrors `model_fit.go` → `"model-fit"`). Test file alongside it:
-  `weekend_usage_test.go`.
-- `Analyze(Input) Result` will trip `golangci-lint`'s `gocritic` performance check for
-  passing/returning a non-trivial struct by value; every built-in validator silences it
-  the same way — copy the comment verbatim, it is what `nolintlint`'s
-  `require-explanation`/`require-specific` settings expect:
+- Name the file in snake_case after the metric, such as `weekend_usage.go` for `Name()`
+  `"weekend-usage"` (as `model_fit.go` maps to `"model-fit"`). Put its test in
+  `weekend_usage_test.go` beside it.
+- `Analyze(Input) Result` triggers `golangci-lint`'s `gocritic` performance check for passing and
+  returning a non-trivial struct by value. Copy the comment every built-in validator uses;
+  `nolintlint` requires its `require-explanation`/`require-specific` form:
 
   ```go
   //nolint:gocritic // Input is a small value bundle required by the Validator interface; analyzed once per CLI run, not a hot path.
   ```
 
-- Reuse the shared helpers in `internal/analyze/format.go` rather than re-deriving them:
-  `readFor(ok, favorableLabel)` for `Read`, `humanize.PercentOrDash`/`perActiveDay`
-  for `—`-safe ratios, `clamp01` for `Purity`, `fracOf` for `Bar.Frac`, `groupLabel` for
-  an empty dimension value.
-- Render a number through `internal/humanize` so it reads the same here as in the report
-  table beside it: `humanize.Count` for tokens (`33.4B`), `humanize.Int` for a count of
-  things that can pass a thousand (`329,612` calls, lines, sessions, turns). A count that
-  is small by construction — active days, projects, task classes, a threshold in a note —
-  stays bare; grouping it is noise.
-- Reach for `in.ByModel`/`in.ByProject`/`in.Totals` before `in.Usage` — see [Read these
-  first](#read-these-first-bymodel-byproject-totals) above. If your metric ends up
-  grouping `Usage` by model or project itself, that is usually a sign the prepared views
-  already have what you need.
-- Give the file a test that seeds a small `Input`, calls `Analyze(...)`, renders it with
-  `RenderResultText`, and asserts the figures/read you expect — plus a zero-value
-  `Input{}` case: no panic, the honest "no data" block, never a favorable read computed
-  from nothing (see `TestValidatorsEmptyInputSafe` in `internal/analyze/validators_test.go`
-  for the pattern every built-in validator is held to).
+- Reuse helpers in `internal/analyze/format.go`: `readFor(ok, favorableLabel)` for `Read`,
+  `humanize.PercentOrDash`/`perActiveDay` for ratios safe on `—`, `clamp01` for `Purity`, `fracOf`
+  for `Bar.Frac`, and `groupLabel` for empty dimension values.
+- Format numbers with `internal/humanize` to match the adjacent report table. Use `humanize.Count`
+  for tokens (`33.4B`) and `humanize.Int` for counts above a thousand (`329,612` calls, lines,
+  sessions, or turns). Leave counts small by construction—active days, projects, task classes, or a
+  threshold in a note—ungrouped.
+- Check `in.ByModel`/`in.ByProject`/`in.Totals` before `in.Usage` (see [Read these
+  first](#read-these-first-bymodel-byproject-totals)). If you group `Usage` by model or project, a
+  prepared view likely has the data already.
+- Test with a small `Input`: call `Analyze(...)`, render with `RenderResultText`, and assert the
+  expected figures and read. Also test zero-value `Input{}`: no panic, an honest "no data" block,
+  and no favorable read from empty data. See `TestValidatorsEmptyInputSafe` in
+  `internal/analyze/validators_test.go` for the built-in pattern.

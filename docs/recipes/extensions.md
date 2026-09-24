@@ -1,24 +1,22 @@
 # Extensions, written out in full
 
-*Part of [Extending assaio](../extending.md). The contracts these implement: [in-tree validator](../extending/metric-validator.md) · [metric plugin](../extending/metric-plugin.md).*
+*Part of [Extending assaio](../extending.md). Contracts: [in-tree
+validator](../extending/metric-validator.md) · [metric plugin](../extending/metric-plugin.md).*
 
-The guides describe the contract; this page is the part people actually want first — complete
-extensions, short enough to read in one go, each showing one thing worth copying.
+These complete, short extensions show one reusable pattern each. The linked guides define their
+contracts.
 
-**What is checked, stated plainly.** The Python plugins are *executed* by
-`TestRecipeMetricPlugins` against a fixture window and asserted on — including the one below that
-gates on `answers`, whose fixture is built so that deleting the gate changes the published figure
-from 30.0 to 50.0 and fails the test. The Go validators are *shape-checked* by
-`TestRecipeValidatorsMatchTheInterface`: parsed, and their method set held to the `Validator`
-interface, because a Go file in a document cannot be compiled without a package around it.
-Shape-checking catches a renamed method and a changed signature; it does not catch a wrong
-number, which is what the honesty rules and a reviewer are for.
+**What the tests check.** `TestRecipeMetricPlugins` **executes** the Python plugins on a fixture
+window and checks their results. For the plugin gated on `answers`, removing the gate changes the
+published figure from 30.0 to 50.0 and fails the test. assaio's config loader reads the config
+block. `TestRecipeValidatorsMatchTheInterface` parses the Go validators and checks their methods
+against `Validator`; a Go file in a doc cannot compile without a package. This catches renamed
+methods and changed signatures, but not wrong numbers. Honesty rules and review cover those.
 
 ## A validator, as small as one gets
 
-Everything a metric needs: read the prepared `Input`, return one `Result`, register from
-`init()`. Nothing else is wired — it appears in `analyze`, in `analyze --format json` and in the
-dashboard because the registry is walked, not enumerated.
+A metric reads prepared `Input`, returns one `Result`, and registers from `init()`. The registry
+automatically includes it in `analyze`, `analyze --format json`, and the dashboard.
 
 ```go #weekday-split
 package analyze
@@ -72,16 +70,13 @@ func (weekdayValidator) Analyze(in Input) Result {
 }
 ```
 
-Note what the no-data path does: `neutral`, an em dash, and a takeaway that says so. A metric
-that returns `0%` when it has no denominator is a lie dressed as a number, and it is the first
-thing a review of a new validator looks for.
+With no data, return `neutral`, an em dash, and a takeaway explaining why. Reporting `0%` without a
+denominator gives a false number; check this first when reviewing a new validator.
 
 ## A validator that refuses to read a silence as a zero
 
-The rule that separates a metric from a mistake: before reading a column, keep only the rows
-whose source can actually record it. A source that never writes a cache counter leaves the field
-at zero, and averaging that in reports "the cache was never written" for tools that simply do not
-say.
+Before reading a column, keep only rows from sources that can record it. A source without a cache
+counter leaves zero in that field; averaging it would falsely say the cache was never written.
 
 ```go #answers-gated
 package analyze
@@ -124,14 +119,14 @@ func (editSizeValidator) Analyze(in Input) Result {
 }
 ```
 
-The caveat is not decoration. It states the share of the window the figure actually describes,
-which is the difference between a number and a number you can act on.
+The caveat gives the share of the window covered by the figure, so readers can judge whether to act
+on it.
 
 ## A metric plugin, any language
 
-The same metric as an executable: no fork, no Go, declared in config under `metrics:`. It
-answers `describe` with what it reads, and `analyze` with one `Result` over exactly that.
-`assaio-agent plugins init --kind metric --lang python` prints this skeleton for you.
+This executable implements the same metric without a fork or Go. Declare it under `metrics:` in
+config. It answers `describe` with the fields it reads and `analyze` with one `Result` over those
+fields. `assaio-agent plugins init --kind metric --lang python` prints the skeleton.
 
 ```python #plugin-weekday
 #!/usr/bin/env python3
@@ -180,15 +175,14 @@ print(json.dumps(HANDSHAKE))
 print(json.dumps(result))
 ```
 
-`name` is stamped by the core as `plugin:<name>` on arrival, so a plugin cannot shadow a
-built-in validator; setting it in the result is not an error, it is simply overwritten.
+Core stamps `name` as `plugin:<name>` on arrival, so a plugin cannot shadow a built-in validator. A
+result may set it, but core overwrites it.
 
 ## A metric plugin that checks what the window can answer
 
-The wire carries `answers`: a map from each tool present in the window to the signal ids it can
-produce. A plugin that ignores it is exposed to exactly the bug the in-tree gate exists to
-prevent — and unlike a validator, it cannot call into the capability matrix, which is why the
-envelope hands it over.
+The wire includes `answers`, mapping each tool in the window to signal ids it can produce. A plugin
+that ignores it risks the same error the in-tree gate prevents. Unlike a validator, it cannot read
+the capability matrix, so the envelope supplies it.
 
 ```python #plugin-answers
 #!/usr/bin/env python3
@@ -242,7 +236,7 @@ print(json.dumps(HANDSHAKE))
 print(json.dumps(result))
 ```
 
-Both plugins are wired the same way:
+Wire both plugins the same way:
 
 ```yaml #metric-config
 metrics:
@@ -251,26 +245,24 @@ metrics:
     timeout: 30s
 ```
 
-and checked before you trust them:
+Check both before trusting them:
 
 ```sh #verify-metric
 assaio-agent metrics verify weekday-split --since 30d
 ```
 
-`metrics verify` runs the plugin on your real window and prints both the contract violations and
-the rendered result, storing nothing.
+`metrics verify` runs the plugin on your real window and prints contract violations and the rendered
+result. It stores nothing.
 
 ## A detector: reading the sequence, not the total
 
-The step timeline (ADR 0012) is the one input that is not an aggregate: it holds what a session
-did, in what order. A detector reads a *scope* of it — never the whole set — because the
-populations are not comparable: 89% of the sequences on the audited store are one-shot SDK calls
-holding 5.7% of its steps, so a rate spanning two scopes describes neither. Declaring the scope is
-what `TraceReader` is for, and the caveat naming what the pattern cannot be told apart from is not
-optional decoration: a hard bug and a loop look identical on a timeline.
+The step timeline (ADR 0012) is the only input that is not aggregated: it records session actions in
+order. A detector reads one *scope*, never the whole set, because the populations differ. On the
+audited store, one-shot SDK calls make up 89% of sequences but only 5.7% of steps, so a rate across
+scopes describes neither. `TraceReader` declares the scope. The caveat must also say what the
+pattern cannot distinguish: a hard bug and a loop look identical on a timeline.
 
-This one counts a file read again inside the same sequence — the cheapest form of "it looked at the
-same thing twice".
+This counts when a sequence reads the same file again.
 
 ```go #read-repeats
 package analyze
@@ -340,13 +332,16 @@ func (v reReadsValidator) Analyze(in Input) Result {
 }
 ```
 
-A target is comparable **only inside its own sequence**: it is an integer assigned in first-seen
-order, never a path and never a digest of one, so "the same file nine times" stays answerable while
-"which file" stays permanently unanswerable.
+A target is comparable **only inside its own sequence**. Its integer is assigned in first-seen
+order; it is neither a path nor a path digest. You can count nine reads of the same file but cannot
+identify the file.
 
 ## Where to go next
 
-- The full `Input` and `Result` field tables: [Adding a metric validator](../extending/metric-validator.md).
-- Every field of the plugin wire, generated from the types: [the reference](https://assaio.dev/docs/reference#metric-plugin).
-- A whole tool assaio does not read yet: [write a parser plugin](../extending/parser-plugin.md), any language.
-- Thresholds on top of these: [rule plugins](rule-plugins.md).
+- Full `Input` and `Result` field tables: [Adding a metric
+  validator](../extending/metric-validator.md).
+- Every plugin wire field, generated from the types: [the
+  reference](https://assaio.dev/docs/reference#metric-plugin).
+- To add a tool assaio does not yet read: [write a parser plugin](../extending/parser-plugin.md) in
+  any language.
+- To set thresholds on these: [rule plugins](rule-plugins.md).

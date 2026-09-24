@@ -3,143 +3,145 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>Extensions, written out in full — assaio</title>
-<meta name="description" content="The guides describe the contract; this page is the part people actually want first">
+<meta name="description" content="validator](../extending/metric-validator.md) · metric plugin.">
 <link rel="canonical" href="https://assaio.dev/docs/recipes/extensions">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://assaio.dev/docs/recipes/extensions">
 <meta property="og:title" content="Extensions, written out in full — assaio">
-<meta property="og:description" content="The guides describe the contract; this page is the part people actually want first">
+<meta property="og:description" content="validator](../extending/metric-validator.md) · metric plugin.">
 <meta property="og:image" content="https://assaio.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="assaio — measure whether AI coding spend is delivering">
+<meta property="og:image:alt" content="assaio logo, cost and output headline, subtitle, install commands and tool names">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://assaio.dev/og.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233E8B79'/%3E%3Cpath d='M9 22 16 10l7 12' stroke='%23EFEAE1' stroke-width='2.4' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M9 22 16 10l7 12' stroke='%23ffffff' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"assaio","item":"https://assaio.dev/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://assaio.dev/docs"},{"@type":"ListItem","position":3,"name":"Extensions, written out in full","item":"https://assaio.dev/docs/recipes/extensions"}]}</script>
 <style>:root{
-  --ink:#14120F; --paper:#EFEAE1;
-  --teal:#3E8B79; --teal-lift:#4F9E8B;
-  --bg:var(--paper); --fg:#1A1713; --dim:#6B6459; --faint:#8D857A;
-  --rule:rgba(20,18,15,.14); --rule-soft:rgba(20,18,15,.07);
-  --cell:rgba(20,18,15,.025); --signal:var(--teal);
+  --bg:#ffffff; --surface:#f5f7f8; --line:#e2e6e9; --line-strong:#cdd3d8;
+  --fg:#0f1417; --dim:#4f5a64; --faint:#66717c;
+  --signal:#0f766e; --signal-strong:#0b5f58; --signal-soft:#e7f4f2;
+  --cell:#f5f7f8; --rule:#e2e6e9; --rule-soft:#edf0f2;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --gut:clamp(1.25rem,4vw,2.5rem);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --gut:clamp(1rem,4vw,2.5rem);
 }
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
-    --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
-    --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
+  :root{
+    --bg:#0c1013; --surface:#11171b; --line:#232e35; --line-strong:#33424c;
+    --fg:#edf1f3; --dim:#a3aeb7; --faint:#8b97a1;
+    --signal:#2dd4bf; --signal-strong:#5eead4; --signal-soft:#0e2826;
+    --cell:#11171b; --rule:#232e35; --rule-soft:#1a2328;
   }
 }
-:root[data-theme="dark"]{
-  --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
-  --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
-  --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
-}
 *,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth; color-scheme:light dark}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 body{margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans);
-  font-size:15.5px; line-height:1.65; -webkit-font-smoothing:antialiased}
-a{color:var(--signal)}
+  font-size:clamp(1rem,.96rem + .2vw,1.0625rem); line-height:1.65; -webkit-font-smoothing:antialiased}
+a{color:var(--signal); text-underline-offset:.2em}
+a:hover{color:var(--signal-strong)}
+:focus-visible{outline:2px solid var(--signal); outline-offset:3px; border-radius:4px}
 .wrap{max-width:84rem; margin:0 auto; padding:0 var(--gut)}
-.top{display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap;
-  padding:1.15rem 0; border-bottom:1px solid var(--rule)}
-.brand{font:600 1rem/1 var(--mono); letter-spacing:-.02em; text-decoration:none; color:var(--fg)}
-.topnav{display:flex; gap:1.1rem; flex-wrap:wrap; font-family:var(--mono); font-size:12px}
-.topnav a{text-decoration:none}
-footer{padding:2.5rem 0 4rem; margin-top:3rem; border-top:1px solid var(--rule-soft);
-  color:var(--faint); font-size:13px}
+.top{display:flex; align-items:center; justify-content:space-between; gap:.5rem 1.5rem; flex-wrap:wrap;
+  min-height:3.75rem; border-bottom:1px solid var(--line)}
+.brand{display:inline-flex; align-items:center; gap:.55rem; min-height:44px; font-weight:700; font-size:1.1rem;
+  letter-spacing:-.02em; text-decoration:none; color:var(--fg)}
+.brand svg{width:26px; height:26px; flex:none}
+.topnav{display:flex; flex-wrap:wrap; gap:0 .25rem; font-size:.95rem}
+.topnav a{display:inline-flex; align-items:center; min-height:44px; padding:0 .7rem; border-radius:8px;
+  text-decoration:none; color:var(--dim); font-weight:500}
+.topnav a:hover{color:var(--fg); background:var(--surface)}
+.topnav a.menu{display:none}
+footer{padding:2.5rem 0 3.5rem; margin-top:3rem; border-top:1px solid var(--line); color:var(--faint); font-size:.88rem}
 footer p{max-width:56rem; margin:0}
-.layout{display:grid; grid-template-columns:15rem minmax(0,1fr); gap:3rem; align-items:start}
-@media (max-width:60rem){.layout{grid-template-columns:minmax(0,1fr); gap:1.5rem}
-  .side{position:static; border-bottom:1px solid var(--rule-soft); padding-bottom:1rem}}
+.layout{display:grid; grid-template-columns:16rem minmax(0,1fr); gap:3rem; align-items:start}
 .side{position:sticky; top:0; padding:2rem 0; max-height:100vh; overflow-y:auto}
-.sidehead{margin:1.4rem 0 .45rem; font:500 .625rem/1 var(--mono); letter-spacing:.14em;
+@media (max-width:60rem){
+  .layout{grid-template-columns:minmax(0,1fr); gap:0}
+  .side{position:static; order:2; max-height:none; padding:1.5rem 0 0; border-top:1px solid var(--line)}
+  .topnav a.menu{display:inline-flex}
+}
+@media (max-width:34rem){.topnav a.opt{display:none} .topnav a{padding:0 .5rem}}
+.sidehead{margin:1.5rem 0 .4rem; font:700 .72rem/1 var(--sans); letter-spacing:.08em;
   text-transform:uppercase; color:var(--faint)}
 .sidehead:first-child{margin-top:0}
 .side ul{list-style:none; margin:0; padding:0}
-.side li{margin:0 0 .3rem}
-.side a{display:block; text-decoration:none; color:var(--dim); font-size:13.5px; line-height:1.4;
-  padding:.15rem 0 .15rem .6rem; border-left:2px solid transparent}
-.side a:hover{color:var(--fg)}
-.side a.on{color:var(--signal); border-left-color:var(--signal)}
-.doc{padding:2rem 0 1rem; max-width:52rem; min-width:0}
-.doc h1{font-size:clamp(1.6rem,4vw,2.15rem); line-height:1.15; letter-spacing:-.015em; margin:0 0 1rem}
-.doc h2{font-size:1.3rem; letter-spacing:-.01em; margin:2.75rem 0 .75rem;
-  padding-top:1.25rem; border-top:1px solid var(--rule-soft)}
-.doc h3{font-size:1.05rem; margin:2rem 0 .5rem}
-.doc h4{font-size:.95rem; margin:1.5rem 0 .4rem; color:var(--dim)}
-.doc h2 a,.doc h3 a,.doc h4 a{text-decoration:none}
-.doc p,.doc li{max-width:44rem}
+.side a{display:flex; align-items:center; min-height:40px; text-decoration:none; color:var(--dim);
+  font-size:.93rem; line-height:1.35; padding:.35rem .75rem; border-radius:8px}
+.side a:hover{color:var(--fg); background:var(--surface)}
+.side a.on{color:var(--signal); background:var(--signal-soft); font-weight:600}
+.doc{padding:2rem 0 1rem; max-width:48rem; min-width:0}
+.doc h1{font-size:clamp(1.8rem,1.3rem + 2vw,2.5rem); line-height:1.1; letter-spacing:-.03em; margin:0 0 1rem}
+.doc h2{font-size:clamp(1.3rem,1.15rem + .6vw,1.55rem); letter-spacing:-.015em; line-height:1.25;
+  margin:2.75rem 0 .75rem; padding-top:1.5rem; border-top:1px solid var(--line)}
+.doc h3{font-size:1.12rem; letter-spacing:-.01em; margin:2rem 0 .5rem}
+.doc h4{font-size:1rem; margin:1.5rem 0 .4rem; color:var(--dim)}
+.doc h2 a,.doc h3 a,.doc h4 a{text-decoration:none; color:inherit}
+.doc p,.doc li{max-width:42rem}
 .doc p{margin:0 0 1rem}
-.doc .lede{color:var(--dim); font-size:1.02rem}
+.doc .lede{color:var(--dim); font-size:1.08rem}
 .doc ul,.doc ol{margin:0 0 1rem; padding-left:1.35rem}
 .doc li{margin:0 0 .45rem}
 .doc li>ul,.doc li>ol{margin-top:.45rem}
-.doc blockquote{margin:0 0 1rem; padding:.1rem 0 .1rem 1rem; border-left:2px solid var(--rule);
+.doc blockquote{margin:0 0 1rem; padding:.2rem 0 .2rem 1rem; border-left:3px solid var(--signal);
   color:var(--dim)}
-.doc hr{border:0; border-top:1px solid var(--rule-soft); margin:2.5rem 0}
-.doc strong{font-weight:600}
+.doc hr{border:0; border-top:1px solid var(--line); margin:2.5rem 0}
+.doc strong{font-weight:650}
 .doc img{max-width:100%}
 code{font-family:var(--mono); font-size:.875em}
-:not(pre)>code{background:var(--cell); border:1px solid var(--rule-soft); border-radius:3px;
-  padding:.08em .32em; word-break:break-word}
-pre{background:var(--cell); border:1px solid var(--rule-soft); border-radius:4px;
-  padding:.9rem 1rem; overflow-x:auto; margin:0 0 1.25rem; line-height:1.55}
-pre code{background:none; border:0; padding:0; font-size:12.5px}
+:not(pre)>code{background:var(--cell); border:1px solid var(--line); border-radius:5px;
+  padding:.08em .35em; overflow-wrap:anywhere}
+pre{background:#0e1316; color:#e6ecef; border:1px solid #222c32; border-radius:10px;
+  padding:1rem 1.1rem; overflow-x:auto; margin:0 0 1.25rem; line-height:1.55}
+pre code{background:none; border:0; padding:0; font-size:.84rem; color:inherit}
 .scroll{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 0 1.25rem}
-table{border-collapse:collapse; width:100%; font-size:13px}
+table{border-collapse:collapse; width:100%; font-size:.9rem}
 .doc table{display:block; overflow-x:auto; margin:0 0 1.25rem}
-th,td{text-align:left; vertical-align:top; padding:.5rem .75rem .5rem 0;
-  border-bottom:1px solid var(--rule-soft)}
-th{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em;
-  color:var(--faint); font-weight:500; white-space:nowrap}
-tbody tr:nth-child(odd){background:var(--cell)}
-td.m{white-space:nowrap; color:var(--signal); font-family:var(--mono); font-size:12.5px}
+th,td{text-align:left; vertical-align:top; padding:.6rem .8rem .6rem 0; border-bottom:1px solid var(--line)}
+th{font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); font-weight:650; white-space:nowrap}
+td.m{white-space:nowrap; color:var(--signal); font-family:var(--mono); font-size:.84rem}
 td.dim{color:var(--dim)}
 section{scroll-margin-top:1rem}
-section h2{font-size:1.3rem; margin:2.75rem 0 .35rem; padding-top:1.25rem;
-  border-top:1px solid var(--rule-soft); letter-spacing:-.01em}
-.note{color:var(--dim); font-size:13.5px; max-width:52rem; margin:0 0 1.25rem}
-h3.sub{font-size:.95rem; margin:1.75rem 0 .5rem; font-weight:600}
+section h2{font-size:clamp(1.3rem,1.15rem + .6vw,1.55rem); margin:2.75rem 0 .35rem; padding-top:1.5rem;
+  border-top:1px solid var(--line); letter-spacing:-.015em}
+.note{color:var(--dim); font-size:.93rem; max-width:48rem; margin:0 0 1.25rem}
+h3.sub{font-size:1rem; margin:1.75rem 0 .5rem; font-weight:650}
 ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
-.cmd{padding:1rem 0; border-bottom:1px solid var(--rule-soft)}
-.cmd h3{font-family:var(--mono); font-size:13px; margin:0 0 .2rem; color:var(--signal); font-weight:500}
-.cmd p{margin:0; color:var(--dim); font-size:13.5px; max-width:44rem}
+.cmd{padding:1rem 0; border-bottom:1px solid var(--line)}
+.cmd h3{font-family:var(--mono); font-size:.9rem; margin:0 0 .25rem; color:var(--signal); font-weight:600}
+.cmd p{margin:0; color:var(--dim); font-size:.93rem; max-width:44rem}
 .cmd table{margin-top:.6rem}
 </style>
 </head>
 <body><div class="wrap">
 <header class="top">
-  <a class="brand" href="https://assaio.dev/">assaio</a>
+  <a class="brand" href="https://assaio.dev/"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--signal)"/><path d="M9 22 16 10l7 12" stroke="var(--bg)" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>assaio</a>
   <nav class="topnav">
-    <a href="https://assaio.dev/">Overview</a>
+    <a class="opt" href="https://assaio.dev/">Overview</a>
     <a href="https://assaio.dev/docs">Docs</a>
     <a href="https://assaio.dev/docs/reference">Reference</a>
     <a href="https://github.com/assaio/assaio">GitHub</a>
-    <a href="https://github.com/assaio/assaio/releases">Releases</a>
+    <a class="opt" href="https://github.com/assaio/assaio/releases">Releases</a>
+    <a class="menu" href="#docs-nav">Menu</a>
   </nav>
 </header>
-<div class="layout"><aside class="side"><nav><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/runtime-inspect">Runtime inspect (experimental)</a></li><li><a href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a class="on" href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="extensions-written-out-in-full">Extensions, written out in full</h1>
-<p><em>Part of <a href="https://assaio.dev/docs">Extending assaio</a>. The contracts these implement: <a href="https://assaio.dev/docs/metric-validator">in-tree validator</a> · <a href="https://assaio.dev/docs/metric-plugin">metric plugin</a>.</em></p>
-<p>The guides describe the contract; this page is the part people actually want first — complete
-extensions, short enough to read in one go, each showing one thing worth copying.</p>
-<p><strong>What is checked, stated plainly.</strong> The Python plugins are <em>executed</em> by
-<code>TestRecipeMetricPlugins</code> against a fixture window and asserted on — including the one below that
-gates on <code>answers</code>, whose fixture is built so that deleting the gate changes the published figure
-from 30.0 to 50.0 and fails the test. The Go validators are <em>shape-checked</em> by
-<code>TestRecipeValidatorsMatchTheInterface</code>: parsed, and their method set held to the <code>Validator</code>
-interface, because a Go file in a document cannot be compiled without a package around it.
-Shape-checking catches a renamed method and a changed signature; it does not catch a wrong
-number, which is what the honesty rules and a reviewer are for.</p>
+<div class="layout"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/runtime-inspect">Runtime inspect (experimental)</a></li><li><a href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a class="on" href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="extensions-written-out-in-full">Extensions, written out in full</h1>
+<p><em>Part of <a href="https://assaio.dev/docs">Extending assaio</a>. Contracts: <a href="https://assaio.dev/docs/metric-validator">in-tree
+validator</a> · <a href="https://assaio.dev/docs/metric-plugin">metric plugin</a>.</em></p>
+<p>These complete, short extensions show one reusable pattern each. The linked guides define their
+contracts.</p>
+<p><strong>What the tests check.</strong> <code>TestRecipeMetricPlugins</code> <strong>executes</strong> the Python plugins on a fixture
+window and checks their results. For the plugin gated on <code>answers</code>, removing the gate changes the
+published figure from 30.0 to 50.0 and fails the test. assaio's config loader reads the config
+block. <code>TestRecipeValidatorsMatchTheInterface</code> parses the Go validators and checks their methods
+against <code>Validator</code>; a Go file in a doc cannot compile without a package. This catches renamed
+methods and changed signatures, but not wrong numbers. Honesty rules and review cover those.</p>
 <h2 id="a-validator-as-small-as-one-gets">A validator, as small as one gets</h2>
-<p>Everything a metric needs: read the prepared <code>Input</code>, return one <code>Result</code>, register from
-<code>init()</code>. Nothing else is wired — it appears in <code>analyze</code>, in <code>analyze --format json</code> and in the
-dashboard because the registry is walked, not enumerated.</p>
+<p>A metric reads prepared <code>Input</code>, returns one <code>Result</code>, and registers from <code>init()</code>. The registry
+automatically includes it in <code>analyze</code>, <code>analyze --format json</code>, and the dashboard.</p>
 <pre><code class="language-go">package analyze
 
 func init() { Register(weekdayValidator{}) }
@@ -190,14 +192,11 @@ func (weekdayValidator) Analyze(in Input) Result {
 	return r
 }
 </code></pre>
-<p>Note what the no-data path does: <code>neutral</code>, an em dash, and a takeaway that says so. A metric
-that returns <code>0%</code> when it has no denominator is a lie dressed as a number, and it is the first
-thing a review of a new validator looks for.</p>
+<p>With no data, return <code>neutral</code>, an em dash, and a takeaway explaining why. Reporting <code>0%</code> without a
+denominator gives a false number; check this first when reviewing a new validator.</p>
 <h2 id="a-validator-that-refuses-to-read-a-silence-as-a-zero">A validator that refuses to read a silence as a zero</h2>
-<p>The rule that separates a metric from a mistake: before reading a column, keep only the rows
-whose source can actually record it. A source that never writes a cache counter leaves the field
-at zero, and averaging that in reports &quot;the cache was never written&quot; for tools that simply do not
-say.</p>
+<p>Before reading a column, keep only rows from sources that can record it. A source without a cache
+counter leaves zero in that field; averaging it would falsely say the cache was never written.</p>
 <pre><code class="language-go">package analyze
 
 func init() { Register(editSizeValidator{}) }
@@ -237,12 +236,12 @@ func (editSizeValidator) Analyze(in Input) Result {
 	return r
 }
 </code></pre>
-<p>The caveat is not decoration. It states the share of the window the figure actually describes,
-which is the difference between a number and a number you can act on.</p>
+<p>The caveat gives the share of the window covered by the figure, so readers can judge whether to act
+on it.</p>
 <h2 id="a-metric-plugin-any-language">A metric plugin, any language</h2>
-<p>The same metric as an executable: no fork, no Go, declared in config under <code>metrics:</code>. It
-answers <code>describe</code> with what it reads, and <code>analyze</code> with one <code>Result</code> over exactly that.
-<code>assaio-agent plugins init --kind metric --lang python</code> prints this skeleton for you.</p>
+<p>This executable implements the same metric without a fork or Go. Declare it under <code>metrics:</code> in
+config. It answers <code>describe</code> with the fields it reads and <code>analyze</code> with one <code>Result</code> over those
+fields. <code>assaio-agent plugins init --kind metric --lang python</code> prints the skeleton.</p>
 <pre><code class="language-python">#!/usr/bin/env python3
 &quot;&quot;&quot;Weekday token share as an out-of-tree metric plugin.&quot;&quot;&quot;
 import datetime as dt
@@ -288,13 +287,12 @@ else:
 print(json.dumps(HANDSHAKE))
 print(json.dumps(result))
 </code></pre>
-<p><code>name</code> is stamped by the core as <code>plugin:&lt;name&gt;</code> on arrival, so a plugin cannot shadow a
-built-in validator; setting it in the result is not an error, it is simply overwritten.</p>
+<p>Core stamps <code>name</code> as <code>plugin:&lt;name&gt;</code> on arrival, so a plugin cannot shadow a built-in validator. A
+result may set it, but core overwrites it.</p>
 <h2 id="a-metric-plugin-that-checks-what-the-window-can-answer">A metric plugin that checks what the window can answer</h2>
-<p>The wire carries <code>answers</code>: a map from each tool present in the window to the signal ids it can
-produce. A plugin that ignores it is exposed to exactly the bug the in-tree gate exists to
-prevent — and unlike a validator, it cannot call into the capability matrix, which is why the
-envelope hands it over.</p>
+<p>The wire includes <code>answers</code>, mapping each tool in the window to signal ids it can produce. A plugin
+that ignores it risks the same error the in-tree gate prevents. Unlike a validator, it cannot read
+the capability matrix, so the envelope supplies it.</p>
 <pre><code class="language-python">#!/usr/bin/env python3
 &quot;&quot;&quot;AI lines per edit, counting only the sources that record edits.&quot;&quot;&quot;
 import json
@@ -345,26 +343,24 @@ else:
 print(json.dumps(HANDSHAKE))
 print(json.dumps(result))
 </code></pre>
-<p>Both plugins are wired the same way:</p>
+<p>Wire both plugins the same way:</p>
 <pre><code class="language-yaml">metrics:
   - name: weekday-split
     command: ./scripts/weekday-split.py
     timeout: 30s
 </code></pre>
-<p>and checked before you trust them:</p>
+<p>Check both before trusting them:</p>
 <pre><code class="language-sh">assaio-agent metrics verify weekday-split --since 30d
 </code></pre>
-<p><code>metrics verify</code> runs the plugin on your real window and prints both the contract violations and
-the rendered result, storing nothing.</p>
+<p><code>metrics verify</code> runs the plugin on your real window and prints contract violations and the rendered
+result. It stores nothing.</p>
 <h2 id="a-detector-reading-the-sequence-not-the-total">A detector: reading the sequence, not the total</h2>
-<p>The step timeline (ADR 0012) is the one input that is not an aggregate: it holds what a session
-did, in what order. A detector reads a <em>scope</em> of it — never the whole set — because the
-populations are not comparable: 89% of the sequences on the audited store are one-shot SDK calls
-holding 5.7% of its steps, so a rate spanning two scopes describes neither. Declaring the scope is
-what <code>TraceReader</code> is for, and the caveat naming what the pattern cannot be told apart from is not
-optional decoration: a hard bug and a loop look identical on a timeline.</p>
-<p>This one counts a file read again inside the same sequence — the cheapest form of &quot;it looked at the
-same thing twice&quot;.</p>
+<p>The step timeline (ADR 0012) is the only input that is not aggregated: it records session actions in
+order. A detector reads one <em>scope</em>, never the whole set, because the populations differ. On the
+audited store, one-shot SDK calls make up 89% of sequences but only 5.7% of steps, so a rate across
+scopes describes neither. <code>TraceReader</code> declares the scope. The caveat must also say what the
+pattern cannot distinguish: a hard bug and a loop look identical on a timeline.</p>
+<p>This counts when a sequence reads the same file again.</p>
 <pre><code class="language-go">package analyze
 
 import (
@@ -431,15 +427,18 @@ func (v reReadsValidator) Analyze(in Input) Result {
 	return r
 }
 </code></pre>
-<p>A target is comparable <strong>only inside its own sequence</strong>: it is an integer assigned in first-seen
-order, never a path and never a digest of one, so &quot;the same file nine times&quot; stays answerable while
-&quot;which file&quot; stays permanently unanswerable.</p>
+<p>A target is comparable <strong>only inside its own sequence</strong>. Its integer is assigned in first-seen
+order; it is neither a path nor a path digest. You can count nine reads of the same file but cannot
+identify the file.</p>
 <h2 id="where-to-go-next">Where to go next</h2>
 <ul>
-<li>The full <code>Input</code> and <code>Result</code> field tables: <a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a>.</li>
-<li>Every field of the plugin wire, generated from the types: <a href="https://assaio.dev/docs/reference#metric-plugin">the reference</a>.</li>
-<li>A whole tool assaio does not read yet: <a href="https://assaio.dev/docs/parser-plugin">write a parser plugin</a>, any language.</li>
-<li>Thresholds on top of these: <a href="https://assaio.dev/docs/recipes/rule-plugins">rule plugins</a>.</li>
+<li>Full <code>Input</code> and <code>Result</code> field tables: <a href="https://assaio.dev/docs/metric-validator">Adding a metric
+validator</a>.</li>
+<li>Every plugin wire field, generated from the types: <a href="https://assaio.dev/docs/reference#metric-plugin">the
+reference</a>.</li>
+<li>To add a tool assaio does not yet read: <a href="https://assaio.dev/docs/parser-plugin">write a parser plugin</a> in
+any language.</li>
+<li>To set thresholds on these: <a href="https://assaio.dev/docs/recipes/rule-plugins">rule plugins</a>.</li>
 </ul>
 </main>
 </div>
@@ -450,6 +449,4 @@ names no release — which version is current is stated once, on the
 <a href="https://github.com/assaio/assaio/releases">releases page</a>, where it cannot fall behind.
 It loads nothing: no fonts, no analytics, no third-party requests.</p>
 </footer>
-</div><script>
-try{var t=localStorage.getItem('assaio-theme'); if(t) document.documentElement.setAttribute('data-theme',t);}catch(e){}
-</script></body></html>
+</div></body></html>

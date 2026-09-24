@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"html"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -51,6 +52,10 @@ func TestCommittedReferencePageMatchesTheBinary(t *testing.T) {
 // working.
 func TestCommittedRedirectMatches(t *testing.T) {
 	assertGenerated(t, filepath.Join(repoRoot, docs.RedirectFile), docs.Redirect())
+}
+
+func TestCommittedSitemapListsEveryPage(t *testing.T) {
+	assertGenerated(t, filepath.Join(repoRoot, docs.SitemapFile), docs.Sitemap(guides(t)))
 }
 
 // A document under docs/ is published or excused, and never neither: a guide added to the tree
@@ -125,6 +130,11 @@ func TestLLMsFileNamesEverySource(t *testing.T) {
 	report(t, docs.CheckMentions(reference(), llmsTxt, read(t, llmsTxt), "sources"))
 }
 
+// The README's source table is the first list of supported tools most readers see.
+func TestREADMENamesEverySource(t *testing.T) {
+	report(t, docs.CheckMentions(reference(), "README.md", read(t, filepath.Join(repoRoot, "README.md")), "sources"))
+}
+
 // B155 is the failure this covers: six prepared-input fields reached no metric plugin while
 // five shipped validators read them, and the extension documentation described a contract that
 // was not the one on the wire. Both halves of that contract are checked, because documenting
@@ -194,6 +204,21 @@ func TestDocumentsPrintNoFlagTheBinaryLacks(t *testing.T) {
 	for _, f := range []string{"README.md", "CONTRIBUTING.md", "AGENTS.md", "RELEASING.md"} {
 		report(t, docs.CheckInvocations(ref, f, read(t, filepath.Join(repoRoot, f))))
 	}
+	report(t, docs.CheckInvocations(ref, sitePage, htmlCode(read(t, sitePage))))
+}
+
+var (
+	codeElement = regexp.MustCompile(`(?s)<code[^>]*>(.*?)</code>`)
+	anyTag      = regexp.MustCompile(`<[^>]+>`)
+)
+
+// htmlCode turns a page's <code> elements into the Markdown code spans CheckInvocations reads.
+func htmlCode(page string) string {
+	var b strings.Builder
+	for _, m := range codeElement.FindAllStringSubmatch(page, -1) {
+		b.WriteString("`" + html.UnescapeString(anyTag.ReplaceAllString(m[1], "")) + "`\n")
+	}
+	return b.String()
 }
 
 // The guides recommend helpers by name. A rename that left the advice behind is the defect this

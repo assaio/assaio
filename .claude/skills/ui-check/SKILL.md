@@ -23,8 +23,8 @@ Playwright refuses `file://`: tell the agent to serve the directory over localho
 
 Give it the file paths, the sections the change touched, and the checklist it carries: every
 section present, `—`/unmeasured for absence, no console errors, no network request, 400 px and
-default width, keyboard focus on the toggle and links, both themes, the faceplate scrolled into
-view before its screenshot. Ask for a pass/fail table with the exact observation and the
+default width (and 320/768/1024 px for the site), keyboard focus on every control, both themes
+(the dashboard's toggle; `prefers-color-scheme` emulation for the site). Ask for a pass/fail table with the exact observation and the
 screenshot paths.
 
 ## Read the return

@@ -2,54 +2,47 @@
 
 *Part of [Extending assaio](../extending.md).*
 
-`assaio-agent serve` runs a self-hosted team server: teammates' `assaio-agent sync` runs
-push their local usage to it over HTTP, and it serves back one aggregated,
-pseudonymized-by-default Assay dashboard for the whole team at `GET /`
-(`internal/server`). This is still an MVP — there is no TLS, so run `serve` behind a reverse
-proxy on a trusted network rather than exposing it to the open internet.
+`assaio-agent serve` runs a self-hosted team server. Teammates use `assaio-agent sync` to push local
+usage over HTTP. At `GET /`, the server returns an aggregated Assay dashboard, pseudonymized by
+default, for the whole team (`internal/server`). This is an MVP with no TLS. Run `serve` behind a
+reverse proxy on a trusted network; do not expose it to the open internet.
 
-**Every route but the `/healthz` probe requires the bearer token, the dashboard included**
-(since v0.24; it was open before, which protected the wrong direction — the page carries a whole
-team's usage). `/healthz` reads nothing, is deliberately open for an orchestrator, and is exempt
-from the rate limit so unrelated traffic cannot fail a liveness probe.
+**Every route except `/healthz` requires the bearer token, including the dashboard** (since v0.24;
+it was previously open despite showing the whole team's usage). `/healthz` reads nothing and stays
+open for orchestrators. It is exempt from rate limits so unrelated traffic cannot fail liveness
+checks.
 
-Identity has two modes and `serve` prints which one it started in:
+Identity has two modes; `serve` prints the active mode at startup:
 
-- **Server-derived** — set `server.members` to one secret per member. The member is whoever
-  holds the secret, and the name in the request body is ignored. Prefer this: the dedupe-key
-  prefix that keeps two members' rows apart has always assumed exactly one possible writer per
-  row, and this is what enforces it.
-- **Client-asserted** — a single shared `server.token`. It still works, and any holder can push
-  usage under any member name. `serve` says so at startup.
+- **Server-derived** — set `server.members` to one secret per member. The secret holder determines
+  the member; the request body's name is ignored. Prefer this mode. The dedupe-key prefix separating
+  members' rows assumes one possible writer per row, and this mode enforces that.
+- **Client-asserted** — use one shared `server.token`. Any holder can push usage under any member
+  name. `serve` reports this at startup.
 
-Requests are rate limited per secret (`server.rate_limit_per_minute`, default 120; a negative
-value disables it for a deployment that bounds traffic elsewhere), keyed by secret rather than
-by address so one member's runaway loop cannot lock out their colleagues.
+Requests are rate limited per secret (`server.rate_limit_per_minute`, default 120). A negative value
+disables the limit for deployments that bound traffic elsewhere. Keying by secret instead of address
+keeps one member's runaway loop from locking out colleagues.
 
-Point `assaio-agent doctor --db <central store>` at the server's database to see its size,
-reclaimable space, measured growth and projected year.
+Run `assaio-agent doctor --db <central store>` against the server database to see its size,
+reclaimable space, measured growth, and projected year.
 
-The extension mechanism does not change at that boundary. `server.BuildDashboard`
-(`internal/server/dashboard.go`) calls the exact same `dashboard.Build` the local
-`assaio-agent dashboard` command calls, over the exact same process-wide
-`analyze.Validators()` registry every validator self-registers into — there is no
-separate server-side validator list. That means a custom validator compiled into your
-team's `assaio-agent` build (see [Adding a metric validator](metric-validator.md))
-shows up on the team server's dashboard automatically: same faceplate cell, same ledger
-entry, same anonymization rules, with nothing to configure on the server side. The
-deliberate exception is **exec plugins**: `serve` executes neither [metric
-plugins](metric-plugin.md) nor [rule
-plugins](rule-plugin.md), because its dashboard endpoint is rebuilt per request and a
-subprocess per view is a denial-of-service surface the server has no budget for — they are
-local-CLI surfaces (`analyze`,
-`dashboard`, `metrics verify`, and `check` for rules; see [ADR
+The same extension mechanism applies to the server. `server.BuildDashboard`
+(`internal/server/dashboard.go`) calls the same `dashboard.Build` as local `assaio-agent dashboard`,
+using the same process-wide `analyze.Validators()` registry where validators self-register. There is
+no separate server validator list. A custom validator compiled into the team's `assaio-agent` build
+(see [Adding a metric validator](metric-validator.md)) appears automatically on the team dashboard
+with the same faceplate cell, ledger entry, and anonymization rules; no server config is needed.
+**Exec plugins** are excluded: `serve` runs neither [metric plugins](metric-plugin.md) nor [rule
+plugins](rule-plugin.md). The dashboard rebuilds for each request, and spawning a subprocess per
+view would create a denial-of-service risk without a server budget. They run on local CLI surfaces:
+`analyze`, `dashboard`, `metrics verify`, and `check` for rules (see [ADR
 0004](../adr/0004-exec-metric-plugin-protocol.md) and [ADR
-0005](../adr/0005-exec-rule-plugin-protocol.md)). The one
-difference from the local CLI is that the served dashboard's anonymization is not
-optional — `BuildDashboard` hardcodes `anonymize = true`, so a real-name view is only
-ever available locally, as an explicit `--no-anonymize` run against a copy of the store
-(`assaio-agent dashboard --db <path-to-central-db> --no-anonymize`), never as the
-served default.
+0005](../adr/0005-exec-rule-plugin-protocol.md)). Served dashboards always anonymize:
+`BuildDashboard` hardcodes `anonymize = true`. Real names are available only locally, through an
+explicit `--no-anonymize` run against a store copy
+(`assaio-agent dashboard --db <path-to-central-db> --no-anonymize`), never through the served
+dashboard.
 
 ```yaml
 # on the server

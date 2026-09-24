@@ -1,41 +1,41 @@
 # Local session-to-commit evidence
 
-`assaio-agent evidence` is the first small Evidence Graph surface. It compares sessions in
-the local store with commits reachable from `HEAD` in one local repository:
+`assaio-agent evidence` is the first small Evidence Graph interface. It compares local-store
+sessions with commits reachable from `HEAD` in one local repository:
 
 ```console
 $ assaio-agent evidence --repo . --since 30d
 $ assaio-agent evidence --repo ../service --format json
 ```
 
-It makes no network request, accepts no `--db` override, refuses a store containing team
-member rows and writes nothing. Repeating the command re-reads the same inputs and produces
-the same attribution answer; neither commit observations nor derived edges are persisted.
+It makes no network requests, accepts no `--db` override, rejects stores with team member rows, and
+writes nothing. Repeating it reads the same inputs and yields the same attribution answer. It
+persists neither commit observations nor derived edges.
 
 ## What one result means
 
-Every project-scoped session has exactly one outcome:
+Each project-scoped session has exactly one outcome:
 
-- `matched` — the available evidence supports one or more candidates without forcing a
-  many-to-many relation into one winner;
-- `ambiguous` — at least two candidates carry equivalent available evidence, so all remain;
-- `unmatched` — no candidate is supported, the following window is still open, or the
-  session has no usable time window.
+- `matched` — available evidence supports one or more candidates without choosing one from a
+  many-to-many relationship;
+- `ambiguous` — at least two candidates have equivalent available evidence, so all remain;
+- `unmatched` — no candidate is supported, the following window remains open, or the session lacks a
+  usable time window.
 
-The summary reports two fractions over the same project-session population. Candidate coverage
-is `(matched + ambiguous) / population`; resolved coverage is `matched / population`. Sessions
-for another stored project and sessions whose project is unavailable are named separately and
-never silently added to that denominator.
+The summary uses the same project-session population for both fractions: candidate coverage is
+`(matched + ambiguous) / population`, and resolved coverage is `matched / population`. It reports
+sessions from other stored projects and sessions with unavailable projects separately, excluding
+both from that denominator.
 
-The document stamps algorithm `session-commit/v1`; each result states method, confidence,
-provenance, ambiguity, reason, candidates and alternatives. Each candidate carries the commit hash and time plus the
-git observation's source, time source, provenance, privacy class and content-free file-category
-counts. A hash is shown because it is the source's own stable identifier and lets a local reader
-inspect the candidate in their own repository.
+The document identifies algorithm `session-commit/v1`. Each result includes method, confidence,
+provenance, ambiguity, reason, candidates, and alternatives. Each candidate includes its commit hash
+and time, plus the git observation's source, time source, provenance, privacy class, and
+content-free file-category counts. The hash is git's stable identifier and lets readers inspect the
+candidate in their local repository.
 
 ## Methods and confidence
 
-The engine uses only evidence the current contracts actually carry:
+The engine uses only evidence in the current contracts:
 
 | Method | Result | Confidence | Rule |
 |---|---|---|---|
@@ -45,26 +45,23 @@ The engine uses only evidence the current contracts actually carry:
 | `project-time-following` | ambiguous | insufficient | When no commit overlaps the session, several following commits fit the same bound; no available signal separates them. |
 | `none` | unmatched | insufficient | No candidate or no usable evidence. The reason says which. |
 
-The 48-hour following boundary is inclusive. A commit one second beyond it is not a candidate.
-Commits unreachable from `HEAD` are absent because the local git collector does not observe
-them. Input order does not change the answer: sessions and commits are ordered by their stable
-identifiers and times before matching.
+The 48-hour following boundary is inclusive; a commit one second later is excluded. The local git
+collector sees only commits reachable from `HEAD`. Input order does not affect results: sessions and
+commits are sorted by stable identifiers and times before matching.
 
 ## Privacy and limits
 
-The command reads the stored session id, tool, project basename and first/last timestamps. From
-git it returns only commit hashes, timestamps, parent and line counts, revert indication and a
-six-way file-category count. Paths and commit subjects are read transiently by the collector to
-derive categories and the revert indication; prompt text, model responses, code, diffs, commit
-messages and branch names are never part of an observation, edge or output.
+The command reads each stored session's id, tool, project basename, and first and last timestamps.
+Git observations contain only commit hashes, timestamps, parent and line counts, revert indication,
+and counts across six file categories. The collector briefly reads paths and commit subjects to
+derive categories and revert indications. Prompts, model responses, code, diffs, commit messages,
+and branch names never appear in observations, edges, or output.
 
-Project identity is only the basename already stored by assaio. Two repositories with the same
-basename cannot be separated by this method. Commit observations carry no author, so identity
-cannot separate overlapping users; the conformance corpus requires that case to remain
-ambiguous. The output has no member, person, score or rank field and is not intended for
-performance evaluation.
+Project identity uses only the basename assaio stores, so this method cannot distinguish
+repositories with the same basename. Commit observations lack authors, so identity cannot
+distinguish overlapping users; the conformance corpus requires that case to stay ambiguous. Output
+has no member, person, score, or rank field and is not intended for performance evaluation.
 
-A `matched` label is an attribution observation, not proof that an AI session caused the commit
-and not evidence of AI impact. v0.27 has no PR, review, CI, merge, attributable-survival or other
-outcome correlation. Those require new observations, connector privacy policy and their own
-conformance cases.
+A `matched` label is an attribution observation. It does not prove an AI session caused a commit or
+show AI impact. v0.27 has no PR, review, CI, merge, attributable-survival, or other outcome
+correlation. Those need new observations, connector privacy policy, and conformance cases.

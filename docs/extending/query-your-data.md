@@ -1,8 +1,8 @@
 # Query your own data
 
-*Part of [Extending assaio](../extending.md). The column notes below are this page's own; the
-[generated reference](https://assaio.dev/docs/reference) covers commands, flags, config keys,
-signals and the metric contract, not the storage schema.*
+*Part of [Extending assaio](../extending.md). This page has its own column notes; the [generated
+reference](https://assaio.dev/docs/reference) covers commands, flags, config keys, signals, and the
+metric contract, but not the storage schema.*
 
 Everything `assaio` collects lives in one SQLite file:
 
@@ -10,9 +10,8 @@ Everything `assaio` collects lives in one SQLite file:
 ~/.local/share/assaio/assaio.db
 ```
 
-The location honors `XDG_DATA_HOME`. It is an ordinary SQLite database — point `sqlite3`,
-DB Browser, or any client at it and query directly. `assaio` never phones home, so this
-file is the whole of your data.
+The location honors `XDG_DATA_HOME`. Query this ordinary SQLite database directly with `sqlite3`, DB
+Browser, or any client. `assaio` never phones home; this file holds all your data.
 
 ## Schema
 
@@ -64,57 +63,48 @@ retention horizon.
 | `cache_miss_reason` | `TEXT` | The vendor's own stated reason a cache read missed, `''` when unstated. |
 | `project_conflict` | `INTEGER` | `1` when the same completed Claude sub-agent aggregate carried competing non-empty projects. Its `project` and `subpath` stay empty; usage remains counted once. |
 
-The activity columns (`lines_added` … `rework_lines`) are populated by the Claude Code and
-Codex parsers, and `lines_added`/`lines_removed` by GitHub Copilot CLI since v0.6 (once per
-session, not per turn); `rejected` is Claude-Code-only. Gemini CLI and Cline record no line or
-edit signal at all, so they store `0` throughout — **absent, not zero**, which is why every
-figure over these columns filters by what a source can answer (ADR 0011). They hold **counts only** — never the code content of the lines
-they count.
+Claude Code and Codex parsers populate the activity columns (`lines_added` … `rework_lines`). Since
+v0.6, GitHub Copilot CLI also populates `lines_added`/`lines_removed` once per session, not per
+turn. Only Claude Code populates `rejected`. Gemini CLI and Cline record no line or edit signals, so
+they store `0` throughout: **absent, not zero**. Figures using these columns must filter by source
+capability (ADR 0011). These columns hold **counts only**, never the counted code.
 
-**`agy` is that hazard inverted, and it is the one this page can hand you.** Antigravity CLI
-records `edits`, `tool_calls` and the five purpose counts and publishes **no token counter
-anywhere in its format**, so every token column on an `agy` row is a structural zero. A
-`SELECT tool, SUM(input_tokens) … GROUP BY tool` written off this page therefore reports a real
-source at zero tokens, and priced, at a fabricated `$0` — the figure the binary refuses to
-print, on the one surface that bypasses its withholding. Filter token and cost queries with
-`WHERE tool <> 'agy'`, or read the depth matrix (`assaio-agent doctor`, `signals coverage`)
-before summing a column across sources.
+**`agy` has the reverse hazard.** Antigravity CLI records `edits`, `tool_calls`, and five purpose
+counts but **no token counter anywhere in its format**. Every token column on an `agy` row is
+therefore a structural zero. A `SELECT tool, SUM(input_tokens) … GROUP BY tool` based on this page
+would show a real source at zero tokens and, if priced, a fabricated `$0`. The binary withholds that
+figure, but direct SQL bypasses the check. For token and cost queries, use `WHERE tool <> 'agy'`, or
+check the depth matrix (`assaio-agent doctor`, `signals coverage`) before summing across sources.
 
-`report --format csv` covers tokens and cost, with one gap tracked as `B197`: it carries `in`,
-`out`, `cache_read`, `cache_write` and `cost`, but **not `cache_write_1h`**, and the 1-hour
-cache-write tier bills at its own rate. Recomputing cost from the four published token columns
-therefore misses `cache_write_1h × (1h rate − standard write rate)` — measured against the
-maintainer's store that remainder is **$2,582.38** for `claude-opus-5` alone. Read
-`cache_write_1h` from the table above when a check has to reconcile. `effectiveness --format
-csv` adds the activity and `$`/100-lines columns.
+`report --format csv` reports tokens and cost but has a gap tracked as `B197`: it includes `in`,
+`out`, `cache_read`, `cache_write`, and `cost`, but **not `cache_write_1h`**. The 1-hour cache-write
+tier has its own rate. Recomputing cost from those four token columns misses
+`cache_write_1h × (1h rate − standard write rate)`. On the maintainer's store, that gap is
+**$2,582.38** for `claude-opus-5` alone. Read `cache_write_1h` from the table above to reconcile
+costs. `effectiveness --format csv` adds activity and `$`/100-lines columns.
 
-**Cost is not stored.** The database holds tokens only; dollar cost is computed at report
-time against the embedded price table, because prices change and unpriced models must stay
-honestly blank. For cost figures, use `assaio-agent report --format csv` (which carries a
-`cost` column) rather than SQL.
+**Cost is not stored.** The database holds tokens, not dollars. Reports compute cost from the
+embedded price table because prices change and unpriced models must remain blank. For cost figures,
+use `assaio-agent report --format csv`, which includes a `cost` column, instead of SQL.
 
-**Beside those two, `session_step` holds the sequence**: one row per step, carrying the kind of
-step, its position, the model, its token total, how it ended, and an integer standing for the
-file it touched — never a path (see [PRIVACY.md](../../PRIVACY.md)). It is bounded by
-`trace.horizon_days` (30 by default), which is the only retention rule in the store; `0` turns
-it off and the table then grows without bound.
+**`session_step` holds each sequence:** one row per step, with its kind, position, model, token
+total, ending, and an integer representing the touched file, never a path (see
+[PRIVACY.md](../../PRIVACY.md)). `trace.horizon_days` bounds retention (default 30). This is the
+store's only retention rule; `0` disables it, so the table grows without bound.
 
-**Three bookkeeping tables sit beside them**, none holding usage: `ingest_file` (one row per
-input already parsed — path, size, mtime, parsing build) makes a repeat `backfill` nearly
-free, and `ingest_source` (one row per source per run — files found, files read, records,
-skipped lines, zero-token records) is the baseline the [format-drift
-canaries](../format-resilience.md) compare against, and `digest_snapshot` (the verdicts and
-totals each `digest` run reported, so the next one can say what moved). All three are caches:
-dropping them costs one slow re-parse, a reset drift baseline and a digest with nothing to
-compare against, nothing more. `ingest_file` is pruned to what is
-actually on disk after each pass, and `ingest_source` keeps only the newest runs per tool,
-so none of them grows with how long assaio has been installed. Use `assaio-agent compact` to
-return freed pages to the filesystem — SQLite does not do that on its own.
+**Three bookkeeping tables hold no usage:** `ingest_file` records each parsed input's path, size,
+mtime, and parsing build, making repeat `backfill` nearly free. `ingest_source` records files found,
+files read, records, skipped lines, and zero-token records for each source and run; [format-drift
+canaries](../format-resilience.md) compare against it. `digest_snapshot` stores each `digest` run's
+verdicts and totals for the next comparison. All three are caches. Dropping them causes one slow
+re-parse, resets the drift baseline, and leaves one digest with nothing to compare against, but has
+no other cost. Each pass prunes `ingest_file` to files on disk; `ingest_source` keeps only the
+newest runs per tool. None grows with installation age. Run `assaio-agent compact` to return freed
+pages to the filesystem; SQLite does not do this automatically.
 
-**Stability.** The schema may still evolve before v1.0. Changes will be additive where
-possible — new nullable columns rather than renames — but treat direct queries as coupled
-to a version you have pinned, not a frozen contract. The report/JSON/CSV output is the
-more stable surface.
+**Stability.** The schema may change before v1.0. Changes will be additive where possible, using new
+nullable columns instead of renames. Treat direct queries as tied to a pinned version, not a frozen
+contract. Report/JSON/CSV output is more stable.
 
 ## Ready-made queries
 
@@ -122,8 +112,8 @@ more stable surface.
 DB=~/.local/share/assaio/assaio.db
 ```
 
-**Token spend per project, last 30 days** (the dimension behind `report --by project`;
-join to your own price sheet for dollars, or use the CSV report):
+**Token spend per project, last 30 days** (the dimension behind `report --by project`; join your
+price sheet for dollars or use the CSV report):
 
 ```sh
 sqlite3 -header -column "$DB" "
@@ -147,8 +137,8 @@ sqlite3 -header -column "$DB" "
   ORDER BY total_tok DESC;"
 ```
 
-**Cache efficiency per project** — cache reads as a share of input + cache reads, the same
-ratio the `Cache%` column shows:
+**Cache efficiency per project** — cache reads divided by input plus cache reads, as shown in
+`Cache%`:
 
 ```sh
 sqlite3 -header -column "$DB" "

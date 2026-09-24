@@ -1,81 +1,73 @@
 # Reconciling against the vendor's own numbers
 
-Every `$` assaio prints is an **estimate**: local token counts priced at public
-pay-as-you-go rates. `assaio-agent reconcile` is the only check on that estimate which does
-not come from assaio itself — it compares the estimate against what a vendor says it
-billed.
+Every `$` assaio prints is an **estimate** based on local token counts and public pay-as-you-go
+rates. `assaio-agent reconcile` checks that estimate against a vendor's billed amount, the only
+check from outside assaio.
 
 ```
 assaio-agent reconcile ~/Downloads/usage.csv --since 30d
 ```
 
-No credential and no network. The export is a file you downloaded; getting it out of a
-vendor console is deliberately your step, so the tool never holds a key that could pull
-your account data.
+No credentials or network access are needed. You download the export from the vendor console, so the
+tool never holds a key that can access your account data.
 
 ## Getting an export
 
-Every vendor puts this somewhere different, and the location changes more often than this
-file does. Look for "usage", "billing", "cost" or "activity" in the vendor's console and an
-**Export** or **Download CSV** control on that page. Any export works as long as each row
-carries a **date** and an **amount**; a model column and a token column make the report
-say more, and their absence is reported rather than assumed away.
+Vendor console locations vary and change often. Look for "usage", "billing", "cost", or "activity",
+then an **Export** or **Download CSV** control. Any export works if every row has a **date** and
+**amount**. Model and token columns add detail; the report notes when they are missing.
 
 ## Column binding
 
-assaio has never read a real vendor export, so it ships **no vendor profiles** — claiming
-"supports X" for a format nobody here has verified is exactly the kind of unchecked claim
-this project refuses. Instead columns bind by header alias, and the binding is printed:
+assaio has never read a real vendor export, so it has **no vendor profiles** and makes no unverified
+format support claims. It binds columns by header alias and prints the binding:
 
 ```
   read as     day=Usage Date  cost=Cost USD  model=Model  currency=Currency
 ```
 
-Check that line. If a column bound wrong, or an alias missed, say so explicitly:
+Check that line. If a column bound incorrectly or an alias was missed, specify the binding:
 
 ```
 assaio-agent reconcile usage.csv --map cost=amount,day=usage_date,model=sku
 ```
 
-Only `day` and `cost` are required. A non-USD export is refused rather than converted at a
-rate assaio would have to invent.
+Only `day` and `cost` are required. Non-USD exports are rejected; assaio does not invent a
+conversion rate.
 
-An export over 64 MiB is refused rather than read — narrow the exported range and run it again.
+Exports over 64 MiB are rejected. Narrow the date range and retry.
 
 ## Reading the output
 
-**Scope comes first, and it is not a formality.** An export's window is almost never the
-window you queried, and comparing two totals over two different date ranges reports a
-difference in *dates* as a difference in *money*. The overlap is computed before any delta,
-and the money excluded on each side is printed so the exclusion is visible.
+**Compare scope first.** An export's date window rarely matches the query window. Comparing
+different windows confuses a date difference with a money difference. The tool computes the overlap
+before any delta and prints the amount excluded from each side.
 
-**The estimate may be a band.** Usage assaio read but could not price is never added into
-the figure; it sets the top of a band instead, extrapolated at the window's own $/token.
-That extrapolation is crude by construction — a cache read and a completion token do not
-cost the same — which is why it sizes a range and never becomes a number of its own.
+**The estimate may be a band.** Usage assaio reads but cannot price is excluded from the estimate.
+Instead, it sets the top of a band by extrapolating the window's own $/token. This is crude because
+cache reads and completion tokens cost different amounts, so the extrapolation defines a range and
+never appears as its own figure.
 
-**Only evidenced causes are named.** A per-model cause is computed only when the two sides'
-model names actually share values. When the vendor writes `claude-sonnet-4.5` and the logs
-write `claude-sonnet-4-5-20250929`, matching them is guesswork, so the run says the
-vocabularies have nothing in common instead of inventing an explanation.
+**Only evidenced causes are named.** The tool calculates a per-model cause only when both sides use
+some identical model names. If the vendor says `claude-sonnet-4.5` and logs say
+`claude-sonnet-4-5-20250929`, it reports that the names have no overlap instead of guessing a match.
 
-**The residual is the point.** Whatever no named cause accounts for is printed as
-*unexplained delta*. It is not rounded away, not absorbed into the nearest cause, and
-neither side is adjusted to close it. A delta assaio cannot explain is the output.
+**The residual is the point.** The tool prints any delta left after named causes as *unexplained
+delta*. It neither rounds it away, assigns it to another cause, nor adjusts either side to erase it.
+An unexplained delta is a valid result.
 
 ## What it cannot check
 
-Printed on every run, so silence is never mistaken for coverage:
+Printed on every run so missing coverage is clear:
 
-- a line count, an edit attribution, or a per-session split — an export bills aggregates
-- anything on a **flat-rate plan**: a subscription bills the plan, not the tokens, so there
-  is no per-token actual to compare against
-- whether the price table itself is right — this checks where totals land, not what a token
-  should have cost
+- line counts, edit attribution, or per-session splits; exports bill aggregates
+- anything on a **flat-rate plan**; subscriptions bill for the plan, not per token, so there is no
+  per-token actual to compare
+- whether the price table is correct; this checks where totals land, not what each token should cost
 
 ## Contributing a capture
 
-`internal/reconcile/testdata/` holds a **constructed** sample, labelled as such in the same
-way `internal/calibration` labels its traces. One redacted real export — date, model, token
-count, amount, currency, nothing else — would upgrade that to `real` and let the aliases be
-checked against a format a vendor actually writes.
+`internal/reconcile/testdata/` contains a **constructed** sample, labeled like traces in
+`internal/calibration`. One redacted real export containing only date, model, token count, amount,
+and currency would change its label to `real` and let aliases be checked against a vendor's actual
+format.

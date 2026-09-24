@@ -1,24 +1,23 @@
 # Runtime inspect (experimental)
 
-`assaio-agent runtime inspect` reads the metrics a self-hosted inference deployment already
-publishes — one snapshot, read-only, nothing stored.
+`assaio-agent runtime inspect` reads one snapshot of metrics published by a self-hosted inference
+deployment. It is read-only and stores nothing.
 
-**This is a feasibility slice, not a monitoring product.** It exists to find out whether runtime
-evidence beside assaio's usage evidence changes a decision anybody actually makes. Until three
-self-hosted deployments say it does, nothing here is a promise and it may be removed. See
-[ROADMAP.md](../ROADMAP.md) for the gate and its kill criterion.
+**This is a feasibility slice, not a monitoring product.** It tests whether runtime evidence
+alongside assaio's usage evidence changes a real decision. Until three self-hosted deployments
+confirm that, the feature is not promised and may be removed. See [ROADMAP.md](../ROADMAP.md) for
+the gate and kill criterion.
 
 ## What it can and cannot see
 
-It can only see infrastructure **you** operate. A hosted Claude, Codex, Gemini or Cursor session
-runs on the vendor's accelerators, and no local signal reveals them: assaio leaves that
-`unknown` rather than estimating it. Coding-tool activity and runtime telemetry are separate
-evidence planes and this command does not join them — joining needs a request, trace, deployment
-or workload identity that neither side currently carries.
+It sees only infrastructure **you** operate. Hosted Claude, Codex, Gemini, and Cursor sessions run
+on vendor accelerators that local signals cannot reveal; assaio reports them as `unknown` rather
+than estimating. Coding-tool activity and runtime telemetry remain separate. Joining them requires a
+request, trace, deployment, or workload identity that neither currently carries.
 
-It does not: store a time series, estimate a self-hosted cost, recommend a GPU or runtime
-change, or alter any configuration. It reads no prompt, response, code or diff, because the
-endpoints it reads carry none.
+It does not store time series, estimate self-hosted cost, recommend GPU or runtime changes, or
+change configuration. It reads no prompts, responses, code, or diffs because its endpoints contain
+none.
 
 ## Running it
 
@@ -30,7 +29,7 @@ assaio-agent runtime inspect \
   --dcgm-url http://127.0.0.1:9400/metrics
 ```
 
-Against saved snapshots, which is deterministic and needs no deployment:
+Against saved snapshots; this is deterministic and needs no deployment:
 
 ```sh
 curl -s http://gpu-node:8000/metrics > vllm.prom
@@ -38,46 +37,43 @@ curl -s http://gpu-node:9400/metrics > dcgm.prom
 assaio-agent runtime inspect --vllm-file vllm.prom --dcgm-file dcgm.prom
 ```
 
-`--vllm-url` and `--vllm-file` are mutually exclusive, as are the DCGM pair: a live endpoint and
-a saved snapshot are two different claims about where a number came from. Either source may be
-used alone. `--format json` prints the same content as a deterministic document -- the same input encodes the same way -- and not as a frozen contract while the demand gate is open.
+`--vllm-url` and `--vllm-file` cannot be used together; the same applies to the DCGM pair. A live
+endpoint and a saved snapshot make different claims about a number's source. Either source can be
+used alone. `--format json` prints the same content as a deterministic document: identical input
+encodes identically. Its format is not a frozen contract while the demand gate remains open.
 
-Bounds are flags, not hidden defaults: `--timeout` (5s), `--max-bytes` (8 MiB), `--max-redirects`
-(2; `0` forbids redirects entirely). The request is a plain GET with no header, body or
-credential — an inspection that could carry a secret would need a threat model this experiment
-does not have.
+The flags set explicit bounds: `--timeout` (5s), `--max-bytes` (8 MiB), and `--max-redirects` (2;
+`0` blocks all redirects). Requests are plain GETs without headers, bodies, or credentials. An
+inspection that carries secrets would need a threat model this experiment lacks.
 
 ## What the output means
 
-Every capability in the catalog appears whether or not the deployment published it. An output
-listing only what it found would read as complete.
+The output lists every catalog capability, including those the deployment did not publish. Listing
+only found metrics would imply complete coverage.
 
-- **unavailable is not zero.** A metric nobody published is not a metric measured at zero, and
-  the difference decides whether you go looking for an exporter flag or conclude your GPUs are
-  idle.
-- **A counter is never a rate.** Counters here are cumulative since the exporter started.
-  Turning one into a throughput needs a second read and the interval between them; this command
-  takes one read and says so on every counter it prints.
-- **A histogram reports its observation count only.** A percentile computed from one snapshot's
-  buckets describes the whole life of the process, not "lately".
-- **Units come from the exporter where it declares one** (`# UNIT`), and otherwise from assaio's
-  catalog, which was read off the vendor's documentation. The output says which.
-- **Unreachable establishes nothing.** A failed read is reported as a failed read, never as a
-  deployment that exposes nothing.
-- **Partial stays partial.** Skipped lines and a truncated read are reported *before* the list of
-  missing capabilities, because either one makes every absence in that list unproven.
+- **Unavailable is not zero.** An unpublished metric was not measured at zero; check for an exporter
+  flag before concluding GPUs are idle.
+- **A counter is never a rate.** Counters accumulate from exporter startup. Throughput requires a
+  second reading and the interval; this command takes one reading and labels every counter
+  accordingly.
+- **A histogram reports its observation count only.** A percentile from one snapshot's buckets
+  covers the process's whole lifetime, not recent activity.
+- **Units come from the exporter where it declares one** (`# UNIT`); otherwise they come from
+  assaio's catalog, based on vendor documentation. The output names the source.
+- **Unreachable establishes nothing.** A failed read is reported as a failure, not as a deployment
+  with no metrics.
+- **Partial stays partial.** Skipped lines and truncated reads appear before missing capabilities
+  because either makes those absences unproven.
 
 ## What it reads
 
-Metric names are the vendors' own, verbatim, so they can be grepped against the documentation
-they come from: [vLLM](https://docs.vllm.ai/en/latest/design/metrics/) and the
-[NVIDIA DCGM exporter](https://docs.nvidia.com/datacenter/dcgm/latest/reference/dcgm-exporter-metrics.html).
-`internal/runtime/vllm` and `internal/runtime/dcgm` hold one catalog each — one adapter per
-exporter, because the definitions are the part that goes stale, and hiding them in a shared
-Prometheus reader is how a renamed field becomes a silently wrong number.
+Metric names match the vendors' names exactly, so you can find them in the
+[vLLM](https://docs.vllm.ai/en/latest/design/metrics/) and [NVIDIA DCGM
+exporter](https://docs.nvidia.com/datacenter/dcgm/latest/reference/dcgm-exporter-metrics.html)
+documentation. `internal/runtime/vllm` and `internal/runtime/dcgm` each hold one exporter catalog.
+Separate adapters keep definitions visible when vendor names change; a shared Prometheus reader
+could silently report a wrong number.
 
-**The test fixtures are constructed from those documents, not captured from a running
-deployment.** That is a real limitation: a constructed fixture proves the parser reads the shape
-the documentation describes and proves nothing about the shape a particular version emits. A
-redacted snapshot from a real deployment is the contribution this needs — see
-`internal/runtime/testdata/README.md`.
+**Test fixtures come from those documents, not a running deployment.** They prove the parser handles
+the documented format, not what any specific version emits. A redacted snapshot from a real
+deployment would address this limit; see `internal/runtime/testdata/README.md`.

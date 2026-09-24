@@ -1,10 +1,9 @@
 # Format resilience — detecting and reacting to vendor log-format drift
 
-Every format `assaio` parses is **vendor-internal**: none of the tools document their
-session logs as a stable interface, and any release of theirs can change shape without
-notice (`doctor` discloses this on every run). This document is the operating flow for
-that reality: what protects the numbers, how a change that shrinks them without erroring
-gets caught, and the detect → triage → fix → release loop.
+Every format `assaio` parses is **vendor-internal**. The tools do not document session logs as
+stable interfaces, and any release may change their shape without notice; `doctor` discloses this on
+every run. This guide covers safeguards for the numbers, detection of silent drops, and the detect →
+triage → fix → release process.
 
 ## What protects us today
 
@@ -23,34 +22,29 @@ gets caught, and the detect → triage → fix → release loop.
 
 ## The three silent failure modes
 
-Everything above catches a parse that *fails*. None of these does — which is why they
-needed their own defense:
+The checks above catch parse failures. They miss these cases, which need separate defenses:
 
-1. **Semantic drift.** If a vendor renames or moves a token field, the line often still
-   parses as valid JSON — it just stops matching the usage shape, or maps to zero tokens.
-   `skipped` counts *unparseable* lines, not renamed keys, so totals quietly shrink
-   instead of failing loudly.
-2. **Discovery drift.** If a tool moves its log directory or changes file naming,
-   `Discover` finds fewer (or zero) files. `backfill` and `doctor` *show* the counts, but
-   nothing flagged "this used to be 300 files and is now 0" as an anomaly.
-3. **Additive drift.** If a vendor starts *recording something new*, every figure assaio
-   already publishes stays exactly as correct as it was. Nothing shrinks, nothing errors,
-   no canary can fire — and the tool silently stops being as deep as its source allows.
+1. **Semantic drift.** A renamed or moved token field may still produce valid JSON but stop matching
+   the usage shape or map to zero tokens. `skipped` counts *unparseable* lines, not renamed keys, so
+   totals can silently shrink.
+2. **Discovery drift.** If a tool moves its log directory or renames files, `Discover` finds fewer
+   or none. `backfill` and `doctor` *show* file counts, but did not flag a drop from 300 files to 0.
+3. **Additive drift.** If a vendor starts *recording something new*, every figure assaio already
+   publishes stays exactly as correct as it was. Nothing shrinks or errors, so no canary fires, but
+   assaio misses data the source now provides.
 
-The first two share one property: the failure mode is **plausible-looking underreporting**,
-which is exactly what an honesty-first tool must not do silently. The third is different in
-kind, and worth stating separately because the defenses above are all aimed at the first two.
+The first two can cause **plausible-looking underreporting** that an honesty-first tool must flag.
+Additive drift needs a separate defense because the checks above target drops and failures.
 
 ### Additive drift has no canary, and cannot have one
 
-Every canary below judges a source against **its own history**: fewer files, fewer records per
-file, more skips, more zero-token records. A vendor adding a field or an event moves none of
-those. The detection is a **periodic field audit** — enumerate every key path a current corpus
-holds, diff it against what the parser reads — and the audit's own currency is the risk:
-[source-fields.md](extending/source-fields.md) states each section's corpus and when it was
-taken, because a stale audit reports the absence of a field that has been on disk for months.
+The canaries below compare a source with **its own history**: file counts, records per file, skips,
+and zero-token records. Adding a field or event changes none of these. Detect it with a **periodic
+field audit**: list every key path in a current corpus and compare it with what the parser reads.
+[source-fields.md](extending/source-fields.md) records each section's corpus and capture date; a
+stale audit can miss a field present on disk for months.
 
-The worked example is Codex's `event_msg/item_completed`, found in the v0.26 re-audit:
+The v0.26 re-audit found Codex's `event_msg/item_completed`:
 
 | | |
 |---|---|
@@ -61,22 +55,19 @@ The worked example is Codex's `event_msg/item_completed`, found in the v0.26 re-
 | Canaries that fired | **none, correctly**: records per file, files found, skips and zero-token share were all unchanged |
 | Audit that would have found it | the field audit — whose Codex section was taken on 21 rollouts, all of them older than the event |
 
-The lesson is not that a canary was missing. It is that **the field audit is a detector, not
-documentation**, and it decays: re-take it against a current corpus on a cadence, or it reports
-last year's tool. What that particular finding changed in the code is recorded in the audit's
-own Codex section — it is measured, and deliberately *not* read, because its ids join to
-nothing.
+**The field audit is a detector, not documentation.** Repeat it regularly on a current corpus or it
+describes an outdated tool. The audit's Codex section records the measured finding: the code
+deliberately does not read that event because its ids join to nothing.
 
 ## Detection — three channels, and a fourth that is not automatic
 
-0. **The field audit, by hand and on a cadence.** Named first because it is the only detector
-   additive drift has, and the only one nothing runs for you:
-   [source-fields.md](extending/source-fields.md), re-taken against a current corpus, each
-   section stating the corpus it was taken from and when. The three below all judge a source
-   against its own history and none of them can see a field that was never read.
+0. **Audit fields manually and regularly.** Only this detects additive drift, and nothing runs it
+   for you. Recheck [source-fields.md](extending/source-fields.md) against a current corpus,
+   recording the corpus and date for each section. The three checks below compare a source with its
+   history and cannot find a field the parser never read.
 
-1. **Local canaries, automatic.** After every `backfill`, four of the five judge a source
-   against its own recent history, and one judges a condition:
+1. **Local canaries run automatically.** After each `backfill`, four of five compare a source with
+   its recent history; one checks a condition:
 
    | Canary | Fires when | Abstains below |
    |---|---|---|
@@ -86,64 +77,52 @@ nothing.
    | `zero-token` | at least a quarter of parsed records carry no tokens at all | 50 records, **and** a source whose depth row declares a token counter |
    | `barren` | files are found and no run on record has read a usage record out of them | nothing — the condition is absolute |
 
-   The design rules behind those numbers matter more than the numbers: the baseline is a
-   **median** of recent runs, so one odd pass cannot move it; every comparison is a
-   **ratio**, so an incremental pass that read four files stays comparable to a full one
-   that read six thousand; and every canary that computes a share has a **sample floor**
-   below which it says nothing, because a share computed from a handful of records is not
-   evidence. A source with no files — an exec plugin — is judged only by `zero-token`, the
-   one canary that needs none.
+   The baseline is a **median** of recent runs, so one odd run cannot move it. Every comparison uses
+   a **ratio**, making an incremental run of four files comparable with a full run of six thousand.
+   Canaries that calculate shares have a **sample floor**; below it, too few records support a
+   judgment. A source without files, such as an exec plugin, gets only the `zero-token` check, which
+   needs no files.
 
-   `barren` is the exception to all of it, and deliberately so: a comparison cannot see a
-   source that never worked, because its baseline is zero and there is no drop to detect.
-   That was measured, not assumed — setting all four sample floors to `1` and re-running
-   the real corpus fired nothing on either build. It reads the whole history rather than
-   one run, because an ordinary incremental pass whose single changed input yields nothing
-   is not a barren source.
+   `barren` checks a condition instead: a source that never worked has a zero baseline, so
+   comparisons cannot detect a drop. This was measured by setting all four sample floors to `1` and
+   rerunning the real corpus; neither build triggered them. It reads all history because one
+   incremental run whose single changed input yields nothing does not mean the source is barren.
 
-   `zero-token` carries a second floor the others do not, and it is a capability rather than a
-   sample size: a source whose depth row answers no token signal is exempt. Antigravity CLI
-   publishes no counter anywhere in its format, so 100% of its records are zero-token on a
-   perfectly healthy run — judged by the share it would fire on every backfill forever and fail
-   `doctor --strict` on data that is exactly right, which is how a canary stops being evidence.
-   A source the matrix has never heard of is still judged: not knowing a tool is not evidence
-   that it keeps no tokens.
+   `zero-token` also checks capability, not just sample size. A source whose depth row has no token
+   signal is exempt. Antigravity CLI has no counter in its format, so a healthy run has 100%
+   zero-token records. Checking that share would warn on every backfill and fail `doctor --strict`
+   on correct data. An unknown source is still checked: lack of a matrix entry does not show that it
+   has no tokens.
 
-   A breach prints `warning: possible format drift in <tool>` — or, for `barren`, `warning:
-   nothing read from a detected source`, because a condition is not a diagnosis — and appears
-   in `doctor`'s drift section; `doctor --strict` turns it into an exit code for cron or CI. While a
-   source's discovery canary is lit, its per-input ingest state is frozen rather than
-   pruned: "the files are gone" and "we stopped finding them" are indistinguishable, and
-   the state is the evidence.
-2. **User reports.** A "my numbers dropped after updating <tool>" bug is the classic
-   drift signature. Such issues get the **`format-drift`** label. Ask for: the tool's
-   version, `assaio-agent doctor` output, and a few **redacted** sample lines — the
-   same rules as the [connector intake
-   flow](extending/data-source.md#the-intake-path-open-a-connector-issue-first): never a real
-   transcript, prompts, or code.
-3. **Maintainer canary (manual).** When a covered tool ships a major release,
-   generate one fresh throwaway session with it and run `backfill` + `doctor` against
-   a scratch store (`--db`); eyeball the counts. Cheap, and catches drift before users
-   do.
+   A breach prints `warning: possible format drift in <tool>`; `barren` prints
+   `warning: nothing read from a detected source`, since the condition alone is not a diagnosis.
+   Both appear in `doctor`'s drift section, and `doctor --strict` exits non-zero for cron or CI.
+   While a discovery canary is active, per-input ingest state is frozen rather than pruned: missing
+   files and failed discovery look alike, and the state is evidence.
+2. **User reports.** A report that numbers dropped after a <tool> update suggests drift. Label the
+   issue **`format-drift`**. Ask for the tool version, `assaio-agent doctor` output, and a few
+   **redacted** sample lines. Follow the [connector intake
+   flow](extending/data-source.md#the-intake-path-open-a-connector-issue-first): never request a
+   real transcript, prompts, or code.
+3. **Maintainer canary (manual).** When a covered tool ships a major release, make a fresh throwaway
+   session, run `backfill` and `doctor` against a scratch store (`--db`), and inspect the counts.
+   This can catch drift before users report it.
 
 ## The most brittle source, named
 
-Not all six are equally exposed, and pretending otherwise is the same mistake as a bare
-checkmark on a depth matrix. **Antigravity CLI (`agy`) is the most brittle of the six**, on
-three counts at once:
+The six sources have different risks. **Antigravity CLI (`agy`) is the most brittle of the six** for
+three reasons:
 
-- **The binary self-updates.** Antigravity CLI 1.1.23 was verified on 2026-09-02, with a `.old` copy of
-  the previous build sitting beside it from the day before — two versions from two consecutive
-  days on one machine. Nothing pins a user to the version this parser was read against, and the
-  depth matrix names Antigravity CLI 1.1.23 for exactly that reason.
-- **The schema is unpublished** and the format is under a directory shared with another tool.
-  `~/.gemini` holds Gemini CLI as well, which is why both discoverers glob narrowly and neither
-  scans the shared root.
-- **What accounting exists is in unnamed protobuf fields.** The parser deliberately reads none
-  of them (see [what each source's log carries](extending/source-fields.md)); the fields it does
-  read are named JSON keys, which is the single reason this source is readable at all.
+- **The binary self-updates.** Antigravity CLI 1.1.23 was verified on 2026-09-02; a `.old` copy from
+  the previous day sat beside it, showing two versions on one machine in consecutive days. Users are
+  not pinned to the parser's tested version, so the depth matrix names Antigravity CLI 1.1.23.
+- **The schema is unpublished** and its directory is shared with another tool. `~/.gemini` also
+  holds Gemini CLI, so both discoverers use narrow globs and neither scans the shared root.
+- **Accounting uses unnamed protobuf fields.** The parser deliberately reads none of them (see [what
+  each source's log carries](extending/source-fields.md)). It reads named JSON keys, which make this
+  source readable.
 
-Which canary catches which failure here, and which does not:
+Which canaries catch these failures, and which do not:
 
 | If Antigravity CLI… | caught by |
 |---|---|
@@ -152,36 +131,32 @@ Which canary catches which failure here, and which does not:
 | writes a `created_at` in another format | `skipped` — undatable turns are counted, not silently dropped |
 | renames `tool_calls` | **nothing.** The corpus holds 26 tool calls across 500 conversations, which is far too sparse to form a baseline any share could be judged against. Stated here rather than guarded, because a canary computed from 26 observations is not evidence. |
 
-The last row is the honest limit. It is also the reason `agy` is `activity-only` and not
-`standard`: the figures it feeds are few enough to check by eye, and none of them is a cost.
+The last row marks the limit. It is why `agy` is `activity-only`, not `standard`: its few figures
+can be checked by eye, and none measures cost.
 
 ## Reaction — the fix loop
 
-1. **Label and confirm.** Tag the issue `format-drift`; reproduce from the redacted
-   sample and the reported tool version.
-2. **Capture the new shape as a fixture.** Add a new fixture beside the old one — synthetic,
-   or a field-allowlist redaction of a real capture, never a real transcript — and regenerate
-   goldens with `-update`. **Keep the old fixture and keep parsing the old shape** — users' disks still hold months of
-   history in the previous format; a parser upgrade must handle both, additively.
-3. **Fix the parser.** Update mappings; add fuzz seeds for the new shape; `make fuzz`
-   is mandatory on any parser change.
-4. **Guard the dedupe keys.** A fix must not change how existing records' dedupe keys
-   are derived — that would double-count on the next `backfill`. If a key change is
-   truly unavoidable, the release notes must say so and document the
-   `clear --tool <name>` + re-backfill path.
-5. **Re-check the honesty surface.** If the new format changes what a field *means*
-   (folded token classes, different cache accounting), the mapping decision goes into
-   the parser's package doc **and** a `doctor` caveat line — every modeling assumption
-   stays user-visible.
-6. **Ship a patch release within days** (see [RELEASING.md](../RELEASING.md)): parser
-   fixes are exactly the "patch, days not weeks" case. Name the tool and its affected
-   versions in the release notes.
+1. **Label and confirm.** Label the issue `format-drift`; reproduce it with the redacted sample and
+   reported tool version.
+2. **Capture the new shape as a fixture.** Add a synthetic fixture or field-allowlist redaction of a
+   real capture beside the old one; never use a real transcript. Regenerate goldens with `-update`.
+   **Keep the old fixture and keep parsing the old shape** because users still have months of older
+   logs. Parser upgrades must support both shapes additively.
+3. **Fix the parser.** Update mappings, add fuzz seeds for the new shape, and run `make fuzz` on
+   every parser change.
+4. **Guard the dedupe keys.** Do not change keys for existing records or the next `backfill` will
+   double-count. If a change is unavoidable, explain it in release notes and document
+   `clear --tool <name>` followed by re-backfill.
+5. **Re-check the honesty surface.** If the new format changes a field's meaning, such as folded
+   token classes or cache accounting, record the mapping decision in the parser package doc **and**
+   a `doctor` caveat line. Keep every modeling assumption visible to users.
+6. **Ship a patch release within days** (see [RELEASING.md](../RELEASING.md)). Parser fixes follow
+   the "patch, days not weeks" rule. Name the tool and affected versions in the release notes.
 
 ## Out-of-tree parsers (exec plugins)
 
-Plugins get the same posture with inverted ownership: the **plugin author** owns steps
-2–5 for their tool, `assaio-agent plugins verify <name>` is their conformance check,
-and the boundary validation means a drifting plugin fails *loud* (skipped counts,
-violations listed) rather than storing garbage. The wire contract itself
-(handshake + JSONL, ADR 0003; metric envelope, ADR 0004) is versioned — a breaking
-change to it is a release-notes event on our side, never a silent one.
+For plugins, the **plugin author** owns steps 2–5 for their tool.
+`assaio-agent plugins verify <name>` checks conformance, and boundary validation makes a drifting
+plugin fail loudly with skip counts and listed violations instead of storing bad data. The wire
+contract is versioned (handshake + JSONL, ADR 0003; metric envelope, ADR 0004). A breaking change
+requires release notes on our side.

@@ -48,8 +48,14 @@ Discussion.
 - Nightly fuzz opens 'Nightly fuzz found a failing input' with a `fuzz-finding-<target>` artifact,
   or 'Nightly fuzz failed without a failing input' for build, toolchain, runner, or timeout
   failures. Together with the Go 1.27.1 toolchain floor from 0.28.0, this closes `B198`.
-
-### Fixed
+- `assaio.dev` adds a shorter overview, ccusage and vendor comparisons, a FAQ, and matching `/docs`
+  pages.
+- Pages support OS light/dark mode, 44 px targets, and no horizontal scroll from 320 px.
+- Pages add JSON-LD, `robots.txt`, and generated `sitemap.xml`; no external fonts, scripts, or
+  analytics.
+- Guides, README.md, and site/llms.txt use shorter prose; headings, anchors, commands, and code
+  stay.
+- `make test` checks overview command lines and that README.md names every source.
 
 ### Fixed
 
