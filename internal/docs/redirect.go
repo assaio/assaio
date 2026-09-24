@@ -28,7 +28,7 @@ func Redirect() []byte {
 <meta property="og:image" content="` + Host + `/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="assaio — measure whether AI coding spend is delivering">
+<meta property="og:image:alt" content="assaio logo, cost and output headline, subtitle, install commands and tool names">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="` + Host + `/og.png">
 <style>` + baseStyle + `</style>

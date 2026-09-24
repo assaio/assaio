@@ -1,37 +1,33 @@
 # Label rules you can paste in
 
-*Part of [Extending assaio](../extending.md). What labels are for: [`mark`](../extending.md#the-surfaces) and the [task/outcome/difficulty vocabularies](https://github.com/assaio/assaio/blob/main/docs/adr/0006-session-annotations.md).*
+*Part of [Extending assaio](../extending.md). Label uses: [`mark`](../extending.md#the-surfaces) and
+the [task/outcome/difficulty
+vocabularies](https://github.com/assaio/assaio/blob/main/docs/adr/0006-session-annotations.md).*
 
-A label is the one fact a session log cannot contain: what the work *was*. `mark --suggest`
-derives it from what the store already recorded — the branch a session ran on, the skill or
-sub-agent it used, the entrypoint it came through — and `--accept-suggested` writes what it
-derived, never replacing a label made by hand.
+A session log cannot record what the work *was*; a label can. `mark --suggest` uses stored
+evidence—the session's branch, skill or sub-agent, and entrypoint—to suggest it.
+`--accept-suggested` writes those suggestions without replacing hand-written labels.
 
-The built-in rules cover branch conventions common enough to be worth shipping, and nothing
-else. On the maintainer's own store they reach **4.2% of sessions and 5.5% of tokens** — which
-is the honest yield of a convention assaio did not invent, not a failure. Your repository's own
-conventions are worth more than any default, and each is four lines.
+Built-in rules cover only common branch conventions. In the maintainer's store they label **4.2% of
+sessions and 5.5% of tokens**. That is the reach of a convention assaio did not create. Your
+repository's conventions can cover more, and each rule takes four lines.
 
-Every recipe below is loaded and exercised by `TestRecipeLabelRules`, which asserts the labels
-it derives. A recipe that stopped working would fail the build rather than sit here reading
-plausibly.
+`TestRecipeLabelRules` loads every recipe below and checks its derived labels. If a recipe stops
+working, the build fails.
 
 ## How a rule is evaluated
 
-Each entry names a **source** (`branch`, `skill`, `agent`, `entrypoint`), an **RE2 pattern**
-over that source's value, and the **axis** and **value** a match implies. Every rule is tried;
-if two rules imply different values on the same axis, the session gets **nothing** on that axis
-— a disagreement is not a tie to be broken. The axis vocabularies are closed, so a rule
-proposing a value outside one fails at load rather than at midnight.
+Each entry specifies a **source** (`branch`, `skill`, `agent`, `entrypoint`), an **RE2 pattern** for
+its value, and the resulting **axis** and **value**. Every rule runs. If two rules give different
+values on one axis, the session gets **nothing** on that axis. Axis vocabularies are closed; rules
+with invalid values fail when loaded.
 
-Rules are *added* to the built-ins. Set `labels.defaults: false` when a default reads a
-convention your repository uses for something else — an `audit/` branch that is not a review,
-say — so only yours apply.
+Your rules are *added* to the built-ins. Set `labels.defaults: false` if a default misreads your
+convention—for example, an `audit/` branch that is not a review—so only your rules apply.
 
 ## Conventional-commit branches
 
-The most common convention there is, and the one the defaults already cover; spelled out here
-because it is the template every other recipe copies.
+The defaults already cover this common convention. Use it as the template for other recipes.
 
 ```yaml #conventional-branches
 labels:
@@ -60,8 +56,8 @@ labels:
 
 ## Ticket keys that carry the type
 
-Where a branch is named after a tracker key rather than the work, the type usually lives in the
-project prefix. This is the shape to copy when your keys look like `PLAT-1234` or `BUG-77`.
+If a branch uses a tracker key instead of describing the work, the project prefix often identifies
+the task type. Use this pattern for keys such as `PLAT-1234` or `BUG-77`.
 
 ```yaml #ticket-keys
 labels:
@@ -82,8 +78,8 @@ labels:
 
 ## Spikes and throwaway branches
 
-A spike is research, and its cost per line is meaningless — which is exactly why labelling it
-matters: `analyze --task research` takes it out of the numbers everything else is judged by.
+A spike is research, so its cost per line is meaningless. Label it so `analyze --task research`
+excludes it from figures used to judge other work.
 
 ```yaml #spikes
 labels:
@@ -100,10 +96,9 @@ labels:
 
 ## Skills and sub-agents
 
-Claude Code records which skill and which sub-agent a turn ran under, and both are stronger
-evidence than a branch name: a session that spent its tokens under a review sub-agent was a
-review, whatever the branch was called. No other source records either today, so a repository
-whose work runs elsewhere derives nothing from these — which is the correct answer, not a gap.
+Claude Code records the skill and sub-agent used for each turn. Both provide stronger evidence than
+a branch name: tokens spent under a review sub-agent indicate review work regardless of branch. No
+other source records either today, so work done elsewhere gets no label from these rules.
 
 ```yaml #skills-and-agents
 labels:
@@ -128,9 +123,9 @@ labels:
 
 ## Entrypoints: what ran it, not what it was
 
-An entrypoint says how the session was started — a hook, a scheduled run, an editor. It answers
-*difficulty* and *outcome* far better than it answers *task*: an unattended run that nobody was
-watching is not the same work as one someone sat through.
+An entrypoint shows whether a hook, scheduled run, or editor started the session. It provides better
+evidence for *difficulty* and *outcome* than for *task*: an unattended run differs from one a person
+watched.
 
 ```yaml #entrypoints
 labels:
@@ -143,14 +138,14 @@ labels:
 
 ## Reading what you get before you write it
 
-`mark --suggest` shows the evidence for each session and writes nothing, so a rule set can be
-read before it is trusted:
+`mark --suggest` shows each session's evidence without writing anything, so you can review the
+rules' results:
 
 ```console
 $ assaio-agent mark --suggest --since 30d
 $ assaio-agent mark --accept-suggested --since 30d
 ```
 
-The second command writes only what the first showed, and never replaces a label made by hand.
-If the output is empty, the honest reading is that your repository's convention is not in this
-file yet — not that the sessions were unlabelable.
+The second command writes only what the first showed and never replaces hand-written labels. Empty
+output means these rules do not cover your repository's convention yet; it does not mean the
+sessions cannot be labeled.

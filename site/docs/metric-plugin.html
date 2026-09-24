@@ -3,174 +3,174 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>Write a metric plugin (any language) — assaio</title>
-<meta name="description" content="When to reach for this instead of an in-tree validator. A metric plugin is your own analyzer without forking assaio: an executable in any language that reads the same prepared Input bundle every built-in validator reads and returns one Result. It renders in assaio analyze, analyze --format json, and the Assay dashboard beside the built-ins">
+<meta name="description" content="validator](metric-validator.md).">
 <link rel="canonical" href="https://assaio.dev/docs/metric-plugin">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://assaio.dev/docs/metric-plugin">
 <meta property="og:title" content="Write a metric plugin (any language) — assaio">
-<meta property="og:description" content="When to reach for this instead of an in-tree validator. A metric plugin is your own analyzer without forking assaio: an executable in any language that reads the same prepared Input bundle every built-in validator reads and returns one Result. It renders in assaio analyze, analyze --format json, and the Assay dashboard beside the built-ins">
+<meta property="og:description" content="validator](metric-validator.md).">
 <meta property="og:image" content="https://assaio.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="assaio — measure whether AI coding spend is delivering">
+<meta property="og:image:alt" content="assaio logo, cost and output headline, subtitle, install commands and tool names">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://assaio.dev/og.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233E8B79'/%3E%3Cpath d='M9 22 16 10l7 12' stroke='%23EFEAE1' stroke-width='2.4' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M9 22 16 10l7 12' stroke='%23ffffff' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"assaio","item":"https://assaio.dev/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://assaio.dev/docs"},{"@type":"ListItem","position":3,"name":"Write a metric plugin (any language)","item":"https://assaio.dev/docs/metric-plugin"}]}</script>
 <style>:root{
-  --ink:#14120F; --paper:#EFEAE1;
-  --teal:#3E8B79; --teal-lift:#4F9E8B;
-  --bg:var(--paper); --fg:#1A1713; --dim:#6B6459; --faint:#8D857A;
-  --rule:rgba(20,18,15,.14); --rule-soft:rgba(20,18,15,.07);
-  --cell:rgba(20,18,15,.025); --signal:var(--teal);
+  --bg:#ffffff; --surface:#f5f7f8; --line:#e2e6e9; --line-strong:#cdd3d8;
+  --fg:#0f1417; --dim:#4f5a64; --faint:#66717c;
+  --signal:#0f766e; --signal-strong:#0b5f58; --signal-soft:#e7f4f2;
+  --cell:#f5f7f8; --rule:#e2e6e9; --rule-soft:#edf0f2;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --gut:clamp(1.25rem,4vw,2.5rem);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --gut:clamp(1rem,4vw,2.5rem);
 }
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
-    --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
-    --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
+  :root{
+    --bg:#0c1013; --surface:#11171b; --line:#232e35; --line-strong:#33424c;
+    --fg:#edf1f3; --dim:#a3aeb7; --faint:#8b97a1;
+    --signal:#2dd4bf; --signal-strong:#5eead4; --signal-soft:#0e2826;
+    --cell:#11171b; --rule:#232e35; --rule-soft:#1a2328;
   }
 }
-:root[data-theme="dark"]{
-  --bg:var(--ink); --fg:#EDE7DC; --dim:#9C9486; --faint:#787064;
-  --rule:rgba(237,231,220,.16); --rule-soft:rgba(237,231,220,.07);
-  --cell:rgba(237,231,220,.03); --signal:var(--teal-lift);
-}
 *,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth; color-scheme:light dark}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 body{margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans);
-  font-size:15.5px; line-height:1.65; -webkit-font-smoothing:antialiased}
-a{color:var(--signal)}
+  font-size:clamp(1rem,.96rem + .2vw,1.0625rem); line-height:1.65; -webkit-font-smoothing:antialiased}
+a{color:var(--signal); text-underline-offset:.2em}
+a:hover{color:var(--signal-strong)}
+:focus-visible{outline:2px solid var(--signal); outline-offset:3px; border-radius:4px}
 .wrap{max-width:84rem; margin:0 auto; padding:0 var(--gut)}
-.top{display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap;
-  padding:1.15rem 0; border-bottom:1px solid var(--rule)}
-.brand{font:600 1rem/1 var(--mono); letter-spacing:-.02em; text-decoration:none; color:var(--fg)}
-.topnav{display:flex; gap:1.1rem; flex-wrap:wrap; font-family:var(--mono); font-size:12px}
-.topnav a{text-decoration:none}
-footer{padding:2.5rem 0 4rem; margin-top:3rem; border-top:1px solid var(--rule-soft);
-  color:var(--faint); font-size:13px}
+.top{display:flex; align-items:center; justify-content:space-between; gap:.5rem 1.5rem; flex-wrap:wrap;
+  min-height:3.75rem; border-bottom:1px solid var(--line)}
+.brand{display:inline-flex; align-items:center; gap:.55rem; min-height:44px; font-weight:700; font-size:1.1rem;
+  letter-spacing:-.02em; text-decoration:none; color:var(--fg)}
+.brand svg{width:26px; height:26px; flex:none}
+.topnav{display:flex; flex-wrap:wrap; gap:0 .25rem; font-size:.95rem}
+.topnav a{display:inline-flex; align-items:center; min-height:44px; padding:0 .7rem; border-radius:8px;
+  text-decoration:none; color:var(--dim); font-weight:500}
+.topnav a:hover{color:var(--fg); background:var(--surface)}
+.topnav a.menu{display:none}
+footer{padding:2.5rem 0 3.5rem; margin-top:3rem; border-top:1px solid var(--line); color:var(--faint); font-size:.88rem}
 footer p{max-width:56rem; margin:0}
-.layout{display:grid; grid-template-columns:15rem minmax(0,1fr); gap:3rem; align-items:start}
-@media (max-width:60rem){.layout{grid-template-columns:minmax(0,1fr); gap:1.5rem}
-  .side{position:static; border-bottom:1px solid var(--rule-soft); padding-bottom:1rem}}
+.layout{display:grid; grid-template-columns:16rem minmax(0,1fr); gap:3rem; align-items:start}
 .side{position:sticky; top:0; padding:2rem 0; max-height:100vh; overflow-y:auto}
-.sidehead{margin:1.4rem 0 .45rem; font:500 .625rem/1 var(--mono); letter-spacing:.14em;
+@media (max-width:60rem){
+  .layout{grid-template-columns:minmax(0,1fr); gap:0}
+  .side{position:static; order:2; max-height:none; padding:1.5rem 0 0; border-top:1px solid var(--line)}
+  .topnav a.menu{display:inline-flex}
+}
+@media (max-width:34rem){.topnav a.opt{display:none} .topnav a{padding:0 .5rem}}
+.sidehead{margin:1.5rem 0 .4rem; font:700 .72rem/1 var(--sans); letter-spacing:.08em;
   text-transform:uppercase; color:var(--faint)}
 .sidehead:first-child{margin-top:0}
 .side ul{list-style:none; margin:0; padding:0}
-.side li{margin:0 0 .3rem}
-.side a{display:block; text-decoration:none; color:var(--dim); font-size:13.5px; line-height:1.4;
-  padding:.15rem 0 .15rem .6rem; border-left:2px solid transparent}
-.side a:hover{color:var(--fg)}
-.side a.on{color:var(--signal); border-left-color:var(--signal)}
-.doc{padding:2rem 0 1rem; max-width:52rem; min-width:0}
-.doc h1{font-size:clamp(1.6rem,4vw,2.15rem); line-height:1.15; letter-spacing:-.015em; margin:0 0 1rem}
-.doc h2{font-size:1.3rem; letter-spacing:-.01em; margin:2.75rem 0 .75rem;
-  padding-top:1.25rem; border-top:1px solid var(--rule-soft)}
-.doc h3{font-size:1.05rem; margin:2rem 0 .5rem}
-.doc h4{font-size:.95rem; margin:1.5rem 0 .4rem; color:var(--dim)}
-.doc h2 a,.doc h3 a,.doc h4 a{text-decoration:none}
-.doc p,.doc li{max-width:44rem}
+.side a{display:flex; align-items:center; min-height:40px; text-decoration:none; color:var(--dim);
+  font-size:.93rem; line-height:1.35; padding:.35rem .75rem; border-radius:8px}
+.side a:hover{color:var(--fg); background:var(--surface)}
+.side a.on{color:var(--signal); background:var(--signal-soft); font-weight:600}
+.doc{padding:2rem 0 1rem; max-width:48rem; min-width:0}
+.doc h1{font-size:clamp(1.8rem,1.3rem + 2vw,2.5rem); line-height:1.1; letter-spacing:-.03em; margin:0 0 1rem}
+.doc h2{font-size:clamp(1.3rem,1.15rem + .6vw,1.55rem); letter-spacing:-.015em; line-height:1.25;
+  margin:2.75rem 0 .75rem; padding-top:1.5rem; border-top:1px solid var(--line)}
+.doc h3{font-size:1.12rem; letter-spacing:-.01em; margin:2rem 0 .5rem}
+.doc h4{font-size:1rem; margin:1.5rem 0 .4rem; color:var(--dim)}
+.doc h2 a,.doc h3 a,.doc h4 a{text-decoration:none; color:inherit}
+.doc p,.doc li{max-width:42rem}
 .doc p{margin:0 0 1rem}
-.doc .lede{color:var(--dim); font-size:1.02rem}
+.doc .lede{color:var(--dim); font-size:1.08rem}
 .doc ul,.doc ol{margin:0 0 1rem; padding-left:1.35rem}
 .doc li{margin:0 0 .45rem}
 .doc li>ul,.doc li>ol{margin-top:.45rem}
-.doc blockquote{margin:0 0 1rem; padding:.1rem 0 .1rem 1rem; border-left:2px solid var(--rule);
+.doc blockquote{margin:0 0 1rem; padding:.2rem 0 .2rem 1rem; border-left:3px solid var(--signal);
   color:var(--dim)}
-.doc hr{border:0; border-top:1px solid var(--rule-soft); margin:2.5rem 0}
-.doc strong{font-weight:600}
+.doc hr{border:0; border-top:1px solid var(--line); margin:2.5rem 0}
+.doc strong{font-weight:650}
 .doc img{max-width:100%}
 code{font-family:var(--mono); font-size:.875em}
-:not(pre)>code{background:var(--cell); border:1px solid var(--rule-soft); border-radius:3px;
-  padding:.08em .32em; word-break:break-word}
-pre{background:var(--cell); border:1px solid var(--rule-soft); border-radius:4px;
-  padding:.9rem 1rem; overflow-x:auto; margin:0 0 1.25rem; line-height:1.55}
-pre code{background:none; border:0; padding:0; font-size:12.5px}
+:not(pre)>code{background:var(--cell); border:1px solid var(--line); border-radius:5px;
+  padding:.08em .35em; overflow-wrap:anywhere}
+pre{background:#0e1316; color:#e6ecef; border:1px solid #222c32; border-radius:10px;
+  padding:1rem 1.1rem; overflow-x:auto; margin:0 0 1.25rem; line-height:1.55}
+pre code{background:none; border:0; padding:0; font-size:.84rem; color:inherit}
 .scroll{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 0 1.25rem}
-table{border-collapse:collapse; width:100%; font-size:13px}
+table{border-collapse:collapse; width:100%; font-size:.9rem}
 .doc table{display:block; overflow-x:auto; margin:0 0 1.25rem}
-th,td{text-align:left; vertical-align:top; padding:.5rem .75rem .5rem 0;
-  border-bottom:1px solid var(--rule-soft)}
-th{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em;
-  color:var(--faint); font-weight:500; white-space:nowrap}
-tbody tr:nth-child(odd){background:var(--cell)}
-td.m{white-space:nowrap; color:var(--signal); font-family:var(--mono); font-size:12.5px}
+th,td{text-align:left; vertical-align:top; padding:.6rem .8rem .6rem 0; border-bottom:1px solid var(--line)}
+th{font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); font-weight:650; white-space:nowrap}
+td.m{white-space:nowrap; color:var(--signal); font-family:var(--mono); font-size:.84rem}
 td.dim{color:var(--dim)}
 section{scroll-margin-top:1rem}
-section h2{font-size:1.3rem; margin:2.75rem 0 .35rem; padding-top:1.25rem;
-  border-top:1px solid var(--rule-soft); letter-spacing:-.01em}
-.note{color:var(--dim); font-size:13.5px; max-width:52rem; margin:0 0 1.25rem}
-h3.sub{font-size:.95rem; margin:1.75rem 0 .5rem; font-weight:600}
+section h2{font-size:clamp(1.3rem,1.15rem + .6vw,1.55rem); margin:2.75rem 0 .35rem; padding-top:1.5rem;
+  border-top:1px solid var(--line); letter-spacing:-.015em}
+.note{color:var(--dim); font-size:.93rem; max-width:48rem; margin:0 0 1.25rem}
+h3.sub{font-size:1rem; margin:1.75rem 0 .5rem; font-weight:650}
 ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
-.cmd{padding:1rem 0; border-bottom:1px solid var(--rule-soft)}
-.cmd h3{font-family:var(--mono); font-size:13px; margin:0 0 .2rem; color:var(--signal); font-weight:500}
-.cmd p{margin:0; color:var(--dim); font-size:13.5px; max-width:44rem}
+.cmd{padding:1rem 0; border-bottom:1px solid var(--line)}
+.cmd h3{font-family:var(--mono); font-size:.9rem; margin:0 0 .25rem; color:var(--signal); font-weight:600}
+.cmd p{margin:0; color:var(--dim); font-size:.93rem; max-width:44rem}
 .cmd table{margin-top:.6rem}
 </style>
 </head>
 <body><div class="wrap">
 <header class="top">
-  <a class="brand" href="https://assaio.dev/">assaio</a>
+  <a class="brand" href="https://assaio.dev/"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--signal)"/><path d="M9 22 16 10l7 12" stroke="var(--bg)" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>assaio</a>
   <nav class="topnav">
-    <a href="https://assaio.dev/">Overview</a>
+    <a class="opt" href="https://assaio.dev/">Overview</a>
     <a href="https://assaio.dev/docs">Docs</a>
     <a href="https://assaio.dev/docs/reference">Reference</a>
     <a href="https://github.com/assaio/assaio">GitHub</a>
-    <a href="https://github.com/assaio/assaio/releases">Releases</a>
+    <a class="opt" href="https://github.com/assaio/assaio/releases">Releases</a>
+    <a class="menu" href="#docs-nav">Menu</a>
   </nav>
 </header>
-<div class="layout"><aside class="side"><nav><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a class="on" href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/runtime-inspect">Runtime inspect (experimental)</a></li><li><a href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="write-a-metric-plugin-any-language">Write a metric plugin (any language)</h1>
-<p><em>Part of <a href="https://assaio.dev/docs">Extending assaio</a>. The in-tree equivalent: <a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a>.</em></p>
-<p><strong>When to reach for this instead of an in-tree validator.</strong> A metric plugin is your own
-<strong>analyzer</strong> without forking assaio: an executable in any language that reads the same
-prepared <code>Input</code> bundle every built-in validator reads and returns one <code>Result</code>. It
-renders in <code>assaio analyze</code>, <code>analyze --format json</code>, and the Assay dashboard beside the
-built-ins — same faceplate cell, same ledger entry, same anonymization rules. Reach for
-it when the metric is company-specific and has no reason to be upstreamed; reach for an
-<a href="https://assaio.dev/docs/metric-validator">in-tree validator</a> when it belongs in every install or
-needs domain data the wire envelope doesn't carry yet.</p>
-<p>Metric plugins are <strong>opt-in only</strong>, declared under <code>metrics:</code> in
-<code>~/.config/assaio/config.yaml</code> — never discovered from <code>PATH</code>, never downloaded. The
-entry shape is the same as <code>plugins:</code>, and one binary may appear in both lists, serving
-both protocols (<code>scan</code> and <code>analyze</code> argv):</p>
+<div class="layout"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a class="on" href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/runtime-inspect">Runtime inspect (experimental)</a></li><li><a href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="write-a-metric-plugin-any-language">Write a metric plugin (any language)</h1>
+<p><em>Part of <a href="https://assaio.dev/docs">Extending assaio</a>. In-tree equivalent: <a href="https://assaio.dev/docs/metric-validator">Adding a metric
+validator</a>.</em></p>
+<p><strong>When to use this instead of an in-tree validator.</strong> A metric plugin is your own <strong>analyzer</strong>
+without an assaio fork. It can be an executable in any language. It reads the prepared <code>Input</code>
+bundle used by built-in validators and returns one <code>Result</code>. It appears beside built-ins in
+<code>assaio analyze</code>, <code>analyze --format json</code>, and the Assay dashboard, with the same faceplate cell,
+ledger entry, and anonymization rules. Use it for a company-specific metric that does not belong
+upstream. Use an <a href="https://assaio.dev/docs/metric-validator">in-tree validator</a> if the metric belongs in every install or
+needs domain data absent from the wire envelope.</p>
+<p>Metric plugins are <strong>opt-in only</strong>. Declare them under <code>metrics:</code> in <code>~/.config/assaio/config.yaml</code>;
+they are never discovered from <code>PATH</code> or downloaded. Entries have the same shape as <code>plugins:</code>. One
+binary can serve both protocols (<code>scan</code> and <code>analyze</code> argv) by appearing in both lists:</p>
 <pre><code class="language-yaml">metrics:
   - name: weekend-usage      # required, [a-z0-9-]+; appears as &quot;plugin:weekend-usage&quot;
     command: /path/to/assaio-metric-weekend   # required; PATH lookup if not absolute
     timeout: 30s             # optional, default 60s
     needs: [usage]           # optional veto -- see &quot;Declare what you read&quot; below
 </code></pre>
-<p><strong>Start from a working skeleton.</strong> <code>assaio-agent plugins init --kind metric --lang python</code>
-prints a runnable metric plugin -- correct handshake, both verbs, one result the boundary
-accepts -- to stdout, and the next steps to stderr, so
+<p><strong>Start with a working skeleton.</strong> <code>assaio-agent plugins init --kind metric --lang python</code> prints a
+runnable metric plugin to stdout, with the correct handshake, both verbs, and one accepted result.
+It prints next steps to stderr, so
 <code>assaio-agent plugins init --kind metric --lang python &gt; my-metric.py</code> writes only the program.
 <code>--lang go|python|sh</code> and <code>--kind parser|metric|rule</code> cover every combination.</p>
-<p><strong>One privacy note before the protocol.</strong> Unlike a parser plugin (which reads a tool's
-own logs), a metric plugin <strong>receives your usage data on stdin</strong>: project names, model
-names, member pseudonyms, and token/line counts — the same aggregate metadata the store
-holds, never prompt, response or repository content (none is stored; see <code>PRIVACY.md</code>). The
-trust model is unchanged — a plugin is a local program you chose to run, with your own
-privileges — but know what crosses the process boundary before pointing config at a
-binary you didn't write.</p>
+<p><strong>Privacy note.</strong> A metric plugin <strong>receives your usage data on stdin</strong>: project names, model names,
+member pseudonyms, and token and line counts. This is the same aggregate metadata held by the store.
+It never receives prompt, response, or repository content; none is stored (see <code>PRIVACY.md</code>). A
+parser plugin instead reads a tool's own logs. Both are local programs you choose to run with your
+privileges. Check what a binary receives before adding one you did not write to config.</p>
 <h2 id="the-protocol">The protocol</h2>
-<p><code>assaio</code> runs your plugin <strong>twice per analysis</strong>, both times with
-<code>ASSAIO_METRIC_PROTOCOL=1</code> in the environment:</p>
+<p><code>assaio</code> runs your plugin <strong>twice per analysis</strong>, each time with <code>ASSAIO_METRIC_PROTOCOL=1</code> in the
+environment:</p>
 <ol>
-<li><code>&lt;command&gt; describe</code> — nothing on stdin. You write a handshake line and <strong>one
-Declaration</strong>: what this metric reads.</li>
-<li><code>&lt;command&gt; analyze</code> — the window on stdin, cut to exactly what you declared. You write a
+<li><code>&lt;command&gt; describe</code> — receives nothing on stdin. Write a handshake line and <strong>one Declaration</strong>
+stating what the metric reads.</li>
+<li><code>&lt;command&gt; analyze</code> — receives the window on stdin, limited to what you declared. Write a
 handshake line and <strong>one <code>Result</code></strong>.</li>
 </ol>
-<p>The extra process is what buys the envelope: on a real 30-day store the whole window is
-53 MB and an ordinary metric's projection of it is 43 KB (see below).</p>
-<p><strong>stdin</strong> — the prepared <code>Input</code>, versioned, camelCase (mirroring the public
-<code>analyze --format json</code> shapes; only the version keys stay snake_case, matching the
-parser protocol's <code>assaio_plugin</code>). This is the envelope of a plugin that declared
-everything; a section you do not declare is <strong>not on the document at all</strong>:</p>
+<p>The extra process limits the envelope: on a real 30-day store, the full window is 53 MB; an ordinary
+metric's projection is 43 KB (see below).</p>
+<p><strong>stdin</strong> — the prepared, versioned <code>Input</code> in camelCase, matching public <code>analyze --format json</code>
+shapes. Only version keys use snake_case, matching the parser protocol's <code>assaio_plugin</code>. This
+example declares everything; undeclared sections are <strong>absent from the document</strong>:</p>
 <pre><code class="language-json">{
   &quot;assaio_metric_input&quot;: 4,
   &quot;now&quot;: &quot;2026-07-17T10:00:00Z&quot;,
@@ -215,8 +215,7 @@ everything; a section you do not declare is <strong>not on the document at all</
 }
 </code></pre>
 <h3 id="declare-what-you-read-since-v025-protocol-4">Declare what you read (since v0.25, protocol 4)</h3>
-<p><code>describe</code> answers one question: what does this metric read? assaio sends that and nothing
-else.</p>
+<p><code>describe</code> declares what the metric reads. assaio sends only that.</p>
 <pre><code class="language-json">{&quot;assaio_metric&quot;: 4, &quot;name&quot;: &quot;weekend-usage&quot;}
 {&quot;needs&quot;: [&quot;usage&quot;], &quot;fields&quot;: {&quot;usage&quot;: [&quot;day&quot;, &quot;tool&quot;, &quot;in&quot;, &quot;out&quot;]}}
 </code></pre>
@@ -242,30 +241,25 @@ else.</p>
 </tr>
 </tbody>
 </table>
-<p>Which sections each capability carries: <code>usage</code> carries <code>usage</code>, <code>byModel</code>, <code>byProject</code>,
-<code>totals</code> and <code>delegation</code>; <code>sessions</code> carries <code>sessions</code>; <code>prices</code> carries <code>prices</code> and
-<code>planMonthlyCost</code>; <code>attribution</code> carries <code>skills</code> and <code>agents</code>; <code>turn-sizing</code>, <code>cache-misses</code>
-and <code>trace</code> carry the sections of their own names. The prepared views ride with the rows they
-aggregate because they are bounded by model and project count, not by observation count —
-and only while those rows are the whole window. A <code>where</code> predicate declared against <code>usage</code>,
-<code>byModel</code> or <code>byProject</code> <strong>withholds <code>totals</code> and <code>delegation</code> entirely</strong>, because they span
-the window rather than the rows you asked for, and <code>sum(usage.in) / totals.tokens</code> would be a
-share of a population your rows do not describe. The window's own denominator stays reachable
-as <code>projection.rows[&lt;section&gt;].available</code>. The condition is your declaration, never the
-outcome, so the keys cannot be present on one window and absent on the next.
-<code>now</code>, <code>recentDays</code>, <code>windowStart</code>, <code>historyStart</code>, <code>answers</code>, <code>projection</code> and <code>withheld</code>
-are always sent: they are how you judge what you did receive.</p>
-<p><strong>A column you did not project is absent, and absent is not zero.</strong> <code>projection.fields</code> on
-the envelope is the list of keys you may read; decoding a missing key into a struct field
-gives you a <code>0</code> that no source ever recorded. Same for a section: read <code>projection.needs</code>
-before assuming a key exists.</p>
-<p><strong>A predicate changes your denominator, so the envelope states it.</strong>
-<code>projection.rows[section]</code> gives <code>sent</code> and <code>available</code> — how many rows you received, and how
-many the window held before your own predicate ran. A share over a filtered section is a
-share of <code>sent</code>; saying which of the two your figure means is your job, and
-<code>confidence.signalCoverage</code> is where it goes.</p>
-<p><strong>What this is worth.</strong> The same 30-day window on a real store — 522 usage rows, 3,376
-sessions, 4,279 step sequences, 424,310 steps — serialized under four declarations:</p>
+<p>Capabilities carry these sections: <code>usage</code> carries <code>usage</code>, <code>byModel</code>, <code>byProject</code>, <code>totals</code>, and
+<code>delegation</code>; <code>sessions</code> carries <code>sessions</code>; <code>prices</code> carries <code>prices</code> and <code>planMonthlyCost</code>;
+<code>attribution</code> carries <code>skills</code> and <code>agents</code>; <code>turn-sizing</code>, <code>cache-misses</code>, and <code>trace</code> carry their
+namesake sections. Prepared views accompany their rows because model and project counts bound them,
+not observation counts, but only when those rows cover the whole window. A <code>where</code> predicate on
+<code>usage</code>, <code>byModel</code>, or <code>byProject</code> <strong>withholds <code>totals</code> and <code>delegation</code> entirely</strong>: they span the
+window, not your selected rows. Otherwise, <code>sum(usage.in) / totals.tokens</code> would compare different
+populations. The window denominator remains available as <code>projection.rows[&lt;section&gt;].available</code>.
+Presence depends on your declaration, never the outcome, so keys do not appear in one window and
+vanish in the next. <code>now</code>, <code>recentDays</code>, <code>windowStart</code>, <code>historyStart</code>, <code>answers</code>, <code>projection</code>, and
+<code>withheld</code> are always sent to show what you received.</p>
+<p><strong>A column you did not project is absent, and absent is not zero.</strong> <code>projection.fields</code> lists the
+keys you can read. Decoding a missing key into a struct field can produce a <code>0</code> no source recorded.
+For sections, check <code>projection.needs</code> before reading a key.</p>
+<p><strong>A predicate changes your denominator.</strong> <code>projection.rows[section]</code> reports <code>sent</code> rows received
+and <code>available</code> rows in the window before your predicate. A share over filtered rows uses <code>sent</code> as
+its denominator. State which denominator your figure uses in <code>confidence.signalCoverage</code>.</p>
+<p><strong>Envelope sizes.</strong> The same real 30-day window contains 522 usage rows, 3,376 sessions, 4,279 step
+sequences, and 424,310 steps. Its serialized size under four declarations:</p>
 <table>
 <thead>
 <tr>
@@ -292,46 +286,40 @@ sessions, 4,279 step sequences, 424,310 steps — serialized under four declarat
 </tr>
 </tbody>
 </table>
-<p><strong>Your config entry is a veto, not the declaration.</strong> Before v0.25 the reader wrote
-<code>needs:</code> in <code>config.yaml</code>, which asked the person pasting a config entry to know what your
-plugin reads. Now you declare it and their <code>needs:</code> only <em>narrows</em> it: no key means no
-constraint, allowing more than you declared grants nothing extra, and allowing less sends the
-section absent, names the capability in the envelope's top-level <code>withheld</code>, and adds a
-caveat to your rendered verdict saying the verdict rests on less than you asked for.</p>
+<p><strong>Your config entry can veto the declaration.</strong> Before v0.25, the reader set <code>needs:</code> in
+<code>config.yaml</code> and had to know what your plugin read. Now your plugin declares it, and their <code>needs:</code>
+only <em>narrows</em> it. No key means no constraint; allowing more grants nothing extra. Allowing less
+omits the section, names the capability in top-level <code>withheld</code>, and adds a caveat to the rendered
+verdict that it received less than requested.</p>
 <h3 id="migrating-a-protocol-3-plugin">Migrating a protocol-3 plugin</h3>
-<p>A protocol-3 plugin fails on the handshake, naming the version, before any window is
-serialized for it. Two edits:</p>
+<p>A protocol-3 plugin fails the versioned handshake before its window is serialized. Make two edits:</p>
 <ol>
-<li>Change the handshake integer from <code>3</code> to <code>4</code>, in both verbs.</li>
-<li>Add a <code>describe</code> branch that prints that handshake and one declaration. To reproduce
-protocol 3's payload exactly:
+<li>Change the handshake integer from <code>3</code> to <code>4</code> in both verbs.</li>
+<li>Add a <code>describe</code> branch that prints the handshake and one declaration. To reproduce protocol 3's
+payload exactly:
 <code>{&quot;needs&quot;:[&quot;usage&quot;,&quot;sessions&quot;,&quot;trace&quot;,&quot;attribution&quot;,&quot;turn-sizing&quot;,&quot;cache-misses&quot;,&quot;prices&quot;]}</code>.</li>
 </ol>
-<p>Narrowing from there is optional and is where every byte in the table above comes from. A
-<code>needs:</code> line already in someone's <code>config.yaml</code> keeps working and now reads as a veto over
-your declaration rather than an extension of it.</p>
+<p>You can narrow that declaration to get the smaller payloads in the table above. An existing <code>needs:</code>
+line in someone's <code>config.yaml</code> still works, but now vetoes parts of your declaration instead of
+extending it.</p>
 <h3 id="cachewrite1h--a-subset-never-a-total-since-v014"><code>cacheWrite1h</code> — a subset, never a total (since v0.14)</h3>
-<p><code>cacheWrite1h</code> on a usage row is the portion of <code>cacheWrite</code> that bought a 1-hour cache
-lifetime, and <code>prices[model].cacheWrite1h</code> is that portion's own higher rate. It is a
-<strong>subset</strong>: adding it to <code>cacheWrite</code> double-counts those tokens. Price a row the way the
-core does — <code>min(cacheWrite1h, cacheWrite)</code> at the 1-hour rate, the remainder at
-<code>cacheWrite</code>. Both fields are <code>0</code> for a source that does not report the tier, which reads the
-same as &quot;every write was 5-minute&quot;, so a plugin publishing a figure over them should declare
-its own coverage. Before v0.14 neither field was on the wire, so a plugin re-pricing what it
-was handed necessarily billed every write at the cheaper rate and reported a cost the core
-disagreed with.</p>
+<p><code>cacheWrite1h</code> on a usage row is the part of <code>cacheWrite</code> bought at the 1-hour cache lifetime.
+<code>prices[model].cacheWrite1h</code> gives its higher rate. It is a <strong>subset</strong>: adding it to <code>cacheWrite</code>
+double-counts tokens. Price it as the core does: charge <code>min(cacheWrite1h, cacheWrite)</code> at the
+1-hour rate and the rest at <code>cacheWrite</code>. Both fields are <code>0</code> when a source does not report the
+tier, indistinguishable from every write being 5-minute; declare coverage for figures based on them.
+Before v0.14, neither field was on the wire, so plugin repricing billed all writes at the cheaper
+rate and disagreed with core cost.</p>
 <h3 id="answers--which-zeros-are-measurements-and-which-are-silence"><code>answers</code> — which zeros are measurements and which are silence</h3>
-<p>Every count on a <code>usage</code> or <code>sessions</code> row is <strong>zero for a source that does not record it</strong>,
-and &quot;nothing happened&quot; and &quot;nothing was written down&quot; are different facts. A metric that
-averages the two states what it did not measure — the mistake that made a Cline-only window
-read as <em>100% conversational sessions</em> (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0011-capability-gated-metrics.md">ADR 0011</a>).</p>
-<p><code>answers</code> maps every tool present in this window to the
-<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0008-signal-catalog.md">signal</a> ids it can produce
-(<code>assaio-agent signals list</code>; an out-of-tree parser gets the exec protocol's floor, since its
-capability is whatever its author implemented). The rule is the same one an in-tree validator
-follows: <strong>keep the rows whose tool answers the signal, compute over those, and declare the
-reach</strong> — a figure with no rows left prints nothing rather than a zero, and the verdict is
-withheld rather than earned from a silence.</p>
+<p>Every count on a <code>usage</code> or <code>sessions</code> row is <strong>zero when the source does not record it</strong>. That
+differs from nothing happening. Averaging both states claims a measurement you lack; this made a
+Cline-only window appear to have <em>100% conversational sessions</em> (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0011-capability-gated-metrics.md">ADR
+0011</a>).</p>
+<p><code>answers</code> maps each tool in the window to the <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0008-signal-catalog.md">signal</a> ids it can
+produce (<code>assaio-agent signals list</code>). An out-of-tree parser gets the exec protocol's floor because
+its author determines its capabilities. Follow the in-tree validator rule: <strong>keep rows from tools
+that answer the signal, compute from those rows, and declare the reach</strong>. If none remain, print no
+figure instead of zero and withhold the verdict.</p>
 <pre><code class="language-python">capable = [r for r in inp[&quot;usage&quot;] if &quot;ai.rework.lines&quot; in inp[&quot;answers&quot;].get(r[&quot;tool&quot;], [])]
 if not capable:
     result[&quot;read&quot;] = {&quot;key&quot;: &quot;neutral&quot;, &quot;label&quot;: &quot;—&quot;}     # withhold, never certify a silence
@@ -341,62 +329,52 @@ else:
     result[&quot;confidence&quot;] = {&quot;signalCoverage&quot;: reach, &quot;samples&quot;: len(capable),
                             &quot;samplesUnit&quot;: &quot;usage rows&quot;}
 </code></pre>
-<p>Only the tools actually in the window are sent: a plugin needs the capability of the data it
-was handed, and shipping the whole matrix would make the envelope a second publication of it.</p>
-<p><strong>Session labels are deliberately absent from this document.</strong> In-tree validators can read
-the task/outcome/difficulty a person attached with <code>assaio-agent mark</code>, but the plugin wire
-does not carry them and the usage rows above are never split by them: a plugin receives
-exactly the same shape it received before labels existed. That is a decision, not an
-oversight — labels are local, and widening what leaves the machine is its own choice rather
-than a side effect (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0006-session-annotations.md">ADR 0006</a>). If you need a metric per
-kind of work today, run your plugin under <code>assaio-agent analyze --task &lt;kind&gt;</code>: the filter
-is applied to the window before the input document is built, so your plugin computes over
-exactly those sessions without needing to know why.</p>
-<p>The semantics are exactly <a href="https://assaio.dev/docs/metric-validator#what-a-validator-reads-input"><code>Input</code>'s</a>: <code>usage</code> is
-pre-aggregated by <code>(day, tool, model, project, entrypoint, member)</code>; <code>cost</code> fields are
-<code>null</code> when unpriced, never a fabricated <code>0</code>; <code>byModel</code>/<code>byProject</code>/<code>totals</code> are the
-prepared views to read first; <code>prices</code> carries only models present in the window's
-usage. Like <code>Input</code>, the envelope is <strong>versioned but pre-1.0 unstable</strong> — a release that
-reshapes it says so explicitly (see <code>RELEASING.md</code>).</p>
-<p><strong>stdout</strong> — a one-line handshake, then exactly <strong>one</strong> JSON <code>Result</code> document
-(pretty-printed is fine; anything after it is a violation):</p>
+<p>Only tools in the window are sent. The plugin needs their capabilities, not the whole matrix, which
+would publish it again in the envelope.</p>
+<p><strong>Session labels are absent from this document.</strong> In-tree validators can read task, outcome, and
+difficulty labels added with <code>assaio-agent mark</code>. The plugin wire does not carry them or split usage
+rows by them; its shape is unchanged. Labels are local, and sending them across the process boundary
+requires a separate decision (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0006-session-annotations.md">ADR 0006</a>). For a metric by kind
+of work, run the plugin with <code>assaio-agent analyze --task &lt;kind&gt;</code>. The filter runs before input is
+built, so the plugin receives only matching sessions without knowing why.</p>
+<p>The envelope follows <a href="https://assaio.dev/docs/metric-validator#what-a-validator-reads-input"><code>Input</code>'s</a> semantics:
+<code>usage</code> is pre-aggregated by <code>(day, tool, model, project, entrypoint, member)</code>; unpriced <code>cost</code>
+fields are <code>null</code>, never fabricated <code>0</code>; read the prepared <code>byModel</code>/<code>byProject</code>/<code>totals</code> views
+first; and <code>prices</code> includes only models used in the window. Like <code>Input</code>, it is <strong>versioned but
+pre-1.0 unstable</strong>. Releases that reshape it say so explicitly (see <code>RELEASING.md</code>).</p>
+<p><strong>stdout</strong> — one handshake line, then exactly <strong>one</strong> JSON <code>Result</code> document. Pretty printing is
+fine; anything after it violates the protocol:</p>
 <ol>
-<li><code>{&quot;assaio_metric&quot;: 4, &quot;name&quot;: &quot;&lt;name&gt;&quot;}</code> — version must be <code>4</code> (it was <code>3</code> before v0.25;
-see the breaking change in <a href="https://github.com/assaio/assaio/blob/main/CHANGELOG.md">CHANGELOG.md</a>), <code>name</code> must equal the
-configured name. The same line opens <code>describe</code>.</li>
-<li>One <code>Result</code> in the same shape <code>analyze --format json</code> emits — see <a href="https://assaio.dev/docs/metric-validator#what-a-validator-returns-result">What a validator
-returns: Result</a>. The wire <code>name</code> field is ignored:
-assaio always stamps <code>plugin:&lt;name&gt;</code>, so a plugin can never shadow a built-in
-validator.</li>
+<li><code>{&quot;assaio_metric&quot;: 4, &quot;name&quot;: &quot;&lt;name&gt;&quot;}</code> — version must be <code>4</code> (<code>3</code> before v0.25; see
+<a href="https://github.com/assaio/assaio/blob/main/CHANGELOG.md">CHANGELOG.md</a>), and <code>name</code> must match the configured name. This line also
+opens <code>describe</code>.</li>
+<li>One <code>Result</code> in the shape emitted by <code>analyze --format json</code> (see <a href="https://assaio.dev/docs/metric-validator#what-a-validator-returns-result">What a validator returns:
+Result</a>). assaio ignores the wire <code>name</code> and
+stamps <code>plugin:&lt;name&gt;</code>, so a plugin cannot shadow a built-in validator.</li>
 </ol>
-<p>Anything written to stderr passes through prefixed <code>[metric/&lt;name&gt;] </code>.</p>
-<p><strong>Declare what your verdict rests on</strong> (v0.5). Every result carries a confidence envelope,
-and assaio fills all of it except the one part only your plugin knows: how many
-observations you counted.</p>
+<p>Anything written to stderr passes through with the prefix <code>[metric/&lt;name&gt;] </code>.</p>
+<p><strong>Declare what supports your verdict</strong> (v0.5). Every result has a confidence envelope. assaio fills
+every part except the observation count, which only your plugin knows.</p>
 <pre><code class="language-json">&quot;confidence&quot;: {&quot;samples&quot;: 12, &quot;samplesUnit&quot;: &quot;sessions&quot;}
 </code></pre>
-<p>Coverage, freshness and the parsing build are stamped for you from the same window the
-built-in metrics use, so your verdict is judged on the same footing as theirs. A plugin
-that omits the field reads as <code>insufficient</code> — the honest label for &quot;did not say what it
-rests on&quot; — so declare it even when the number is large. Count observations, not the
-buckets you report: &quot;3 models&quot; is a shape, &quot;31 active days&quot; is evidence.</p>
-<p><strong>Declare how much of the window your figure describes</strong> (v0.9), if it is not all of it:</p>
+<p>assaio stamps coverage, freshness, and parsing build from the same window used by built-in metrics.
+If your plugin omits the field, its verdict is <code>insufficient</code> because it states no basis. Declare it
+even for large counts. Count observations, not reported buckets: &quot;3 models&quot; describes a shape; &quot;31
+active days&quot; is evidence.</p>
+<p><strong>Declare how much of the window your figure covers</strong> (v0.9) if it covers less than all of it:</p>
 <pre><code class="language-json">&quot;confidence&quot;: {&quot;samples&quot;: 12, &quot;samplesUnit&quot;: &quot;sessions&quot;, &quot;signalCoverage&quot;: 0.05}
 </code></pre>
-<p>The three stamped axes describe the <em>window</em>; this one describes your <em>question</em>, and only
-your metric can answer it. A figure computed from one source's records in a five-source
-window is real and describes a sliver, and nothing at window level can see the difference —
-<code>reasoning-share</code> read a 20% share off under 1% of a store's output and carried <code>high</code> until
-it started declaring this. Omit the key and you claim the whole window, which is what every
-plugin released before the axis existed meant and stays true for most metrics. Declare <code>0</code>
-and the verdict reads <code>insufficient</code>: nothing in this window could answer, which is a
-different fact from a thin answer. The share sets the label alongside the other axes, and
-<code>assaio analyze</code> names it when it is the weakest one:</p>
+<p>The three stamped axes describe the <em>window</em>; this axis describes your <em>question</em>, which only your
+metric can assess. A figure from one source in a five-source window covers a small share that
+window-level measures miss. <code>reasoning-share</code> reported a 20% share from under 1% of a store's output
+and kept a <code>high</code> label until it declared this share. Omitting the key claims the whole window, as
+plugins released before this axis did; that remains correct for most metrics. Declaring <code>0</code> yields
+<code>insufficient</code>: nothing in the window answered, rather than a thin answer. This share helps set the
+label, and <code>assaio analyze</code> names it when it is the weakest axis:</p>
 <pre><code>Confidence: low · 43 active days · signal coverage &lt;1%
 </code></pre>
-<p><strong>A verdict resting on nothing says which nothing it is</strong> (v0.10). <code>insufficient</code> has four
-causes and they are different facts about different things, so the summary line names the one
-that applies:</p>
+<p><strong>An unsupported verdict says why</strong> (v0.10). <code>insufficient</code> has four distinct causes. The summary
+line names the one that applies:</p>
 <table>
 <thead>
 <tr>
@@ -423,17 +401,16 @@ that applies:</p>
 </tr>
 </tbody>
 </table>
-<p>The first row is not available to an exec metric plugin: it rests on the validator declaring
-which capture a zero would be missing, which the plugin protocol has no field for. A plugin
-covering none of the window reads as the second row.</p>
-<p>Declaring <code>samples: 0</code> with a unit is therefore better than omitting the field: &quot;zero
-sessions&quot; is a measurement, &quot;no stated basis&quot; is an absence of one.</p>
+<p>The first row does not apply to an exec metric plugin: it requires the validator to declare which
+missing capture a zero represents, and the plugin protocol has no field for that. A plugin covering
+none of the window uses the second row.</p>
+<p>Declare <code>samples: 0</code> with a unit instead of omitting the field: &quot;zero sessions&quot; is a measurement;
+&quot;no stated basis&quot; is not.</p>
 <h3 id="the-window-not-just-its-rows-since-v017">The window, not just its rows (since v0.17)</h3>
-<p>Six fields answer questions about the <strong>window</strong> that no sum over <code>usage</code> can reach, and until
-v0.17 none of them crossed this boundary — which meant five shipped validators read data an
-out-of-tree author could not. They are on the envelope now, and the parity is enforced by a
-test: an <code>analyze.Input</code> field must either appear here or be listed as a deliberate exception
-with its reason.</p>
+<p>Six fields answer <strong>window</strong> questions that sums over <code>usage</code> cannot. Before v0.17, none crossed
+this boundary, so out-of-tree authors lacked data used by five shipped validators. They are now in
+the envelope. A test enforces parity: every <code>analyze.Input</code> field must appear here or be listed as a
+deliberate exception with a reason.</p>
 <table>
 <thead>
 <tr>
@@ -480,58 +457,51 @@ with its reason.</p>
 </tr>
 </tbody>
 </table>
-<p><code>skills</code>, <code>agents</code> and <code>cacheMisses</code> are all shaped the same way: <strong>present means recorded,
-absent means not recorded, and neither means zero.</strong> Before publishing a figure over any of
-them, check <code>answers</code> for whether the tools in this window record it at all, and declare the
-coverage you actually had.</p>
-<p>Those additions kept the envelope at <code>assaio_metric_input: 1</code>, because a plugin written
-against the earlier shape kept working and simply ignored them. Protocol 4 is the first
-change to the request rather than the answer, which is why it could not be additive.</p>
+<p><code>skills</code>, <code>agents</code>, and <code>cacheMisses</code> share a rule: <strong>present means recorded; absent means not
+recorded; neither means zero.</strong> Before publishing a figure based on them, check <code>answers</code> to see
+whether the window's tools record them, and declare actual coverage.</p>
+<p>These additions kept the envelope at <code>assaio_metric_input: 1</code>: older plugins ignored the new fields
+and still worked. Protocol 4 first changed the request instead of the answer, so it could not be
+additive.</p>
 <h2 id="what-the-boundary-enforces">What the boundary enforces</h2>
-<p>The honesty rules are enforced, not requested. A result that fails <strong>any</strong> check is
-rejected whole — assaio never renders a fabricated or partially-sanitized verdict. On a
-bare <code>analyze</code>/<code>dashboard</code> run a failing plugin is skipped with one <code>warning:</code> line and
-the built-ins still render; an explicitly selected one (<code>analyze plugin:&lt;name&gt;</code>) is a
-hard error.</p>
+<p>assaio enforces the honesty rules. A result failing <strong>any</strong> check is rejected whole; no fabricated
+or partly sanitized verdict is rendered. On a bare <code>analyze</code>/<code>dashboard</code> run, assaio skips a failing
+plugin, prints one <code>warning:</code> line, and still renders built-ins. An explicitly selected plugin
+(<code>analyze plugin:&lt;name&gt;</code>) fails with a hard error.</p>
 <ul>
-<li>The <strong>declaration</strong> is refused whole, with every reason, before any window is serialized:
-<code>needs</code> must be present and non-empty and name only known capabilities, with no duplicate;
-every <code>fields</code> key must be a section whose capability you declared, and every column in it a
-column that section has; every <code>where</code> key must address <code>&lt;section&gt;.&lt;column&gt;</code>, on a top-level
-section you declared, on a string column, admitting at least one value. Nothing is repaired —
-a column assaio silently dropped from your projection is a column you read as absent.</li>
-<li><code>layer</code> must be <code>activity</code>, <code>output</code>, <code>outcome</code> or <code>impact</code> — which of the four measurement
-layers your verdict rests on (ADR 0013). Required, because a built-in metric cannot compile
-without stating it and an extension surface weaker than the core it extends is not a surface.
-Declare what the <strong>verdict</strong> is a claim about: a figure inside the result may sit on a lower
-layer as context. <code>activity</code> is what happened (tokens, turns, tool calls, edits — cost too);
-<code>output</code> is what was produced (changed lines, commits, tests); <code>outcome</code> is whether it held
-(merged, survived, passed CI); <code>impact</code> is value delivered. Never relabel one as another.</li>
-<li><code>read.key</code> must be <code>good</code>, <code>watch</code>, or <code>neutral</code>; <code>read.label</code> non-empty, ≤ 16 chars.</li>
-<li><code>title</code> (≤ 80), <code>howToRead</code> and <code>takeaway</code> (≤ 400) are required; <code>describe</code> (≤ 200)
-and <code>caveats</code> (≤ 400 each, max 8) optional.</li>
-<li>Figures max 12, bars max 30; their <code>label</code>/<code>value</code>/<code>note</code> ≤ 120 chars each.</li>
-<li>No control characters anywhere (terminal-escape guard; the dashboard's HTML escaping
-is separate and automatic).</li>
+<li>The <strong>declaration</strong> is rejected whole, with every reason, before any window is serialized. <code>needs</code>
+must be present, non-empty, contain only known capabilities, and have no duplicates. Each <code>fields</code>
+key must name a section whose capability you declared; each listed column must exist in that
+section. Each <code>where</code> key must address <code>&lt;section&gt;.&lt;column&gt;</code> on a declared top-level section, use a
+string column, and allow at least one value. Nothing is repaired: a silently dropped projected
+column would read as absent.</li>
+<li><code>layer</code> is required and must be <code>activity</code>, <code>output</code>, <code>outcome</code>, or <code>impact</code>: the verdict's
+measurement layer (ADR 0013). Built-in metrics must state it to compile, so extensions must state
+it too. A figure within the result may provide context from a lower layer. <code>activity</code> covers what
+happened (tokens, turns, tool calls, edits, and cost); <code>output</code> covers what was produced (changed
+lines, commits, tests); <code>outcome</code> covers whether it held (merged, survived, passed CI); <code>impact</code>
+covers value delivered. Never relabel one as another.</li>
+<li><code>read.key</code> must be <code>good</code>, <code>watch</code>, or <code>neutral</code>; <code>read.label</code> must be non-empty and ≤ 16 chars.</li>
+<li><code>title</code> (≤ 80), <code>howToRead</code>, and <code>takeaway</code> (≤ 400) are required; <code>describe</code> (≤ 200) and <code>caveats</code>
+(≤ 400 each, max 8) are optional.</li>
+<li>At most 12 figures and 30 bars; each <code>label</code>/<code>value</code>/<code>note</code> is ≤ 120 chars.</li>
+<li>No control characters anywhere (a terminal-escape guard; dashboard HTML escaping is separate and
+automatic).</li>
 <li><code>purity</code> and every <code>bars[].frac</code> are clamped to <code>[0,1]</code>.</li>
 <li>Stdout is capped at 1 MiB; the run is killed after <code>timeout</code> (default 60s).</li>
-<li>Two keys are <strong>decoded and then discarded</strong>, because they are answers about the window
-rather than about your metric: <code>lead</code> (<code>lead.rank</code>, <code>lead.reasons</code>) is which findings the
-window promotes, and a metric cannot see the others to rank itself among them; and
-<code>confidence.recorded</code>, which decides whether assaio prints the one insufficient-data reason
-that names a cure. Setting either is not an error and costs you nothing but the work — the
-core clears both on arrival and computes them itself.</li>
-<li><code>barsPseudonym</code> works exactly as for built-ins: set it when your <code>Bars</code> rank
-by a name a person chose. The pre-rename key <code>barsAreProjects: true</code> is still accepted
-and maps to <code>&quot;project&quot;</code>, so a plugin released against it keeps being pseudonymized
-rather than silently publishing real project names. Any <em>other</em> unknown field is
-rejected outright — a misspelled key must not quietly disarm a setting. The
-<a href="https://assaio.dev/docs#honesty-constraints-for-every-extension">honesty constraints</a> bind a metric plugin the
-same as any in-tree validator.</li>
+<li>Two keys are <strong>decoded and then discarded</strong> because they describe the window, not your metric:
+<code>lead</code> (<code>lead.rank</code>, <code>lead.reasons</code>) ranks findings, but a metric cannot see the others;
+<code>confidence.recorded</code> determines whether assaio prints the insufficient-data reason that names a
+cure. Setting either is allowed, but the core clears and computes both itself.</li>
+<li><code>barsPseudonym</code> works as it does for built-ins: set it when your <code>Bars</code> rank by a person-chosen
+name. The older <code>barsAreProjects: true</code> is accepted and maps to <code>&quot;project&quot;</code>, so old plugins still
+pseudonymize project names. Any <em>other</em> unknown field is rejected: a typo must not disable a
+setting. The <a href="https://assaio.dev/docs#honesty-constraints-for-every-extension">honesty constraints</a> apply
+as they do to in-tree validators.</li>
 </ul>
 <h2 id="a-complete-example-python">A complete example (Python)</h2>
-<p>The same weekend-usage metric as the <a href="https://assaio.dev/docs/metric-validator-example">in-tree worked
-example</a> — one metric, both extension paths:</p>
+<p>The same weekend-usage metric as the <a href="https://assaio.dev/docs/metric-validator-example">in-tree worked example</a>, shown
+through both extension paths:</p>
 <pre><code class="language-python">#!/usr/bin/env python3
 &quot;&quot;&quot;assaio-metric-weekend: share of AI tokens used on Saturday/Sunday.&quot;&quot;&quot;
 import json, sys
@@ -580,9 +550,9 @@ print(json.dumps({
     &quot;caveats&quot;: [&quot;Directional: a proxy for out-of-hours work, not a burnout measurement.&quot;],
 }))
 </code></pre>
-<p>Make it executable, declare it under <code>metrics:</code> as above, and check conformance —
-<code>metrics verify</code> runs the plugin on your real store's window <strong>without storing
-anything</strong> and prints the violations, if any, plus the rendered result:</p>
+<p>Make the plugin executable and declare it under <code>metrics:</code> as above. Check conformance with
+<code>metrics verify</code>: it runs the plugin on your real store's window <strong>without storing anything</strong> and
+prints any violations plus the rendered result:</p>
 <pre><code class="language-console">$ assaio-agent metrics verify weekend-usage
 weekend-usage: handshake OK
 result: VALID
@@ -595,13 +565,13 @@ PLUGIN:WEEKEND-USAGE · Weekend Usage  [WATCH]  (activity)
 $ assaio-agent metrics list
 weekend-usage     /path/to/assaio-metric-weekend  (timeout 30s)
 </code></pre>
-<p>From then on a bare <code>assaio-agent analyze</code> prints it after the built-ins,
-<code>assaio-agent analyze plugin:weekend-usage</code> runs it alone, <code>analyze --list</code> shows it
-(without executing it), and <code>assaio-agent dashboard</code> gives it a faceplate cell and
-ledger entry like any built-in's.</p>
+<p>A bare <code>assaio-agent analyze</code> then prints it after the built-ins.
+<code>assaio-agent analyze plugin:weekend-usage</code> runs it alone; <code>analyze --list</code> lists it without
+executing it; and <code>assaio-agent dashboard</code> gives it a faceplate cell and ledger entry like a
+built-in.</p>
 <h2 id="conformance-vectors--your-ci-without-this-binary">Conformance vectors — your CI without this binary</h2>
-<p><code>docs/conformance/</code> publishes every document this boundary accepts and refuses, with the
-verdict and the reason:</p>
+<p><code>docs/conformance/</code> contains every document this boundary accepts or rejects, with the verdict and
+reason:</p>
 <table>
 <thead>
 <tr>
@@ -632,15 +602,13 @@ verdict and the reason:</p>
 is the document as a <strong>string</strong>, so a malformed one — trailing data, a control character, text
 that is not JSON at all — is representable. Feed each <code>doc</code> to your decoder and assert
 <code>accept</code>; when it is <code>false</code>, your rejection reason should mention <code>expect</code>.</p>
-<p>These same files drive assaio's own tests and seed its fuzzers, so a vector that stops
-describing the boundary fails assaio's build rather than yours.</p>
-<p><strong>Where it deliberately does not run:</strong> the <a href="https://assaio.dev/docs/team-server">team server</a>'s served
-dashboard (<code>GET /</code> rebuilds per request — spawning
-config-declared subprocesses per request would be a denial-of-service vector), the
-dashboard's per-project drill-down (built-ins only), and <code>demo</code> (deterministic sample).
-It <em>does</em> run in <code>assaio-agent check</code> when you have configured <a href="https://assaio.dev/docs/rule-plugin">rule
-plugins</a>, so a rule can gate on your own metric.
-See <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0004-exec-metric-plugin-protocol.md">ADR 0004</a> for the full rationale.</p>
+<p>The same files drive assaio's tests and seed its fuzzers. If a vector stops describing the boundary,
+assaio's build fails instead of yours.</p>
+<p><strong>Where it does not run:</strong> the <a href="https://assaio.dev/docs/team-server">team server</a>'s served dashboard (<code>GET /</code> rebuilds on
+each request, so spawning configured subprocesses could enable denial of service), the dashboard's
+per-project drill-down (built-ins only), and <code>demo</code> (a deterministic sample). It <em>does</em> run in
+<code>assaio-agent check</code> when <a href="https://assaio.dev/docs/rule-plugin">rule plugins</a> are configured, so a rule can gate on your
+metric. See <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0004-exec-metric-plugin-protocol.md">ADR 0004</a> for the full rationale.</p>
 <hr>
 </main>
 </div>
@@ -651,6 +619,4 @@ names no release — which version is current is stated once, on the
 <a href="https://github.com/assaio/assaio/releases">releases page</a>, where it cannot fall behind.
 It loads nothing: no fonts, no analytics, no third-party requests.</p>
 </footer>
-</div><script>
-try{var t=localStorage.getItem('assaio-theme'); if(t) document.documentElement.setAttribute('data-theme',t);}catch(e){}
-</script></body></html>
+</div></body></html>

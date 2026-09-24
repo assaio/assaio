@@ -1,11 +1,11 @@
 # Add a data source
 
-*Part of [Extending assaio](../extending.md). No Go, no PR: [write a parser plugin](parser-plugin.md) instead.*
+*Part of [Extending assaio](../extending.md). No Go or PR needed: [write a parser
+plugin](parser-plugin.md).*
 
-A data source is one Go package under `internal/parser/<tool>/`. It turns a tool's
-on-disk session logs into a slice of normalized `usage.Record` values. That is the
-entire job — pricing, aggregation, storage, and rendering are the core's responsibility,
-not the parser's.
+A data source is one Go package under `internal/parser/<tool>/`. It converts a tool's on-disk
+session logs into normalized `usage.Record` values. The core handles pricing, aggregation, storage,
+and rendering.
 
 A parser exposes exactly two functions:
 
@@ -20,91 +20,73 @@ func Discover(root string) ([]string, error)
 func Parse(r io.Reader) ([]usage.Record, int, error)
 ```
 
-`Discover` is a filesystem glob rooted at a path the core resolves for you (see
-[`internal/paths`](../../internal/paths/paths.go)). Keep the glob narrow — `~/.gemini`, for
-example, is shared with Antigravity CLI, so the Gemini discoverer only matches
-`tmp/*/chats/session-*.jsonl` and the Antigravity one only
-`antigravity-cli/brain/*/.system_generated/logs/transcript.jsonl`. `Parse` takes an
-`io.Reader` (not a path) so it is trivial to test against a fixture. A source whose unit of
-work is a directory rather than a single file may expose a
-`ParseDir(dir string) ([]usage.Record, int, error)` helper instead — Cline reads
-`ui_messages.json` alongside `task_metadata.json`; Antigravity CLI reads one file but keeps
-the conversation id in the directory name and nowhere inside it. Such a parser still keeps a
-reader-shaped core (`cline.ParseTask`, `agy.ParseTranscript`) that takes the id as an argument
-rather than deriving it, so the parsing stays testable against a fixture and hermetic; the
-file-oriented `Parse(io.Reader)` shape is the default and the one to reach for first.
+`Discover` runs a filesystem glob under a root the core resolves (see
+[`internal/paths`](../../internal/paths/paths.go)). Keep the glob narrow: `~/.gemini` is shared with
+Antigravity CLI, so Gemini matches only `tmp/*/chats/session-*.jsonl` and Antigravity matches only
+`antigravity-cli/brain/*/.system_generated/logs/transcript.jsonl`. `Parse` accepts an `io.Reader`,
+not a path, so you can test it with a fixture. A source that processes directories may expose
+`ParseDir(dir string) ([]usage.Record, int, error)` instead: Cline reads `ui_messages.json` with
+`task_metadata.json`, while Antigravity CLI reads one file but gets the conversation id only from
+its directory name. Keep a reader-based core (`cline.ParseTask`, `agy.ParseTranscript`) that accepts
+the id as an argument, so fixture tests stay hermetic. Prefer the file-based `Parse(io.Reader)` form
+when possible.
 
-**While you work on a parser, run `assaio-agent backfill --full`.** Ingest skips inputs it
-has already parsed unchanged, and the stored state is keyed on the build's identity — which
-stays constant for a local build, precisely so a rebuild does not force a re-parse of every
-file. A released binary invalidates the state automatically; your development build does
-not, so `--full` is how you see a parser change take effect.
+**While developing a parser, run `assaio-agent backfill --full`.** Ingest skips unchanged inputs it
+has already parsed. Stored state uses the build's identity, which stays constant for local builds so
+rebuilding does not reparse every file. Released binaries invalidate that state automatically;
+development builds do not. Use `--full` to see parser changes.
 
-Where `Discover`'s root itself comes from — the built-in default, or a team's own
-override — is a separate, non-code concern; see [Custom log-source
-paths](parser-plugin.md#custom-log-source-paths).
+The root for `Discover` can be the built-in default or a team override. This needs no code change;
+see [Custom log-source paths](parser-plugin.md#custom-log-source-paths).
 
 ### Declare what your source can answer
 
-A parser also adds one row to the depth matrix in
-[`internal/parser/depth.go`](../../internal/parser/depth.go), and the part that matters most is
-`Answers`: the ids of the signals your source can actually produce (`assaio-agent signals
-list` prints them all). Do not reach for the nearest tier and move on — the tier's three
-axes are a summary, and `Activity: true` says nothing about *which* activity. Copilot CLI
-records changed lines and no edit count, no tool calls, no turns and no rework, so it lists
-two activity signals and not the other four; declaring the axis alone made `signals coverage`
-report sixteen of eighteen signals as fully supported when the truth was ten.
+Add a row for the parser in [`internal/parser/depth.go`](../../internal/parser/depth.go). Set
+`Answers` to the ids of signals the source can produce (`assaio-agent signals list` shows them). A
+tier summarizes three axes; `Activity: true` does not identify which activity signals exist. Copilot
+CLI records changed lines but no edit count, tool calls, turns, or rework. It lists two activity
+signals, not the other four. Declaring only the axis made `signals coverage` claim full support for
+sixteen of eighteen signals when only ten were supported.
 
-What your source writes but you choose *not* to read belongs in the audit below — [What each
-source's log carries](source-fields.md) — with the reason,
-so the next reader can tell a deliberate omission from an oversight.
+List fields your source writes but your parser does not read in [What each source's log
+carries](source-fields.md), with reasons for each omission.
 
-The rule is one question per signal: **would a figure computed from my records be right, or
-merely non-empty?** If the log does not carry it, leave it out — an absent signal is reported
-as "this source cannot answer it", which is a useful fact, while a claimed one becomes a
-number someone trusts. That applies inside the token group too: `ai.tokens.reasoning` is
-declared per source rather than inherited, because Claude Code and Cline never surface a
-thinking count and claiming it for them reported full support for a figure their records can
-only leave at zero. A test asserts the ids you list are real and that they do not contradict
-the tier axes ([ADR 0008](../adr/0008-signal-catalog.md)).
+For each signal, ask: **would a figure computed from my records be right, or merely non-empty?** If
+the log lacks the data, omit the signal. An absent signal says the source cannot answer; a declared
+signal produces a number people may trust. This applies to tokens: `ai.tokens.reasoning` is declared
+per source because Claude Code and Cline never expose a thinking count. Claiming it for them
+reported full support for a figure their records leave at zero. A test checks that listed ids exist
+and agree with the tier axes ([ADR 0008](../adr/0008-signal-catalog.md)).
 
-**A metric reads this row before it reads your records.** A validator that reports a
-per-session figure — the session mix, context health, how long sessions run, the rejection
-rate — first asks `parser.Answers(tool, id)` and keeps only the sessions your source can
-answer for, because a field you never write is not a zero: it is a silence, and averaging it
-in reports a fact about someone's work that came from your parser's gap. Leaving a signal out
-therefore *removes* your sessions from that figure rather than dragging it down. Spell the id
-with the `parser.Signal*` constant, never as a literal — a typo answers false for every tool
-and empties a metric instead of failing a build.
+**Metrics check this row before reading your records.** For per-session figures such as session mix,
+context health, session length, and rejection rate, a validator calls `parser.Answers(tool, id)` and
+includes only sessions the source can answer for. A field your parser never writes is missing, not
+zero; including it would distort the average. Omitting a signal excludes your sessions from that
+figure. Use the `parser.Signal*` constant for each id, never a literal: a typo returns false for
+every tool and empties a metric without failing the build.
 
-The row does more than describe your source. `parser.Tools()` and `parser.Answers()` are how
-everything downstream asks what exists and what it can do — sync validation, `clear --tool`,
-the confidence envelope on every verdict, and every caveat that used to spell out tool names.
-Wiring your parser into `internal/ingest` and `doctor`'s scan is still a separate step, and
-two tests bind the three together: the set ingest reads, the set doctor scans, and the set the
-matrix publishes must be identical. A parser that ships without its row is not merely
-undocumented — its records get rejected by the team server and its data cannot be deleted per
-source, which is exactly what happened to Copilot CLI between v0.6 and v0.8.
+The row also tells downstream code which tools exist and what they can answer through
+`parser.Tools()` and `parser.Answers()`: sync validation, `clear --tool`, every verdict's confidence
+envelope, and tool-specific caveats. Wire the parser into `internal/ingest` and the `doctor` scan
+separately. Two tests require the sets read by ingest, scanned by doctor, and published by the
+matrix to match. Without a row, the team server rejects the parser's records and users cannot delete
+its data by source. This happened to Copilot CLI between v0.6 and v0.8.
 
 ### Corrupt-line policy: skip and count
 
-Session logs are live, append-only files a tool can be writing to while `assaio` reads
-them — a truncated final line or one bad byte is expected, not exceptional. `Parse`
-therefore never aborts a file over one malformed line: a line that fails `json.Unmarshal`
-is counted in the returned `skipped` int and parsing continues, so the records on either
-side of it are never lost to one corrupt entry. A log line that unmarshals fine but
-carries no usage is simply *filtered*, not counted as skipped — only unmarshal failures
-count. The scanner itself can still fail (e.g. `bufio.ErrTooLong` past `parser.MaxLineBytes`);
-that is a structural problem with the whole file, not one line, so it is returned as an
-error, wrapped with context. `internal/ingest.Run` mirrors this at the file level: a file
-that cannot be opened or parsed at all is counted as `Failed` and the run continues with
-the remaining files, so one corrupt log never blocks a `backfill` of the rest.
+Session logs are live, append-only files that a tool may write while `assaio` reads them. Truncated
+final lines and bad bytes are expected. `Parse` counts each line that fails `json.Unmarshal` in the
+returned `skipped` int and continues, preserving records around it. Lines that parse but contain no
+usage are filtered, not counted as skipped; only unmarshal failures count. Scanner failures such as
+`bufio.ErrTooLong` beyond `parser.MaxLineBytes` affect the file as a whole and return an error with
+context. At the file level, `internal/ingest.Run` counts files it cannot open or parse as `Failed`
+and continues, so one corrupt log does not block the rest of a `backfill`.
 
 ## The `usage.Record` contract
 
-Every record you emit is one normalized usage event. The struct lives in
-[`internal/usage/record.go`](../../internal/usage/record.go); fill in what the log gives you
-and leave the rest at its zero value.
+Each emitted record is one normalized usage event. Fill in fields the log provides in
+[`internal/usage/record.go`](../../internal/usage/record.go), and leave the rest at their zero
+values.
 
 | Field | Type | Meaning | Rules |
 |-------|------|---------|-------|
@@ -132,158 +114,134 @@ and leave the rest at its zero value.
 | `Compactions` | `int64` | Context-compaction events attributed to this record — a context-strain signal. | `0` if the source exposes no compaction/summarization marker. |
 | `ReworkLines` | `int64` | AI-added lines later removed by a subsequent edit to the same file, within one transcript — a rework/thrash proxy. | Computed via the shared [`internal/parser.Rework`](../../internal/parser/rework.go) helper. The file path used to detect it is read transiently and **never** copied onto the record. `0` if unknown. |
 
-Records with no token usage should be skipped, not emitted with zeros.
+Skip records with no token usage; do not emit them with zeros.
 
 ### Parsers stay hermetic — project resolution is ingest's job
 
-A parser's only filesystem access is the `io.Reader` `Parse` was handed. It must never
-open, stat, or walk anything else — in particular, it must not import
-`internal/projectid` or otherwise try to resolve `Cwd` to a repository root itself. Emit
-`Cwd` verbatim from the log and, as a fallback `Project`, your own best guess (typically
-`filepath.Base(cwd)`); `internal/ingest` re-resolves `Project` (and fills `Subpath`) for
-every record after `Parse` returns, by walking the real filesystem via
-`internal/projectid`. This split keeps parsers trivially testable against a fixture
-reader — no temp directories, no `.git` scaffolding — and keeps the one place that
-touches the filesystem for identity resolution auditable in one file
-([`internal/ingest/project.go`](../../internal/ingest/project.go)). It is also why a
-per-file metric can't be built from stored data: the file path itself never survives
-past this step (see [What a validator reads: Input](metric-validator.md#what-a-validator-reads-input)).
+A parser may read only the `io.Reader` passed to `Parse`. Do not open, stat, or walk other files, or
+import `internal/projectid` to resolve `Cwd` to a repository root. Emit `Cwd` as logged and set a
+fallback `Project` from your best guess, usually `filepath.Base(cwd)`. After `Parse`,
+`internal/ingest` walks the filesystem through `internal/projectid` to resolve `Project` and fill
+`Subpath` for every record. This keeps fixture tests free of temporary directories and `.git`
+scaffolding, and confines identity resolution to
+[`internal/ingest/project.go`](../../internal/ingest/project.go). The file path does not survive
+this step, so stored data cannot support a per-file metric (see [What a validator reads:
+Input](metric-validator.md#what-a-validator-reads-input)).
 
 ### Activity fields are optional (honesty note)
 
-`LinesAdded`, `LinesRemoved`, `Edits`, `ToolCalls`, `Rejected`, `Compactions`, and
-`ReworkLines` are session-level activity signals that power the `effectiveness` report
-(AI output vs. cost) and the `analyze` validators. A new parser **MAY** populate them
-where its source genuinely exposes edit/diff data, and **MUST** leave them at `0` where
-it does not — an honest zero, never a guess. When you do count lines, count only the
-`+`/`-` diff markers; the content of the line is never stored.
+`LinesAdded`, `LinesRemoved`, `Edits`, `ToolCalls`, `Rejected`, `Compactions`, and `ReworkLines` are
+session-level activity signals used by `effectiveness` (AI output versus cost) and `analyze`
+validators. A new parser **MAY** fill them when its source exposes edit or diff data and **MUST**
+leave them at `0` otherwise. Never guess. For line counts, count only `+`/`-` diff markers; never
+store line content.
 
-**Today the Claude Code and Codex parsers are the two that populate the full set —
-`LinesAdded`, `LinesRemoved`, `Edits`, `ToolCalls`, `Compactions`, and `ReworkLines`**
-(Copilot CLI carries the two line counts per session and none of the rest) (Claude Code from structured edit
-results, sub-agent tool stats, and compaction-boundary lines; Codex from
-`patch_apply_end` diffs, function/custom tool-call events, and `compacted` events — both
-share the [`internal/parser.Rework`](../../internal/parser/rework.go) helper for rework
-detection). `Rejected` is Claude-Code-only: Codex's rollout logs don't surface tool-use
-denials the way Claude Code's do. Gemini and Cline report token usage but leave every
-activity field at `0`, so they contribute cost but not line counts — which is exactly what
-the `effectiveness` view discloses.
+**Claude Code and Codex currently populate the full set: `LinesAdded`, `LinesRemoved`, `Edits`,
+`ToolCalls`, `Compactions`, and `ReworkLines`.** Copilot CLI provides only the two per-session line
+counts. Claude Code uses structured edit results, sub-agent tool stats, and compaction-boundary
+lines; Codex uses `patch_apply_end` diffs, function/custom tool-call events, and `compacted` events.
+Both use [`internal/parser.Rework`](../../internal/parser/rework.go) to detect rework. Only Claude
+Code populates `Rejected`: Codex rollout logs do not expose tool-use denials the same way. Gemini
+and Cline report token usage but leave all activity fields at `0`, so they add cost but no line
+counts, as the `effectiveness` view discloses.
 
 ### DedupeKey determinism (hard rule)
 
-Inserts are idempotent: the store's uniqueness constraint is `(tool, dedupe_key)`, so
-`backfill` is safe to run repeatedly. That guarantee only holds if **re-parsing the same
-file always produces the same keys**. A `DedupeKey` must therefore be a pure function of
-the log's content, never of wall-clock time, iteration randomness, or map ordering.
+Inserts are idempotent because the store enforces uniqueness on `(tool, dedupe_key)`, making
+repeated `backfill` runs safe. This requires **the same file to produce the same keys every time**.
+Derive each `DedupeKey` only from log content, never wall-clock time, random iteration, or map
+ordering.
 
-- When the log gives you a stable per-record UUID, use it directly — Claude Code keys on
-  the message `uuid`.
-- Otherwise, derive a positional key like `fmt.Sprintf("%s:%d", sessionID, index)` where
-  `index` counts emitted records in file order — Codex, Gemini, and Cline do this.
+- Use a stable per-record UUID from the log when available; Claude Code uses the message `uuid`.
+- Otherwise, derive a positional key such as `fmt.Sprintf("%s:%d", sessionID, index)`, where `index`
+  counts emitted records in file order; Codex, Gemini, and Cline do this.
 
-If two parses of one unchanged file disagree on keys, you will silently double-count on
-the next `backfill`. The golden test below is your guard against exactly that.
+Different keys from two parses of the same unchanged file silently double-count on the next
+`backfill`. The golden test below guards against this.
 
 ### Granularity honesty (hard rule)
 
-`assaio` will not let session-level data masquerade as per-turn data. If your source only
-reports totals for a whole session (a daily vendor aggregate, a single end-of-session
-summary), you **must** set `Granularity: "session"`. Emit `"turn"` only when each record
-genuinely corresponds to one request/response. When in doubt, choose `"session"` — an
-honest coarse label beats a precise-looking lie.
+`assaio` distinguishes session totals from per-turn data. If a source reports only whole-session
+totals, such as a daily vendor aggregate or one end-of-session summary, **must** set
+`Granularity: "session"`. Use `"turn"` only when each record represents one request and response. If
+unsure, use `"session"`.
 
-The rule bites inside a source, not only between them: a Claude Code transcript is per-turn
-throughout except for the one record summarizing a completed sub-agent, which totals a whole
-run and is therefore `"session"`. It was labelled `"turn"` until v0.10, which let every
-per-turn figure count it as a single very large turn. If one shape in your log aggregates,
-label that shape — the field is per record, not per parser.
+Set granularity for each record, even within one source. Claude Code transcripts are per-turn except
+for the record summarizing a completed sub-agent's whole run, which is `"session"`. Before v0.10 it
+was labeled `"turn"`, so per-turn figures counted it as one very large turn. Label any aggregate
+record by its own shape; the field is per record, not per parser.
 
 ## Golden-file testing
 
-Parsers are tested against captured fixtures under the package's `testdata/` directory,
-compared to a checked-in `.golden` snapshot of the parsed records. The convention (see
-[`internal/parser/claude/claude_test.go`](../../internal/parser/claude/claude_test.go)):
+Test parsers against captured fixtures in the package's `testdata/` directory and compare parsed
+records with a checked-in `.golden` snapshot. Follow
+[`internal/parser/claude/claude_test.go`](../../internal/parser/claude/claude_test.go):
 
-- A fixture (`testdata/session.jsonl`) and its golden output (`testdata/session.golden`,
-  the records marshaled as indented JSON).
-- An `-update` flag that regenerates the golden file:
+- A fixture (`testdata/session.jsonl`) and golden output (`testdata/session.golden`, parsed records
+  as indented JSON).
+- An `-update` flag to regenerate the golden file:
 
   ```sh
   go test ./internal/parser/<tool>/ -run TestParseGolden -update
   ```
 
-  Run it once you have eyeballed the parse, then commit the `.golden` file. Review it in
-  the diff on every future change — a golden mismatch is how you catch a vendor changing
-  their format out from under you.
+  Inspect the parse, run the update once, and commit the `.golden` file. Review future diffs: a
+  mismatch can reveal a vendor format change.
 
-- **A fixture is synthetic, or a field-allowlist redaction of a real capture. Never a real
-  transcript.** Fabricating a minimal log that exercises the fields and edge cases you care
-  about (dedupe, model switches mid-session, cache tokens, missing cwd) is the default and
-  keeps the test's intent legible. A redaction is the stronger option where you have a real
-  corpus, and it is only a redaction if it is by allowlist: every field the parser reads stays
-  verbatim, every field it does not is replaced — a body by the same number of placeholder
-  lines, an identifier or path by a stand-in — and nothing the parser never reads is copied at
-  all. Either way the rule the fixture exists to keep is the same one, and it is absolute:
-  no prompt, no code, no path, no name reaches the repository. `internal/calibration` records
-  which of the two a trace is, in its `capture` field, because a constructed sample proves the
-  reading and only a real one also proves the shape is still what the vendor writes.
+- **Use a synthetic fixture or an allowlist-redacted real capture. Never commit a real transcript.**
+  The default is a minimal synthetic log covering relevant fields and edge cases (dedupe,
+  mid-session model switches, cache tokens, missing cwd). A real capture is stronger evidence if
+  redacted by allowlist: keep every field the parser reads verbatim; replace fields it does not
+  read, using the same number of placeholder lines for a body and stand-ins for identifiers and
+  paths; copy nothing else. No prompt, code, path, or name may reach the repository.
+  `internal/calibration` marks each trace's type in `capture`: a constructed sample proves parsing,
+  while a real one also confirms the vendor's current format.
 
-Add a second, assertion-style test for behavior the golden file cannot make obvious —
-that duplicates collapse, that non-usage lines are filtered, that dimensions land on every
-record.
+Add an assertion-style test for behavior the golden file does not show clearly, such as duplicate
+collapse, filtering non-usage lines, or dimensions on every record.
 
 ## Fuzzing
 
-Every parser must ship a native Go fuzz test — `FuzzParse`, or a name saying which entry point
-it drives when the parser has more than one (`FuzzParseTask` for Cline, `FuzzParseTranscript`
-for Antigravity CLI). Add it to `make fuzz`, which names each fuzzer explicitly. It seeds `f.Add` with the package's `testdata/` fixture
-plus a few hand-written edge seeds (empty input, `{}`, a truncated JSON line, int64-max
-token values, invalid UTF-8), and asserts the parser's invariants on every returned
-record: `Parse` never panics (a non-nil error returns early, which is fine), `skipped >= 0`,
-no token field is negative, a field the log states as a portion of another stays inside it
-(`ReasoningTokens <= OutputTokens`, `CacheWrite1hTokens <= CacheWriteTokens`), `Tool` equals
-the package constant, and `DedupeKey` is
-non-empty. `make fuzz` runs each fuzzer for `FUZZTIME` (default `20s`); a discovered
-crasher is committed as a corpus file under `testdata/fuzz/` so it becomes a permanent
-regression seed.
+Every parser needs a native Go fuzz test named `FuzzParse`, or a name that identifies the entry
+point if there are several (`FuzzParseTask` for Cline, `FuzzParseTranscript` for Antigravity CLI).
+List each fuzzer explicitly in `make fuzz`. Seed `f.Add` with a `testdata/` fixture and hand-written
+cases: empty input, `{}`, truncated JSON, int64-max token values, and invalid UTF-8. For every
+returned record, assert that `Parse` never panics (a non-nil error may return early),
+`skipped >= 0`, token fields are nonnegative, portions stay within totals
+(`ReasoningTokens <= OutputTokens`, `CacheWrite1hTokens <= CacheWriteTokens`), `Tool` matches the
+package constant, and `DedupeKey` is nonempty. `make fuzz` runs each fuzzer for `FUZZTIME` (default
+`20s`). Commit discovered crashers under `testdata/fuzz/` as permanent regression seeds.
 
 ## Wire it in
 
-Three touch points connect a finished parser to the CLI.
+Connect a finished parser to the CLI in three places.
 
-1. **Ingest** — [`internal/ingest/ingest.go`](../../internal/ingest/ingest.go). Add your
-   discovery call and append a `source` (tool name + discovered files + `Parse` function)
-   to the `sources` slice. Directory-oriented sources append a `dirSource` instead.
-   Add the root resolver to [`internal/paths`](../../internal/paths/paths.go). If your
-   source populates `Cwd`, project/subpath resolution happens automatically — every
-   `source` and the Cline branch already run through
-   [`internal/ingest/project.go`](../../internal/ingest/project.go) before `Insert`;
-   nothing more to wire up.
+1. **Ingest** — In [`internal/ingest/ingest.go`](../../internal/ingest/ingest.go), add discovery and
+   append a `source` containing the tool name, discovered files, and `Parse` function to `sources`.
+   Use `dirSource` for directory-based sources. Add the root resolver to
+   [`internal/paths`](../../internal/paths/paths.go). If the source fills `Cwd`, project and subpath
+   resolution is automatic: every `source` and the Cline branch pass through
+   [`internal/ingest/project.go`](../../internal/ingest/project.go) before `Insert`.
 
-2. **Doctor** — [`internal/cli/doctor.go`](../../internal/cli/doctor.go). Print a discovery
-   line so `assaio-agent doctor` reports how many files were found, and add a one-line
-   caveat for any modeling assumption your parser makes (folded token classes, recomputed
-   cost, shared directories). Every honesty compromise the parser makes belongs in
-   `doctor` output.
+2. **Doctor** — In [`internal/cli/doctor.go`](../../internal/cli/doctor.go), add a discovery line so
+   `assaio-agent doctor` reports the file count. Add a one-line caveat for each modeling assumption,
+   such as folded token classes, recomputed cost, or shared directories. Report every parser
+   compromise in `doctor`.
 
-3. **Its size** — measure what the source costs the store, on a real corpus, before you call
-   it done. `SELECT name, pgsize FROM dbstat` before and after an ingest into a throwaway
-   store gives the per-record and per-day figure; state both, and state whether any of it is
-   reachable by a retention rule. `trace.horizon_days` prunes the step timeline and nothing
-   else, so a source that emits no steps accumulates in `usage_record` forever and only
-   `clear` plus `compact` frees it. AGENTS.md requires a bound with a cleanup path for every
-   growth, and a parser is a growth: SQLite never shrinks on DELETE, so an unbounded source
-   nobody measured is discovered as a full disk rather than as a number.
+3. **Its size** — Measure storage growth on a real corpus before finishing. Compare
+   `SELECT name, pgsize FROM dbstat` before and after ingest into a throwaway store. Report size per
+   record and per day, and whether a retention rule covers it. `trace.horizon_days` prunes only the
+   step timeline. A source with no steps grows `usage_record` indefinitely; only `clear` followed by
+   `compact` frees space. AGENTS.md requires a bound and cleanup path for every source of growth.
+   SQLite does not shrink on DELETE, so unmeasured growth can fill a disk.
 
 ## The intake path: open a connector issue first
 
-Before writing code, open a **Connector request** issue
-([`.github/ISSUE_TEMPLATE/connector.yml`](../../.github/ISSUE_TEMPLATE/connector.yml)). It
-captures the tool, which channels its data is available through (local logs, vendor API,
-OTLP, editor/CLI hooks), and — most importantly — a redacted sample of the log format.
-That sample becomes the synthetic fixture, and the discussion settles the token-mapping
-questions (does input include cache? how is reasoning billed?) before they turn into
-wrong numbers. A connector is a well-scoped first contribution; the issue is where it
-starts.
+Before coding, open a **Connector request** issue
+([`.github/ISSUE_TEMPLATE/connector.yml`](../../.github/ISSUE_TEMPLATE/connector.yml)). Include the
+tool, available data channels (local logs, vendor API, OTLP, editor/CLI hooks), and a redacted log
+sample. The sample becomes the synthetic fixture. Use the discussion to settle token mapping,
+including whether input includes cache and how reasoning is billed, before producing wrong numbers.
+A connector is a scoped first contribution that starts with this issue.
 
 ---

@@ -1,23 +1,20 @@
 # Gating CI on what a window cost
 
-*Part of [Extending assaio](../extending.md). The rules that decide a verdict live in [rule plugins](rule-plugins.md).*
+*Part of [Extending assaio](../extending.md). Verdict rules are in [rule plugins](rule-plugins.md).*
 
-`check` is the only command that exits non-zero on purpose. It fails on a token or
-API-equivalent `$` budget, and it fails when a configured [rule plugin](rule-plugins.md) raises
-an `error` alert — or cannot be evaluated at all. Everything below is a complete, working
-invocation; every command and flag on this page is checked against the binary's own command
-tree, so a renamed flag breaks the build rather than a reader's pipeline.
+`check` is the only command designed to exit non-zero. It fails on a token or API-equivalent `$`
+budget, or when a configured [rule plugin](rule-plugins.md) raises an `error` alert or cannot run.
+Every invocation below works, and every command and flag is checked against the binary's command
+tree so a renamed flag fails the build before it breaks a pipeline.
 
 ## The one thing to decide first
 
-**Tokens or dollars.** `--max-tokens` is plan-independent: it counts what was spent regardless of
-what anybody pays per token. `--max-cost` is an API-equivalent estimate, and on a subscription it
-is not your bill — it is what the same usage would have cost at list price.
+**Tokens or dollars.** `--max-tokens` counts usage regardless of the price paid per token.
+`--max-cost` estimates API-equivalent list-price cost; on a subscription, it is not your bill.
 
-A cost gate refuses to pass on a partial figure: a window carrying usage the price table cannot
-price **fails** rather than reporting the priced part as if it were the whole. That is deliberate,
-and it is why a token gate is the better default for a team that has not configured its pricing
-basis yet.
+A cost gate **fails** if the window includes usage missing from the price table; it will not treat a
+partial cost as the whole. Use a token gate by default until your team has configured its pricing
+basis.
 
 ```sh #budget-tokens
 # Fails when the last 7 days exceeded 50M tokens.
@@ -31,7 +28,7 @@ assaio-agent check --since 30d --max-cost 1500
 
 ## As a pre-push hook
 
-The cheapest place to notice a runaway week, because it costs nothing until you push.
+Catch a runaway week here at no cost until you push.
 
 ```sh #pre-push-hook
 #!/usr/bin/env sh
@@ -42,21 +39,18 @@ fi
 exit 0
 ```
 
-Blocking a push on a *team* budget punishes whoever pushes last, which is why the recipe warns.
-Block on a rule plugin instead when the thing you want stopped is a property of the change.
+A push gate on a *team* budget penalizes whoever pushes last. To stop a property of a change, gate
+on a rule plugin instead.
 
 ## As a GitHub Actions job
 
-**`check` reads a store, and a CI runner has none.** This is the part every "put it in CI" recipe
-gets wrong, including an earlier draft of this one: a runner's own filesystem holds no agent
-sessions, so a gate that just installs the binary and runs `check` reads an empty window and
-passes at any spend, forever. There is no command that pulls a window either — `sync` is
-push-only.
+**`check` reads a store, and a CI runner has none.** A runner has no agent sessions, so installing
+the binary and running `check` against its empty window passes regardless of spend. `sync` only
+pushes; no command pulls a window.
 
-So the store has to arrive from somewhere, and the job has to say where. Two honest shapes: run
-the gate **on the machine that has the store** (the [team server](../extending/team-server.md)
-host, via `--db`), or carry the store into the job as an artifact something else published. The
-recipe below does the second, because it is the one that fits an Actions workflow.
+Provide the store to the job. Run the gate **on the machine that has the store**, such as the [team
+server](../extending/team-server.md) host with `--db`, or publish the store as an artifact and bring
+it into the job. The recipe below uses an artifact for an Actions workflow.
 
 ```yaml #actions-job
 name: ai-budget
@@ -86,12 +80,12 @@ jobs:
         run: assaio-agent check --db store/assaio.db --since 7d --max-tokens 50000000
 ```
 
-Note the schedule rather than a `pull_request` trigger. A per-PR budget gate reads as a
-per-person one within a week, and this project refuses to build those.
+Use the schedule shown, not a `pull_request` trigger. A per-PR budget gate acts like a per-person
+weekly budget, which this project does not build.
 
 ## What a non-zero exit does and does not mean
 
-`check` exits non-zero for three different reasons and it is worth knowing which you got:
+`check` exits non-zero for three reasons; identify which one occurred:
 
 | Exit | Meaning |
 |------|---------|
@@ -99,18 +93,17 @@ per-person one within a week, and this project refuses to build those.
 | an `error` alert | a rule plugin judged something and said so |
 | a rule that could not be evaluated | the gate fails closed rather than passing on an unanswered question |
 
-The third is the one people patch out and should not: a rule that failed to run has told you
-nothing, and treating nothing as a pass is how a gate quietly stops gating.
+Do not ignore the third reason. A rule that failed to run gave no verdict; treating that as a pass
+silently disables the gate.
 
 ## Before you gate on cost, check the cost
 
-A budget on an estimate is only as good as the price table under it. `doctor --strict` fails when
-too much of *your* store carries no price at all, which is the condition that makes a `--max-cost`
-gate misleading rather than wrong.
+An estimated-cost budget depends on the price table. `doctor --strict` fails when too much of *your*
+store has no price, which makes a `--max-cost` gate misleading rather than wrong.
 
 ```sh #doctor-before-cost
 assaio-agent doctor --strict
 ```
 
-Run it in the same job, before the gate. `pricing.max_unpriced_share` sets the ceiling; the
-default is 5% and `0` disables the check.
+Run it before the gate in the same job. `pricing.max_unpriced_share` sets the limit; it defaults to
+5%, and `0` disables the check.

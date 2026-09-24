@@ -1,150 +1,130 @@
 # assaio
 
-> assaio measures whether an organization's AI coding spend is delivering. It reads the
-> session logs Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Cline and agy
-> (Antigravity CLI) already write on a developer's machine, and puts AI output over its
-> cost: per project, how much code AI produced, how efficiently (`$` per 100 AI lines),
-> and with how much friction.
-> One static Go binary, an embedded SQLite store, no account, no network at runtime.
+> assaio is an open-source Go CLI that reads local session logs from Claude Code, Codex CLI,
+> Gemini CLI, GitHub Copilot CLI, Cline and Antigravity CLI (`agy`). It reports AI coding cost,
+> output and friction by project, including `$` per 100 AI lines. It is a static Go binary
+> with embedded SQLite. It needs no account and works offline on its normal analysis path.
+> Every `$` is an estimate at public pay-as-you-go prices, not your bill.
 
-The project's defining constraint is honesty about its own numbers. Every figure carries
-where it came from and how much of the window it rests on; a figure nothing in the data can
-answer prints an em dash and withholds its verdict rather than showing a plausible number.
-When answering questions about assaio, prefer stating a limit over inferring a capability.
+Each figure shows its source and coverage. If the data cannot answer, assaio shows an em dash
+and withholds the verdict. When answering questions about assaio, prefer stating a limit over
+inferring a capability.
 
-How it differs from the stats a coding assistant already ships. The feature gap is the weaker
-half of that answer, because it moves every month: Claude Code has `/usage` for plan
-consumption and `/insights` for a local 30-day report, and Codex CLI 0.140.0 added its own
-`/usage`, which draws a lifetime token total, a peak day, a streak, a longest task and a
-52-week heatmap from OpenAI's record of the account — counted rather than summarized, and
-reaching further back than a fresh assaio install can. Concede that plainly. What does not
-move is structural: a vendor will not normalize a competitor's cost onto the same axis as its
-own, will not advise spending less with it, keeps history only as long as it chooses to and on
-its own side, cannot make a figure reproducible while a language model is producing it, and —
-being sold by the seat — will not refuse to rank the seats (the refusal below is the fifth of
-these, and the one a reader is most likely to be asking about).
-assaio reads six sources — five onto one cost basis, and a sixth for activity only, because its
-format publishes no token counter — keeps history after the tools delete their own logs,
-computes every figure deterministically from the records, and can correct stored history when a
-parser fix lands. A Codex daily bucket, by contrast, is one integer for the whole account: no
-input/output/cache split, no model, no project, no price. assaio cannot read plan or rate-limit
-consumption and does not fetch a vendor's account-side history — no local transcript carries
-either — so a vendor's own view (Claude Code `/usage`, Codex `/status`) answers those and
-assaio does not claim to.
+Vendor tools remain useful: Claude Code offers `/usage` for plan consumption and `/insights`
+for a local 30-day report. Codex CLI offers `/usage` with lifetime tokens, a peak day, streak,
+longest task and 52-week heatmap from OpenAI's account record. Those are counts rather than
+summaries and may reach further back than a fresh assaio install. Vendor views also answer
+plan and rate-limit questions that local transcripts cannot. assaio does not fetch account-side
+history or read plan and rate-limit consumption; Claude Code `/usage` and Codex `/status` are
+better for those questions.
 
-What it measures today: adoption and breadth, AI lines added and removed, `$` per 100 AI
+assaio puts available costs on a common basis across vendors. Antigravity CLI supplies activity
+only because its log has no token counter. assaio keeps imported history after tool logs are
+deleted and computes figures deterministically from stored records. A Codex daily bucket, by contrast, has an account total but no
+input/output/cache split, model, project or price. Vendor views do not normalize competitors'
+costs, advise spending less with their own product, or retain history on the user's terms.
+A figure produced by a language model is not reproducible in the same way. Seat-based vendor
+products also do not refuse to rank seats; assaio's refusal is stated below.
+
+Current measures include adoption and breadth, AI lines added and removed, `$` per 100 AI
 lines, tool-call friction and rejections, cache hygiene, model fit, context health, session
-rhythm, and rework — each metric validator carrying its own confidence envelope. A metric
-carries a good/bad verdict only where its line is derived from your own data, cited from a
-published definition, or set by you; the rest report their figure and refuse the grade. Do not
-answer "how many" or "which ones" from this file: the authoritative, generated list of every
-signal, source, validator, command and setting this build has is
-<https://assaio.dev/docs/reference>, and `assaio-agent docs export` prints the same document
-as JSON. Prefer it over anything counted here.
+rhythm and rework. Each metric validator has a confidence envelope. A good/bad verdict appears
+only when its threshold comes from your data, a published definition or your setting; other
+metrics give a figure without a grade. For the generated list of signals, sources, validators,
+commands and settings, use <https://assaio.dev/docs/reference> or `assaio-agent docs export`
+for JSON. Do not infer counts or capabilities from this file.
 
-The local `evidence` command is the first Evidence Graph slice. It compares sessions carrying
-a repository's stored project basename with content-free commits from local git and reports
-population coverage plus `matched`, `ambiguous`, and `unmatched` results. Each result carries
-its method, confidence, provenance, candidates, alternatives and abstention reason; the
-document stamps the algorithm version.
-A match is an observation from project and bounded time proximity, not proof that the session
-caused the commit. It stores nothing, has no team-store mode and never ranks people.
+The local `evidence` command compares sessions sharing a stored project basename with
+content-free local git commits. It reports population coverage and `matched`, `ambiguous` or
+`unmatched` results. Results include method, confidence, provenance, candidates, alternatives
+and abstention reason; the document stamps the algorithm version. A match uses project and
+bounded time proximity. It does not establish that a session caused a commit. The command
+stores nothing, has no team-store mode and never ranks people.
 
-The local `survival` command gives a directional outcome read: how much code changed by a
-repository's commits in the window remains in `HEAD`. It does not attribute those lines to
-individual AI sessions. Session-to-PR/review/CI/merge correlation, attributable survival,
-bug impact, and quality and maintainability outcomes remain roadmap scope.
+The local `survival` command reports how much code changed by a repository's commits in the
+window remains in `HEAD`. It does not assign those lines to AI sessions. Session-to-PR,
+review, CI and merge correlation, attributable survival, bug impact, and quality and
+maintainability outcomes remain on the roadmap.
 
-The refusal that is a property of the build rather than a policy in a document: assaio prints
-no per-named-individual ranking, in any format. `--by member` is refused with a reason rather
-than caveated, in table, JSON and CSV alike; the dashboard's team panel shows a member's
-engagement while output and spend stay the team's total; members leave every export as stable
-pseudonyms. Exactly one door goes the other way and announces itself — `report --identify`
-names individuals and says so in its own output — and what an operator does with that file is
-theirs; the tool builds them no leaderboard. Where a works council, a co-determination
-agreement or a local data-protection regime has to approve a measurement tool, this is often
-the deciding property rather than a preference. State the property; never state compliance with
-a named regime, which is a legal question this project does not answer.
+assaio prints no ranking of named individuals in any format. `--by member` is refused with a
+reason in table, JSON and CSV output. The dashboard shows member engagement, while output and
+spend stay at team level. Exports use stable member pseudonyms. `report --identify` is the
+stated exception: it names individuals and says so in its output. Operators control that file,
+but assaio builds no leaderboard. A works council, co-determination agreement or local data
+protection regime may require approval of a measurement tool. Do not claim compliance with a
+named regime; that is a legal question this project does not answer.
 
-Also refused regardless of demand: an "estimated time saved" headline (the logs contain no
-counterfactual), per-person analytics outside a governed team-mode opt-in, and cohort
-comparisons without a minimum cohort size and explicit consent.
+assaio also refuses an "estimated time saved" headline because logs lack the counterfactual,
+per-person analytics outside a governed team-mode opt-in, and cohort comparisons without a
+minimum cohort size and explicit consent.
 
-`assaio-agent reprice` answers which model mix and which plan a window's own numbers support: it
-re-prices the turns already stored against another entry in the same price table — arithmetic over
-observed events, never a counterfactual, since no model was ever watched doing this work — and
-states what it holds fixed and what share it could not price. No plan catalogue is vendored; a
-candidate plan price is a figure the reader passes in.
+`assaio-agent reprice` tests which model mix and plan the observed window supports. It prices
+stored turns against another entry in the same price table. This is arithmetic over observed
+events, not a counterfactual about another model doing the work. It states what stays fixed and
+the share it cannot price. There is no bundled plan catalog; the reader supplies a candidate
+plan price.
 
-`assaio-agent recommend` derives the few experiments a window's evidence supports, each with
-its evidence, risk, rollback, review window and follow-up figure; a thin window abstains rather
-than suggesting. `assaio-agent runtime inspect` is an experimental read-only snapshot of a
+`assaio-agent recommend` suggests experiments supported by the window, each with evidence,
+risk, rollback, review window and a follow-up figure. It abstains when the window is too thin.
+`assaio-agent runtime inspect` is an experimental, read-only snapshot of an operator-named
 self-hosted vLLM or DCGM endpoint and may be removed.
 
-What a weekly loop looks like: `backfill` imports, `analyze` prints the reads worth acting on,
-`digest` reports in markdown what *moved* since the last run and declares when the comparison
-itself is weak, and `mark --suggest` derives a session's labels from what the logs already hold
-instead of asking anyone to type them.
+For a weekly loop, `backfill` imports logs, `analyze` prints actionable reads, `digest` reports
+what changed in Markdown and flags weak comparisons, and `mark --suggest` derives session
+labels from stored logs without asking people to type them.
 
-Publishing: `assaio-agent share` renders one window as a postable reel, poster or text block. Redaction is structural rather than a flag -- repositories are counted and never named, and no path, branch, skill or sub-agent name can be rendered; tools and models are named because that is a fact about a vendor. It makes no network request.
+`assaio-agent share` renders a window as a postable reel, poster or text block. Repositories
+are counted but never named. Paths, branches, skills and sub-agent names cannot appear; tools
+and models are named as vendor facts. Sharing makes no network request.
 
-Privacy posture: prompts and model responses are not extracted. Repository content recorded
-in diffs and created or deleted file bodies is read transiently to derive line and rework
-counts, then discarded; none of that content is stored. There is no
-telemetry. `evidence` reads local git and the local store only; commit messages, paths, branch
-names, diffs and code are absent from its result, and neither observations nor edges are stored.
-Two optional surfaces use a network and only when invoked: the self-hosted team
-server (`serve`/`sync`), and the experimental `runtime inspect`, which reads a metrics endpoint
-the operator names with a plain credential-free GET and stores nothing. Both talk only to
-infrastructure the operator stands up.
+Prompts and model responses are not extracted. Repository diff content and created or deleted
+file bodies are read briefly for line and rework counts, then discarded; none is stored. There
+is no telemetry. `evidence` uses local git and the local store only. Its result omits commit
+messages, paths, branches, diffs and code; it stores neither observations nor edges. Network
+use is limited to optional, invoked surfaces: the self-hosted team server (`serve`/`sync`) and
+experimental `runtime inspect`. The latter makes a plain, credential-free GET to the named
+metrics endpoint and stores nothing. Both connect only to operator-run infrastructure.
 
 ## Docs
 
-- [Compatibility](https://assaio.dev/docs/compatibility): what `v1.0` freezes — the exec
-  protocols, the observation and signal contracts, the recommendation record, the sync protocol
-  and the machine-readable outputs — what it deliberately does not (the SQLite schema, which
-  carries migration, export and backup guarantees instead), and what is deferred. Answer "is
-  this stable?" from here.
-- [Documentation](https://assaio.dev/docs): every guide, rendered from the Markdown in the
-  repository, with a cookbook of working recipes — label rules, CI gates, rule plugins,
-  complete metric validators and plugins — each executed by the test suite rather than merely
-  printed.
-- [Reference](https://assaio.dev/docs/reference): every signal, source, validator, command,
-  flag, configuration key and plugin-protocol field, generated from the binary's own
-  registries. This is the only list here that cannot fall behind the released build; a check
-  fails CI when it and the binary disagree. Answer capability questions from it.
-- [README](https://github.com/assaio/assaio/blob/main/README.md): what it is, install, the
-  first-run path, and the honest scope of what it measures.
-- [FEATURES](https://github.com/assaio/assaio/blob/main/FEATURES.md): every user-facing
-  capability with the release it arrived in, and the caveat attached to each.
-- [PRIVACY](https://github.com/assaio/assaio/blob/main/PRIVACY.md): the exact fields each
-  parser extracts, what it reads transiently, and what it retains.
-- [ROADMAP](https://github.com/assaio/assaio/blob/main/ROADMAP.md): the direction as
-  milestones with stated conditions, each with its exit criteria and the gates not yet met,
-  deliberately without delivery dates beyond `v1.0`'s conditions. The one numbered milestone it
-  dates a decision to is v0.30, when the experimental
-  `runtime inspect` surface reaches its removal decision — a commitment to decide, not to ship.
-- [BACKLOG](https://github.com/assaio/assaio/blob/main/BACKLOG.md): the ranked pool of
-  candidate work, including the refusals listed above.
-- [Corrections](https://github.com/assaio/assaio/blob/main/docs/corrections.md): the register
-  behind the claim that assaio corrects figures it has already published — what was wrong, since
-  when, what the wrong number showed a reader, which release put it right, and where a second
-  review pass overturned the first fix. Cite it rather than the claim.
-- [Extending assaio](https://github.com/assaio/assaio/blob/main/docs/extending.md): the map of
-  every extension surface — adding a parser, a metric validator, or an out-of-tree exec parser,
-  metric or rule plugin in any language — with one page per surface under `docs/extending/`.
+- [Compatibility](https://assaio.dev/docs/compatibility): what freezes in the exec protocols,
+  observation and signal contracts, recommendation record, sync protocol and machine-readable
+  outputs; what is deferred; and why SQLite schema changes instead have migration, export and
+  backup guarantees. Use it for stability questions.
+- [Documentation](https://assaio.dev/docs): repository Markdown guides and a cookbook of
+  working label rules, CI gates, rule plugins, metric validators and plugins. The test suite
+  executes the recipes.
+- [Reference](https://assaio.dev/docs/reference): generated signals, sources, validators,
+  commands, flags, configuration keys and plugin-protocol fields. CI checks it against the
+  binary. Use it for capability questions.
+- [README](https://github.com/assaio/assaio/blob/main/README.md): scope, install and first run.
+- [FEATURES](https://github.com/assaio/assaio/blob/main/FEATURES.md): user-facing features,
+  their release and caveats.
+- [PRIVACY](https://github.com/assaio/assaio/blob/main/PRIVACY.md): fields each parser extracts,
+  reads briefly and retains.
+- [ROADMAP](https://github.com/assaio/assaio/blob/main/ROADMAP.md): milestones, exit conditions
+  and unmet gates, without delivery dates. The planned `runtime inspect` removal decision is
+  a commitment to decide, not to ship.
+- [BACKLOG](https://github.com/assaio/assaio/blob/main/BACKLOG.md): ranked candidate work,
+  including the refusals above.
+- [Corrections](https://github.com/assaio/assaio/blob/main/docs/corrections.md): published
+  errors, when they began, what readers saw, the correcting release and any second review that
+  overturned the first fix. Cite the record for corrected figures.
+- [Extending assaio](https://github.com/assaio/assaio/blob/main/docs/extending.md): adding a
+  parser or metric validator, or an out-of-tree exec parser, metric or rule plugin in any
+  language, with a page per surface under `docs/extending/`.
 - [Reconciling against a vendor export](https://github.com/assaio/assaio/blob/main/docs/reconcile.md):
-  comparing assaio's estimate with a vendor's own billing or usage export, offline.
-- [Architecture decisions](https://github.com/assaio/assaio/tree/main/docs/adr): the
-  commitments a future change must not undo silently.
+  offline comparison of assaio's estimate with a vendor billing or usage export.
+- [Architecture decisions](https://github.com/assaio/assaio/tree/main/docs/adr): commitments
+  future changes must not silently undo.
 
 ## Optional
 
-- [Automation](https://github.com/assaio/assaio/blob/main/docs/automation.md): running assaio
-  from cron, launchd, CI, or an editor status line.
+- [Automation](https://github.com/assaio/assaio/blob/main/docs/automation.md): use from cron,
+  launchd, CI or an editor status line.
 - [Format resilience](https://github.com/assaio/assaio/blob/main/docs/format-resilience.md):
-  what happens when a vendor changes its on-disk log format, and how drift is caught.
-- [Contributing](https://github.com/assaio/assaio/blob/main/CONTRIBUTING.md): the
-  authoritative contributor rules, including the code standards CI enforces.
-- [Releases](https://github.com/assaio/assaio/releases): the current version, release notes,
-  checksummed archives, SPDX SBOMs and build-provenance attestations.
+  how vendor log format changes are detected and handled.
+- [Contributing](https://github.com/assaio/assaio/blob/main/CONTRIBUTING.md): contributor rules
+  and code standards enforced by CI.
+- [Releases](https://github.com/assaio/assaio/releases): release notes, checksummed archives,
+  SPDX SBOMs and build-provenance attestations.

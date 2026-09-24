@@ -1,14 +1,17 @@
 # The website
 
-<https://assaio.dev/> is `site/index.html`, written by hand: the overview page, and the only one
-anybody edits. Everything under `/docs` is generated. No framework, no CDN — every stylesheet is
-inlined, the favicon is an inline `data:` SVG and every link is absolute, so any page renders
-correctly opened straight from disk. Keep it that way; it is the same posture as the offline
-dashboard the tool itself writes. `wrangler.toml` says where the directory goes and under which
-domains — deployment configuration, not a build step.
+<https://assaio.dev/> is `site/index.html`, written by hand: the overview page, and the only
+hand-written page. `site/llms.txt` and `site/robots.txt` are also written by hand. Everything
+under `/docs` is generated. No framework, no CDN — every stylesheet is inlined, the favicon is an
+inline `data:` SVG and every link is absolute, so any page renders correctly opened straight from
+disk. Keep it that way; it is the same posture as the offline dashboard the tool itself writes.
+The page follows the operating system's light or dark setting through `prefers-color-scheme`;
+there is no toggle and nothing is stored. `wrangler.toml` says where the directory goes and under
+which domains — deployment configuration, not a build step.
 
-Three other files sit beside it in `site/`. One is generated, and two are there because they are
-read by something that is **not** the browser rendering the page:
+Other files sit beside it in `site/`. `docs.html`, `docs/` and `sitemap.xml` are generated;
+`og.png`, `llms.txt` and `robots.txt` are read by something other than the browser rendering the
+page:
 
 - **`docs.html` and everything under `docs/`** — the documentation section, all of it generated
   and none of it edited by hand. Each page is rendered from the Markdown it is written in under
@@ -22,6 +25,8 @@ read by something that is **not** the browser rendering the page:
   the file, and is only wrong against the deployed site. The `servedpaths` job holds every
   internal link and canonical to a path the host actually serves.
 
+- **`sitemap.xml`** — `make docs` writes it from the guide list. It has no `lastmod`, so the
+  committed file equals the generator's output; `TestCommittedSitemapListsEveryPage` holds it.
 - **`og.png`** — the card a shared link renders as. Every Open Graph tag was present except
   this one, so LinkedIn and the rest showed a bare grey line; a `data:` URI cannot stand in,
   because no major crawler accepts one for `og:image`. It does not weaken the "loads nothing"
@@ -32,9 +37,16 @@ read by something that is **not** the browser rendering the page:
 - **`llms.txt`** — the [llmstxt.org](https://llmstxt.org/) summary an assistant reads instead of
   scraping the page. It states what assaio measures, what it refuses to measure, and links the
   documents that answer the rest.
+- **`robots.txt`** — names each AI crawler in its own group, because each obeys only its own,
+  and announces the sitemap.
+
+The page carries JSON-LD in an inline `<script type="application/ld+json">`, which fetches
+nothing: schema.org Organization, WebSite and SoftwareSourceCode on the overview, and
+BreadcrumbList on every generated page. It carries no version, counts or source list, because
+those would repeat data-claim facts with nothing checking them.
 
 Anything added to `site/` is served, so it inherits the page's own rules: the `noversion` job
-reads every `.html`, `.txt` and `.md` under that directory, not just the page.
+reads every `.html`, `.txt`, `.md` and `.xml` under that directory, not just the page.
 
 ## What it is allowed to say
 
@@ -62,19 +74,20 @@ neither is a stamp: SVG geometry attributes, whose optimized path data writes im
 The rest of what a release used to re-read by hand is now a test. `site/index.html` declares which
 of its claims are checkable — `data-claim="command.digest"` on the entry that describes it,
 `data-covers="commands"` on the list that promises to enumerate them, `data-claim="sources.count"`
-on the word "five" — and `internal/docs` checks exactly those against the binary's own registries.
+on the source count — and `internal/docs` checks exactly those against the binary's own registries.
+Command lines printed in `<code>` on the page are checked against the binary's command tree by
+`CheckInvocations`, as they are in the guides.
 It runs in both directions, and the second one is the one that matters: a claim with nothing
 behind it fails, **and so does a shipped capability the page never names**. `digest` and
 `mark --suggest` shipped in v0.17.0 and this page said neither for a whole release.
 
-What it deliberately does not check is prose. "Twenty-one reads, one faceplate" has its number
-verified and its sentence trusted; the questions-it-answers section, the honest-scope section and
-the colophon are checked by a reader, not a regex. A guard that implied otherwise would be the
-false green this project exists to refuse. The cost of that trade is real and was paid at v0.21:
-the same page carried "the nineteen directional reads" 250 lines below a verified
-"Twenty-one", because the second was inside a claim span and the first was not. The set of covered claims is `commands`, `sources`,
-`signals`, `validators` and `config`, and only top-level commands are enumerable — a page has to
-name every capability, not every subcommand of one.
+What it deliberately does not check is prose. Counts sit in data-claim spans in the fact strip
+and also appear in prose; the questions, comparison and FAQ sections are checked by a reader, not
+a regex. A guard that implied otherwise would be the false green this project exists to refuse.
+The cost of that trade was paid at v0.21: a verified "Twenty-one" sat beside an unverified
+"nineteen" on the same page. That is why counts go in spans. The set of covered claims is
+`commands`, `sources`, `signals`, `validators` and `config`, and only top-level commands are
+enumerable — a page has to name every capability, not every subcommand of one.
 
 `site/llms.txt` cannot carry attributes, so it gets the weaker form of the same rule: every
 source has to be named somewhere in it, matched the way prose writes names ("Claude Code"
@@ -103,10 +116,8 @@ only be `canonical` or `alternate`, or carry a `data:` URI: nearly every other `
 the check allows the two that do not rather than trying to list the ones that do. And no
 `@import` or `url(//…)`, protocol-relative included. The check exists because the sentence is one
 pasted embed away from being false, and a marketing badge is precisely the shape that arrives as
-one. The Product Hunt badge in the hero is the worked
-example: the official SVG, both themes, inlined. Inlining it also froze its upvote counter, so
-the counter was removed rather than shipped stale — a page arguing that a number should never
-look more certain than it is cannot display a stale one.
+one. An embed is inlined or the sentence changes; the old Product Hunt badge was removed rather
+than inlined in the redesign. Product Hunt is a plain footer link.
 
 ## How it deploys
 
@@ -130,11 +141,11 @@ a fact about the project, and keeping it in the repository is what stops it from
 setting in a dashboard nobody remembers — which is how the site deploy stayed broken for five
 releases.
 
-`site.yml` no longer deploys. It runs the three artifact guards — no version named, nothing
-fetched at render time, a share card that exists — over every served page on each push, tag and
-pull request, and nothing else. The content guards are Go tests, so they run in `make test`
-locally and in `ci.yml`: keeping them in the language that owns the registries is what lets them
-compare against the registries rather than against another copy of the answer.
+`site.yml` no longer deploys. It runs the four artifact guards — no version named, nothing fetched
+at render time, every internal link served, a share card that exists — over every served page on
+each push, tag and pull request, and nothing else. The content guards are Go tests, so they run in
+`make test` locally and in `ci.yml`: keeping them in the language that owns the registries is what
+lets them compare against the registries rather than against another copy of the answer.
 
 ### What that costs, stated plainly
 

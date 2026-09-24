@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://assaio.dev/</loc></url>
+  <url><loc>https://assaio.dev/docs</loc></url>
+  <url><loc>https://assaio.dev/docs/compatibility</loc></url>
+  <url><loc>https://assaio.dev/docs/metric-validator</loc></url>
+  <url><loc>https://assaio.dev/docs/metric-validator-example</loc></url>
+  <url><loc>https://assaio.dev/docs/metric-plugin</loc></url>
+  <url><loc>https://assaio.dev/docs/rule-plugin</loc></url>
+  <url><loc>https://assaio.dev/docs/parser-plugin</loc></url>
+  <url><loc>https://assaio.dev/docs/data-source</loc></url>
+  <url><loc>https://assaio.dev/docs/query-your-data</loc></url>
+  <url><loc>https://assaio.dev/docs/team-server</loc></url>
+  <url><loc>https://assaio.dev/docs/source-fields</loc></url>
+  <url><loc>https://assaio.dev/docs/runtime-inspect</loc></url>
+  <url><loc>https://assaio.dev/docs/evidence</loc></url>
+  <url><loc>https://assaio.dev/docs/automation</loc></url>
+  <url><loc>https://assaio.dev/docs/reconcile</loc></url>
+  <url><loc>https://assaio.dev/docs/format-resilience</loc></url>
+  <url><loc>https://assaio.dev/docs/recipes/label-rules</loc></url>
+  <url><loc>https://assaio.dev/docs/recipes/ci-gates</loc></url>
+  <url><loc>https://assaio.dev/docs/recipes/rule-plugins</loc></url>
+  <url><loc>https://assaio.dev/docs/recipes/automation</loc></url>
+  <url><loc>https://assaio.dev/docs/recipes/extensions</loc></url>
+  <url><loc>https://assaio.dev/docs/reference</loc></url>
+</urlset>

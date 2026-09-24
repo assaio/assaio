@@ -1,12 +1,11 @@
 # Compatibility
 
-What `assaio` promises not to break, and what it deliberately does not promise. This file is
-the single answer: [ROADMAP.md](../ROADMAP.md), [RELEASING.md](../RELEASING.md) and
-[extending.md](extending.md) link here rather than restating it, because for several releases
-they each carried a different version of it and nothing noticed.
+This page defines what `assaio` promises to keep compatible and what it does not.
+[ROADMAP.md](../ROADMAP.md), [RELEASING.md](../RELEASING.md), and [extending.md](extending.md) link
+here because their separate versions disagreed for several releases without detection.
 
-`assaio` is pre-1.0. Until `v1.0`, a minor release may break any of it, and the changelog says
-so under a **Breaking** heading. What follows is what `v1.0` means.
+`assaio` is pre-1.0. Before `v1.0`, a minor release may break any contract; the changelog marks such
+changes **Breaking**. The sections below define the `v1.0` commitments.
 
 ## Frozen at v1.0
 
@@ -24,31 +23,29 @@ compatibility test, and a written deprecation path; after it, a breaking change 
 
 ## Not frozen, and guaranteed instead
 
-**The SQLite schema is an implementation detail.** It is not a public API and will not be
-frozen at `v1.0`. Reading the database directly is supported for exploration
-([extending/query-your-data.md](extending/query-your-data.md)) and unsupported as an integration.
+**The SQLite schema is an implementation detail.** It is not a public API and will not be frozen at
+`v1.0`. Direct database reads are supported for exploration
+([extending/query-your-data.md](extending/query-your-data.md)), not integration.
 
-What is guaranteed in its place:
+These guarantees take its place:
 
-- **Forward migration** from any released version to any later one, applied automatically and
-  tested from the oldest supported version. A shipped migration is immutable in name and
-  content (see [RELEASING.md](../RELEASING.md#schema-changes-hard-rule)).
-- **Export.** Everything the store holds is reachable through the machine-readable outputs
-  above, which *are* frozen. No analysis or export requires a network, a server, or a licence.
-- **Backup.** The store is one file; copying it while `assaio` is idle is a complete backup.
+- **Forward migration** from any released version to any later one, applied automatically and tested
+  from the oldest supported version. A shipped migration's name and content never change (see
+  [RELEASING.md](../RELEASING.md#schema-changes-hard-rule)).
+- **Export.** Machine-readable outputs above expose everything in the store, and those outputs *are*
+  frozen. Analysis and export need no network, server, or license.
+- **Backup.** The store is one file. Copy it while `assaio` is idle for a complete backup.
 
-The reason is v0.12: correcting a semantic error needed a migration that rewrote stored rows,
-and it will not be the last. A frozen store schema would have made that correction the breaking
-change instead of the bug. The promise worth making is that history stays *correctable*.
+The v0.12 migration corrected a semantic error by rewriting stored rows, and more corrections may be
+needed. Freezing the schema would have made that correction a breaking change instead of a bug fix.
+The guarantee is that stored history stays *correctable*.
 
 ## Deferred, and not a v1 contract
 
 **An in-process Go plugin API.** Exec protocols are the extension boundary: language-neutral,
-opt-in, validated at the boundary, and bounded in time and size. A dynamically loaded in-process
-API needs a measured performance or deployment need that nobody has demonstrated, and Go's own
-`plugin` package cannot deliver it portably. If it ever arrives it will be additive — a second
-boundary beside the exec one, never a replacement for it.
+opt-in, validated at the boundary, and limited in time and size. No measured performance or
+deployment need yet justifies a dynamically loaded in-process API, and Go's `plugin` package is not
+portable. If added, it will be a second boundary alongside exec, not a replacement.
 
-**Assaio Cloud.** The managed service is not part of this repository's compatibility surface.
-The contracts above are the same ones it will speak; nothing in the open-source binary may come
-to require it.
+**Assaio Cloud.** The managed service is outside this repository's compatibility surface. It will
+use the contracts above. The open-source binary will not require it.

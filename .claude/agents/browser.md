@@ -23,10 +23,11 @@ What every review covers:
 - **Console and network**: zero console errors; the page loads nothing over the network
   (the site promises it; the dashboard is offline by design). List any request.
 - **400 px wide** and the default width: no horizontal scroll, no clipped text.
-- **Keyboard**: the theme toggle and every link reachable and visible in focus.
-- **Both themes** (`data-theme`), because the palette is where contrast bugs hide.
-- On the site: the faceplate bars animate only when scrolled into view, so scroll before you
-  screenshot them.
+- **Keyboard**: every link and control reachable and visible in focus (the dashboard's theme
+  toggle included).
+- **Both themes**, because the palette is where contrast bugs hide: the dashboard's toggle
+  (`data-theme`); on the site, emulate `prefers-color-scheme` light and dark — it has no toggle.
+- **Phone and tablet** on the site: 320, 390, 768 and 1024 px as well as desktop.
 
 Save screenshots under the scratchpad or `${XDG_CACHE_HOME:-$HOME/.cache}/assaio-ui/` and
 report their paths, never their contents. Report: the file checked, a table of checks with

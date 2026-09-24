@@ -1,14 +1,14 @@
 # Worked example: Weekend Usage
 
-*Part of [Extending assaio](../extending.md). The contract this follows: [Adding a metric validator](metric-validator.md).*
+*Part of [Extending assaio](../extending.md). Contract: [Adding a metric
+validator](metric-validator.md).*
 
-A realistic company-specific metric: what share of AI token usage falls on a Saturday or
-Sunday — an out-of-hours/DevEx signal a security or engineering-management team might
-want that has no reason to be a built-in. (A per-**file** metric like "share of edits
-touching test files" is *not* possible from stored data today — file paths are read
-transiently during ingest and never persisted, only aggregate counts are, per [Parsers
-stay hermetic](data-source.md#parsers-stay-hermetic--project-resolution-is-ingests-job). This example
-uses a day-level signal instead, which `Input.Usage`'s `Day` field already supports.)
+This company-specific metric measures the share of AI tokens used on Saturday or Sunday. A security
+or engineering-management team might use it as an out-of-hours/DevEx signal; it does not need to be
+built in. A per-**file** metric such as "share of edits touching test files" cannot use stored data
+today: ingest reads file paths briefly but persists only aggregate counts (see [Parsers stay
+hermetic](data-source.md#parsers-stay-hermetic--project-resolution-is-ingests-job)). The example
+uses a day-level signal supported by `Input.Usage`'s `Day` field.
 
 `internal/analyze/weekend_usage.go`:
 
@@ -178,8 +178,8 @@ func TestWeekendUsageEmptyInputSafe(t *testing.T) {
 }
 ```
 
-`go test ./internal/analyze/... -run Weekend -v` passes all three cases. This validator
-does not set `BarsPseudonym` (it has no `Bars` at all) and does not need `Delegation`,
-`Sessions`, or `Prices` — a validator only touches the `Input` fields its metric needs.
+`go test ./internal/analyze/... -run Weekend -v` passes all three cases. This validator sets no
+`BarsPseudonym` because it has no `Bars`. It needs no `Delegation`, `Sessions`, or `Prices`;
+validators use only the `Input` fields their metrics need.
 
 ---

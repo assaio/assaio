@@ -1,26 +1,23 @@
 # Extending assaio
 
-Every axis a company needs to adapt `assaio` for its own use is a documented, working
-extension point: your own **metric and dashboard section** (in-tree, one file — or
-**out-of-tree in any language**, no fork), your own **log-source location** (a config change,
-no code), an entirely new **tool as an out-of-tree plugin** (any language, no Go), your own
-**CI gate** (a rule plugin, any language), and **direct SQL** against your own data.
+Adapt `assaio` through documented, working extension points: add a **metric and dashboard section**
+(one in-tree file or **out-of-tree in any language** without a fork), change a **log-source
+location** in config, add a **tool as an out-of-tree plugin** (any language, no Go), define a **CI
+gate** with a rule plugin (any language), or use **direct SQL** on your data.
 
-This page is the map and the rules that bind all of them. Each surface has its own page, and
-what can be *listed* rather than explained — every signal, source, validator, command, setting
-and protocol field — is generated from the binary's own registries:
+This page maps the extension points and their rules. Each has its own guide. The binary generates
+lists of every signal, source, validator, command, setting, and protocol field from its registries:
 
-- **[`assaio-agent docs export`](#the-generated-reference)** — the machine-readable reference,
-  published as [assaio.dev/docs/reference](https://assaio.dev/docs/reference).
+- **[`assaio-agent docs export`](#the-generated-reference)** — a machine-readable reference
+  published at [assaio.dev/docs/reference](https://assaio.dev/docs/reference).
 
-**The headline mechanism, in one paragraph.** A metric is one Go file under
-`internal/analyze/` that reads the same `Input` bundle every built-in metric reads and returns
-one `Result` value. Register it from that file's own `init()`, and it appears in `assaio
-analyze`, `assaio analyze --format json`, **and** the HTML dashboard — a new faceplate cell and
-a new ledger section, laid out, colored and captioned like every built-in one — with no other
-code to write and no template to touch. That claim is verified end to end in
-[the worked example](extending/metric-validator-example.md), including what happens when your
-metric's `Bars` rank by project name and the report is anonymized.
+**The headline mechanism, in one paragraph.** Put a metric in one Go file under `internal/analyze/`.
+It reads the same `Input` bundle as built-in metrics and returns one `Result`. Register it in that
+file's `init()`, and it appears in `assaio analyze`, `assaio analyze --format json`, **and** the
+HTML dashboard as a faceplate cell and ledger section with the same layout, colors, and captions as
+built-ins. No other code or template edits are needed. [The worked
+example](extending/metric-validator-example.md) verifies this end to end, including anonymization
+when the metric's `Bars` rank by project name.
 
 ## The surfaces
 
@@ -37,15 +34,14 @@ metric's `Bars` rank by project name and the report is anonymized.
 | [In-tree parser (new data source)](extending/data-source.md) | today | One Go package under `internal/parser/`, with golden and fuzz tests; merge via PR. |
 | Out-of-tree Go plugin API (library import, dynamically loaded) | deferred | Not a v1 contract and not scheduled: the exec protocols are the extension boundary. See [compatibility.md](compatibility.md). |
 
-Two more pages exist for reading rather than writing:
-[what each source's log carries](extending/source-fields.md), the field-by-field audit behind
-every depth row, and [the worked example](extending/metric-validator-example.md).
+For background, read [what each source's log carries](extending/source-fields.md), the
+field-by-field audit behind every depth row, and [the worked
+example](extending/metric-validator-example.md).
 
 ## Recipes
 
-The guides describe the contracts; these are working examples to copy. **Every recipe is held to
-still working, and not all of them equally** — the classification is code, and a recipe missing
-from it fails the build:
+The guides define the contracts; these are working examples to copy. **Recipes have different levels
+of verification.** Code classifies each recipe, and the build fails if one is missing:
 
 | how | what it means | how many |
 |---|---|---|
@@ -54,37 +50,33 @@ from it fails the build:
 | loaded | parsed by assaio's own configuration loader and validated | 2 |
 | shape-checked | parsed, and the method set held to the `Validator` interface: a renamed method fails, a wrong number does not | 3 |
 
-A shell recipe is the weak one, and it is weak in a specific way worth knowing: the flags are
-real, and whether the pipeline around them does what the prose says is a reviewer's judgement.
+Shell recipes have the weakest verification: the flags are real, but a reviewer judges whether the
+surrounding pipeline works as described.
 
-- [Extensions, written out in full](recipes/extensions.md) — complete validators and metric
-  plugins, including the one thing that separates a metric from a mistake: gating on what the
-  window can actually answer.
-- [Label rules you can paste in](recipes/label-rules.md) — branch, skill, sub-agent and
-  entrypoint conventions for `mark --suggest`, which ships defaults for almost nothing on purpose.
+- [Extensions, written out in full](recipes/extensions.md) — complete validators and metric plugins,
+  including how to gate on what the window can answer.
+- [Label rules you can paste in](recipes/label-rules.md) — branch, skill, sub-agent, and entrypoint
+  conventions for `mark --suggest`, which intentionally ships almost no defaults.
 - [Rule plugins you can run today](recipes/rule-plugins.md) — three complete gates, starting with
-  the one that catches a verdict withheld for want of data.
-- [Gating CI on what a window cost](recipes/ci-gates.md) — `check` as a pre-push hook and a
-  scheduled job, and what each non-zero exit actually means.
-- [Running it without being asked](recipes/automation.md) — the weekly loop, delivering a digest,
-  and what not to automate.
+  one that catches a verdict withheld for lack of data.
+- [Gating CI on what a window cost](recipes/ci-gates.md) — `check` as a pre-push hook and scheduled
+  job, with the meaning of each non-zero exit.
+- [Running it without being asked](recipes/automation.md) — a weekly loop, digest delivery, and what
+  to avoid automating.
 
 ## The generated reference
 
-`assaio-agent docs export --format json` prints everything about the binary that can be
-enumerated: the signal catalog, the source-depth matrix, the validators with their scope, the
-whole command tree with flags and defaults, every configuration key with its environment
-variable, and the metric-plugin protocol's fields. The same document renders as
-[assaio.dev/docs/reference](https://assaio.dev/docs/reference).
+`assaio-agent docs export --format json` prints the binary's enumerable surfaces: the signal
+catalog, source-depth matrix, validators and their scope, command tree with flags and defaults,
+configuration keys and environment variables, and metric-plugin protocol fields. The same document
+appears at [assaio.dev/docs/reference](https://assaio.dev/docs/reference).
 
-It exists because a hand-copied list is a list that falls behind: the website went three
-releases stale before anyone noticed, and a shipped command sat unpublished for a whole release
-after that. So the enumerable surfaces are generated, the published files declare which of
-their claims are checkable, and `make test` fails when a page and the binary disagree. What a
-figure *means* stays prose — reflection reads names and types, never intent — which is why
-these pages are still written by hand.
+The binary generates enumerable references, and `make test` fails when a published page disagrees
+with it. Published files declare which claims can be checked. A hand-copied website list fell three
+releases behind, and a shipped command went unpublished for another release. These pages still
+explain what figures *mean* by hand: reflection can read names and types, but not intent.
 
-Read it directly if you are building on assaio:
+If you are building on assaio, read the reference directly:
 
 ```console
 $ assaio-agent docs export | jq '.validators[] | select(.scope=="window") | .name'
@@ -93,62 +85,54 @@ $ assaio-agent docs export | jq '.sources[] | {tool, tier, signals: (.answers | 
 
 ## Honesty constraints for every extension
 
-`assaio`'s product promise is **measure value, not people; honest statistics or nothing**
-(`AGENTS.md`, `CONTRIBUTING.md`). That promise is not a built-in-only courtesy — it binds every
-extension whose output a person reads as a metric or a dashboard section: an in-tree validator,
-a community PR, or a private fork's own validator file. Concretely:
+`assaio` promises to **measure value, not people; honest statistics or nothing** (`AGENTS.md`,
+`CONTRIBUTING.md`). This applies to every extension whose metric or dashboard output people read:
+in-tree validators, community PRs, and validator files in private forks. In practice:
 
 - **Directional, not authoritative.** A `Read` (`Strong`/`Watch`/`Healthy`/…) is a diagnostic
-  signal, not a verdict. If the evidence behind your metric is contested, incomplete, or a proxy
-  for the thing you actually care about, say so in `HowToRead` or a `Caveat` — the word
-  "directional" belongs in your rendered text, not just in this document.
-- **`—` for an undefined ratio, never a fabricated one.** Divide-by-zero is a dash, not a zero
-  or a 100% — use `humanize.PercentOrDash` (`internal/humanize/percent.go`) or `perActiveDay`
-  (`internal/analyze/format.go`), or the same
-  pattern by hand. A metric that reports "0%" when it has no denominator to divide by is a lie
-  dressed as a number. This holds even when an underlying aggregate's own zero-denominator
-  default is `0` (e.g. `report.ChurnStat.ReworkRate`) — a `Figure` must still check the raw
-  denominator itself rather than formatting that default directly (see
-  `internal/analyze/rework.go`'s "rework" figure, which reads `ReworkLines`/`LinesAdded` via
-  `humanize.PercentOrDash` instead of formatting `ReworkRate`).
-- **A silence is not a zero.** Before reading a column, check that the source recording the row
-  can produce it at all — `answers` on the wire, `parser.Answers` in-tree (ADR 0011). A source
-  that never writes a cache-write counter leaves the field at zero, and a metric that reads that
-  as "the cache was never written" is reporting a silence as a measurement.
-- **Aggregate and pseudonymized by default; per-person only as a governed opt-in.** `Input`
-  carries no user identity today — it groups by project, tool, model and entrypoint, never by
-  person, so a validator that ranks something ranks *those* dimensions, the same way
-  `throughput` ranks projects, never individuals. If your `Bars` rank by a name a person chose,
-  set `Result.BarsPseudonym` (`"project"` or `"skill"`) so the dashboard's `--anonymize` (on by
-  default) pseudonymizes those labels exactly as it does for the built-in `throughput`
-  validator — enforced generically by `internal/dashboard.anonymizeVerdicts`, not hardcoded to
-  any one validator's name, so it applies to yours too. Leave it empty for any other dimension
-  (models, tools, …); those must never be pseudonymized. A future per-member breakdown is only
-  ever a deliberate, consented, team-mode opt-in — never silent, never a leaderboard, never
-  built for individual performance evaluation.
-- **Say so when you approximate.** If your metric cannot observe something precisely from the
-  stored aggregate — `Input.Usage` is already grouped, so per-record detail is gone — label the
-  figure as approximate in the rendered text rather than presenting it as exact.
-- **Never a per-person scoreboard.** Even in team mode, an extension must not turn individual
-  usage into a ranked, named list presented as a performance signal. See `PRIVACY.md`.
+  signal, not a verdict. If your metric relies on contested or incomplete evidence, or measures a
+  proxy, explain that in `HowToRead` or a `Caveat`. Put the word "directional" in the rendered text,
+  not only here.
+- **`—` for an undefined ratio, never a fabricated one.** Show a dash for division by zero, never
+  zero or 100%. Use `humanize.PercentOrDash` (`internal/humanize/percent.go`), `perActiveDay`
+  (`internal/analyze/format.go`), or the same pattern. "0%" without a denominator is false. Even if
+  an aggregate defaults to `0` when its denominator is zero (for example,
+  `report.ChurnStat.ReworkRate`), a `Figure` must check the raw denominator instead of formatting
+  that default. See the "rework" figure in `internal/analyze/rework.go`, which passes
+  `ReworkLines`/`LinesAdded` to `humanize.PercentOrDash` instead of formatting `ReworkRate`.
+- **A silence is not a zero.** Before reading a column, check whether the row's source can produce
+  it: `answers` on the wire or `parser.Answers` in-tree (ADR 0011). A source that never records
+  cache writes leaves the counter at zero; that does not mean the cache was never written.
+- **Aggregate and pseudonymized by default; per-person only as a governed opt-in.** `Input` has no
+  user identity today. It groups by project, tool, model, and entrypoint, never person. Rank those
+  dimensions as `throughput` ranks projects, never individuals. If your `Bars` rank names chosen by
+  people, set `Result.BarsPseudonym` to `"project"` or `"skill"`. The dashboard's `--anonymize`, on
+  by default, then pseudonymizes those labels as it does for built-in `throughput`.
+  `internal/dashboard.anonymizeVerdicts` applies this to every validator, including yours. Leave the
+  field empty for other dimensions, such as models and tools; they must never be pseudonymized. Any
+  future per-member breakdown requires a deliberate, consented team-mode opt-in. It must never be
+  silent, a leaderboard, or a tool for individual performance evaluation.
+- **Say so when you approximate.** If stored aggregates cannot show a value precisely, label the
+  rendered figure approximate. `Input.Usage` is already grouped, so per-record detail is gone.
+- **Never a per-person scoreboard.** Even in team mode, an extension must not present ranked, named
+  individual usage as a performance signal. See `PRIVACY.md`.
 
-These are the rules `internal/analyze`'s built-in validators are held to and tested against
+The built-in validators in `internal/analyze` follow these rules, with tests
 (`TestValidatorsEmptyInputSafe`, `TestReworkDashOnZeroToolCalls`,
-`TestBuildNeverAnonymizesModelNames`) — a code review of a new validator holds it to the same
-bar.
+`TestBuildNeverAnonymizesModelNames`). Code review holds new validators to the same standard.
 
 ## Custom metrics (what's shipped vs. roadmap)
 
-Custom metrics ship **two ways today**: the in-tree, one-file-per-metric
-[validator](extending/metric-validator.md) — compiled in, runs everywhere including
-[the team server](extending/team-server.md) — and the out-of-tree
-[metric plugin](extending/metric-plugin.md), any language, no fork, declared in config, running
-in `analyze` and the local dashboard. Thresholds *on* those metrics ship as
-[rule plugins](extending/rule-plugin.md), out-of-tree for the same reason.
+Custom metrics ship **two ways today**: an in-tree, one-file-per-metric
+[validator](extending/metric-validator.md), compiled in and available everywhere, including [the
+team server](extending/team-server.md); or an out-of-tree [metric
+plugin](extending/metric-plugin.md), written in any language without a fork, declared in config, and
+run by `analyze` and the local dashboard. Set thresholds for those metrics with out-of-tree [rule
+plugins](extending/rule-plugin.md).
 
-A *dynamically loaded, in-process Go API* — the `plugin/metric/` and `plugin/rule/` tree
-sketched in [`CONTRIBUTING.md`](../CONTRIBUTING.md) — is **deferred and is not a v1 contract**;
-see [compatibility.md](compatibility.md) for why and for what would change that. The exec
-protocols are the extension boundary. Their wire envelope is versioned but pre-1.0 unstable; if
-you have a metric in mind that needs domain data the envelope (or `Input`) does not yet carry,
-open an issue and describe it — that is exactly what shapes it before the contract freezes.
+A *dynamically loaded, in-process Go API*—the `plugin/metric/` and `plugin/rule/` tree proposed in
+[`CONTRIBUTING.md`](../CONTRIBUTING.md)—is **deferred and is not a v1 contract**.
+[compatibility.md](compatibility.md) explains why and what could change that. Exec protocols define
+the extension boundary. Their wire envelope is versioned but unstable before 1.0. If your metric
+needs domain data absent from the envelope or `Input`, open an issue describing it so the contract
+can account for it before it freezes.
