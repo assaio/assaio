@@ -101,9 +101,9 @@ same questions as one that reports both. Every source therefore publishes its **
 |------|-------|-------|---------------|-------------------------------|------------------|---------------------------------|
 | Claude Code | v0.1 | **deep** | ✔ (incl. sub-agent turns) | ✔ full, incl. rejections | ✔ steps, outcomes and targets | ✔ |
 | OpenAI Codex CLI | v0.1 | standard | ✔ (exact, delta-based) | ✔ except rejections; since v0.13 a created file contributes its lines, which it did not before | ✔ since v0.26: steps and targets; the outcome *signal* is not claimed — only a patch states whether it applied, and a command is marked *completed* whether or not it worked | — |
-| Gemini CLI | v0.1 | standard | ✔ | — (cost only; `B39` / `B72` in [BACKLOG.md](BACKLOG.md)) | — | — |
+| Gemini CLI | v0.1 | standard | ✔ | — (sessions, turns and active minutes; no lines, edits or rework; `B39` / `B72` in [BACKLOG.md](BACKLOG.md)) | — | — |
 | GitHub Copilot CLI | v0.6 | standard | ✔ (exact, per model, incl. reasoning) | ✔ lines added/removed per session; edit and tool-call counts are in the log but not extracted yet ([audit](docs/extending/source-fields.md)) | — | — |
-| Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (cost only; `B39` / `B72` in [BACKLOG.md](BACKLOG.md)) | — | — |
+| Cline | v0.1 | standard | ✔ (recomputed from tokens) | — (sessions, turns and active minutes; no lines, edits or rework; `B39` / `B72` in [BACKLOG.md](BACKLOG.md)) | — | — |
 | Antigravity CLI (`agy`) | v0.25 | **activity-only** | — (no counter exists in the format; every token and cost figure withholds rather than counting zero) | ✔ turns, tool calls and edits per turn; no changed lines, rework or compaction | — | — |
 | Exec parser plugins | v0.1 | declared per record | ✔ (validated at the boundary) | — (protocol carries tokens only) | — | — |
 

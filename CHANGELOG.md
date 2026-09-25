@@ -33,6 +33,13 @@ Discussion.
 
 ## [Unreleased]
 
+### Fixed
+
+- Corrected the threat model and architecture guide's claim that the desktop opener is the only
+  program assaio launches: on an empty store, `share` imports logs and starts configured parser
+  plugins; `evidence` and `survival` run `git`, and metric and rule plugins run as subprocesses
+  ([correction](docs/corrections.md#threat-model-said-share-starts-the-only-program)).
+
 ## [0.29.0] - 2026-09-25
 
 ### Changed

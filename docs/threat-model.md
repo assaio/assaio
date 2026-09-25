@@ -239,8 +239,10 @@ with the report it came from.
 **The artifact makes no request.** The preview page is self-contained — inline CSS, one
 inline script, no external font, image or request — and the PNG, MP4 or WebM it offers are
 produced in your own browser from a canvas and saved by your own download. `share` writes a
-file and asks the desktop to open it (`open`, `xdg-open`, `rundll32`), which is the only
-program assaio ever launches; `--no-open` writes the file and stops.
+file and asks the desktop to open it (`open`, `xdg-open`, `rundll32`); `--no-open` writes the
+file and stops. On an empty store, `share` first imports your logs, which starts any parser
+plugins you configured. Elsewhere, `evidence` and `survival` run `git`, and metric and rule
+plugins run as subprocesses.
 
 **Someone who receives a posted card learns:** which tools and models you use, aggregate
 token, line and cost magnitudes, a session-shape fingerprint, and how many repositories were

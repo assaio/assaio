@@ -64,10 +64,14 @@ current" that place is the releases page, which the site now links instead of co
 
 What replaced the guard is its inverse: `site.yml` fails if a bare `X.Y.Z` appears anywhere under
 `site/`. Reintroducing a stamp is therefore a deliberate act with a red check attached, not an
-easy convenience that quietly creates a chore. Two shapes are masked before the search, because
-neither is a stamp: SVG geometry attributes, whose optimized path data writes implicit separators
-(`d="M12.5.5…"`), and dotted quads, because the reference page publishes `serve --addr`'s default of
-`127.0.0.1:8787`. Masking is the same move both times — say what is *not* a version, then look.
+easy convenience that quietly creates a chore. Four shapes are masked before the search, in this
+order: SVG geometry attributes, whose optimized path data writes implicit separators
+(`d="M12.5.5…"`); dotted quads, because the reference page publishes `serve --addr`'s default of
+`127.0.0.1:8787`; another tool's version immediately after its name, such as
+`Antigravity CLI 1.1.23`, which ages when that tool releases and makes a self-updating format claim
+checkable; and a versioned URL on another project, which is a citation. A URL on assaio's own
+repository is still a stamp and still fails. Masking is the same move every time — say what is
+*not* a version, then look.
 
 ### The claims the page is held to
 
