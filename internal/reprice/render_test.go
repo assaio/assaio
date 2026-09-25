@@ -79,6 +79,46 @@ func TestRenderNamesATargetItCouldNotPrice(t *testing.T) {
 	}
 }
 
+// TestRenderNamesALastListedTarget: a route priced at a rate the vendor may no longer offer
+// reads as current unless the block says otherwise, and only those routes may be named.
+func TestRenderNamesALastListedTarget(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		against []string
+		want    string
+	}{
+		{name: "no named target", want: ""},
+		{name: "a listed target", against: []string{"cheap"}, want: ""},
+		{name: "a retained target", against: []string{"small"}, want: "small"},
+		{name: "a retained target beside a listed one", against: []string{"cheap", "small"}, want: "small"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in := lastListedInput([]store.UsageRow{row("big", 1_000_000, 100_000, 10_000_000, 1_000_000)})
+			w := Compute(&in, Options{Against: tc.against})
+
+			var buf bytes.Buffer
+			if err := RenderText(&buf, &w); err != nil {
+				t.Fatal(err)
+			}
+			if got := lastListedLine(buf.String()); got != tc.want {
+				t.Errorf("last listed names %q, want %q:\n%s", got, tc.want, buf.String())
+			}
+		})
+	}
+}
+
+// lastListedLine returns the names the last-listed line carries, or "" when there is no line.
+func lastListedLine(block string) string {
+	const prefix = "    last listed price: "
+	for _, line := range strings.Split(block, "\n") {
+		if rest, ok := strings.CutPrefix(line, prefix); ok {
+			named, _, _ := strings.Cut(rest, " — ")
+			return named
+		}
+	}
+	return ""
+}
+
 func TestNames(t *testing.T) {
 	for _, tc := range []struct {
 		name string

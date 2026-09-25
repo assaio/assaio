@@ -20,6 +20,9 @@ type Route struct {
 	Delta float64 `json:"delta"`
 	// Share is Delta over the observed priced cost: how much of the window the move touches.
 	Share float64 `json:"share"`
+	// LastListed is true when Target is priced at the last rate LiteLLM listed for a model it no
+	// longer lists, so the figure may use a price the vendor no longer offers.
+	LastListed bool `json:"lastListed"`
 }
 
 // routes prices the observed premium bundle against every candidate and returns them cheapest
@@ -41,7 +44,10 @@ func routes(b *Basis, in *analyze.Input, against []string) (found []Route, unpri
 			unpriceable = append(unpriceable, target)
 			continue
 		}
-		r := Route{Target: target, Premium: cost, Window: b.Cost - b.Premium.Cost + cost}
+		r := Route{
+			Target: target, Premium: cost, Window: b.Cost - b.Premium.Cost + cost,
+			LastListed: in.Prices.Retained(target),
+		}
 		r.Delta = b.Cost - r.Window
 		r.Share = share(r.Delta, b.Cost)
 		found = append(found, r)
@@ -82,6 +88,16 @@ func targets(b *Basis, in *analyze.Input, against []string) []string {
 	}
 	for _, name := range against {
 		add(name)
+	}
+	return out
+}
+
+func lastListed(routes []Route) []string {
+	var out []string
+	for i := range routes {
+		if routes[i].LastListed {
+			out = append(out, routes[i].Target)
+		}
 	}
 	return out
 }

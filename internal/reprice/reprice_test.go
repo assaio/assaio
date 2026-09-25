@@ -148,18 +148,50 @@ func TestAgainstNamesAModelTheWindowNeverRan(t *testing.T) {
 	}
 }
 
-// A model priced only by the retained ledger is one the vendor no longer lists: its price is
-// the right estimate for past usage and no route to move work onto.
-func TestNoRouteOntoAModelLiteLLMNoLongerLists(t *testing.T) {
-	in := input([]store.UsageRow{
-		row("big", 1_000_000, 100_000, 10_000_000, 1_000_000),
-		row("small", 100_000, 10_000, 0, 0),
-	}, 0)
+// lastListedInput is input over a table that prices "small" only through the retained ledger
+// and "cheap" at the same rates as a model LiteLLM still lists.
+func lastListedInput(rows []store.UsageRow) analyze.Input {
 	dropped := table["small"]
 	dropped.Retained = true
-	in.Prices = pricing.Table{"big": table["big"], "small": dropped}
-	if w := Compute(&in, Options{}); len(w.Routes) != 0 {
-		t.Fatalf("routes = %+v, want none onto a model only the ledger prices", w.Routes)
+	prices := pricing.Table{"big": table["big"], "small": dropped, "cheap": table["small"]}
+	in := analyze.BuildInput(rows, nil, prices, windowEnd, 0, analyze.Delegation{})
+	in.WindowStart = windowStart
+	return in
+}
+
+// A model priced only by the retained ledger is one the vendor no longer lists: its price is
+// the right estimate for past usage and no route to move work onto, so it is never proposed,
+// and a caller who names it gets the route marked rather than refused.
+func TestRouteMarksALastListedTarget(t *testing.T) {
+	premium := row("big", 1_000_000, 100_000, 10_000_000, 1_000_000)
+	for _, tc := range []struct {
+		name    string
+		rows    []store.UsageRow
+		against []string
+		want    map[string]bool
+	}{
+		{name: "a retained model the window ran is not proposed", rows: []store.UsageRow{premium, row("small", 100_000, 10_000, 0, 0)}, want: map[string]bool{}},
+		{name: "only the listed model is proposed", rows: []store.UsageRow{premium, row("small", 1, 1, 0, 0), row("cheap", 1, 1, 0, 0)}, want: map[string]bool{"cheap": false}},
+		{name: "a named retained target", rows: []store.UsageRow{premium}, against: []string{"small"}, want: map[string]bool{"small": true}},
+		{name: "a named listed target", rows: []store.UsageRow{premium}, against: []string{"cheap"}, want: map[string]bool{"cheap": false}},
+		{name: "both named", rows: []store.UsageRow{premium}, against: []string{"small", "cheap"}, want: map[string]bool{"small": true, "cheap": false}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in := lastListedInput(tc.rows)
+			w := Compute(&in, Options{Against: tc.against})
+			got := make(map[string]bool, len(w.Routes))
+			for _, r := range w.Routes {
+				got[r.Target] = r.LastListed
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("routes = %+v, want targets %v", w.Routes, tc.want)
+			}
+			for target, want := range tc.want {
+				if last, ok := got[target]; !ok || last != want {
+					t.Errorf("route %q lastListed = %v (present %v), want %v", target, last, ok, want)
+				}
+			}
+		})
 	}
 }
 
