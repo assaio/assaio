@@ -38,9 +38,16 @@ Discussion.
 - When `reprice --against` targets a model LiteLLM no longer lists, text output names the target
   on a 'last listed price' line and `--format json` marks its route `"lastListed": true`. The
   vendor may no longer offer that rate.
+- Add the Capture contribution issue template (`B191`) for redacted Gemini CLI or Cline logs and
+  vendor usage exports for `reconcile`. It states the redaction rules and that files will be
+  committed to this public repository. It is the way in for `B144` and `B192`.
 
 ### Fixed
 
+- Corrected the threat model and architecture guide's claim that the desktop opener is the only
+  program assaio launches: on an empty store, `share` imports logs and starts configured parser
+  plugins; `evidence` and `survival` run `git`, and metric and rule plugins run as subprocesses
+  ([correction](docs/corrections.md#threat-model-said-share-starts-the-only-program)).
 - Corrected the threat model and architecture guide's claim that the desktop opener is the only
   program assaio launches: on an empty store, `share` imports logs and starts configured parser
   plugins; `evidence` and `survival` run `git`, and metric and rule plugins run as subprocesses

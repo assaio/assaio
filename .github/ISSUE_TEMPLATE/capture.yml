@@ -1,0 +1,60 @@
+name: Capture contribution
+description: "Share a redacted log or vendor usage export to check a source or reconciler against real data."
+labels: [capture]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gemini CLI and Cline logs, and the vendor-export reader behind `assaio-agent reconcile`, have only been checked against hand-written samples. A real, redacted file lets us check what the tool actually writes. See [what each source's log carries](https://assaio.dev/docs/source-fields) for the fields assaio reads.
+
+        The file will be committed under `testdata/` with `capture: real` in this public Apache-2.0 repository. Redact it for publication, not a private handoff. Follow the redaction rules below.
+  - type: dropdown
+    id: source
+    attributes:
+      label: "What are you sharing?"
+      description: "Select the source of the log or export."
+      options:
+        - Gemini CLI chat log
+        - Cline task directory
+        - Vendor usage export (for reconcile)
+        - Another tool's log
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: "Tool version or export source"
+      description: "Give the tool version, or the vendor console or page and the date you downloaded the export."
+    validations:
+      required: true
+  - type: textarea
+    id: origin
+    attributes:
+      label: "File origin"
+      description: "Give the path pattern with your user name replaced (for example ~/.gemini/tmp/<hash>/chats/), operating system, and date range covered."
+    validations:
+      required: true
+  - type: checkboxes
+    id: redaction
+    attributes:
+      label: "Redaction checks"
+      description: "Confirm each applicable rule before sharing the file."
+      options:
+        - label: "Token counts, costs, and timestamps are verbatim."
+          required: true
+        - label: "Identifiers and paths use stand-ins such as user-1 or /home/user/project."
+          required: true
+        - label: "Prompts, responses, and file contents use the same number of placeholder lines."
+          required: true
+        - label: "Nothing the parser does not read is included."
+          required: true
+        - label: "For vendor exports, only date, model, token count, amount, and currency remain."
+        - label: "I understand this file will be committed to a public Apache-2.0 repository."
+          required: true
+  - type: textarea
+    id: file
+    attributes:
+      label: "Redacted file"
+      description: "Attach the redacted file or paste it if short. GitHub accepts .txt, .json, .csv, and .zip; zip a .jsonl file or task directory."
+    validations:
+      required: true
