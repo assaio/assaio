@@ -1,0 +1,3 @@
+# Model ids deliberately removed from retained.json, one per line: `<model id> <reason>`.
+# A key that leaves retained.json unprices that model's history, so CI fails any change that
+# drops one without naming it here. An id listed here must no longer be a key of retained.json.

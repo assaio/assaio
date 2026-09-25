@@ -77,7 +77,7 @@ tools beyond Go.
 | Entry point | Does | Writes | Guard | Paid | Needs |
 |---|---|---|---|---|---|
 | `.github/workflows/ci.yml` | fmt, vet, lint, `go test -race` on Linux/macOS/Windows, build, govulncheck | nothing | required for merge | no | — |
-| `.github/workflows/consistency.yml` | backlog hygiene, changelog ↔ tags, CITATION.cff ↔ parsers | nothing | required for merge | no | — |
+| `.github/workflows/consistency.yml` | backlog hygiene, changelog ↔ tags, CITATION.cff ↔ parsers, `retained.json` key removals absent from `retained_removed.txt` | nothing | required for merge | no | — |
 | `.github/workflows/dco.yml` | `Signed-off-by` on every commit, no AI-author trailer | nothing | required for merge | no | — |
 | `.github/workflows/fuzz.yml` | 30s per fuzzer on PRs touching parsers, 10 min nightly; opens an issue on a nightly failure | ⚠ a GitHub issue (nightly) | — | no | — |
 | `.github/workflows/codeql.yml` | CodeQL for Go, Actions, Python | SARIF to code scanning | — | no | — |

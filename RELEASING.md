@@ -132,7 +132,9 @@ how an honesty-first product starts making false claims about itself:
   `internal/pricing/snapshot.go`, and folds every id without a '/' into
   `internal/pricing/retained.json`, preserving the last price of models LiteLLM drops.
   Review the `retained.json` diff for every repriced and new id. A refresh that skips the
-  fold fails `make test` (`TestRetainedHoldsEveryUnprefixedKey`). **This is the release's
+  fold fails `make test` (`TestRetainedHoldsEveryUnprefixedKey`). A key may leave
+  `retained.json` only when listed with its reason in `internal/pricing/retained_removed.txt`;
+  `consistency.yml` fails any other removal. **This is the release's
   job, not a background chore**: every `$` assaio prints is a token count times this table.
   A stale table can look complete: five weeks of drift left 45.5% of the maintainer's
   tokens unpriced and a window's estimate $15,452.42 short.
