@@ -16,6 +16,10 @@ import (
 	"github.com/assaio/assaio/internal/usage"
 )
 
+// pluginTimeout bounds plugin fixtures whose timeout is not under test, with room for the whole
+// suite running in parallel on a loaded machine.
+const pluginTimeout = "30s"
+
 func write(t *testing.T, path, body string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
@@ -243,7 +247,7 @@ func TestRunIngestsConfiguredPlugin(t *testing.T) {
 	}
 	defer func() { _ = st.Close() }()
 
-	plugins := []config.PluginConfig{{Name: "demo", Command: pluginScript, Timeout: "5s"}}
+	plugins := []config.PluginConfig{{Name: "demo", Command: pluginScript, Timeout: pluginTimeout}}
 	results, err := Run(context.Background(), home, st, config.Sources{}, plugins, Options{})
 	if err != nil {
 		t.Fatal(err)
@@ -286,8 +290,8 @@ func TestRunPluginFailureCountsAsFailedAndContinues(t *testing.T) {
 	defer func() { _ = st.Close() }()
 
 	plugins := []config.PluginConfig{
-		{Name: "demo", Command: badScript, Timeout: "5s"},
-		{Name: "good", Command: goodScript, Timeout: "5s"},
+		{Name: "demo", Command: badScript, Timeout: pluginTimeout},
+		{Name: "good", Command: goodScript, Timeout: pluginTimeout},
 	}
 	results, err := Run(context.Background(), home, st, config.Sources{}, plugins, Options{})
 	if err != nil {

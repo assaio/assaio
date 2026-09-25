@@ -72,7 +72,7 @@ func TestPluginRunCarriesNoFileCounts(t *testing.T) {
 		t.Fatal(err)
 	}
 	st := openStore(t)
-	plugins := []config.PluginConfig{{Name: "demo", Command: pluginScript, Timeout: "5s"}}
+	plugins := []config.PluginConfig{{Name: "demo", Command: pluginScript, Timeout: pluginTimeout}}
 	if _, err := Run(context.Background(), t.TempDir(), st, config.Sources{}, plugins, Options{}); err != nil {
 		t.Fatal(err)
 	}

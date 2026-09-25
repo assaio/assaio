@@ -27,7 +27,7 @@ func runRuleScript(t *testing.T, name string, timeout time.Duration) ([]Alert, e
 }
 
 func TestRunRuleHappyPath(t *testing.T) {
-	got, err := runRuleScript(t, "rule_good.sh", 5*time.Second)
+	got, err := runRuleScript(t, "rule_good.sh", scriptTimeout)
 	if err != nil {
 		t.Fatalf("RunRule() err = %v", err)
 	}
@@ -46,7 +46,7 @@ func TestRunRuleHappyPath(t *testing.T) {
 }
 
 func TestRunRuleCarriesErrorSeverity(t *testing.T) {
-	got, err := runRuleScript(t, "rule_error.sh", 5*time.Second)
+	got, err := runRuleScript(t, "rule_error.sh", scriptTimeout)
 	if err != nil {
 		t.Fatalf("RunRule() err = %v", err)
 	}
@@ -56,7 +56,7 @@ func TestRunRuleCarriesErrorSeverity(t *testing.T) {
 }
 
 func TestRunRuleEmptyVerdictsSafe(t *testing.T) {
-	cfg := Config{Name: "demo", Command: script(t, "rule_good.sh"), Timeout: 5 * time.Second}
+	cfg := Config{Name: "demo", Command: script(t, "rule_good.sh"), Timeout: scriptTimeout}
 	if _, err := RunRule(context.Background(), cfg, nil); err != nil {
 		t.Fatalf("RunRule(no verdicts) err = %v", err)
 	}
@@ -68,15 +68,15 @@ func TestRunRuleFailures(t *testing.T) {
 		timeout time.Duration
 		wantSub string
 	}{
-		{"rule_bad_handshake.sh", 5 * time.Second, "handshake protocol 0"},
-		{"rule_name_mismatch.sh", 5 * time.Second, "handshake name"},
-		{"rule_invalid_severity.sh", 5 * time.Second, "severity"},
-		{"rule_malformed.sh", 5 * time.Second, "decoding alerts"},
-		{"rule_two_docs.sh", 5 * time.Second, "trailing data"},
-		{"rule_oversize.sh", 5 * time.Second, "exceeded"},
+		{"rule_bad_handshake.sh", scriptTimeout, "handshake protocol 0"},
+		{"rule_name_mismatch.sh", scriptTimeout, "handshake name"},
+		{"rule_invalid_severity.sh", scriptTimeout, "severity"},
+		{"rule_malformed.sh", scriptTimeout, "decoding alerts"},
+		{"rule_two_docs.sh", scriptTimeout, "trailing data"},
+		{"rule_oversize.sh", scriptTimeout, "exceeded"},
 		{"rule_timeout.sh", 200 * time.Millisecond, "timed out"},
-		{"rule_nonzero.sh", 5 * time.Second, "exit status 3"},
-		{"rule_silent.sh", 5 * time.Second, "no handshake"},
+		{"rule_nonzero.sh", scriptTimeout, "exit status 3"},
+		{"rule_silent.sh", scriptTimeout, "no handshake"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.script, func(t *testing.T) {

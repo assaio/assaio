@@ -11,6 +11,10 @@ import (
 	"time"
 )
 
+// scriptTimeout bounds fixtures whose timeout is not under test, with room for the whole suite
+// running in parallel on a loaded machine.
+const scriptTimeout = 30 * time.Second
+
 func script(t *testing.T, name string) string {
 	t.Helper()
 	if runtime.GOOS == "windows" {
@@ -27,7 +31,7 @@ func script(t *testing.T, name string) string {
 }
 
 func TestRunHappyPath(t *testing.T) {
-	cfg := Config{Name: "demo", Command: script(t, "good.sh"), Timeout: 5 * time.Second}
+	cfg := Config{Name: "demo", Command: script(t, "good.sh"), Timeout: scriptTimeout}
 	recs, stats, err := Run(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("Run() err = %v", err)
@@ -49,7 +53,7 @@ func TestRunHappyPath(t *testing.T) {
 }
 
 func TestRunHandshakeMismatch(t *testing.T) {
-	cfg := Config{Name: "demo", Command: script(t, "handshake_mismatch.sh"), Timeout: 5 * time.Second}
+	cfg := Config{Name: "demo", Command: script(t, "handshake_mismatch.sh"), Timeout: scriptTimeout}
 	_, _, err := Run(context.Background(), cfg)
 	if err == nil {
 		t.Fatal("Run() err = nil, want handshake mismatch error")
@@ -60,7 +64,7 @@ func TestRunHandshakeMismatch(t *testing.T) {
 }
 
 func TestRunInvalidRecordsSkippedAndCounted(t *testing.T) {
-	cfg := Config{Name: "demo", Command: script(t, "violations.sh"), Timeout: 5 * time.Second}
+	cfg := Config{Name: "demo", Command: script(t, "violations.sh"), Timeout: scriptTimeout}
 	recs, stats, err := Run(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("Run() err = %v", err)
@@ -78,7 +82,7 @@ func TestRunInvalidRecordsSkippedAndCounted(t *testing.T) {
 }
 
 func TestVerifyCollectsViolationReasons(t *testing.T) {
-	cfg := Config{Name: "demo", Command: script(t, "violations.sh"), Timeout: 5 * time.Second}
+	cfg := Config{Name: "demo", Command: script(t, "violations.sh"), Timeout: scriptTimeout}
 	_, violations, stats, err := Verify(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("Verify() err = %v", err)
@@ -113,7 +117,7 @@ func TestRunTimeoutKillsPlugin(t *testing.T) {
 }
 
 func TestRunNonZeroExitFails(t *testing.T) {
-	cfg := Config{Name: "demo", Command: script(t, "nonzero_exit.sh"), Timeout: 5 * time.Second}
+	cfg := Config{Name: "demo", Command: script(t, "nonzero_exit.sh"), Timeout: scriptTimeout}
 	_, _, err := Run(context.Background(), cfg)
 	if err == nil {
 		t.Fatal("Run() err = nil, want non-zero exit error")
@@ -129,7 +133,7 @@ func TestRunStderrPassthroughPrefixesPluginName(t *testing.T) {
 	os.Stderr = w
 	defer func() { os.Stderr = origStderr }()
 
-	cfg := Config{Name: "demo", Command: script(t, "good.sh"), Timeout: 5 * time.Second}
+	cfg := Config{Name: "demo", Command: script(t, "good.sh"), Timeout: scriptTimeout}
 	_, _, runErr := Run(context.Background(), cfg)
 	if closeErr := w.Close(); closeErr != nil {
 		t.Fatal(closeErr)
@@ -151,7 +155,7 @@ func TestRunStderrPassthroughPrefixesPluginName(t *testing.T) {
 }
 
 func TestRunToolNamespacing(t *testing.T) {
-	cfg := Config{Name: "demo", Command: script(t, "good.sh"), Timeout: 5 * time.Second}
+	cfg := Config{Name: "demo", Command: script(t, "good.sh"), Timeout: scriptTimeout}
 	recs, _, err := Run(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)
