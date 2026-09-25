@@ -108,8 +108,9 @@ are reported instead of repaired by inspecting content or identity.
 
 ### The team server — network
 
-This is the largest exception to assaio's offline posture, and it is opt-in twice: you run
-the server, and you point `sync` at it.
+This is the one exception to assaio's offline posture in its own code; exec plugins you
+configure are separate programs. It is opt-in twice: you run the server, and you point
+`sync` at it.
 
 **Trusted:** the network it sits on. `internal/server` ships **no TLS of its own** — put a
 reverse proxy in front of it, on a network you trust. `sync` warns when `--server` is
@@ -249,29 +250,6 @@ token, line and cost magnitudes, a session-shape fingerprint, and how many repos
 active. That is real information about an organization's scale, and posting is a choice. They
 learn no name, path, branch, prompt, or line of code.
 
-### `runtime inspect` — an outbound connection
-
-Experimental, opt-in per invocation, and the only place assaio connects to something that is
-not a team server ([`runtime-inspect.md`](runtime-inspect.md)).
-
-**Trusted:** the URL you type. It is not derived from any data assaio read.
-
-**Checked** (`runtime.Fetch`, `runtime.FetchLimits`): a plain `GET` and nothing else — no
-header a caller can inject, no body, and **no credential**, because an inspection that could
-carry a secret would need a threat model this experiment does not have. `--timeout` (5s),
-`--max-bytes` (8 MiB) and `--max-redirects` (2; `0` forbids redirects) bound the read. A
-non-200 is an error. A body over the budget is an error rather than a truncated read,
-because a partial exposition would make every metric it did not reach look absent. Nothing
-fetched is stored. `--vllm-file` / `--dcgm-file` read a saved snapshot and touch no network
-at all.
-
-**A hostile endpoint can:** serve a bounded body that assaio parses, and attempt a redirect
-chain within the limit. **It cannot** obtain a credential, because none is ever sent.
-
-**Residual:** assaio will connect to whatever address you name, including a loopback or
-link-local one. The URL comes from your command line, never from parsed data, so this is not
-a request-forgery sink — but it is your responsibility to point it at your own exporter.
-
 ## 2. Data map
 
 ### What never leaves the process at all
@@ -294,25 +272,26 @@ stored; `evidence` prints them only to its local stdout.
 
 ### Where the network is, exactly
 
-Three code paths in the whole binary can open a socket, and this is checkable rather than
+Two code paths in the whole binary can open a socket, and this is checkable rather than
 asserted:
 
 ```sh
 $ grep -rln '"net/http"' internal/ cmd/ | grep -v _test | sort
 internal/cli/sync_push.go
-internal/runtime/fetch.go
 internal/server/auth.go
 internal/server/handlers.go
 internal/server/ratelimit.go
 internal/server/server.go
 ```
 
-`sync_push.go` is `sync`, the four `server/` files are `serve`, and `fetch.go` is
-`runtime inspect`. Everything else — `backfill`, `report`, `effectiveness`, `analyze`,
-`status`, `check`, `doctor`, `dashboard`, `share`, `reconcile`, `digest`, `mark`, `compact`,
-`clear` — has no way to reach a network. The model price table is embedded at build time
-(`//go:embed litellm.json retained.json`), so pricing is offline too. There is no telemetry, no analytics,
-and no crash reporting anywhere in the repository.
+`sync_push.go` is `sync`, and the four `server/` files are `serve`. Everything else —
+`backfill`, `report`, `effectiveness`, `analyze`, `status`, `check`, `doctor`, `dashboard`,
+`share`, `reconcile`, `digest`, `mark`, `compact`, `clear` — has no way to reach a network.
+An exec plugin is a separate program covered under [Exec
+plugins](#exec-plugins--running-someone-elses-code) above; it can reach whatever its own
+code reaches. The model price table is embedded at build time (`//go:embed litellm.json
+retained.json`), so pricing is offline too. There is no telemetry, no analytics, and no
+crash reporting anywhere in the repository.
 
 ### What crosses the machine boundary, and under whose control
 
@@ -320,7 +299,6 @@ and no crash reporting anywhere in the repository.
 |---|---|---|---|---|
 | `sync` | you run it | a server **you** operate | raw `usage.Record` rows from `Store.Export`: tool, session id, timestamp, model, token counts, dedupe key, **project**, **subpath**, **branch**, entrypoint, granularity, activity counts, **skill**, **agent** | member is a pseudonym unless `--member` is passed; the other names travel as they are stored |
 | `serve` | you run it | whoever holds a token | the aggregated Assay dashboard | member and project pseudonymized (`anonymize = true`, not overridable over HTTP); raw names only via `report --identify` against the same store, which says so in its own output |
-| `runtime inspect --*-url` | per invocation | an endpoint you name | one `GET`, no credential | n/a — nothing is sent |
 | metric plugin | declared in config | a local subprocess you chose | stored aggregates: projects, models, member pseudonyms, token/line counts — only the sections, columns and rows the plugin declares, and only those your `needs:` veto allows | none beyond member pseudonyms — this is a local program you trusted by declaring it |
 | rule plugin | declared in config | a local subprocess you chose | verdicts only, `Bars` stripped | structural |
 | `share` | you run it | a file you then post | figures quoted from `analyze`, tools, models, counts | structural; no name can be rendered |

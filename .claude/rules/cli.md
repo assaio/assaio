@@ -20,5 +20,5 @@ paths:
 - **Config keys** are documented in `config.example.yaml` and `ASSAIO_*` env vars in
   `internal/config`; `TestDocumentsPrintNoFlagTheBinaryLacks` reads `README.md`,
   `CONTRIBUTING.md`, `AGENTS.md`, `RELEASING.md` for flags that do not exist.
-- Nothing here makes a network call except `sync` and `runtime inspect`, both opt-in; keep the
-  offline promise (`PRIVACY.md`).
+- Nothing here makes a network call except `sync` and `serve`, both opt-in; keep the offline
+  promise (`PRIVACY.md`).

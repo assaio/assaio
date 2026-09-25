@@ -66,8 +66,6 @@ plan price.
 
 `assaio-agent recommend` suggests experiments supported by the window, each with evidence,
 risk, rollback, review window and a follow-up figure. It abstains when the window is too thin.
-`assaio-agent runtime inspect` is an experimental, read-only snapshot of an operator-named
-self-hosted vLLM or DCGM endpoint and may be removed.
 
 For a weekly loop, `backfill` imports logs, `analyze` prints actionable reads, `digest` reports
 what changed in Markdown and flags weak comparisons, and `mark --suggest` derives session
@@ -80,10 +78,10 @@ and models are named as vendor facts. Sharing makes no network request.
 Prompts and model responses are not extracted. Repository diff content and created or deleted
 file bodies are read briefly for line and rework counts, then discarded; none is stored. There
 is no telemetry. `evidence` uses local git and the local store only. Its result omits commit
-messages, paths, branches, diffs and code; it stores neither observations nor edges. Network
-use is limited to optional, invoked surfaces: the self-hosted team server (`serve`/`sync`) and
-experimental `runtime inspect`. The latter makes a plain, credential-free GET to the named
-metrics endpoint and stores nothing. Both connect only to operator-run infrastructure.
+messages, paths, branches, diffs and code; it stores neither observations nor edges. assaio
+uses the network only for the self-hosted team server (`serve`/`sync`), which connects only to
+operator-run infrastructure. Configured exec plugins are the operator's own programs; their
+network use depends on their code.
 
 ## Docs
 
@@ -103,8 +101,7 @@ metrics endpoint and stores nothing. Both connect only to operator-run infrastru
 - [PRIVACY](https://github.com/assaio/assaio/blob/main/PRIVACY.md): fields each parser extracts,
   reads briefly and retains.
 - [ROADMAP](https://github.com/assaio/assaio/blob/main/ROADMAP.md): milestones, exit conditions
-  and unmet gates, without delivery dates. The planned `runtime inspect` removal decision is
-  a commitment to decide, not to ship.
+  and unmet gates, without delivery dates.
 - [BACKLOG](https://github.com/assaio/assaio/blob/main/BACKLOG.md): ranked candidate work,
   including the refusals above.
 - [Corrections](https://github.com/assaio/assaio/blob/main/docs/corrections.md): published

@@ -100,9 +100,9 @@ trace:
 
 # Team server (`assaio-agent serve`): a self-hosted HTTP endpoint that collects usage
 # pushed by `assaio-agent sync` from every teammate's machine and serves it back as one
-# aggregated, pseudonymized-by-default Assay dashboard. This is one of only two non-offline
-# surfaces in assaio (the other is the experimental `runtime inspect`) -- you run and control
-# this server yourself, on your own network.
+# aggregated, pseudonymized-by-default Assay dashboard. This server and sync are the only
+# parts of assaio that use the network. You run and control this server yourself, on your
+# own network. A configured exec plugin is your own program; its network use is its own.
 # Security model: every route but the /healthz probe requires a bearer token, the dashboard
 # included. There is no
 # TLS -- put a reverse proxy in front (see internal/server's package doc). Not

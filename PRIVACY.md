@@ -289,13 +289,11 @@ The core analysis commands — `backfill`, `report`, `effectiveness`, `analyze`,
 at build time, so every report works fully offline; nothing is fetched, uploaded, or
 phoned home.
 
-Three **optional commands are the exception**, and only when you invoke them.
+Two **optional commands are the exception**, and only when you invoke them.
 `assaio-agent sync` uploads your usage records to a team server, and `assaio-agent serve` runs
 that server; both talk only to infrastructure **you** stand up and point them at (see below).
-`assaio-agent runtime inspect --vllm-url/--dcgm-url` reads a metrics endpoint **you name** —
-a plain GET with no header, body or credential, bounded by `--timeout`, `--max-bytes` and
-`--max-redirects`, storing nothing; `--vllm-file`/`--dcgm-file` read a saved snapshot and need
-no network at all. If you never run those three, `assaio` never touches the network.
+If you never run those two, `assaio` itself never touches the network, and exec plugins
+(described at the top of this file) are your own programs.
 
 `assaio-agent share` is not an exception to this — it makes no request, and neither does the
 page it writes. After writing the file it can ask your desktop to open it (`open`, `xdg-open`,
@@ -346,7 +344,7 @@ travels only if you post it.
 
 v0.1 ships an early, self-hostable **team server** so a team can pool its usage in one
 place: `assaio-agent serve` runs a central collector and `assaio-agent sync` pushes each
-member's records to it, with a per-member team dashboard. It is the **largest of the networked exceptions**
+member's records to it, with a per-member team dashboard. It is the **networked exception**
 named above — the offline guarantee is about the local analysis, not this. You run
 the server on **your own infrastructure** and control what reaches it. It is an honest MVP:
 no TLS of its own (put a reverse proxy in front), meant for a trusted network — not yet
