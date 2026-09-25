@@ -127,12 +127,20 @@ t ALLOW 'python3 .claude/scripts/text_model.py --detect'
 t ALLOW 'claude --version'
 
 # --- push to main with an open work file
+# The checkout is on main, so a push that names no branch, or names HEAD, lands there.
 wip=$(mktemp -d)
+git init -q -b main "$wip"
 mkdir -p "$wip/docs/work" && touch "$wip/docs/work/2026-09-18-thing.md" "$wip/docs/work/TEMPLATE.md"
 CLAUDE_PROJECT_DIR=$wip t DENY 'git push origin main'
 CLAUDE_PROJECT_DIR=$wip t DENY 'git push origin HEAD:main'
+CLAUDE_PROJECT_DIR=$wip t DENY 'git push origin HEAD:refs/heads/main'
+CLAUDE_PROJECT_DIR=$wip t DENY 'git push'
+CLAUDE_PROJECT_DIR=$wip t DENY 'git push -u origin HEAD'
 CLAUDE_PROJECT_DIR=$wip t DENY 'gh pr merge 42 --squash'
 CLAUDE_PROJECT_DIR=$wip t ALLOW 'git push origin feat/x'
+CLAUDE_PROJECT_DIR=$wip t ALLOW 'git push -q -u origin feat/x'
+CLAUDE_PROJECT_DIR=$wip t ALLOW 'git push -o ci.skip origin feat/x'
+CLAUDE_PROJECT_DIR=$wip t ALLOW 'git push origin feat/x --set-upstream'
 rm -f "$wip/docs/work/2026-09-18-thing.md"
 CLAUDE_PROJECT_DIR=$wip t ALLOW 'git push origin main'
 CLAUDE_PROJECT_DIR=$wip t ALLOW 'gh pr merge 42 --squash'

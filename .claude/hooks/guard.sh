@@ -128,11 +128,19 @@ while IFS= read -r seg; do
 			ask "Force-push rewrites the remote branch. Prefer --force-with-lease; confirm this is a branch nobody else pulled."
 		fi
 		# A push that lands on main publishes https://assaio.dev/ (Cloudflare builds every push to
-		# main, ungated). An open work file means the change is not finished.
+		# main, ungated). An open work file means the change is not finished. Flags may precede the
+		# remote; only the options listed here take their value as the next word.
+		refspecs=$(printf '%s' "$bare" | awk '{
+			for (i = 3; i <= NF; i++) {
+				if ($i ~ /^(-o|--push-option|--repo|--receive-pack|--exec)$/) { i++; continue }
+				if ($i ~ /^-/) continue
+				if (n++) print $i
+			}
+		}')
 		target_main=no
-		if printf '%s' "$bare" | grep -qE '([[:space:]]|:)main([[:space:]]|$)'; then
+		if printf '%s' "$bare" | grep -qE '([[:space:]]|:|refs/heads/)main([[:space:]]|$)'; then
 			target_main=yes
-		elif ! printf '%s' "$bare" | grep -qE '^git[[:space:]]+push[[:space:]]+[^-][^[:space:]]*[[:space:]]+[^-]'; then
+		elif [ -z "$refspecs" ] || printf '%s\n' "$refspecs" | grep -qxE 'HEAD|@'; then
 			[ "$(git -C "${CLAUDE_PROJECT_DIR:-.}" symbolic-ref --short HEAD 2>/dev/null)" = "main" ] && target_main=yes
 		fi
 		if [ "$target_main" = yes ] && [ -n "$(wip_files)" ]; then
