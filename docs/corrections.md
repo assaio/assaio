@@ -31,6 +31,16 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+<a id="threat-model-said-share-starts-the-only-program"></a>
+
+### The threat model said `share` starts the only program assaio launches
+
+*Corrected in v0.30.0.*
+
+From v0.25.0, the `share` section of docs/threat-model.md and docs/architecture.md said the desktop opener (`open`, `xdg-open`, `rundll32`) was the only program assaio launches. That was incomplete — on an empty store, `share` first imports logs, starting any configured parser plugins; `evidence` and `survival` run `git` against the local repository; metric and rule plugins declared in config run as subprocesses.
+
+A reader deciding what assaio executes on their machine was told less than the binary does. The threat model now names each program and when it runs; the architecture guide points to it instead of repeating the claim.
+
 ## [0.29.0] - 2026-09-25
 
 <a id="models-with-no-token-rate-were-priced-at-0"></a>

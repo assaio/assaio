@@ -154,8 +154,10 @@ source. Vendor log formats can change. Tests, calibration checks and `doctor` sh
 cannot prevent it.
 
 Costs are API-equivalent estimates from a vendored LiteLLM price snapshot, not vendor invoices or
-reconstructed subscription quota use. `reconcile` compares a downloaded export with the local
-estimate and shows any unexplained remainder.
+reconstructed subscription quota use. Since v0.29.0, when LiteLLM stops listing a model, assaio
+keeps the last price LiteLLM published for it; the vendor may no longer offer that rate, and
+`doctor` counts such models. `reconcile` compares a downloaded export with the local estimate and
+shows any unexplained remainder.
 
 ## Privacy: local and offline
 

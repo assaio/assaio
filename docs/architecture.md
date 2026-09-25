@@ -199,7 +199,8 @@ Outputs leave the process only when asked:
   `assaio-agent sync` pushes, and the one place a record travels un-aggregated. It never
   scans `cwd`, because that is not a column;
 - `dashboard` and `share` write an HTML file to a path you name (`share` then asks the
-  desktop to open it, the only program assaio launches);
+  desktop to open it); for every program assaio runs, see
+  [threat-model.md](threat-model.md#the-share-artifact--publication);
 - `report --format json|csv` writes to stdout;
 - `evidence --format text|json` writes local session→commit candidates to stdout, including
   project basename, session id and commit hash; it is not a shareable artifact;
