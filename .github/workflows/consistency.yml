@@ -177,3 +177,47 @@ jobs:
             diff <(printf '%s\n' "$cited_tools") <(printf '%s\n' "$shipped_tools") || true
             exit 1
           fi
+
+      # `make prices` only adds or reprices retained.json, so a vanished key is a hand edit that
+      # silently unprices that model's history; the Go guard sees only keys the snapshot lists.
+      - name: retained.json loses a key only on purpose
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+          ledger=internal/pricing/retained.json
+          declared=internal/pricing/retained_removed.txt
+          case "$EVENT" in
+            pull_request) base=$(git merge-base "origin/$BASE_REF" HEAD) ;;
+            push)
+              case "$REF" in refs/tags/*) echo "tag push -- nothing to compare"; exit 0 ;; esac
+              if [ -z "$BEFORE" ] || [ -z "${BEFORE//0/}" ]; then
+                echo "first push of $REF -- nothing to compare"; exit 0
+              fi
+              base=$BEFORE ;;
+            *) echo "$EVENT -- nothing to compare"; exit 0 ;;
+          esac
+          git rev-parse --verify --quiet "$base^{commit}" >/dev/null || {
+            echo "::error::base revision $base is not in this clone, so removed keys cannot be listed."
+            exit 1
+          }
+          base_keys=""
+          if git cat-file -e "$base:$ledger" 2>/dev/null; then
+            base_keys=$(git show "$base:$ledger" | jq -r 'keys[]')
+          fi
+          head_keys=$(jq -r 'keys[]' "$ledger")
+          removed=$(comm -23 <(printf '%s\n' "$base_keys" | sed '/^$/d' | sort -u) <(printf '%s\n' "$head_keys" | sort -u))
+          listed=$(awk '!/^[[:space:]]*#/ && NF { print $1 }' "$declared" | sort -u)
+          undeclared=$(comm -23 <(printf '%s\n' "$removed" | sed '/^$/d') <(printf '%s\n' "$listed" | sed '/^$/d'))
+          if [ -n "$undeclared" ]; then
+            while IFS= read -r id; do
+              echo "::error file=$ledger::$id was removed from retained.json without being declared."
+            done <<< "$undeclared"
+            echo "::error file=$ledger::Restore each key, or add a '<model id> <reason>' line for it to $declared."
+            exit 1
+          fi
+          echo "$(printf '%s\n' "$removed" | sed '/^$/d' | wc -l | tr -d ' ') key(s) removed since $base, all declared"
