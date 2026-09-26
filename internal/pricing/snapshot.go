@@ -1,7 +1,7 @@
 package pricing
 
 // SnapshotDate is the date the vendored litellm.json was downloaded; `make prices` sets it.
-const SnapshotDate = "2026-09-23"
+const SnapshotDate = "2026-09-26"
 
 // Info reports the embedded table: how many keys the LiteLLM snapshot prices, how many more
 // only retained.json prices because a later snapshot dropped them, and the snapshot date.
