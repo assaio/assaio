@@ -93,7 +93,18 @@ func writeRoutes(out io.Writer, w *Window) error {
 			return err
 		}
 	}
+	if err := writeLastListed(out, w.Routes); err != nil {
+		return err
+	}
 	return writeUnpriceable(out, w)
+}
+
+func writeLastListed(out io.Writer, routes []Route) error {
+	if last := lastListed(routes); len(last) > 0 {
+		return writeLine(out, "    last listed price: "+names(last)+
+			" — delisted by LiteLLM; priced at its last rate, which the vendor may no longer offer")
+	}
+	return nil
 }
 
 // writeUnpriceable names the targets that never reached the table, then closes the section. It

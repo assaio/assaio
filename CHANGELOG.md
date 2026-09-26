@@ -33,6 +33,12 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+
+- When `reprice --against` targets a model LiteLLM no longer lists, text output names the target
+  on a 'last listed price' line and `--format json` marks its route `"lastListed": true`. The
+  vendor may no longer offer that rate.
+
 ### Fixed
 
 - Corrected the threat model and architecture guide's claim that the desktop opener is the only
