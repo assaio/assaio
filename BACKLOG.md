@@ -48,23 +48,13 @@ later review finds opens a new pool below rather than reopening this one.
 
 ## Alongside everything — "Somebody outside this repository"
 
-The external-validation half of [roadmap milestone 1](ROADMAP.md#1-trust-and-activation),
-and the only milestone in this file whose work is not this repository's to do. Two sources and the reconciler are calibrated
-against a sample written in the source's own shape rather than a real one, and no amount of
-local work changes that: the missing input is a file somebody else has. `B144` is the half that
-already had an id; below are the door a capture arrives through, the half that never had an id,
-and the reason a silence here would mean anything.
-
-- [ ] **B191 · a capture contribution has no door** — S · both — the repository takes bug,
-  connector and feature issues and disables blank ones, so somebody who runs Gemini CLI and is
-  willing to hand over a redacted chat log has to pick a template written for a different
-  purpose, or open a Discussion and guess at the rules. A **Capture contribution** template
-  states them instead: which source, the tool's version, the field allowlist every checked-in
-  trace was redacted under (numbers verbatim, identifiers and paths replaced by stand-ins,
-  bodies replaced by the same number of placeholder lines, nothing the parser does not read
-  copied at all), and — the part a contributor should never have to infer — that the file is
-  committed to a public Apache-2.0 repository, so it is redacted for publication rather than for
-  a private handoff.
+The external-validation half of [roadmap milestone 1](ROADMAP.md#1-trust-and-activation), and
+the only milestone in this file whose work is not this repository's to do. Two sources and the
+reconciler are calibrated against a sample written in the source's own shape rather than a real
+one, and no amount of local work changes that: the missing input is a file somebody else has.
+`B144` is the half that already had an id; captures now arrive through the Capture contribution
+issue template. Below are the half that never had an id and the reason a silence here would mean
+anything.
 
 - [ ] **B192 · the reconciler has never read a real export** — S · both — `B19` shipped the
   reader and the arithmetic against a **constructed** CSV whose column names and magnitudes were
