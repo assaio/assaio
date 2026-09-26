@@ -23,7 +23,9 @@ binary disagree. The same document is machine-readable through
 	writeWire(&b, ref.ValidatorInput, ref.MetricWire)
 
 	// Exported by `docs export --format html` on a machine with no repository: without the
-	// guide set the sidebar would be a single entry, so the page navigates itself instead.
+	// guide set the sidebar would be a single entry, so the page navigates itself instead, and
+	// there is no previous page to lead back to.
+	sequence := guides
 	if len(guides) == 0 {
 		guides = referenceSections
 	}
@@ -31,10 +33,11 @@ binary disagree. The same document is machine-readable through
 		Title: "Reference",
 		Description: "Every signal, source, validator, command, flag, configuration key and " +
 			"metric-contract field assaio has, generated from the binary's own registries.",
-		URL:     ReferenceURL,
-		Current: ReferenceURL,
-		Body:    b.String(),
-		Guides:  guides,
+		URL:      ReferenceURL,
+		Current:  ReferenceURL,
+		Body:     b.String(),
+		Guides:   guides,
+		Sequence: sequence,
 	})
 }
 

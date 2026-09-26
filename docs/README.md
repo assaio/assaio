@@ -8,6 +8,8 @@ Where everything lives, in one place.
   accuracy boundaries.
 - [`FEATURES.md`](../FEATURES.md) — the maintained inventory of what exists today,
   with the release each capability arrived in.
+- [`index.md`](index.md) is the /docs landing page. Its reading paths set the reading order,
+  sidebar groups, and previous/next links. Every published guide must appear in exactly one path.
 - [`extending.md`](extending.md) — the map of every extension surface and the honesty rules
   that bind all of them, with one page per surface under [`extending/`](extending): the
   [in-tree metric validator](extending/metric-validator.md) and its

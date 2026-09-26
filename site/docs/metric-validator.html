@@ -114,6 +114,53 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
 .cmd h3{font-family:var(--mono); font-size:.9rem; margin:0 0 .25rem; color:var(--signal); font-weight:600}
 .cmd p{margin:0; color:var(--dim); font-size:.93rem; max-width:44rem}
 .cmd table{margin-top:.6rem}
+.toc{min-width:0; font-size:.9rem}
+.toc ul{list-style:none; margin:0; padding:0}
+.toc a{display:flex; align-items:center; min-height:44px; padding:.35rem .75rem; border-radius:8px;
+  text-decoration:none; color:var(--dim); line-height:1.35; overflow-wrap:anywhere}
+.toc a:hover{color:var(--fg); background:var(--surface)}
+@media (width < 75rem){
+  .toc{margin-top:2rem; padding:.75rem .5rem .5rem; border:1px solid var(--line); border-radius:10px}
+  .toc .sidehead{margin-left:.75rem}
+}
+@media (width > 60rem){
+  .with-toc{row-gap:0}
+  .with-toc .side{grid-column:1; grid-row:1 / span 2}
+  .with-toc .toc{grid-column:2; grid-row:1}
+  .with-toc .doc{grid-column:2; grid-row:2}
+}
+@media (width >= 75rem){
+  .with-toc{grid-template-columns:16rem minmax(0,1fr) 13rem}
+  .with-toc .side,.with-toc .doc{grid-row:1}
+  .with-toc .toc{grid-column:3; grid-row:1; position:sticky; top:0; max-height:100vh; overflow-y:auto; padding:2rem 0}
+}
+.pager{display:flex; flex-wrap:wrap; justify-content:space-between; gap:1rem; margin:3rem 0 0;
+  padding-top:1.5rem; border-top:1px solid var(--line)}
+.pager a{display:flex; flex-direction:column; justify-content:center; flex:0 1 20rem; min-width:0; min-height:44px;
+  padding:.6rem .9rem; border:1px solid var(--line); border-radius:10px; text-decoration:none;
+  color:var(--fg); font-weight:600; line-height:1.35; overflow-wrap:anywhere}
+.pager a:hover{border-color:var(--signal); color:var(--fg)}
+.pager a.next{margin-left:auto; text-align:right}
+.pager .dir{font:700 .72rem/1.4 var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+.landing{display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr)); gap:0 1.25rem;
+  align-content:start}
+.landing>*{grid-column:1 / -1}
+.landing>h1+p{color:var(--dim); font-size:1.08rem}
+.landing>.path{grid-column:auto; margin:0 0 1.25rem; padding:1.25rem 1.25rem .75rem; border:1px solid var(--line);
+  border-radius:12px; background:var(--surface); min-width:0}
+.path h2{margin:0 0 .5rem; padding:0; border:0; font-size:1.2rem}
+.path p{color:var(--dim); font-size:.95rem}
+.path ul{list-style:none; padding:0; margin:0}
+.path li{margin:0}
+.path a{display:flex; align-items:center; min-height:44px; padding:.35rem 0; line-height:1.35;
+  text-decoration:none; overflow-wrap:anywhere}
+.path a:hover{text-decoration:underline}
+@media print{
+  .side,.toc,.pager,.topnav{display:none}
+  .layout{display:block}
+  .landing{display:block}
+  .landing>.path{break-inside:avoid}
+}
 </style>
 </head>
 <body><div class="wrap">
@@ -128,8 +175,8 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
     <a class="menu" href="#docs-nav">Menu</a>
   </nav>
 </header>
-<div class="layout"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li><li><a class="on" href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/runtime-inspect">Runtime inspect (experimental)</a></li><li><a href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="adding-a-metric-validator">Adding a metric validator</h1>
-<p><em>Part of <a href="https://assaio.dev/docs">Extending assaio</a>. Next: <a href="https://assaio.dev/docs/metric-validator-example">the worked example</a>.</em></p>
+<div class="layout with-toc"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">assaio documentation</a></li></ul><p class="sidehead">Understand the figures</p><ul><li><a href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/runtime-inspect">Runtime inspect (experimental)</a></li></ul><p class="sidehead">Run it for a team</p><ul><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li></ul><p class="sidehead">Extend assaio</p><ul><li><a href="https://assaio.dev/docs/extending">Extending assaio</a></li><li><a class="on" href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li></ul><p class="sidehead">Use an example</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><nav class="toc" aria-label="On this page"><p class="sidehead">On this page</p><ul><li><a href="#what-a-validator-reads-input">What a validator reads: Input</a></li><li><a href="#what-a-validator-returns-result">What a validator returns: Result</a></li><li><a href="#register-it-the-validator-interface">Register it: the Validator interface</a></li><li><a href="#verified-it-appears-in-the-cli-and-the-dashboard-automatically">Verified: it appears in the CLI and the dashboard automatically</a></li><li><a href="#conventions-and-lint">Conventions and lint</a></li></ul></nav><main class="doc"><h1 id="adding-a-metric-validator">Adding a metric validator</h1>
+<p><em>Part of <a href="https://assaio.dev/docs/extending">Extending assaio</a>. Next: <a href="https://assaio.dev/docs/metric-validator-example">the worked example</a>.</em></p>
 <p>Every block in <code>assaio analyze</code>—adoption, model fit, context health, throughput, and rework—is a
 <code>Validator</code> under <a href="https://github.com/assaio/assaio/blob/main/internal/analyze/validator.go"><code>internal/analyze/</code></a>. This implements the
 in-tree &quot;one metric = one file&quot; design from <a href="https://github.com/assaio/assaio/blob/main/AGENTS.md"><code>AGENTS.md</code></a> and
@@ -185,7 +232,7 @@ server</a>).</p>
 <tr>
 <td><code>Usage</code></td>
 <td><code>[]store.UsageRow</code></td>
-<td>The window's usage, <strong>pre-aggregated</strong> by <code>(day, tool, model, project, entrypoint, member)</code> — one row per combination, tokens and activity counts summed (<code>internal/store/store.go</code>'s <code>Usage</code> query). Not one row per raw event: there is no per-record or per-file detail left at this point (see the <a href="https://assaio.dev/docs#honesty-constraints-for-every-extension">say-so-when-approximating</a> rule). Each row carries <code>Day</code> (<code>&quot;YYYY-MM-DD&quot;</code>), <code>Tool</code>, <code>Model</code>, <code>Project</code>, <code>Entrypoint</code>, <code>Member</code>; token fields <code>In, Out, CacheRead, CacheWrite, Reasoning</code>; and activity fields <code>LinesAdded, LinesRemoved, Edits, ToolCalls, Rejected, Compactions, ReworkLines</code> (see the <a href="https://assaio.dev/docs/data-source#the-usagerecord-contract"><code>usage.Record</code> contract</a> for what each counts). It also carries the tool-call purpose split <code>ToolReads, ToolSearches, ToolCommands, ToolWrites, ToolOther</code> — which sums to <code>ToolCalls</code> for tools that name their tool calls and is all-zero for tools that do not — and <code>ToolErrors</code>, calls that came back an error. <strong>Every activity count here is zero for a source that does not record it</strong>, exactly as on <code>Sessions</code>: keep the rows whose <code>Tool</code> answers the matching signal with <code>report.UsageAnswering</code> before computing a rate over one — see <a href="#reading-a-field-only-the-sources-that-record-it-carry">Reading a field only the sources that record it carry</a>. That applies to the tool-call purpose split too, which is populated by only some tools.</td>
+<td>The window's usage, <strong>pre-aggregated</strong> by <code>(day, tool, model, project, entrypoint, member)</code> — one row per combination, tokens and activity counts summed (<code>internal/store/store.go</code>'s <code>Usage</code> query). Not one row per raw event: there is no per-record or per-file detail left at this point (see the <a href="https://assaio.dev/docs/extending#honesty-constraints-for-every-extension">say-so-when-approximating</a> rule). Each row carries <code>Day</code> (<code>&quot;YYYY-MM-DD&quot;</code>), <code>Tool</code>, <code>Model</code>, <code>Project</code>, <code>Entrypoint</code>, <code>Member</code>; token fields <code>In, Out, CacheRead, CacheWrite, Reasoning</code>; and activity fields <code>LinesAdded, LinesRemoved, Edits, ToolCalls, Rejected, Compactions, ReworkLines</code> (see the <a href="https://assaio.dev/docs/data-source#the-usagerecord-contract"><code>usage.Record</code> contract</a> for what each counts). It also carries the tool-call purpose split <code>ToolReads, ToolSearches, ToolCommands, ToolWrites, ToolOther</code> — which sums to <code>ToolCalls</code> for tools that name their tool calls and is all-zero for tools that do not — and <code>ToolErrors</code>, calls that came back an error. <strong>Every activity count here is zero for a source that does not record it</strong>, exactly as on <code>Sessions</code>: keep the rows whose <code>Tool</code> answers the matching signal with <code>report.UsageAnswering</code> before computing a rate over one — see <a href="#reading-a-field-only-the-sources-that-record-it-carry">Reading a field only the sources that record it carry</a>. That applies to the tool-call purpose split too, which is populated by only some tools.</td>
 </tr>
 <tr>
 <td><code>Sessions</code></td>
@@ -566,7 +613,7 @@ surface, including the automatic dashboard section.</p>
 <td><code>BarsPseudonym</code></td>
 <td>What kind of user-authored name <code>Bars</code>' labels carry: <code>&quot;project&quot;</code>, <code>&quot;skill&quot;</code>, or <code>&quot;&quot;</code> for none.</td>
 <td>Not rendered.</td>
-<td>Tells <code>--anonymize</code> whether to pseudonymize <code>Bars</code> labels, and under which prefix — see <a href="https://assaio.dev/docs#honesty-constraints-for-every-extension">Honesty constraints</a>. Set it for anything a person named (a repository, a skill, a sub-agent); leave it empty for a fixed vocabulary the tool defines (models, tools, time bands). Set it wrongly and you either scramble a label that was never PII, or leak a real name into a report meant to be shared.</td>
+<td>Tells <code>--anonymize</code> whether to pseudonymize <code>Bars</code> labels, and under which prefix — see <a href="https://assaio.dev/docs/extending#honesty-constraints-for-every-extension">Honesty constraints</a>. Set it for anything a person named (a repository, a skill, a sub-agent); leave it empty for a fixed vocabulary the tool defines (models, tools, time bands). Set it wrongly and you either scramble a label that was never PII, or leak a real name into a report meant to be shared.</td>
 </tr>
 <tr>
 <td><code>Takeaway</code></td>
@@ -673,7 +720,7 @@ registration order.</p>
 <p>Verification found and fixed a gap: <code>Bars</code> pseudonymization applied only to the validator named
 <code>&quot;throughput&quot;</code>. A <strong>custom</strong> validator ranking <code>Bars</code> by project could therefore expose real project
 names under <code>--anonymize</code>. The <code>Result.BarsPseudonym</code> field now directs
-<code>internal/dashboard.anonymizeVerdicts</code> for any validator (see <a href="https://assaio.dev/docs#honesty-constraints-for-every-extension">Honesty
+<code>internal/dashboard.anonymizeVerdicts</code> for any validator (see <a href="https://assaio.dev/docs/extending#honesty-constraints-for-every-extension">Honesty
 constraints</a>).</p>
 <h2 id="conventions-and-lint">Conventions and lint</h2>
 <ul>
@@ -712,7 +759,7 @@ and no favorable read from empty data. See <code>TestValidatorsEmptyInputSafe</c
 <code>internal/analyze/validators_test.go</code> for the built-in pattern.</p>
 </li>
 </ul>
-</main>
+<nav class="pager" aria-label="Previous and next"><a class="prev" href="https://assaio.dev/docs/extending"><span class="dir">Previous</span> Extending assaio</a><a class="next" href="https://assaio.dev/docs/metric-validator-example"><span class="dir">Next</span> Worked example: Weekend Usage</a></nav></main>
 </div>
 <footer>
 <p>Generated from the repository: every page here is rendered from the Markdown it is written in,

@@ -42,6 +42,14 @@ Discussion.
   vendor usage exports for `reconcile`. It states the redaction rules and that files will be
   committed to this public repository. It is the way in for `B144` and `B192`.
 
+### Changed
+
+- assaio.dev/docs now opens on a landing page with reading paths for understanding the figures,
+  running it for a team, extending assaio, and using an example. Guide pages show an 'On this page'
+  outline on the right on wide screens and above the article on narrow screens, plus previous/next
+  links in reading order. 'Extending assaio' moved from /docs to /docs/extending. The site still
+  loads no script, font or third-party request.
+
 ### Fixed
 
 - Corrected the threat model and architecture guide's claim that the desktop opener is the only

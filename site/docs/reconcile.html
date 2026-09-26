@@ -114,6 +114,53 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
 .cmd h3{font-family:var(--mono); font-size:.9rem; margin:0 0 .25rem; color:var(--signal); font-weight:600}
 .cmd p{margin:0; color:var(--dim); font-size:.93rem; max-width:44rem}
 .cmd table{margin-top:.6rem}
+.toc{min-width:0; font-size:.9rem}
+.toc ul{list-style:none; margin:0; padding:0}
+.toc a{display:flex; align-items:center; min-height:44px; padding:.35rem .75rem; border-radius:8px;
+  text-decoration:none; color:var(--dim); line-height:1.35; overflow-wrap:anywhere}
+.toc a:hover{color:var(--fg); background:var(--surface)}
+@media (width < 75rem){
+  .toc{margin-top:2rem; padding:.75rem .5rem .5rem; border:1px solid var(--line); border-radius:10px}
+  .toc .sidehead{margin-left:.75rem}
+}
+@media (width > 60rem){
+  .with-toc{row-gap:0}
+  .with-toc .side{grid-column:1; grid-row:1 / span 2}
+  .with-toc .toc{grid-column:2; grid-row:1}
+  .with-toc .doc{grid-column:2; grid-row:2}
+}
+@media (width >= 75rem){
+  .with-toc{grid-template-columns:16rem minmax(0,1fr) 13rem}
+  .with-toc .side,.with-toc .doc{grid-row:1}
+  .with-toc .toc{grid-column:3; grid-row:1; position:sticky; top:0; max-height:100vh; overflow-y:auto; padding:2rem 0}
+}
+.pager{display:flex; flex-wrap:wrap; justify-content:space-between; gap:1rem; margin:3rem 0 0;
+  padding-top:1.5rem; border-top:1px solid var(--line)}
+.pager a{display:flex; flex-direction:column; justify-content:center; flex:0 1 20rem; min-width:0; min-height:44px;
+  padding:.6rem .9rem; border:1px solid var(--line); border-radius:10px; text-decoration:none;
+  color:var(--fg); font-weight:600; line-height:1.35; overflow-wrap:anywhere}
+.pager a:hover{border-color:var(--signal); color:var(--fg)}
+.pager a.next{margin-left:auto; text-align:right}
+.pager .dir{font:700 .72rem/1.4 var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+.landing{display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr)); gap:0 1.25rem;
+  align-content:start}
+.landing>*{grid-column:1 / -1}
+.landing>h1+p{color:var(--dim); font-size:1.08rem}
+.landing>.path{grid-column:auto; margin:0 0 1.25rem; padding:1.25rem 1.25rem .75rem; border:1px solid var(--line);
+  border-radius:12px; background:var(--surface); min-width:0}
+.path h2{margin:0 0 .5rem; padding:0; border:0; font-size:1.2rem}
+.path p{color:var(--dim); font-size:.95rem}
+.path ul{list-style:none; padding:0; margin:0}
+.path li{margin:0}
+.path a{display:flex; align-items:center; min-height:44px; padding:.35rem 0; line-height:1.35;
+  text-decoration:none; overflow-wrap:anywhere}
+.path a:hover{text-decoration:underline}
+@media print{
+  .side,.toc,.pager,.topnav{display:none}
+  .layout{display:block}
+  .landing{display:block}
+  .landing>.path{break-inside:avoid}
+}
 </style>
 </head>
 <body><div class="wrap">
@@ -128,7 +175,7 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
     <a class="menu" href="#docs-nav">Menu</a>
   </nav>
 </header>
-<div class="layout"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">Extending assaio</a></li></ul><p class="sidehead">Guides</p><ul><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/runtime-inspect">Runtime inspect (experimental)</a></li><li><a href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li><li><a class="on" href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li></ul><p class="sidehead">Recipes</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="reconciling-against-the-vendors-own-numbers">Reconciling against the vendor's own numbers</h1>
+<div class="layout with-toc"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">assaio documentation</a></li></ul><p class="sidehead">Understand the figures</p><ul><li><a href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a class="on" href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li><li><a href="https://assaio.dev/docs/runtime-inspect">Runtime inspect (experimental)</a></li></ul><p class="sidehead">Run it for a team</p><ul><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li></ul><p class="sidehead">Extend assaio</p><ul><li><a href="https://assaio.dev/docs/extending">Extending assaio</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li></ul><p class="sidehead">Use an example</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><nav class="toc" aria-label="On this page"><p class="sidehead">On this page</p><ul><li><a href="#getting-an-export">Getting an export</a></li><li><a href="#column-binding">Column binding</a></li><li><a href="#reading-the-output">Reading the output</a></li><li><a href="#what-it-cannot-check">What it cannot check</a></li><li><a href="#contributing-a-capture">Contributing a capture</a></li></ul></nav><main class="doc"><h1 id="reconciling-against-the-vendors-own-numbers">Reconciling against the vendor's own numbers</h1>
 <p>Every <code>$</code> assaio prints is an <strong>estimate</strong> based on local token counts and public pay-as-you-go
 rates. <code>assaio-agent reconcile</code> checks that estimate against a vendor's billed amount, the only
 check from outside assaio.</p>
@@ -178,7 +225,7 @@ per-token actual to compare</li>
 <code>internal/calibration</code>. One redacted real export containing only date, model, token count, amount,
 and currency would change its label to <code>real</code> and let aliases be checked against a vendor's actual
 format.</p>
-</main>
+<nav class="pager" aria-label="Previous and next"><a class="prev" href="https://assaio.dev/docs/evidence"><span class="dir">Previous</span> Local session-to-commit evidence</a><a class="next" href="https://assaio.dev/docs/format-resilience"><span class="dir">Next</span> Format resilience — detecting and reacting to vendor log-format drift</a></nav></main>
 </div>
 <footer>
 <p>Generated from the repository: every page here is rendered from the Markdown it is written in,
