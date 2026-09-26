@@ -31,11 +31,13 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-09-26
+
 <a id="runtime-inspect-reported-published-vllm-metrics-as-unavailable"></a>
 
 ### `runtime inspect` reported published vLLM metrics as unavailable
 
-*Corrected in v0.30.0.*
+*Corrected in v0.30.0, released 2026-09-26.*
 
 Since v0.24.0, `runtime inspect` listed vLLM capabilities it could not find under `unavailable here -- not zero, not measured` (or `"present": false` with `--format json`). This told readers the deployment did not publish them. The claim is withdrawn: two defects made it say this about metrics the server did publish.
 
@@ -51,7 +53,7 @@ The DCGM reader was unaffected. assaio has no telemetry, so whether anyone relie
 
 ### The threat model said `share` starts the only program assaio launches
 
-*Corrected in v0.30.0.*
+*Corrected in v0.30.0, released 2026-09-26.*
 
 From v0.25.0, the `share` section of docs/threat-model.md and docs/architecture.md said the desktop opener (`open`, `xdg-open`, `rundll32`) was the only program assaio launches. That was incomplete — on an empty store, `share` first imports logs, starting any configured parser plugins; `evidence` and `survival` run `git` against the local repository; metric and rule plugins declared in config run as subprocesses.
 

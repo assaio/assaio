@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-09-26
+
 ### Breaking
 
 - **Experimental `assaio-agent runtime inspect` (since v0.24) is removed.** Scripts calling it now
@@ -54,6 +56,11 @@ Discussion.
 
 ### Changed
 
+- The 2026-09-26 LiteLLM snapshot prices 26 new unprefixed ids, including
+  `apac.anthropic.claude-opus-5-5`, `openai.gpt-6-sol`, `global.openai.gpt-5.5` and
+  `deepseek.r1-v1:0`; reprices 3 (`gemini-2.5-flash-image`, `gemini-3-pro-image-preview`,
+  `gemini-3.1-flash-image-preview`); and lists 11 previously dropped ids again, including
+  `gpt-5-codex` and `gpt-5.1-codex`. Now 55 ids rely on their last listed price instead of 66.
 - assaio.dev/docs now opens on a landing page with reading paths for understanding the figures,
   running it for a team, extending assaio, and using an example. Guide pages show an 'On this page'
   outline on the right on wide screens and above the article on narrow screens, plus previous/next
@@ -1685,7 +1692,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.29.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.30.0...HEAD
+[0.30.0]: https://github.com/assaio/assaio/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/assaio/assaio/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/assaio/assaio/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/assaio/assaio/compare/v0.26.1...v0.27.0
