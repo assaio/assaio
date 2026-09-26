@@ -80,8 +80,11 @@ the text itself.
 
 ## settings.json
 
-Permissions allow the read-only and verify commands, ask for every commit, push, tag, merge
-and release, and deny reading secret files. `enabledPlugins` switches off the user-level
+Permissions allow the maintainer's whole loop without a prompt: verify, commit, push, open and
+merge a PR, tag through `make release`, and the content door. `hooks/guard.sh` is what stops the
+irreversible cases (above). They still ask before discarding local work (`git reset --hard`,
+`clean`, `restore`, `checkout --`) or creating or deleting a release by hand, and deny reading
+secret files. `enabledPlugins` switches off the user-level
 plugins that add nothing here (Atlassian, Sentry, Railway, Cloudflare, chrome-devtools, GitHub)
 so their skill and tool listings stay out of every session's context; Playwright stays for
 `browser`. `attribution` is empty because this project never credits an assistant.
