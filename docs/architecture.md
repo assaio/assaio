@@ -12,7 +12,8 @@ marked in place rather than described afterwards: they are steps in this path, n
 one.
 
 The whole reporting path is local. Network access exists only in the explicitly invoked team
-server/sync and runtime-inspection paths; what crosses a machine boundary, and under whose control, is
+server (`serve`) and `sync` paths. Configured exec plugins are separate programs; their network
+use is their own. What crosses a machine boundary, and under whose control, is covered in
 [`threat-model.md`](threat-model.md) and [`PRIVACY.md`](../PRIVACY.md).
 
 ## 1. Discovery — `internal/paths`, `internal/ingest`

@@ -33,6 +33,16 @@ Discussion.
 
 ## [Unreleased]
 
+### Breaking
+
+- **Experimental `assaio-agent runtime inspect` (since v0.24) is removed.** Scripts calling it now
+  fail with an unknown-command error and exit status 1. On channels searched through 2026-09-24,
+  none of its roadmap gate conditions was evidenced (assaio has no telemetry, so silent use cannot
+  be seen); its vLLM reader reported 8 of 12 capabilities unavailable against vLLM v0.12.0's
+  metrics and 6 of 12 against v0.10.2's ([correction](docs/corrections.md#runtime-inspect-reported-published-vllm-metrics-as-unavailable)).
+  **Migration:** Read endpoints with `curl <endpoint>/metrics`, vLLM's own Grafana dashboards, or
+  `dcgmi dmon`. These do not replace its one-shot joined snapshot.
+
 ### Added
 
 - When `reprice --against` targets a model LiteLLM no longer lists, text output names the target

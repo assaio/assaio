@@ -155,8 +155,7 @@ unauthorized caller cannot read a report or submit another member's identity.
 - Keep release artifacts reproducible, attested, scanned and built on a supported toolchain.
 - Complete the local and team threat model, privacy map and deletion tests.
 
-**Exit:** the claims and public contracts are dependable, not merely feature-rich. Runtime
-Insights is not a v1 requirement.
+**Exit:** the claims and public contracts are dependable, not merely feature-rich.
 
 ## Explicit gates and deferrals
 
@@ -164,7 +163,7 @@ Insights is not a v1 requirement.
 | --- | --- |
 | More local token dashboards or visualizations | Defer unless a design partner names a decision the existing dashboard cannot support. |
 | New coding-tool parsers | Require a stable discoverable source, a real redacted corpus and a user who will rerun it. Prefer out-of-tree plugins before in-tree ownership. |
-| `runtime inspect` beyond its current slice | At v0.30, remove it unless three self-hosted-model operators identify the same recurring decision, one contributes a real exposition and one returns for a second use. |
+| `runtime inspect` | Removed in v0.30. The gate counts missing evidence as a no: on GitHub issues and discussions, Hacker News, and social search up to 2026-09-24, none of its three conditions was evidenced. assaio has no telemetry, so silent use cannot be seen. The second-use condition was measured on a reader that reported 6 to 8 of its 12 vLLM capabilities as unavailable ([correction](docs/corrections.md#runtime-inspect-reported-published-vllm-metrics-as-unavailable)). It returns only when three self-hosted-model operators name the same recurring decision and one contributes a real exposition, preferably as an out-of-tree plugin first. |
 | Production team server | Starts with milestone 4 design partners, not in anticipation of them. |
 | Managed cloud | Starts only after the self-hosted team loop is repeatable and its operating envelope is measured. |
 | In-process Go plugin API | Waits for the v1 contract freeze; exec protocols remain the stable path. |

@@ -127,7 +127,6 @@ internal/recommend/      typed experiment records: evidence, rollback, follow-up
 internal/reconcile/      compares a vendor's own export against the local estimate
 internal/report/         aggregates stored usage into priced rows; renders table/JSON/CSV
 internal/reprice/        prices the window's own turns against another entry in the same table
-internal/runtime/        experimental read-only snapshot of a self-hosted vLLM/DCGM endpoint
 internal/server/         self-hosted team server: usage collection + served dashboard
 internal/share/          the postable artifact: structural redaction, quoted figures (ADR 0014)
 internal/signal/         the catalog of what assaio can report, and what data supports it

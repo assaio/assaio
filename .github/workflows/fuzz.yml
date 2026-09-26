@@ -19,7 +19,6 @@ on:
       - 'internal/parser/**'
       - 'internal/plugin/**'
       - 'internal/reconcile/**'
-      - 'internal/runtime/openmetrics/**'
       # The two files that decide what runs at all. A change to either can shrink coverage
       # without touching a parser, which is the failure this workflow exists to make loud.
       - 'Makefile'

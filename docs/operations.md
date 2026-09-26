@@ -16,7 +16,7 @@ tools beyond Go.
 | `make lint` | `gofmt -l`, `go vet`, `golangci-lint run` | nothing | Requires `Makefile`-pinned golangci-lint version | no | golangci-lint |
 | `make test` | `go test ./...` (CI adds `-race`, coverage) | test caches | — | no | — |
 | `make build` | static binary to `bin/assaio-agent`, version from `git describe` | `bin/` (ignored) | — | no | — |
-| `make fuzz` | every parser, reconciler, plugin and openmetrics fuzzer for `FUZZTIME` (20s) | a crasher under `testdata/fuzz/` — keep it | — | no | — |
+| `make fuzz` | every parser, reconciler and plugin fuzzer for `FUZZTIME` (20s) | a crasher under `testdata/fuzz/` — keep it | — | no | — |
 | `make vuln` | `govulncheck ./...` | nothing | — | no | network (vuln DB) |
 | `.claude/checks/gate.sh` | the quiet local gate: fmt `--diff`, lint, test, build, docs drift, harness checks, fuzz when a parser changed, vuln with `full` | logs under `~/.cache/assaio-gate/` | — | no | jq, python3 |
 | `.claude/checks/setup.py` | harness well-formed: frontmatter, rule globs, cited paths, `AGENTS.md` budget, no Fable id | nothing | — | no | python3 |
@@ -58,7 +58,6 @@ tools beyond Go.
 |---|---|---|---|---|---|
 | `assaio-agent serve` | the team server MVP on loopback, no TLS | ⚠ `assaio-server.db`; listens on `--addr` | `--token` ≥16 bytes or `server.members` required | no | `ASSAIO_SERVER_TOKEN` |
 | `assaio-agent sync` | pushes local records to a server | ⚠ HTTP POST to `--server` | warns on cleartext off-loopback; 401 stops | no | `ASSAIO_SYNC_TOKEN`, `ASSAIO_SYNC_SERVER` |
-| `assaio-agent runtime` | reads a self-hosted vLLM/DCGM endpoint | nothing | only with `--vllm-url` / `--dcgm-url` | no | the endpoint |
 
 ## Release and publish (asks first)
 

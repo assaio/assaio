@@ -13,8 +13,9 @@ roadmap; today you run the company server with `serve` (see the [team server](..
 - **`statusline`** — shows one line in a status bar. It only reads the store, so it reflects your
   last `backfill` and always shows the data's age.
 - **`sync`** — pushes local usage to a team server in one bearer-token HTTPS call. It is
-  **pseudonymized by default**; `--member` explicitly opts in to a real name. This is the only
-  network path; nothing else leaves the machine.
+  **pseudonymized by default**; `--member` explicitly opts in to a real name. `sync` and `serve`
+  (the team server it pushes to) are assaio's only network paths. Nothing else leaves the machine,
+  apart from what a configured exec plugin does as your own program.
 - **`survival`** — checks locally how much of a repo's window survives in `HEAD`, alongside stored
   AI lines. It calls `git blame`, so run it periodically, such as weekly, rather than per commit. It
   reports merge commits separately from the rate: git gives no line counts for merges, so a

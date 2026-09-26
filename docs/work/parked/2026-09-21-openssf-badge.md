@@ -80,7 +80,7 @@ Everything below is Met unless the Answer column says otherwise.
 
 | Criterion | Answer | Evidence |
 |---|---|---|
-| `know_secure_design` / `know_common_errors` | **Assert yourself** | Self-assessment by the primary developer; the evidence a justification can cite: `docs/threat-model.md` (trust surfaces, data map, deletion test); offline by default, the network reached only by `sync`, `serve` and `runtime inspect`; least-privilege workflow tokens (`permissions: contents: read`) and SHA-pinned actions; untrusted input (session logs, plugin output, CSV exports) parsed behind validation and fuzzed; HTML rendered through `html/template`; no SQL built by string formatting; bearer token compared in constant time; gosec, CodeQL and govulncheck in CI. |
+| `know_secure_design` / `know_common_errors` | **Assert yourself** | Self-assessment by the primary developer; the evidence a justification can cite: `docs/threat-model.md` (trust surfaces, data map, deletion test); offline by default, the network reached only by `sync` and `serve`; least-privilege workflow tokens (`permissions: contents: read`) and SHA-pinned actions; untrusted input (session logs, plugin output, CSV exports) parsed behind validation and fuzzed; HTML rendered through `html/template`; no SQL built by string formatting; bearer token compared in constant time; gosec, CodeQL and govulncheck in CI. |
 | `crypto_published` / `crypto_floss` / `crypto_working` / `crypto_weaknesses` | Met | Go standard library only: HMAC-SHA256 (`internal/pseudonym`), `crypto/subtle` constant-time compare (`internal/server/identity.go`) |
 | `crypto_keylength` | Met | SHA-256, 256-bit secrets |
 | `crypto_call` | Met | No cryptography is reimplemented |
