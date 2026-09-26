@@ -10,8 +10,10 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 )
 
 // GitHubBlob is where a document that is not published on the site still lives.
@@ -28,30 +30,42 @@ type Site struct {
 // Markdown renders one document to an HTML fragment, rewriting every relative link to where
 // that target actually lives once published. A link this cannot resolve is an error rather than
 // a silently emitted 404: the site is the copy a reader trusts, and a dead link there is the
-// same class of defect as a stale number.
-func Markdown(source, doc string, s Site) (string, []error) {
-	md := goldmark.New(
+// same class of defect as a stale number. It also returns the document's h2 outline, with the
+// ids the rendered headings carry.
+func Markdown(source, doc string, s Site) (string, []Heading, []error) {
+	md := newMarkdown()
+	src := []byte(doc)
+	ctx := parser.NewContext(parser.WithIDs(newGitHubIDs()))
+	root := md.Parser().Parse(text.NewReader(src), parser.WithContext(ctx))
+
+	errs := rewriteLinks(root, path.Dir(source), s)
+	if source == LandingSource {
+		wrapPaths(root)
+	}
+	headings := outline(root, src)
+
+	var out bytes.Buffer
+	if err := md.Renderer().Render(&out, src, root); err != nil {
+		return "", nil, append(errs, err)
+	}
+	return out.String(), headings, errs
+}
+
+// newMarkdown is the one parser configuration, shared by the renderer and by the reading of
+// the landing, so a list the landing counts is the list the page shows.
+func newMarkdown() goldmark.Markdown {
+	return goldmark.New(
 		goldmark.WithExtensions(extension.Table, extension.Strikethrough, extension.Linkify),
-		// Heading ids come from the context generator below; without this option goldmark
-		// assigns none at all and every in-page anchor written in docs/ lands at the top.
+		// Heading ids come from the context generator; without this option goldmark assigns
+		// none at all and every in-page anchor written in docs/ lands at the top.
 		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 		// Every document rendered here is written in this repository and reviewed in a pull
 		// request, and the site guards read the generated file: a page that fetched anything
 		// or carried an embed fails `selfcontained`. Without this, goldmark writes a visible
 		// "raw HTML omitted" marker where a document has so much as a comment.
-		goldmark.WithRendererOptions(html.WithUnsafe()),
+		goldmark.WithRendererOptions(html.WithUnsafe(),
+			renderer.WithNodeRenderers(util.Prioritized(pathCardRenderer{}, 500))),
 	)
-	reader := text.NewReader([]byte(doc))
-	ctx := parser.NewContext(parser.WithIDs(newGitHubIDs()))
-	root := md.Parser().Parse(reader, parser.WithContext(ctx))
-
-	errs := rewriteLinks(root, path.Dir(source), s)
-
-	var out bytes.Buffer
-	if err := md.Renderer().Render(&out, []byte(doc), root); err != nil {
-		return "", append(errs, err)
-	}
-	return out.String(), errs
 }
 
 func rewriteLinks(root ast.Node, fromDir string, s Site) []error {

@@ -37,8 +37,9 @@ server (git/issue-tracker correlation for survival/bug/quality) is future roadma
 - The gate: `make fmt` (no diff), `make lint`, `make test`, `make fuzz` on a parser change,
   `make vuln`; `.golangci.yml` is the canon. File size and complexity are review norms, not lint
   gates (ADR 0002) — never turn them into gates.
-- Every `.md` under `docs/` is published or excused in `internal/docs/guides.go`; `make docs`
-  regenerates `docs/reference.json` and the site, and `make test` fails on drift.
+- Every `.md` under `docs/` is linked from a path in `docs/index.md` or excused in
+  `internal/docs/guides.go`; `make docs` regenerates `docs/reference.json` and the site, and
+  `make test` fails on drift.
 
 ## Honesty rules (product-critical)
 

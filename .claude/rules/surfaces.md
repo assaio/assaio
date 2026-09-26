@@ -17,8 +17,9 @@ paths:
   ungated (`docs/site.md`). Nothing on it names a version (`site.yml` fails on a bare `X.Y.Z`),
   loads a remote asset, or links a `.html` path. `site/index.html` is the only hand-written page;
   `site/llms.txt` and `site/robots.txt` are hand-written too.
-- **Every `.md` under `docs/` is published or excused** in `internal/docs/guides.go`
-  (`order` / `unpublished`); a new file in neither fails `make test`. `docs/work/` and `docs/adr/`
+- **Every `.md` under `docs/` is published or excused**: linked from a path in `docs/index.md`
+  (which sets reading order, sidebar and previous/next) or listed in `unpublished` in
+  `internal/docs/guides.go`; a new file in neither fails `make test`. `docs/work/` and `docs/adr/`
   are skipped as directories. `docs/reference.json`, `site/reference.html`, `site/docs.html`,
   `site/docs/*` and `site/sitemap.xml` are generated: `make docs`, never edited.
 - **Lifecycle**: a shipped item is *deleted* from `BACKLOG.md` (ids never reused, never `[x]`),

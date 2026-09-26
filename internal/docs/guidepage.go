@@ -16,7 +16,7 @@ func GuidePage(repoRoot string, g *Guide, guides []Guide) ([]byte, []error) {
 	if err != nil {
 		return nil, []error{err}
 	}
-	body, errs := Markdown(g.Source, string(raw), Site{
+	body, headings, errs := Markdown(g.Source, string(raw), Site{
 		Published: PublishedMap(guides),
 		Exists: func(repoPath string) bool {
 			_, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(repoPath)))
@@ -26,6 +26,10 @@ func GuidePage(repoRoot string, g *Guide, guides []Guide) ([]byte, []error) {
 	if len(errs) > 0 {
 		return nil, prefix(g.Source, errs)
 	}
+	landing := g.Source == LandingSource
+	if landing {
+		headings = nil
+	}
 	return renderPage(&pageSpec{
 		Title:       g.Title,
 		Description: describe(string(raw)),
@@ -33,6 +37,9 @@ func GuidePage(repoRoot string, g *Guide, guides []Guide) ([]byte, []error) {
 		Current:     g.URL,
 		Body:        body,
 		Guides:      guides,
+		Outline:     headings,
+		Sequence:    guides,
+		Landing:     landing,
 	}), nil
 }
 

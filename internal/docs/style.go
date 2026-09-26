@@ -4,7 +4,7 @@ package docs
 // site/ has to render without fetching anything (docs/site.md). The palette is the website's;
 // the two are separate copies on purpose, since sharing one would mean the page fetches a
 // stylesheet and breaks the promise it makes about itself.
-const pageStyle = baseStyle + docStyle
+const pageStyle = baseStyle + docStyle + navStyle
 
 const baseStyle = `:root{
   --bg:#ffffff; --surface:#f5f7f8; --line:#e2e6e9; --line-strong:#cdd3d8;
@@ -103,4 +103,56 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
 .cmd h3{font-family:var(--mono); font-size:.9rem; margin:0 0 .25rem; color:var(--signal); font-weight:600}
 .cmd p{margin:0; color:var(--dim); font-size:.93rem; max-width:44rem}
 .cmd table{margin-top:.6rem}
+`
+
+// navStyle places the outline, the pager and the landing's path cards. The outline follows the
+// sidebar in the DOM and is moved by grid placement alone, so there is one copy for every width
+// and a keyboard reaches it before the article.
+const navStyle = `.toc{min-width:0; font-size:.9rem}
+.toc ul{list-style:none; margin:0; padding:0}
+.toc a{display:flex; align-items:center; min-height:44px; padding:.35rem .75rem; border-radius:8px;
+  text-decoration:none; color:var(--dim); line-height:1.35; overflow-wrap:anywhere}
+.toc a:hover{color:var(--fg); background:var(--surface)}
+@media (width < 75rem){
+  .toc{margin-top:2rem; padding:.75rem .5rem .5rem; border:1px solid var(--line); border-radius:10px}
+  .toc .sidehead{margin-left:.75rem}
+}
+@media (width > 60rem){
+  .with-toc{row-gap:0}
+  .with-toc .side{grid-column:1; grid-row:1 / span 2}
+  .with-toc .toc{grid-column:2; grid-row:1}
+  .with-toc .doc{grid-column:2; grid-row:2}
+}
+@media (width >= 75rem){
+  .with-toc{grid-template-columns:16rem minmax(0,1fr) 13rem}
+  .with-toc .side,.with-toc .doc{grid-row:1}
+  .with-toc .toc{grid-column:3; grid-row:1; position:sticky; top:0; max-height:100vh; overflow-y:auto; padding:2rem 0}
+}
+.pager{display:flex; flex-wrap:wrap; justify-content:space-between; gap:1rem; margin:3rem 0 0;
+  padding-top:1.5rem; border-top:1px solid var(--line)}
+.pager a{display:flex; flex-direction:column; justify-content:center; flex:0 1 20rem; min-width:0; min-height:44px;
+  padding:.6rem .9rem; border:1px solid var(--line); border-radius:10px; text-decoration:none;
+  color:var(--fg); font-weight:600; line-height:1.35; overflow-wrap:anywhere}
+.pager a:hover{border-color:var(--signal); color:var(--fg)}
+.pager a.next{margin-left:auto; text-align:right}
+.pager .dir{font:700 .72rem/1.4 var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+.landing{display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr)); gap:0 1.25rem;
+  align-content:start}
+.landing>*{grid-column:1 / -1}
+.landing>h1+p{color:var(--dim); font-size:1.08rem}
+.landing>.path{grid-column:auto; margin:0 0 1.25rem; padding:1.25rem 1.25rem .75rem; border:1px solid var(--line);
+  border-radius:12px; background:var(--surface); min-width:0}
+.path h2{margin:0 0 .5rem; padding:0; border:0; font-size:1.2rem}
+.path p{color:var(--dim); font-size:.95rem}
+.path ul{list-style:none; padding:0; margin:0}
+.path li{margin:0}
+.path a{display:flex; align-items:center; min-height:44px; padding:.35rem 0; line-height:1.35;
+  text-decoration:none; overflow-wrap:anywhere}
+.path a:hover{text-decoration:underline}
+@media print{
+  .side,.toc,.pager,.topnav{display:none}
+  .layout{display:block}
+  .landing{display:block}
+  .landing>.path{break-inside:avoid}
+}
 `

@@ -2,6 +2,7 @@ package docs
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -16,45 +17,16 @@ type Guide struct {
 	// URL is where it is served; File is where the generated page is committed.
 	URL, File string
 	Title     string
-	// Group is the heading it appears under in the docs index.
+	// Group is the sidebar heading it appears under: the reading path in docs/index.md that lists
+	// it, GroupStart for the landing itself.
 	Group string
 }
 
-// Groups, in the order a reader meets them.
+// The two sidebar groups no reading path supplies: the landing, and the generated reference.
 const (
-	GroupStart   = "Start here"
-	GroupGuides  = "Guides"
-	GroupRecipes = "Recipes"
-	GroupRef     = "Reference"
+	GroupStart = "Start here"
+	GroupRef   = "Reference"
 )
-
-// order is the one editorial fact about this set: what a reader should meet first. Everything
-// else -- which documents exist, what they are called -- is read from the tree, so a new page
-// cannot be forgotten. A publishable document missing from this list fails the build rather than
-// appearing last or not at all.
-var order = []string{
-	"docs/extending.md",
-	"docs/compatibility.md",
-	"docs/extending/metric-validator.md",
-	"docs/extending/metric-validator-example.md",
-	"docs/extending/metric-plugin.md",
-	"docs/extending/rule-plugin.md",
-	"docs/extending/parser-plugin.md",
-	"docs/extending/data-source.md",
-	"docs/extending/query-your-data.md",
-	"docs/extending/team-server.md",
-	"docs/extending/source-fields.md",
-	"docs/runtime-inspect.md",
-	"docs/evidence.md",
-	"docs/automation.md",
-	"docs/reconcile.md",
-	"docs/format-resilience.md",
-	"docs/recipes/label-rules.md",
-	"docs/recipes/ci-gates.md",
-	"docs/recipes/rule-plugins.md",
-	"docs/recipes/automation.md",
-	"docs/recipes/extensions.md",
-}
 
 // unpublished names each Markdown file under docs/ that the site deliberately does not serve,
 // with the reason. An entry here is a decision; a file in neither list is an oversight, and
@@ -73,36 +45,49 @@ var unpublished = map[string]string{
 		"maintainer and the agent harness, like site.md",
 }
 
-// Guides reads the published set from the repository and returns it in reading order.
+// Guides reads the published set from the repository and returns it in reading order: the
+// landing, then each reading path's guides as docs/index.md lists them. A publishable document
+// no path lists fails the build rather than appearing last or not at all.
 func Guides(repoRoot string) ([]Guide, error) {
 	found, err := documents(repoRoot)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]Guide, 0, len(found))
-	for _, source := range order {
-		title, ok := found[source]
-		if !ok {
-			return nil, fmt.Errorf("%s is listed in reading order but the repository has no such file", source)
-		}
-		delete(found, source)
-		out = append(out, guide(source, title))
+	landing, ok := found[LandingSource]
+	if !ok {
+		return nil, fmt.Errorf("%s is missing; it is the landing page and the reading order", LandingSource)
 	}
-	for source := range found {
-		return nil, fmt.Errorf("%s is publishable but appears in neither the reading order nor the "+
-			"unpublished list in internal/docs/guides.go", source)
+	raw, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(LandingSource))) //nolint:gosec // the landing under the repository root
+	if err != nil {
+		return nil, err
+	}
+	paths, err := readPaths(string(raw), found)
+	if err != nil {
+		return nil, err
+	}
+	out := []Guide{guide(LandingSource, landing, GroupStart)}
+	delete(found, LandingSource)
+	for _, p := range paths {
+		for _, source := range p.Sources {
+			out = append(out, guide(source, found[source], p.Title))
+			delete(found, source)
+		}
+	}
+	if len(found) > 0 {
+		orphans := slices.Sorted(maps.Keys(found))
+		return nil, fmt.Errorf("%s is publishable but no reading path in %s lists it; add it to one "+
+			"there, or excuse it in the unpublished list in internal/docs/guides.go",
+			strings.Join(orphans, ", "), LandingSource)
 	}
 	return out, nil
 }
 
-func guide(source, title string) Guide {
+func guide(source, title, group string) Guide {
+	if source == LandingSource {
+		return Guide{Source: source, URL: "/docs", File: "site/docs.html", Title: title, Group: group}
+	}
 	slug := strings.TrimSuffix(path.Base(source), ".md")
-	group := GroupGuides
-	switch {
-	case source == "docs/extending.md":
-		return Guide{Source: source, URL: "/docs", File: "site/docs.html", Title: title, Group: GroupStart}
-	case strings.HasPrefix(source, "docs/recipes/"):
-		group = GroupRecipes
+	if strings.HasPrefix(source, "docs/recipes/") {
 		slug = "recipes/" + slug
 	}
 	return Guide{
@@ -185,8 +170,20 @@ const (
 	ReferenceFile   = "site/docs/reference.html"
 )
 
-// GroupsInOrder is how the index lays the set out.
-func GroupsInOrder() []string { return []string{GroupStart, GroupGuides, GroupRecipes, GroupRef} }
+// GroupsInOrder is how the sidebar lays the set out: each group as the guides first reach it,
+// then the reference.
+func GroupsInOrder(guides []Guide) []string {
+	var out []string
+	for _, g := range guides {
+		if !slices.Contains(out, g.Group) {
+			out = append(out, g.Group)
+		}
+	}
+	if !slices.Contains(out, GroupRef) {
+		out = append(out, GroupRef)
+	}
+	return out
+}
 
 // InGroup returns the guides of one group, keeping reading order.
 func InGroup(guides []Guide, group string) []Guide {

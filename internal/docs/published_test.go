@@ -254,6 +254,11 @@ func TestEveryLinkInsideTheSiteResolves(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, p := range files {
+		for _, m := range regexp.MustCompile(`href="#([^"]*)"`).FindAllStringSubmatch(read(t, p), -1) {
+			if !pages[servedURL(p)][m[1]] {
+				t.Errorf("%s links to #%s, and the page itself has no such anchor", servedURL(p), m[1])
+			}
+		}
 		for _, m := range regexp.MustCompile(`href="https://assaio\.dev([^"]*)"`).FindAllStringSubmatch(read(t, p), -1) {
 			target, fragment, _ := strings.Cut(m[1], "#")
 			if target == "" {

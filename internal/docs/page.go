@@ -11,7 +11,8 @@ import (
 const Host = "https://assaio.dev"
 
 // pageSpec is one published page. Description feeds the meta tags a shared link renders from;
-// Current marks which sidebar entry the reader is on.
+// Current marks which sidebar entry the reader is on. Outline feeds "On this page", Sequence the
+// previous and next links; either left empty renders nothing.
 type pageSpec struct {
 	Title       string
 	Description string
@@ -19,6 +20,9 @@ type pageSpec struct {
 	Current     string
 	Body        string
 	Guides      []Guide
+	Outline     []Heading
+	Sequence    []Guide
+	Landing     bool
 }
 
 // renderPage wraps a body in the shell every served page shares. One shell, so the reference
@@ -61,9 +65,18 @@ func renderPage(p *pageSpec) []byte {
     <a class="menu" href="#docs-nav">Menu</a>
   </nav>
 </header>
-<div class="layout">`)
+`)
+	toc := tocHTML(p.Outline)
+	layout, main := "layout", "doc"
+	if toc != "" {
+		layout += " with-toc"
+	}
+	if p.Landing {
+		main += " landing"
+	}
+	b.WriteString(`<div class="` + layout + `">`)
 	writeSidebar(&b, p)
-	b.WriteString(`<main class="doc">` + p.Body + `</main>
+	b.WriteString(toc + `<main class="` + main + `">` + p.Body + pagerHTML(p.Sequence, p.URL) + `</main>
 </div>
 <footer>
 <p>Generated from the repository: every page here is rendered from the Markdown it is written in,
@@ -79,7 +92,7 @@ It loads nothing: no fonts, no analytics, no third-party requests.</p>
 
 func writeSidebar(b *strings.Builder, p *pageSpec) {
 	b.WriteString(`<aside class="side" id="docs-nav"><nav aria-label="Documentation">`)
-	for _, group := range GroupsInOrder() {
+	for _, group := range GroupsInOrder(p.Guides) {
 		entries := InGroup(p.Guides, group)
 		if group == GroupRef && len(entries) == 0 {
 			entries = []Guide{{URL: ReferenceURL, Title: "Every signal, source and setting"}}
