@@ -47,6 +47,12 @@ type Record struct {
 	// "apps/mobile"), or "" at the root or when unresolved. Set by ingest, never by a
 	// parser; always relative, never an absolute path.
 	Subpath string
+	// ProjectGuessed marks a Project resolved for a working directory that no longer exists, so
+	// it was computed with less of the filesystem than a read made while the directory existed
+	// (a removed clone nested in another repository resolves to the outer one). TRANSIENT, like
+	// Cwd. A first read stores it as the best label there is; a re-read never replaces a stored
+	// project with it.
+	ProjectGuessed bool `json:"-"`
 	// GitBranch is the branch name if the log carries it, else "".
 	GitBranch string
 	// Entrypoint is how the tool was invoked (e.g. "cli", "sdk-py"), else "".

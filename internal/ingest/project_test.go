@@ -75,3 +75,36 @@ func mustMkdirAll(t *testing.T, path string) {
 		t.Fatal(err)
 	}
 }
+
+// TestResolveProjectsMarksOnlyAVanishedDirectoryAsGuessed: once a working directory is gone,
+// whatever resolves now -- its own name, or an outer repository a removed nested clone sat in --
+// is a guess. A directory that still exists is not.
+func TestResolveProjectsMarksOnlyAVanishedDirectoryAsGuessed(t *testing.T) {
+	repo := t.TempDir()
+	mustMkdirAll(t, filepath.Join(repo, ".git"))
+	plain := t.TempDir()
+	tests := []struct {
+		name        string
+		cwd         string
+		wantProject string
+		wantSubpath string
+		wantGuessed bool
+	}{
+		{"a vanished directory outside any repository", filepath.Join(t.TempDir(), "wt-feature"), "wt-feature", "", true},
+		{"an existing directory outside any repository", plain, filepath.Base(plain), "", false},
+		{"a vanished directory inside an existing repository", filepath.Join(repo, "apps", "gone"), filepath.Base(repo), filepath.Join("apps", "gone"), true},
+		{"a vanished clone nested in an existing repository", filepath.Join(repo, "vendor", "acme"), filepath.Base(repo), filepath.Join("vendor", "acme"), true},
+		{"an existing directory inside a repository", repo, filepath.Base(repo), "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recs := []usage.Record{{Cwd: tt.cwd}}
+			resolveProjects(recs, make(projectCache))
+			r := recs[0]
+			if r.Project != tt.wantProject || r.Subpath != tt.wantSubpath || r.ProjectGuessed != tt.wantGuessed {
+				t.Fatalf("got (%q, %q, guessed=%v), want (%q, %q, guessed=%v)",
+					r.Project, r.Subpath, r.ProjectGuessed, tt.wantProject, tt.wantSubpath, tt.wantGuessed)
+			}
+		})
+	}
+}

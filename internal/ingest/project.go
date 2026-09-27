@@ -1,14 +1,20 @@
 package ingest
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/assaio/assaio/internal/projectid"
 	"github.com/assaio/assaio/internal/usage"
 )
 
-// resolution is one cached projectid.Resolve outcome.
-type resolution struct{ root, subpath string }
+// resolution is one cached projectid.Resolve outcome. guessed means the working directory no
+// longer exists: whatever Resolve finds now was computed with less of the filesystem than a
+// read made while it existed.
+type resolution struct {
+	root, subpath string
+	guessed       bool
+}
 
 // projectCache memoizes projectid.Resolve by working directory. Many records — every
 // turn in a session, every session under one repo — share a Cwd, so caching turns a
@@ -32,6 +38,7 @@ func resolveProjects(recs []usage.Record, cache projectCache) {
 		}
 		r.Project = filepath.Base(res.root)
 		r.Subpath = res.subpath
+		r.ProjectGuessed = res.guessed
 	}
 }
 
@@ -41,7 +48,14 @@ func cachedResolve(cwd string, cache projectCache) resolution {
 		return res
 	}
 	root, subpath := projectid.Resolve(cwd)
-	res := resolution{root, subpath}
+	res := resolution{root: root, subpath: subpath, guessed: !exists(cwd)}
 	cache[cwd] = res
 	return res
+}
+
+// exists reports whether path can be stat'ed. A path that cannot be is treated as gone: its
+// repository cannot be verified either way.
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

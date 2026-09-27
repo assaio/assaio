@@ -61,11 +61,12 @@ import (
 // by nothing, so a parser fix to any of them could not reach a single stored row and no canary
 // looked at them. They are corrected now, on the rule that decided granularity -- a re-read of
 // the same file is the authority on what that file says. The three text columns overwrite only
-// when the re-read has an answer: a sidecar that has not been written yet, or a repository moved
-// out from under a path, would otherwise clear a name that was correctly captured, and clearing
-// is not correcting. ts carries no such empty case -- a record without a timestamp never reaches
-// the store -- so it is assigned outright, which is what lets a fix to timestamp extraction move
-// rows back into the days they belong to.
+// when the re-read has an answer: a sidecar that has not been written yet would otherwise clear a
+// name that was correctly captured, and clearing is not correcting. A working directory that no
+// longer exists is not an answer either -- what resolves for it now saw less than the read that
+// stored the project (usage.Record.ProjectGuessed) -- so the args offer it as none. ts carries no such empty case
+// -- a record without a timestamp never reaches the store -- so it is assigned outright, which is
+// what lets a fix to timestamp extraction move rows back into the days they belong to.
 //
 // subpath travels with project because one call to projectid.Resolve sets both, and its guard
 // is the *project's* emptiness rather than its own: "" is the correct subpath for a session at
@@ -142,15 +143,20 @@ func (s *Store) InsertSynced(ctx context.Context, recs []usage.Record) (int, err
 	return inserted, err
 }
 
-// activityRestateArgs binds r to restateActivitySQL's placeholders.
+// activityRestateArgs binds r to restateActivitySQL's placeholders. A guessed project is
+// offered as no answer, so the stored one is kept.
 func activityRestateArgs(r *usage.Record) []any {
+	project, subpath := r.Project, r.Subpath
+	if r.ProjectGuessed {
+		project, subpath = "", ""
+	}
 	return []any{
 		r.Granularity,
 		r.Timestamp.UTC().Format(time.RFC3339),
 		r.Model,
-		r.Project, r.Project,
-		r.Project, r.Project, r.Project, r.Project,
-		r.Project, r.Project, r.Project, r.Subpath,
+		project, project,
+		project, project, project, project,
+		project, project, project, subpath,
 		r.Entrypoint, r.Entrypoint,
 		r.GitBranch, r.GitBranch,
 		r.InputTokens, r.OutputTokens, r.CacheReadTokens, r.CacheWriteTokens, r.ReasoningTokens,
