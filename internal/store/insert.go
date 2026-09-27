@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"time"
 
 	"github.com/assaio/assaio/internal/usage"
@@ -37,7 +36,7 @@ const restateSignalsSQL = `
 func (s *Store) Insert(ctx context.Context, recs []usage.Record) (int, error) {
 	// restateSignalsSQL only ever fills columns that are still zero, so this path cannot lower
 	// a figure and has nothing to watch.
-	inserted, _, err := s.insertWith(ctx, recs, restateSignalsSQL, signalsRestateArgs, "")
+	inserted, _, err := s.insertWith(ctx, recs, restateSignalsSQL, signalsRestateArgs, false)
 	return inserted, err
 }
 
@@ -50,30 +49,30 @@ func signalsRestateArgs(r *usage.Record) []any {
 }
 
 // insertWith inserts recs idempotently and hands every skipped duplicate to restateSQL,
-// which decides what a re-read is allowed to correct on a row that already exists. lowerSQL is
-// the watch on that correction: assigned columns let a re-read move a figure *down*, which is
-// the point -- a corrected rule has to reach history -- and also the one way a parser
-// regression erases evidence with nothing to show for it. Empty on the paths that cannot lower
-// anything.
+// which decides what a re-read is allowed to correct on a row that already exists. watched
+// reads each duplicate before its restate (watchSQL): assigned columns let a re-read move a
+// figure down or replace a name, which is the point -- a corrected rule has to reach history --
+// and also the one way a parser regression erases evidence with nothing to show for it. Off on
+// the paths whose restate cannot do either, or whose operator cannot act on it.
 func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL string,
-	restateArgs func(*usage.Record) []any, lowerSQL string,
-) (inserted, lowered int, err error) {
+	restateArgs func(*usage.Record) []any, watched bool,
+) (inserted int, w Restated, err error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, 0, err
+		return 0, w, err
 	}
 	defer func() { _ = tx.Rollback() }()
 	restate, err := tx.PrepareContext(ctx, restateSQL)
 	if err != nil {
-		return 0, 0, err
+		return 0, w, err
 	}
-	var lower *sql.Stmt
-	if lowerSQL != "" {
-		lower, err = tx.PrepareContext(ctx, lowerSQL)
+	var look *sql.Stmt
+	if watched {
+		look, err = tx.PrepareContext(ctx, watchSQL)
 		if err != nil {
-			return 0, 0, err
+			return 0, w, err
 		}
-		defer func() { _ = lower.Close() }()
+		defer func() { _ = look.Close() }()
 	}
 	defer func() { _ = restate.Close() }()
 	stmt, err := tx.PrepareContext(ctx, `
@@ -89,7 +88,7 @@ func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL 
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(tool, dedupe_key) DO NOTHING`)
 	if err != nil {
-		return 0, 0, err
+		return 0, w, err
 	}
 	defer func() { _ = stmt.Close() }()
 	for i := range recs {
@@ -103,42 +102,29 @@ func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL 
 			r.ToolErrors, r.Sidechain, r.Skill, r.Agent,
 			r.CacheWrite1hTokens, r.CacheMissReason)
 		if err != nil {
-			return inserted, lowered, err
+			return inserted, w, err
 		}
 		n, _ := res.RowsAffected()
 		if n > 0 {
 			inserted++
 			continue
 		}
-		if lower != nil {
-			down, err := wouldLower(ctx, lower, r)
+		if look != nil {
+			down, c, err := watch(ctx, look, r)
 			if err != nil {
-				return inserted, lowered, err
+				return inserted, w, err
 			}
 			if down {
-				lowered++
+				w.Lowered++
 			}
+			w.Identity.Add(c)
 		}
 		if _, err := restate.ExecContext(ctx, restateArgs(r)...); err != nil {
-			return inserted, lowered, err
+			return inserted, w, err
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		return inserted, lowered, err
+		return inserted, w, err
 	}
-	return inserted, lowered, nil
-}
-
-// wouldLower reports whether restating r on its stored row moves any assigned activity figure
-// down. Asked before the update, because afterwards the old figure is gone.
-func wouldLower(ctx context.Context, stmt *sql.Stmt, r *usage.Record) (bool, error) {
-	var one int
-	err := stmt.QueryRowContext(ctx, lowerArgs(r)...).Scan(&one)
-	switch {
-	case errors.Is(err, sql.ErrNoRows):
-		return false, nil
-	case err != nil:
-		return false, err
-	}
-	return true, nil
+	return inserted, w, nil
 }

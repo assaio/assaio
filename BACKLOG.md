@@ -83,10 +83,9 @@ the offline reconciliation against a vendor's own export, shipped after it — a
 price table nothing watched, which was the largest error left in the `$` figure. All three are in
 [CHANGELOG.md](CHANGELOG.md). One item remains and it cannot be closed here at all: `B144` needs
 a redacted real capture, the same contribution `B19`'s column aliases need — which now carries
-its own id (`B192`) and a milestone to arrive through, above. The milestone also
-depends on `B116` and `B118`, which live in the code-health pool below because they are
-corrections to a shipped mechanism rather than calibration work; `B116` is additionally a v1.0
-condition.
+its own id (`B192`) and a milestone to arrive through, above. The milestone also depends on
+`B118`, which lives in the code-health pool below because it corrects a shipped mechanism rather
+than calibration work.
 
 - [ ] **B144 · calibrate Gemini CLI and Cline against a real capture** — S · both — both are
   calibrated today against a *constructed* sample in the source's shape, because the maintainer's
@@ -100,7 +99,7 @@ condition.
 Proposed by the 2026-09-26 framework audit. Users can already write exec parsers, metrics and
 rules and script over `report` and `analyze` JSON; what is untested is a fuller analytical
 contract outside programs can rely on. [ROADMAP.md](ROADMAP.md#1a-a-public-analytical-export)
-owns the order: open corrections first (`B116`, `B118` in the code-health pool), then repository
+owns the order: open corrections first (`B118` in the code-health pool), then repository
 identity and a small export, then typed plugin states and richer parser counters.
 
 - [ ] **B211 · a versioned analytical snapshot** — M · both — a deterministic NDJSON export: a
@@ -966,20 +965,6 @@ they wait behind features but keep the growing metric surface maintainable.
   it read as a real zero. Confirmed against v0.10 as well, so it is not new. Either stamp the
   window like `analyze` does, or render the unstamped case as what it is — a conformance
   check on the document, not a verdict about anyone's data.
-- [ ] **B116 · `model` is the one column a re-read still cannot correct** — S · solo — the rest
-  of this item shipped in v0.24: `ts`, `project`, `subpath`, `entrypoint` and `git_branch` now
-  follow the rule `granularity` answered yes to — **and the downward watch does not cover them**:
-  `lowerRestateSQL` reads the thirteen activity counters only, so a parser regression on those
-  five is writable and uncounted, where the fill-only rules made it unwritable. Widening the
-  predicate (or renaming the counter to "restated") is part of this item now, `session_step.ts` and `kind` move with them, and
-  ingest counts the rows a re-read moves *down* so a corrected rule and a parser regression are
-  no longer indistinguishable from the store's side. What is left is `model`, which is still
-  fill-only — `CASE WHEN model = '' THEN ? ELSE model END` — because a source can legitimately
-  emit a record before it knows the model (Cline reads it from a sidecar that may not exist yet)
-  and a first read that saw none must not pin those tokens as unpriceable forever. That reasoning
-  argues for filling a blank; it does not argue against *correcting* a wrong one, and a model
-  name decides the price, so a fix to model extraction reaches nothing today. The question is
-  whether a later read of the same file is the authority on a name an earlier read already had.
 
 ## Pool — from the v0.13 whole-codebase review
 
@@ -1066,18 +1051,24 @@ file-size norm.
 - [ ] **B186 · one assistant message, two transcripts, two different counts** — M · solo — found
   by the downward-restatement canary `B116` asked for, on its first run against the maintainer's
   store. A Claude sub-agent's transcript and its parent session both carry the same assistant
-  `msg_` id, and the two files see different amounts of it: for
-  `msg_011Ce6Ytmoyd4FXNBViS2XzB` the parent holds 4 `tool_use` blocks and the sub-agent file
-  holds 1. The dedupe key is the message id alone, so whichever file the walk reads last wins
-  the restate, and the stored `tool_calls` oscillates between 4 and 1 forever — the canary
-  reports the same 6 rows on every `backfill --full`, unchanged while the store gains new
-  records around them. **Measured: 6 of 192,277 records (0.003%), a swing of ~18 tool calls
-  against a window of 216,790**, which is why this is a defect to fix rather than a figure to
-  distrust. The decision is which file is the authority on a message that appears in two: the
-  parent transcript is the authority on the parent's turn and the sub-agent file on its own, so
-  the key probably has to carry the scope it was read in — the same shape the sync path already
-  uses to keep two members' rows apart. Whatever the answer, the canary is the regression test:
-  it must reach zero and stay there.
+  `msg_` id, and the two files see different amounts of it: for `msg_011Ce6Ytmoyd4FXNBViS2XzB`
+  the parent holds 4 `tool_use` blocks and the sub-agent file holds 1. The dedupe key is the
+  message id alone, so whichever file the walk reads last wins the restate, and the stored
+  `tool_calls` oscillates between 4 and 1 forever — the canary reports the same 6 rows on every
+  `backfill --full`, unchanged while the store gains new records around them. **Measured: 6 of
+  192,277 records (0.003%), a swing of ~18 tool calls against a window of 216,790**, which is
+  why this is a defect to fix rather than a figure to distrust. The decision is which file is
+  the authority on a message that appears in two: the parent transcript is the authority on the
+  parent's turn and the sub-agent file on its own, so the key probably has to carry the scope it
+  was read in — the same shape the sync path already uses to keep two members' rows apart.
+  Whatever the answer, the canary is the regression test: it must reach zero and stay there.
+  Measured on 2026-09-27 across the maintainer's transcripts: 70 message ids are carried by more
+  than one file, 19 of them with different timestamps (0.5–138 s apart), almost all forked
+  sub-agent transcripts. `B116` made the stored time take the earliest carrier; the assigned
+  activity counts still follow whichever file was read last, and so do a sub-agent aggregate's
+  context columns across its parent transcripts, which is what `restated-down` counts on a full
+  re-read. The same holds for one stored step key, which `steps-changed=2` shows on every full
+  re-read.
 
 - [ ] **B185 · give the withdrawn verdicts a line derived from your own history** — L · both —
   v0.24 withdrew the good/bad call from fourteen metrics because their thresholds were numbers
@@ -1173,6 +1164,17 @@ file-size norm.
   `RenderTable` could call it itself and the invariant would be unbreakable. Also worth noting:
   `collapse_test.go`'s fixtures carry no `Tokened` row, so every token cell in them renders `—`
   and a regression in the token columns would not show there.
+- [ ] **B219 · the restate counts vanish with the terminal** — S/M · solo — `backfill` prints
+  `restated-down=`, `identity-changed=`, `identity-kept=` and `steps-changed=` but keeps none of
+  them. Documented automation runs backfill from launchd, cron and hooks with output discarded,
+  and the first run after an upgrade is the one that restates. Persist the last run's counts per
+  source (a migration) and show them in `doctor` and beside `digest`'s build caveat.
+- [ ] **B220 · a team server never applies the sub-agent conflict rule** — S · team —
+  `restateActivitySQL` recognises a Claude sub-agent aggregate by `dedupe_key LIKE 'agent:%'`,
+  but the sync endpoint prefixes every key with `<member>:`, so on a central store the
+  competing-project rule never fires and a project the member's own store abandoned is kept.
+  Match `%:agent:%` there, as migration 0006 and the delegation reader already do, with one
+  shared definition.
 
 ## Refusals (will not build, regardless of demand)
 

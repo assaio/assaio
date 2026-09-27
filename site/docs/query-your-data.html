@@ -224,7 +224,7 @@ retention horizon.</p>
 <tr>
 <td><code>model</code></td>
 <td><code>TEXT</code></td>
-<td>Model name as recorded by the tool, or <code>''</code> when the source records none — Antigravity CLI writes one nowhere in its format, and a source that learns the name later (Cline reads it from a sidecar) fills the blank on the next <code>backfill</code>.</td>
+<td>Model name as recorded by the tool, or <code>''</code> when the source records none — Antigravity CLI writes one nowhere in its format. For an in-tree source, a later <code>backfill</code> fills a blank (Cline reads the name from a sidecar) and replaces a name when the re-read of the same file states a different one; exec-plugin rows keep their first answer.</td>
 </tr>
 <tr>
 <td><code>input_tokens</code></td>

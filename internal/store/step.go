@@ -13,92 +13,74 @@ const insertStepSQL = `
              tokens, target_ref)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-// restateStepSQL corrects a step already stored from a re-read of the file it came from. Every
-// column here is assigned, because every one of them is assaio's own claim rather than a figure
-// read off the log: the position a step holds, the file identity behind it, the sum of four
-// chosen token fields, and the mapping of a stop reason or an attributed result to an outcome.
-// A rule assaio wrote is a rule assaio can get wrong, and MAX or a fill-only CASE pins the old
-// answer on every stored row forever (B116). Ingest re-reads whole files, and each rule is
-// monotone in the prefix read, so a half-written session still restates upward.
-//
-// kind joined them in v0.24 (B183). It is the classification assaio puts on a tool call -- read,
-// search, command, write -- so a build that learns to tell two of them apart has to be able to
-// say so about calls already stored. Left out of the restate it was the one column no path,
-// `backfill --full` included, could reach: under the default 30-day horizon a wrong
-// classification ages out, and under `trace.horizon_days: 0` it was permanent.
-//
-// ts is here for the same release's other half: usage_record.ts became correctable, and both
-// timestamps come from the same source line. Leaving this one pinned would move a usage row
-// into the day a timestamp fix says it belongs to and leave its steps in the old one -- and
-// PruneSteps reads this column, so the horizon would then cut the wrong steps.
-const restateStepSQL = `
-        UPDATE session_step SET
-            ts = ?,
-            kind = ?,
-            outcome = ?,
-            target_ref = ?,
-            tokens = ?,
-            ordinal = ?
-        WHERE tool = ? AND timeline = ? AND dedupe_key = ?`
+// StepWrite is what one InsertSteps call did: rows new, refused at the vocabulary boundary, and
+// stored steps whose time, kind, position, target or model a re-read changed.
+type StepWrite struct {
+	Inserted, Rejected, Changed int
+}
 
-// InsertSteps writes a session's step sequence, restating a step already stored. It returns
-// how many rows were new and how many were refused at the vocabulary boundary, so neither
-// growth nor loss goes unreported -- the skip-and-count policy the parsers follow.
+// InsertSteps writes a session's step sequence, restating a step already stored, and reports
+// new, refused and changed steps so neither growth, loss nor a rewrite goes unreported -- the
+// skip-and-count policy the parsers follow.
 //
 // Steps are written only for files this store read itself, exactly like InsertLocal: the
 // caller owns the input, so a re-read is the store's own better knowledge of the same step.
-func (s *Store) InsertSteps(ctx context.Context, steps []usage.Step) (inserted, rejected int, err error) {
+func (s *Store) InsertSteps(ctx context.Context, steps []usage.Step) (StepWrite, error) {
+	var w StepWrite
 	if len(steps) == 0 {
-		return 0, 0, nil
+		return w, nil
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, 0, err
+		return w, err
 	}
 	defer func() { _ = tx.Rollback() }()
 
 	ins, err := tx.PrepareContext(ctx, insertStepSQL)
 	if err != nil {
-		return 0, 0, err
+		return w, err
 	}
 	defer func() { _ = ins.Close() }()
-	upd, err := tx.PrepareContext(ctx, restateStepSQL)
+	watched, err := tx.PrepareContext(ctx, restateStepWatchedSQL)
 	if err != nil {
-		return 0, 0, err
+		return w, err
 	}
-	defer func() { _ = upd.Close() }()
+	defer func() { _ = watched.Close() }()
+	rest, err := tx.PrepareContext(ctx, restateStepRestSQL)
+	if err != nil {
+		return w, err
+	}
+	defer func() { _ = rest.Close() }()
 
 	for i := range steps {
 		st := &steps[i]
 		if !usage.ValidStepKind(st.Kind) || !usage.ValidStepOutcome(st.Outcome) {
 			// A vocabulary the readers cannot interpret is rejected at the boundary rather
 			// than stored and rendered as a category nobody defined.
-			rejected++
+			w.Rejected++
 			continue
 		}
 		res, err := ins.ExecContext(ctx, st.Tool, st.SessionID, st.Timeline, st.DedupeKey,
 			st.Timestamp.UTC().Format(time.RFC3339), st.Ordinal, st.Kind, st.Outcome,
 			st.Model, st.Tokens, st.TargetRef)
 		if err != nil {
-			return 0, 0, err
+			return w, err
 		}
-		n, err := res.RowsAffected()
-		if err != nil {
-			return 0, 0, err
-		}
-		if n > 0 {
-			inserted++
+		if n, err := res.RowsAffected(); err != nil {
+			return w, err
+		} else if n > 0 {
+			w.Inserted++
 			continue
 		}
-		if _, err := upd.ExecContext(ctx, st.Timestamp.UTC().Format(time.RFC3339), st.Kind, st.Outcome, st.TargetRef, st.Tokens, st.Ordinal,
-			st.Tool, st.Timeline, st.DedupeKey); err != nil {
-			return 0, 0, err
+		changed, err := restateStep(ctx, watched, rest, st)
+		if err != nil {
+			return w, err
+		}
+		if changed {
+			w.Changed++
 		}
 	}
-	if err := tx.Commit(); err != nil {
-		return 0, 0, err
-	}
-	return inserted, rejected, nil
+	return w, tx.Commit()
 }
 
 // PruneSteps drops steps older than before and reports how many went. This is the bound the

@@ -33,8 +33,28 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+
+- `backfill` reports `identity-changed=` for stored rows whose model, time, project, entrypoint,
+  branch or label changed; `identity-kept=` for names kept when a re-read had none; and
+  `steps-changed=` for changed steps. The first post-upgrade backfill can move cost, `doctor
+  --strict` and `check --max-cost` without new usage.
+
+### Changed
+
+- On a team server, a member's corrected model or label reaches the server on the member's next
+  `sync`, and only within its `--since` window (30 days by default).
+- `backfill` now skips any local record or step dated before 2020 or more than 48 hours ahead and
+  counts it under `skipped=`, matching the existing sync and plugin boundaries.
+
 ### Fixed
 
+- **A re-read now corrects a stored model, skill, agent or cache-miss reason when it names a
+  different one** (`B116`); a blank still keeps the stored name. A model fix reprices history, but
+  only rows whose transcript is still on disk; plugin rows keep theirs.
+- Claude Code rows now store the earliest time on a line carrying the response. Forked sub-agent
+  transcripts replay origin messages with later times, so stored time previously depended on which
+  file was read last. Fixes that move a time later no longer reach stored Claude Code rows.
 - Since v0.24, each upgrade re-read every transcript still on disk. If a session's working directory
   was gone, a re-read could rename its stored project to the directory's own name. Re-reads now keep
   the stored project; renamed rows cannot be rebuilt

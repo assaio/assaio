@@ -23,9 +23,10 @@ var derivedColumns = []string{
 // which is how `tokens = MAX` shipped in a new table with nothing looking -- so a statement added
 // to the package belongs here in the same commit.
 var restateStatements = map[string]string{
-	"restateActivitySQL": restateActivitySQL,
-	"restateSignalsSQL":  restateSignalsSQL,
-	"restateStepSQL":     restateStepSQL,
+	"restateActivitySQL":    restateActivitySQL,
+	"restateSignalsSQL":     restateSignalsSQL,
+	"restateStepWatchedSQL": restateStepWatchedSQL,
+	"restateStepRestSQL":    restateStepRestSQL,
 }
 
 // TestNoRestateMaxesAnAssaioDerivedFigure is the guard the two halves of B116 were found

@@ -50,29 +50,26 @@ func TestInsertSyncedCorrectsAPartialPush(t *testing.T) {
 	}
 }
 
-// TestRestateFillsAMissingModelOnly: a source can emit a record before it knows the model
-// (Cline reads it from a sidecar that may not exist yet), and those tokens are unpriceable
-// until it does. Filling a blank is a repair; overwriting a name would break the rule that the
-// first read is the authority on identity.
-func TestRestateFillsAMissingModelOnly(t *testing.T) {
+// TestSyncedRestateNamesTheModelTheMemberStates: a synced row has exactly one writer, the
+// member whose own re-read produced it, so the naming rule applies there as it does locally --
+// a stated model replaces the stored one, and a blank keeps it.
+func TestSyncedRestateNamesTheModelTheMemberStates(t *testing.T) {
 	ctx := context.Background()
 	st := openTempStore(t)
-
-	if _, _, err := st.InsertLocal(ctx, []usage.Record{syncedTurn(10, 3, "")}); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err := st.InsertLocal(ctx, []usage.Record{syncedTurn(10, 3, "claude-opus-5")}); err != nil {
-		t.Fatal(err)
-	}
-	if got := storedModel(t, st); got != "claude-opus-5" {
-		t.Fatalf("model = %q, want the name the later read supplied", got)
-	}
-
-	if _, _, err := st.InsertLocal(ctx, []usage.Record{syncedTurn(10, 3, "something-else")}); err != nil {
-		t.Fatal(err)
-	}
-	if got := storedModel(t, st); got != "claude-opus-5" {
-		t.Fatalf("model = %q, want the first answer kept -- a stored name is never overwritten", got)
+	for _, step := range []struct {
+		offered, want string
+	}{
+		{"", ""},
+		{"claude-opus-5", "claude-opus-5"},
+		{"", "claude-opus-5"},
+		{"claude-opus-5-5", "claude-opus-5-5"},
+	} {
+		if _, err := st.InsertSynced(ctx, []usage.Record{syncedTurn(10, 3, step.offered)}); err != nil {
+			t.Fatal(err)
+		}
+		if got := storedModel(t, st); got != step.want {
+			t.Fatalf("after offering %q: model = %q, want %q", step.offered, got, step.want)
+		}
 	}
 }
 
@@ -85,4 +82,26 @@ func storedModel(t *testing.T, st *Store) string {
 		t.Fatal(err)
 	}
 	return model
+}
+
+// TestSyncedRestateKeepsTheEarliestTime: a member's store already keeps the earliest carrier's
+// time, so a later time pushed from an older build or a rebuilt store is not a correction.
+func TestSyncedRestateKeepsTheEarliestTime(t *testing.T) {
+	ctx := context.Background()
+	st := openTempStore(t)
+	early := syncedTurn(10, 3, "m")
+	late := early
+	late.Timestamp = early.Timestamp.Add(time.Minute)
+	for _, r := range []usage.Record{early, late} {
+		if _, err := st.InsertSynced(ctx, []usage.Record{r}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var ts string
+	if err := st.db.QueryRowContext(ctx, `SELECT ts FROM usage_record`).Scan(&ts); err != nil {
+		t.Fatal(err)
+	}
+	if want := early.Timestamp.UTC().Format(time.RFC3339); ts != want {
+		t.Fatalf("ts = %q, want the earlier %q", ts, want)
+	}
 }

@@ -22,8 +22,8 @@ func TestTimelinesGroupStepsIntoSequences(t *testing.T) {
 		{Tool: "claude-code", SessionID: "s1", Timeline: "agent-7", DedupeKey: "c", Timestamp: at.Add(2 * time.Minute), Ordinal: 1, Kind: usage.StepRead, Outcome: usage.OutcomeError, TargetRef: 1},
 		{Tool: "claude-code", SessionID: "s2", DedupeKey: "d", Timestamp: at.Add(3 * time.Minute), Ordinal: 1, Kind: usage.StepCommand, Outcome: usage.OutcomeDenied},
 	}
-	if _, rejected, err := s.InsertSteps(ctx, steps); err != nil || rejected != 0 {
-		t.Fatalf("InsertSteps: %v, rejected %d", err, rejected)
+	if w, err := s.InsertSteps(ctx, steps); err != nil || w.Rejected != 0 {
+		t.Fatalf("InsertSteps: %v, rejected %d", err, w.Rejected)
 	}
 
 	got, err := s.Timelines(ctx, at.Add(-time.Hour))
@@ -61,7 +61,7 @@ func TestTimelinesReturnOnlyTheStepsInsideTheWindow(t *testing.T) {
 		{Tool: "claude-code", SessionID: "s1", DedupeKey: "old", Timestamp: old, Ordinal: 1, Kind: usage.StepAssistant},
 		{Tool: "claude-code", SessionID: "s1", DedupeKey: "new", Timestamp: recent, Ordinal: 2, Kind: usage.StepEdit, TargetRef: 3},
 	}
-	if _, _, err := s.InsertSteps(ctx, steps); err != nil {
+	if _, err := s.InsertSteps(ctx, steps); err != nil {
 		t.Fatalf("InsertSteps: %v", err)
 	}
 
@@ -95,7 +95,7 @@ func TestTimelinesAttachTheSessionScopeAndLeaveItEmptyWhenUnknown(t *testing.T) 
 		{Tool: "claude-code", SessionID: "known", DedupeKey: "a", Timestamp: at, Ordinal: 1, Kind: usage.StepAssistant},
 		{Tool: "claude-code", SessionID: "orphan", DedupeKey: "b", Timestamp: at, Ordinal: 1, Kind: usage.StepAssistant},
 	}
-	if _, _, err := s.InsertSteps(ctx, steps); err != nil {
+	if _, err := s.InsertSteps(ctx, steps); err != nil {
 		t.Fatalf("InsertSteps: %v", err)
 	}
 

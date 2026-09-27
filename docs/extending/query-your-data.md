@@ -30,7 +30,7 @@ retention horizon.
 | `tool` | `TEXT` | Source: `claude-code`, `codex`, `gemini-cli`, `copilot-cli`, `cline`, `agy` (Antigravity CLI), or `plugin:<name>` for an out-of-tree parser. |
 | `session_id` | `TEXT` | The tool's session/conversation ID. |
 | `ts` | `TEXT` | UTC RFC3339 timestamp. Day is `substr(ts,1,10)`. |
-| `model` | `TEXT` | Model name as recorded by the tool, or `''` when the source records none — Antigravity CLI writes one nowhere in its format, and a source that learns the name later (Cline reads it from a sidecar) fills the blank on the next `backfill`. |
+| `model` | `TEXT` | Model name as recorded by the tool, or `''` when the source records none — Antigravity CLI writes one nowhere in its format. For an in-tree source, a later `backfill` fills a blank (Cline reads the name from a sidecar) and replaces a name when the re-read of the same file states a different one; exec-plugin rows keep their first answer. |
 | `input_tokens` | `INTEGER` | Non-cached input tokens. |
 | `output_tokens` | `INTEGER` | Output tokens. |
 | `cache_read_tokens` | `INTEGER` | Tokens served from cache. |

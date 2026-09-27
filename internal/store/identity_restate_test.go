@@ -29,14 +29,13 @@ func storedIdentity(t *testing.T, st *Store) (ts, project, entrypoint, branch st
 }
 
 // TestInsertLocalCorrectsTheIdentityColumns is B116: ts, project, entrypoint and git_branch
-// were stamped by the first read and correctable by nothing, so a parser fix to any of them
-// could not reach a single stored row -- including the one that decides which day a record
-// counts toward.
+// must reach a stored row when a re-read states them differently, including the timestamp that
+// decides which day a record counts toward (an earlier one: the earliest carrier wins).
 func TestInsertLocalCorrectsTheIdentityColumns(t *testing.T) {
 	ctx := context.Background()
 	st := openTempStore(t)
-	first := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
-	corrected := time.Date(2026, 7, 3, 9, 0, 0, 0, time.UTC)
+	first := time.Date(2026, 7, 3, 9, 0, 0, 0, time.UTC)
+	corrected := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
 
 	if _, _, err := st.InsertLocal(ctx, []usage.Record{identityTurn(first, "wrong", "cli", "old-branch")}); err != nil {
 		t.Fatal(err)
@@ -47,7 +46,7 @@ func TestInsertLocalCorrectsTheIdentityColumns(t *testing.T) {
 
 	ts, project, entrypoint, branch := storedIdentity(t, st)
 	if ts != corrected.Format(time.RFC3339) {
-		t.Fatalf("ts = %q, want the re-read's %q: a timestamp fix has to reach the day a record counts toward", ts, corrected.Format(time.RFC3339))
+		t.Fatalf("ts = %q, want the re-read's earlier %q: a timestamp fix has to reach the day a record counts toward", ts, corrected.Format(time.RFC3339))
 	}
 	if project != "right" || entrypoint != "sdk-py" || branch != "new-branch" {
 		t.Fatalf("identity = (%q, %q, %q), want the re-read's (right, sdk-py, new-branch)", project, entrypoint, branch)
@@ -86,29 +85,29 @@ func TestInsertLocalCountsADownwardRestatement(t *testing.T) {
 
 	rich := identityTurn(at, "acme", "cli", "main")
 	rich.ToolCalls, rich.Edits, rich.LinesAdded = 40, 9, 300
-	if _, lowered, err := st.InsertLocal(ctx, []usage.Record{rich}); err != nil || lowered != 0 {
-		t.Fatalf("first insert: lowered = %d, err = %v; want 0, nil", lowered, err)
+	if _, w, err := st.InsertLocal(ctx, []usage.Record{rich}); err != nil || w.Lowered != 0 {
+		t.Fatalf("first insert: lowered = %d, err = %v; want 0, nil", w.Lowered, err)
 	}
 
 	same := rich
-	if _, lowered, err := st.InsertLocal(ctx, []usage.Record{same}); err != nil || lowered != 0 {
-		t.Fatalf("identical re-read: lowered = %d, err = %v; want 0, nil", lowered, err)
+	if _, w, err := st.InsertLocal(ctx, []usage.Record{same}); err != nil || w.Lowered != 0 {
+		t.Fatalf("identical re-read: lowered = %d, err = %v; want 0, nil", w.Lowered, err)
 	}
 
 	higher := rich
 	higher.Edits = 12
-	if _, lowered, err := st.InsertLocal(ctx, []usage.Record{higher}); err != nil || lowered != 0 {
-		t.Fatalf("upward restate: lowered = %d, err = %v; want 0, nil", lowered, err)
+	if _, w, err := st.InsertLocal(ctx, []usage.Record{higher}); err != nil || w.Lowered != 0 {
+		t.Fatalf("upward restate: lowered = %d, err = %v; want 0, nil", w.Lowered, err)
 	}
 
 	corrected := rich
 	corrected.LinesAdded = 120
-	inserted, lowered, err := st.InsertLocal(ctx, []usage.Record{corrected})
+	inserted, w, err := st.InsertLocal(ctx, []usage.Record{corrected})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if inserted != 0 || lowered != 1 {
-		t.Fatalf("downward restate: inserted = %d, lowered = %d; want 0, 1", inserted, lowered)
+	if inserted != 0 || w.Lowered != 1 {
+		t.Fatalf("downward restate: inserted = %d, lowered = %d; want 0, 1", inserted, w.Lowered)
 	}
 
 	var lines int64
@@ -127,18 +126,18 @@ func TestInsertLocalCountsADownwardRestatement(t *testing.T) {
 func TestRestateMovesAStepWithItsRecord(t *testing.T) {
 	ctx := context.Background()
 	st := openTempStore(t)
-	first := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
-	corrected := time.Date(2026, 7, 3, 9, 0, 0, 0, time.UTC)
+	first := time.Date(2026, 7, 3, 9, 0, 0, 0, time.UTC)
+	corrected := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
 
 	step := usage.Step{
 		Tool: "claude-code", SessionID: "s1", Timeline: "s1", DedupeKey: "k1",
 		Timestamp: first, Ordinal: 1, Kind: usage.StepAssistant,
 	}
-	if _, _, err := st.InsertSteps(ctx, []usage.Step{step}); err != nil {
+	if _, err := st.InsertSteps(ctx, []usage.Step{step}); err != nil {
 		t.Fatal(err)
 	}
 	step.Timestamp = corrected
-	if _, _, err := st.InsertSteps(ctx, []usage.Step{step}); err != nil {
+	if _, err := st.InsertSteps(ctx, []usage.Step{step}); err != nil {
 		t.Fatal(err)
 	}
 
