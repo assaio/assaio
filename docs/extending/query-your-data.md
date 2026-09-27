@@ -76,12 +76,17 @@ would show a real source at zero tokens and, if priced, a fabricated `$0`. The b
 figure, but direct SQL bypasses the check. For token and cost queries, use `WHERE tool <> 'agy'`, or
 check the depth matrix (`assaio-agent doctor`, `signals coverage`) before summing across sources.
 
-`report --format csv` reports tokens and cost but has a gap tracked as `B197`: it includes `in`,
-`out`, `cache_read`, `cache_write`, and `cost`, but **not `cache_write_1h`**. The 1-hour cache-write
-tier has its own rate. Recomputing cost from those four token columns misses
-`cache_write_1h × (1h rate − standard write rate)`. On the maintainer's store, that gap is
-**$2,582.38** for `claude-opus-5` alone. Read `cache_write_1h` from the table above to reconcile
-costs. `effectiveness --format csv` adds activity and `$`/100-lines columns.
+`report --format csv|json` carries `in`, `out`, `cache_read`, `cache_write`, `cache_write_1h`,
+`cache_write_tiered` and `cost`, so a row that holds one model (the default rows and `--by model`)
+reproduces its cost from its token columns and that model's prices; a row grouped `--by tool`,
+`project` or a label mixes models billed at different rates. `cache_write_1h` is the part of
+`cache_write` bought at the 1-hour cache lifetime and billed at its own rate; never add it to
+`cache_write`. Only Claude Code states the tier: `cache_write_1h` is `null` (an empty CSV cell) for
+a row with no such source, and `cache_write_tiered` is the part of `cache_write` from sources that
+do, so a 1-hour share is `cache_write_1h / cache_write_tiered`. Writes with no stated tier are
+billed at the standard write rate. Claude Code rows imported before assaio read the tier, whose
+transcripts are gone, carry `0` there. In CSV the two are the last columns. `effectiveness --format
+csv` adds activity and `$`/100-lines columns.
 
 **Cost is not stored.** The database holds tokens, not dollars. Reports compute cost from the
 embedded price table because prices change and unpriced models must remain blank. For cost figures,

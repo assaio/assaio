@@ -80,6 +80,13 @@ func accumulate(g, r *Row) {
 	g.Out += r.Out
 	g.CacheRead += r.CacheRead
 	g.CacheWrite += r.CacheWrite
+	g.CacheWriteTiered += r.CacheWriteTiered
+	if r.CacheWrite1h != nil {
+		if g.CacheWrite1h == nil {
+			g.CacheWrite1h = new(int64)
+		}
+		*g.CacheWrite1h += *r.CacheWrite1h
+	}
 	g.Reasoning += r.Reasoning
 	if r.Priced {
 		if g.Cost == nil {

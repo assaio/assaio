@@ -394,12 +394,16 @@ therefore a structural zero. A <code>SELECT tool, SUM(input_tokens) … GROUP BY
 would show a real source at zero tokens and, if priced, a fabricated <code>$0</code>. The binary withholds that
 figure, but direct SQL bypasses the check. For token and cost queries, use <code>WHERE tool &lt;&gt; 'agy'</code>, or
 check the depth matrix (<code>assaio-agent doctor</code>, <code>signals coverage</code>) before summing across sources.</p>
-<p><code>report --format csv</code> reports tokens and cost but has a gap tracked as <code>B197</code>: it includes <code>in</code>,
-<code>out</code>, <code>cache_read</code>, <code>cache_write</code>, and <code>cost</code>, but <strong>not <code>cache_write_1h</code></strong>. The 1-hour cache-write
-tier has its own rate. Recomputing cost from those four token columns misses
-<code>cache_write_1h × (1h rate − standard write rate)</code>. On the maintainer's store, that gap is
-<strong>$2,582.38</strong> for <code>claude-opus-5</code> alone. Read <code>cache_write_1h</code> from the table above to reconcile
-costs. <code>effectiveness --format csv</code> adds activity and <code>$</code>/100-lines columns.</p>
+<p><code>report --format csv|json</code> carries <code>in</code>, <code>out</code>, <code>cache_read</code>, <code>cache_write</code>, <code>cache_write_1h</code>,
+<code>cache_write_tiered</code> and <code>cost</code>, so a row that holds one model (the default rows and <code>--by model</code>)
+reproduces its cost from its token columns and that model's prices; a row grouped <code>--by tool</code>,
+<code>project</code> or a label mixes models billed at different rates. <code>cache_write_1h</code> is the part of
+<code>cache_write</code> bought at the 1-hour cache lifetime and billed at its own rate; never add it to
+<code>cache_write</code>. Only Claude Code states the tier: <code>cache_write_1h</code> is <code>null</code> (an empty CSV cell) for
+a row with no such source, and <code>cache_write_tiered</code> is the part of <code>cache_write</code> from sources that
+do, so a 1-hour share is <code>cache_write_1h / cache_write_tiered</code>. Writes with no stated tier are
+billed at the standard write rate. Claude Code rows imported before assaio read the tier, whose
+transcripts are gone, carry <code>0</code> there. In CSV the two are the last columns. <code>effectiveness --format csv</code> adds activity and <code>$</code>/100-lines columns.</p>
 <p><strong>Cost is not stored.</strong> The database holds tokens, not dollars. Reports compute cost from the
 embedded price table because prices change and unpriced models must remain blank. For cost figures,
 use <code>assaio-agent report --format csv</code>, which includes a <code>cost</code> column, instead of SQL.</p>

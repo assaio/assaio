@@ -45,6 +45,10 @@ Discussion.
 
 - `plugins verify` exits non-zero when any record line violates the protocol, so it can gate a
   plugin's CI (`B216`). `backfill` still skips and counts those lines.
+- **`report --format json|csv` adds `cache_write_1h` and `cache_write_tiered`** (`B197`).
+  Single-model columns reproduce cost; the missing 1-hour tier was $2,582.38 for `claude-opus-5` on
+  the maintainer's store. `cache_write_1h` is `null` when no source states the tier; both are the
+  last CSV columns.
 
 ## [0.30.0] - 2026-09-26
 
