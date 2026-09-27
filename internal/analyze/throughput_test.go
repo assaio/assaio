@@ -61,3 +61,28 @@ func TestThroughputSaysWhyThereIsNoDirection(t *testing.T) {
 		t.Fatalf("Takeaway = %q, want the missing prior span named rather than a line shortage", got.Takeaway)
 	}
 }
+
+// TestThroughputDividesOnlyDaysALineCouldBeRecordedOn: a day on which only a source that records
+// no lines ran is not a day of zero output, so lines per active day leaves it out and says so.
+func TestThroughputDividesOnlyDaysALineCouldBeRecordedOn(t *testing.T) {
+	now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
+	rows := []store.UsageRow{
+		{Day: "2026-08-08", Tool: "claude-code", Model: "claude-opus-4-5", In: 100, LinesAdded: 30},
+		{Day: "2026-08-09", Tool: "claude-code", Model: "claude-opus-4-5", In: 100, LinesAdded: 10},
+		{Day: "2026-08-10", Tool: "agy"},
+	}
+	res := throughputValidator{}.Analyze(BuildInput(rows, nil, testPrices(), now, 7*24*time.Hour, Delegation{}))
+	for _, f := range res.Figures {
+		if f.Label != "lines/active-day" {
+			continue
+		}
+		if f.Value != "20.0" || f.Note != "1 of 3 active days had only sources that record no lines" {
+			t.Fatalf("lines/active-day = %q (%q), want 20.0 over the two line-recording days", f.Value, f.Note)
+		}
+		if res.Confidence.Samples != 2 {
+			t.Fatalf("the read rests on %d days, want the 2 a line could be recorded on", res.Confidence.Samples)
+		}
+		return
+	}
+	t.Fatal("no lines/active-day figure")
+}

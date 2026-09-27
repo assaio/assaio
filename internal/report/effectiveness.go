@@ -48,9 +48,20 @@ type EffRow struct {
 	// UnpricedTokens is how much of TokensTotal carried no known price -- by how much the
 	// cost above is short, which HasUnpriced alone never said.
 	UnpricedTokens int64 `json:"unpriced_tokens"`
-	// CostPer100Lines is Cost per 100 AI lines; nil when LinesAdded is zero or Cost is
-	// unknown -- never a divide-by-zero substitute for a legitimate zero-line group.
+	// CostPer100Lines is LineCapableCost per 100 of the same usage's AI lines; nil when that
+	// usage has no line or no price -- never a divide-by-zero substitute, and never the group's
+	// whole cost over lines only some of its sources could record.
 	CostPer100Lines *float64 `json:"cost_per_100_lines"`
+	// LineCapableCost is the priced cost of this group's line-recording usage, the numerator
+	// CostPer100Lines divides; nil when there is no rate.
+	LineCapableCost *float64 `json:"line_capable_cost"`
+	// LineCapableUnpricedTokens is line-recording usage with no known price, left out of the
+	// ratio on both sides.
+	LineCapableUnpricedTokens int64 `json:"line_capable_unpriced_tokens"`
+	// lineRate is the population CostPer100Lines divides and what it leaves out.
+	lineRate LineRateBasis
+	// editBlindRows counts this group's usage rows from sources recording no edit.
+	editBlindRows int
 	// Tokened reports whether any row in this group came from a source that counts tokens at
 	// all. It is LineCapable's counterpart on the cost half: false means this group's cost is
 	// unknowable rather than merely unpriced.
@@ -73,8 +84,10 @@ func BuildEffectiveness(rows []store.UsageRow, t pricing.Table, by string) ([]Ef
 	)
 	for i := range out {
 		if out[i].LineCapable {
-			out[i].CostPer100Lines = costPer100Lines(out[i].Cost, out[i].LinesAdded)
+			out[i].CostPer100Lines = out[i].lineRate.Per100()
+			out[i].LineCapableCost = out[i].lineRate.LineCost()
 		}
+		out[i].LineCapableUnpricedTokens = out[i].lineRate.UnpricedLineTokens
 	}
 	return out, nil
 }
@@ -105,8 +118,12 @@ func usageDimValue(u *store.UsageRow, by string) string {
 
 // accumulateEff folds u's activity counts and, when u.Model is priced, its cost into g.
 func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table) {
-	g.LineCapable = g.LineCapable || parser.HasLineOutput(u.Tool)
-	g.EditCapable = g.EditCapable || parser.Answers(u.Tool, parser.SignalEditsCount)
+	g.LineCapable = g.LineCapable || parser.RecordsLines(u.Tool)
+	if parser.Answers(u.Tool, parser.SignalEditsCount) {
+		g.EditCapable = true
+	} else {
+		g.editBlindRows++
+	}
 	g.Refusable = g.Refusable || parser.Answers(u.Tool, parser.SignalRejectedCount)
 	g.Tokened = g.Tokened || parser.Answers(u.Tool, parser.SignalTokensTotal)
 	g.LinesAdded += u.LinesAdded
@@ -117,6 +134,7 @@ func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table) {
 	g.TokensTotal += RowTokens(u)
 
 	cost, ok := t.CostTokens(u.Model, pricing.Tokens{In: u.In, Out: u.Out, CacheWrite: u.CacheWrite, CacheRead: u.CacheRead, CacheWrite1h: u.CacheWrite1h})
+	g.lineRate.Add(u.Tool, u.LinesAdded, RowTokens(u), cost, ok)
 	if !ok {
 		g.HasUnpriced = true
 		g.UnpricedTokens += RowTokens(u)
@@ -127,14 +145,4 @@ func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table) {
 		g.Cost = &zero
 	}
 	*g.Cost += cost
-}
-
-// costPer100Lines is cost per 100 AI lines; nil when linesAdded is zero or cost is
-// unknown, so a group is shown as having no defined ratio rather than a fake one.
-func costPer100Lines(cost *float64, linesAdded int64) *float64 {
-	if linesAdded == 0 || cost == nil {
-		return nil
-	}
-	ratio := *cost / (float64(linesAdded) / 100)
-	return &ratio
 }

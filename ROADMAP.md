@@ -94,8 +94,8 @@ Make the current local product easy to evaluate and hard to misunderstand.
 - Calibrate Gemini CLI, Cline and reconciliation against contributed real captures.
 - Keep SAST, dependency and fuzzing automation quiet enough that alerts retain meaning.
 - Stop adding validators that do not change a named decision.
-- Close the corrections a reader can hit today before adding figures: line rates keep
-  denominators wider than their numerators (B118).
+- Fix the issues readers can encounter today before adding figures: model-fit and
+  concentration still divide line counts by usage that records no lines (B221).
 - Measure the first run (B214): on a stated fixture and machine, record the time to a
   written report, the coverage it shows, and whether the reader reached a decision.
 

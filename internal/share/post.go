@@ -68,11 +68,11 @@ func trendPost(t *Trend) string {
 }
 
 func fameLine(f *facts) string {
-	parts := []string{
-		humanize.Count(f.tokens) + " tokens",
-		humanize.Int(f.lines) + " lines",
+	parts := []string{humanize.Count(f.tokens) + " tokens"}
+	if f.linesOK {
+		parts = append(parts, humanize.Int(f.lines)+" lines")
 	}
-	if f.perHundred != "" {
+	if f.perHundred != "" && !f.lineRate.LeavesOut() {
 		parts = append(parts, f.perHundred+" per 100")
 	}
 	return strings.Join(parts, ", ")

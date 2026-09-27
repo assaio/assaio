@@ -74,7 +74,7 @@ func groupStats(rows []store.UsageRow, keyAt func(*store.UsageRow) string, t pri
 		func(g *GroupStat, i int) { accumulateGroupStat(g, &rows[i], t) },
 	)
 	for i := range out {
-		out[i].CostPer100Lines = costPer100Lines(out[i].Cost, out[i].LinesAdded)
+		out[i].CostPer100Lines = out[i].lineRate.Per100()
 	}
 	return out
 }
@@ -86,6 +86,7 @@ func accumulateGroupStat(g *GroupStat, u *store.UsageRow, t pricing.Table) {
 		g.LastActive = u.Day
 	}
 	cost, ok := t.CostTokens(u.Model, pricing.Tokens{In: u.In, Out: u.Out, CacheWrite: u.CacheWrite, CacheRead: u.CacheRead, CacheWrite1h: u.CacheWrite1h})
+	g.lineRate.Add(u.Tool, u.LinesAdded, RowTokens(u), cost, ok)
 	if !ok {
 		g.HasUnpriced = true
 		return

@@ -75,12 +75,18 @@ func clearance(v, threshold float64) float64 {
 }
 
 func scaleSub(f *facts) string {
+	if !f.linesOK {
+		return fmt.Sprintf("%s sessions · %s tokens", humanize.Int(f.sessions), humanize.Count(f.tokens))
+	}
 	return fmt.Sprintf("%s sessions · %s tokens · %s lines", humanize.Int(f.sessions), humanize.Count(f.tokens), humanize.Int(f.lines))
 }
 
 // outputSub is scaleSub for a hook that already said the token count, so the support line
 // adds what the headline did not rather than repeating it.
 func outputSub(f *facts) string {
+	if !f.linesOK {
+		return humanize.Int(f.sessions) + " sessions"
+	}
 	return fmt.Sprintf("%s sessions · %s lines the AI wrote", humanize.Int(f.sessions), humanize.Int(f.lines))
 }
 
@@ -88,7 +94,8 @@ func outputSub(f *facts) string {
 // 100 lines · 92.6% on premium models" reads the second number as a share of spend; it is a
 // share of tokens, and the adjacency alone was enough to make the swap.
 func moneySub(f *facts) string {
-	if f.perHundred == "" {
+	// A line with no room for a note carries the ratio only when it leaves nothing out.
+	if f.perHundred == "" || f.lineRate.LeavesOut() {
 		return scaleSub(f)
 	}
 	return fmt.Sprintf("%s per 100 lines · %s sessions", f.perHundred, humanize.Int(f.sessions))

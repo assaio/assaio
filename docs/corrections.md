@@ -31,6 +31,28 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+<a id="line-rates-divided-by-usage-that-records-no-lines"></a>
+
+### Line rates divided by usage that records no lines
+
+*Corrected in v0.33.0.*
+
+Every figure relating AI lines to something else divided by more than could have produced a line.
+`$`/100 lines — the `status` headline and Hot projects, `effectiveness` rows for groups that mix
+sources and its TOTAL row even under `--by tool`, and the `share` card's "per 100 lines" — set the
+window's priced cost against every AI line, and both populations were wrong. Cost from Gemini CLI
+or Cline, which record no lines, made AI-written code look more expensive per line than it was;
+lines written on a model with no known price counted while their cost did not, which made it look
+cheaper. Both held since v0.1.0, when `$`/100 lines shipped with Gemini CLI and Cline.
+`lines/active-day` counted days on which only a source that records no lines ran (Gemini CLI or
+Cline since v0.1.0, Antigravity CLI since v0.25.0), which made output per day look lower. Priced
+usage from the sources that record lines is now the ratio's whole population, a line-recording
+model with no known price leaves its lines out too, and each surface says what was left out.
+`model-fit`'s lines per 1M tokens and `concentration`'s spend-versus-output gap still divide by
+usage that records no lines (`B221`). Reproduced with constructed windows; not measured on the
+maintainer's transcripts, whose 25 days hold no day without a line-recording source and no priced
+source that records none.
+
 ## [0.32.0] - 2026-09-27
 
 <a id="a-re-read-rewrote-a-stored-project-when-its-directory-was-gone"></a>

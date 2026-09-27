@@ -29,10 +29,14 @@ func RenderEffectivenessCSV(w io.Writer, rows []EffRow) error {
 		"group", "lines_added", "lines_removed", "edits", "tool_calls", "rejected",
 		"tokens_total", "cost", "has_unpriced", "cost_per_100_lines",
 		"line_capable", "edit_capable", "refusable", "tokened",
+		"line_capable_cost", "line_capable_unpriced_tokens",
 	})
 	for i := range rows {
 		r := &rows[i]
-		cost, ratio := "", ""
+		cost, ratio, lineCost := "", "", ""
+		if r.LineCapableCost != nil {
+			lineCost = strconv.FormatFloat(*r.LineCapableCost, 'f', 6, 64)
+		}
 		if r.Cost != nil {
 			cost = strconv.FormatFloat(*r.Cost, 'f', 6, 64)
 		}
@@ -45,6 +49,7 @@ func RenderEffectivenessCSV(w io.Writer, rows []EffRow) error {
 			strconv.FormatInt(r.TokensTotal, 10), cost, strconv.FormatBool(r.HasUnpriced), ratio,
 			strconv.FormatBool(r.LineCapable), strconv.FormatBool(r.EditCapable),
 			strconv.FormatBool(r.Refusable), strconv.FormatBool(r.Tokened),
+			lineCost, strconv.FormatInt(r.LineCapableUnpricedTokens, 10),
 		})
 	}
 	cw.Flush()

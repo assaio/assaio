@@ -23,7 +23,7 @@ import (
 // changing its mind, not the work changing. comparabilityCaveats compares ParsedBy -- the
 // ingesting build -- which does not move when the analyzing binary is upgraded, so this number is
 // the only thing that stops the first digest after such an upgrade reporting the change as findings.
-const SnapshotVersion = 3
+const SnapshotVersion = 4
 
 // Snapshot is what one digest recorded: the totals, the per-dimension weights it ranks
 // movers by, and each validator's verdict. Deliberately no prose and no sample rows -- a

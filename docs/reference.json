@@ -785,7 +785,7 @@
     {
       "name": "throughput",
       "title": "Throughput",
-      "describe": "Total AI-added lines, lines per active day, top projects by lines, and the week-over-week trend.",
+      "describe": "Total AI-added lines, lines per day on which a line-recording source ran, top projects by lines, and the week-over-week trend.",
       "layer": "output",
       "scope": "project"
     },

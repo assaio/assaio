@@ -166,19 +166,23 @@ func TestStatusWithholdsLinesFromASourceThatNeverRecordsThem(t *testing.T) {
 	}
 }
 
-// TestStatusDisclosesAPartialLineDenominator is B5: the cost in $/100 lines is the whole
-// window's while the lines come only from the sources that record them. `effectiveness` and
-// the dashboard colophon both said so; `status` printed the ratio with no disclosure at all.
-func TestStatusDisclosesAPartialLineDenominator(t *testing.T) {
+// TestStatusDisclosesWhatTheRatioLeavesOut: the headline's $/100 lines divides priced usage from
+// the sources that record lines, and says what else the window holds.
+func TestStatusDisclosesWhatTheRatioLeavesOut(t *testing.T) {
 	var buf bytes.Buffer
 	in := BuildInsights([]store.UsageRow{
 		{Day: "2026-08-15", Tool: "claude-code", Model: "claude-opus-4-5", In: 1000, Out: 500, LinesAdded: 40},
-		{Day: "2026-08-15", Tool: "gemini-cli", Model: "gemini-2.5-pro", In: 4000, Out: 2000},
-	}, pricing.Table{}, time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC), 7*24*time.Hour, 5)
+		{Day: "2026-08-15", Tool: "gemini-cli", Model: "claude-opus-4-5", In: 4000, Out: 2000},
+	}, table(), time.Date(2026, 8, 15, 12, 0, 0, 0, time.UTC), 7*24*time.Hour, 5)
 	if err := RenderStatusSummary(&buf, &in); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(buf.String(), "only from the sources that record them") {
-		t.Fatalf("want the ratio's two populations disclosed: %s", buf.String())
+	out := buf.String()
+	if !strings.Contains(out, "† $/100 lines divides only") || !strings.Contains(out, "80% from sources that record no lines") {
+		t.Fatalf("want the ratio's excluded usage disclosed: %s", out)
+	}
+	// claude-code alone: $0.0175 over 40 lines; the whole window's cost would read $0.2188.
+	if !strings.Contains(out, "$0.0438†/100 lines") {
+		t.Fatalf("want the ratio over the line-recording usage only: %s", out)
 	}
 }
