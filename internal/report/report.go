@@ -36,7 +36,15 @@ type Row struct {
 	Out        int64 `json:"out"`
 	CacheRead  int64 `json:"cache_read"`
 	CacheWrite int64 `json:"cache_write"`
-	Reasoning  int64 `json:"reasoning"`
+	// CacheWrite1h is the part of CacheWrite bought at the 1-hour cache lifetime, billed at its
+	// own rate -- a subset, never added to it. It is nil when no source behind the row states
+	// the tier: those writes are billed at the standard rate, and a zero would claim every one
+	// of them was the short-lived kind.
+	CacheWrite1h *int64 `json:"cache_write_1h"`
+	// CacheWriteTiered is the part of CacheWrite from sources that state the tier, which is
+	// the only population CacheWrite1h can be a share of.
+	CacheWriteTiered int64 `json:"cache_write_tiered"`
+	Reasoning        int64 `json:"reasoning"`
 	// Cost is the USD cost computed from the pricing table; nil when the model is unpriced.
 	Cost *float64 `json:"cost"`
 	// Priced reports whether Cost was computed from a known model price.
@@ -93,10 +101,14 @@ func build(rows []store.UsageRow, t pricing.Table, id MemberIdentity) []Row {
 		u := &rows[i]
 		r := Row{
 			Day: u.Day, Tool: u.Tool, Model: u.Model, Project: u.Project, Entrypoint: u.Entrypoint, Member: u.Member,
-			Granularity: u.Granularity,
-			In:          u.In, Out: u.Out, CacheRead: u.CacheRead, CacheWrite: u.CacheWrite, Reasoning: u.Reasoning,
-			Task: u.Task, Outcome: u.Outcome, Difficulty: u.Difficulty,
-			Tokened: parser.Answers(u.Tool, parser.SignalTokensTotal),
+			Granularity: u.Granularity, Tokened: parser.Answers(u.Tool, parser.SignalTokensTotal),
+			In: u.In, Out: u.Out, CacheRead: u.CacheRead, CacheWrite: u.CacheWrite,
+			Reasoning: u.Reasoning, Task: u.Task, Outcome: u.Outcome, Difficulty: u.Difficulty,
+		}
+		if parser.Answers(u.Tool, parser.SignalTokensCacheWrite1h) {
+			long := u.CacheWrite1h
+			r.CacheWrite1h = &long
+			r.CacheWriteTiered = u.CacheWrite
 		}
 		if cost, ok := t.CostTokens(u.Model, pricing.Tokens{In: u.In, Out: u.Out, CacheWrite: u.CacheWrite, CacheRead: u.CacheRead, CacheWrite1h: u.CacheWrite1h}); ok {
 			r.Cost = &cost

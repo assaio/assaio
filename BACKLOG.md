@@ -1039,17 +1039,6 @@ file-size norm.
   make `survival` comparable to GitClear's two-week churn on all five properties instead of
   three.
 
-- [ ] **B197 · `report --format csv` publishes a cost its own columns cannot explain** — S ·
-  solo — the export carries `in`, `out`, `cache_read`, `cache_write` and `cost`, but no
-  `cache_write_1h`, and the 1-hour cache-write tier is billed at its own rate. Recomputing the
-  cost from the four published token columns therefore misses exactly
-  `cache_write_1h × (1h rate − standard write rate)` — measured per model against the
-  maintainer's store, it agrees to six decimals for all eight priced models, and for
-  `claude-opus-5` alone the unexplainable remainder is **$2,582.38**. A machine surface whose
-  own figures do not reconcile is the class of defect this project fixes rather than documents.
-  Found while building an independent check for `reprice`, which had to bypass the export and
-  price straight from `internal/pricing/litellm.json` to verify anything.
-
 - [ ] **B201 · two per-record relationships are checked only at the server boundary** — S · solo
   — `Sidechain ∈ {0,1}` and "the tool-purpose split sums to `ToolCalls`" live in
   `internal/server/validate.go`, although `internal/usage/bounds.go`'s own header says it exists
