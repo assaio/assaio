@@ -31,11 +31,13 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-09-27
+
 <a id="a-re-read-rewrote-a-stored-project-when-its-directory-was-gone"></a>
 
 ### A re-read rewrote a stored project when its directory was gone
 
-*Corrected in v0.32.0.*
+*Corrected in v0.32.0, released 2026-09-27.*
 
 Since v0.24.0, a re-read assigns the project and subpath it resolves. If a session's working
 directory was gone, ingest could resolve only the directory's own name or, for a removed clone
