@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-09-27
+
 ### Added
 
 - `backfill` reports `identity-changed=` for stored rows whose model, time, project, entrypoint,
@@ -1751,7 +1753,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.31.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.32.0...HEAD
+[0.32.0]: https://github.com/assaio/assaio/compare/v0.31.0...v0.32.0
 [0.31.0]: https://github.com/assaio/assaio/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/assaio/assaio/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/assaio/assaio/compare/v0.28.0...v0.29.0
