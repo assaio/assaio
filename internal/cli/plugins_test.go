@@ -82,16 +82,32 @@ func TestExplicitMissingConfigErrors(t *testing.T) {
 	}
 }
 
+// TestPluginsVerifyReportsConformance: verify is what a plugin author's CI runs, so a violation
+// has to fail it -- a report that exits 0 on every line rejected passes a broken plugin.
 func TestPluginsVerifyReportsConformance(t *testing.T) {
 	cfgPath := writePluginConfig(t, pluginScript(t, "violations.sh"))
 	out, err := runCommand(t, "plugins", "verify", "demo", "--config", cfgPath)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil {
+		t.Fatalf("verify must fail when a record line violates the protocol:\n%s", out)
 	}
-	for _, want := range []string{"handshake OK", "records ok: 1", "skipped:    5", "violations:", "dedupe_key"} {
+	for _, want := range []string{
+		"handshake OK", "records ok: 1", "skipped:    9", "violations:", "dedupe_key",
+		"unknown field", "no token counter", "exactly one JSON object",
+	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("plugins verify output missing %q:\n%s", want, out)
 		}
+	}
+}
+
+func TestPluginsVerifyPassesAConformingPlugin(t *testing.T) {
+	cfgPath := writePluginConfig(t, pluginScript(t, "good.sh"))
+	out, err := runCommand(t, "plugins", "verify", "demo", "--config", cfgPath)
+	if err != nil {
+		t.Fatalf("verify of a conforming plugin: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "records ok: 2") {
+		t.Fatalf("plugins verify output = %q, want two records", out)
 	}
 }
 

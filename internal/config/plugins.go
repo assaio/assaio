@@ -24,12 +24,11 @@ type PluginConfig struct {
 	Command string `koanf:"command"`
 	// Timeout bounds one plugin invocation, e.g. "60s". Defaults to 60s if empty.
 	Timeout string `koanf:"timeout"`
-	// Needs is what a metric plugin declares it reads, from assaio's closed capability set.
-	// Everything in the envelope is sent unasked except the step timeline, which was measured
-	// at ~44 MB on a real store: a plugin that wants it lists "trace" here, and one that does
-	// not is told the section was withheld rather than handed an empty array it could mistake
-	// for a window with no sequences (B168). Ignored for parser and rule plugins, which read a
-	// different document.
+	// Needs is this install's veto over what a metric plugin may read, from assaio's closed
+	// capability set. The plugin declares what it reads (protocol 4); this list only narrows
+	// that declaration, and empty means no constraint. A capability it removes is named as
+	// withheld rather than sent as an empty section the plugin could mistake for a window with
+	// no data. Rejected for parser and rule plugins, which read a different document.
 	Needs []string `koanf:"needs"`
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/assaio/assaio/internal/parser"
@@ -18,21 +19,42 @@ import (
 const maxWireStringLen = 512
 
 // wireRecord is the JSONL record shape a plugin emits, snake_case per the protocol spec
-// in docs/extending.md.
+// in docs/extending.md. The token counters are pointers so an omitted counter stays
+// distinguishable from a stated zero (see countsTokens).
 type wireRecord struct {
 	SessionID        string `json:"session_id"`
 	Timestamp        string `json:"timestamp"`
 	Model            string `json:"model"`
-	InputTokens      int64  `json:"input_tokens"`
-	OutputTokens     int64  `json:"output_tokens"`
-	CacheReadTokens  int64  `json:"cache_read_tokens"`
-	CacheWriteTokens int64  `json:"cache_write_tokens"`
-	ReasoningTokens  int64  `json:"reasoning_tokens"`
+	InputTokens      *int64 `json:"input_tokens"`
+	OutputTokens     *int64 `json:"output_tokens"`
+	CacheReadTokens  *int64 `json:"cache_read_tokens"`
+	CacheWriteTokens *int64 `json:"cache_write_tokens"`
+	ReasoningTokens  *int64 `json:"reasoning_tokens"`
 	DedupeKey        string `json:"dedupe_key"`
 	Project          string `json:"project"`
 	GitBranch        string `json:"git_branch"`
 	Entrypoint       string `json:"entrypoint"`
 	Granularity      string `json:"granularity"`
+}
+
+// errNoTokenCounter refuses a record that states no token count at all. The protocol is
+// token-denominated and every plugin source is reported as counting tokens, so storing such a
+// record would render a source that measured nothing as "0 tokens, $0.00" -- absence as zero.
+var errNoTokenCounter = errors.New(
+	"no token counter: a record carries at least one of input_tokens, output_tokens, cache_read_tokens, cache_write_tokens")
+
+// countsTokens reports whether the record states at least one token counter. The protocol has
+// no way to say a source does not keep a counter, so one omitted beside a stated one defaults to
+// 0; reasoning_tokens alone does not count, because it is a subset of output_tokens.
+func (w *wireRecord) countsTokens() bool {
+	return w.InputTokens != nil || w.OutputTokens != nil || w.CacheReadTokens != nil || w.CacheWriteTokens != nil
+}
+
+func orZero(p *int64) int64 {
+	if p == nil {
+		return 0
+	}
+	return *p
 }
 
 // toRecordAt validates the boundary invariants (honesty rules enforced at ingest) and converts
@@ -64,16 +86,19 @@ func (w *wireRecord) toRecordAt(pluginName string, now time.Time) (usage.Record,
 	if err := usage.CheckTimestamp(ts, now); err != nil {
 		return usage.Record{}, err
 	}
+	if !w.countsTokens() {
+		return usage.Record{}, errNoTokenCounter
+	}
 	rec := usage.Record{
 		Tool:             parser.PluginPrefix + pluginName,
 		SessionID:        w.SessionID,
 		Timestamp:        ts,
 		Model:            w.Model,
-		InputTokens:      w.InputTokens,
-		OutputTokens:     w.OutputTokens,
-		CacheReadTokens:  w.CacheReadTokens,
-		CacheWriteTokens: w.CacheWriteTokens,
-		ReasoningTokens:  w.ReasoningTokens,
+		InputTokens:      orZero(w.InputTokens),
+		OutputTokens:     orZero(w.OutputTokens),
+		CacheReadTokens:  orZero(w.CacheReadTokens),
+		CacheWriteTokens: orZero(w.CacheWriteTokens),
+		ReasoningTokens:  orZero(w.ReasoningTokens),
 		DedupeKey:        w.DedupeKey,
 		Project:          w.Project,
 		GitBranch:        w.GitBranch,
@@ -89,10 +114,9 @@ func (w *wireRecord) toRecordAt(pluginName string, now time.Time) (usage.Record,
 // parseRecordLine unmarshals one JSONL line and validates it against the protocol's
 // boundary invariants. The returned error, when non-nil, is the skip reason.
 //
-// Decoding is strict, as the metric and rule protocols already were: a plugin writing
-// `outputTokens` where the protocol says `output_tokens` used to store a zero and be counted
-// as a valid record, which is a silent wrong number rather than a loud protocol error. An
-// unknown field is now a named violation, which is the posture ADR 0003 argues for.
+// Decoding is strict, as the metric and rule protocols are: an unknown field is a named
+// violation rather than a stored zero (ADR 0003), and a line carries exactly one JSON value --
+// a second object after the first would otherwise be dropped while the line counted as valid.
 func parseRecordLine(line []byte, pluginName string) (usage.Record, error) {
 	return parseRecordLineAt(line, pluginName, time.Now())
 }
@@ -105,6 +129,9 @@ func parseRecordLineAt(line []byte, pluginName string, now time.Time) (usage.Rec
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&w); err != nil {
 		return usage.Record{}, fmt.Errorf("invalid JSON: %w", err)
+	}
+	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
+		return usage.Record{}, errors.New("trailing data after the record: a line carries exactly one JSON object")
 	}
 	return w.toRecordAt(pluginName, now)
 }

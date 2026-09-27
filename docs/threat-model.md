@@ -177,14 +177,15 @@ prefixed and passed through rather than swallowed.
 
 **Checked on everything it emits:** a handshake line naming the expected protocol version and
 the configured plugin name; then, for a parser plugin, per record line: strict JSON
-(`DisallowUnknownFields` — an `outputTokens` where the protocol says `output_tokens` is a
-named violation, not a silent zero), every string bounded at 512 bytes, `granularity` from a
-closed set, and `usage.CheckTimestamp` + `usage.CheckCounts`. A bad record line is skipped and
-counted, never fatal; a bad *handshake*, a timeout, or a non-zero exit drops the whole run. The
-metric and rule protocols are stricter still — one document, and any protocol failure discards
-it whole rather than acting on something partially sanitized. Everything stored is namespaced
-`plugin:<name>` (`parser.PluginPrefix`), so a plugin can never impersonate a built-in source,
-and it lands through `Store.Insert` (first-write-wins) rather than the restating path.
+(`DisallowUnknownFields` — an `outputTokens` where the protocol says `output_tokens` is a named
+violation, not a silent zero), every string bounded at 512 bytes, `granularity` from a closed
+set, at least one token counter, exactly one JSON value per line, and `usage.CheckTimestamp` +
+`usage.CheckCounts`. A bad record line is skipped and counted, never fatal; a bad *handshake*, a
+timeout, or a non-zero exit drops the whole run. The metric and rule protocols are stricter
+still — one document, and any protocol failure discards it whole rather than acting on something
+partially sanitized. Everything stored is namespaced `plugin:<name>` (`parser.PluginPrefix`), so
+a plugin can never impersonate a built-in source, and it lands through `Store.Insert`
+(first-write-wins) rather than the restating path.
 
 **What each protocol sends outward** matters as much as what it accepts back:
 

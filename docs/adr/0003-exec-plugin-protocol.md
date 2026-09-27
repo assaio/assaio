@@ -1,7 +1,11 @@
 # 3. Exec plugin protocol for out-of-tree parsers
 
 ## Status
-Accepted (2026-07-13)
+Accepted (2026-07-13). Amended (2026-09-27): the SQLite schema is not public
+([compatibility](../compatibility.md)); the record shape is a separate contract. Before
+v1.0, the parser protocol can tighten under a **Breaking** changelog entry without a
+handshake bump, as v0.31 did: a record needs a token counter, and a line holds one JSON
+value. The version number moves at the v1 freeze.
 
 ## Context
 The core lives under Go's `internal/` on purpose: freezing a public Go API before v1.0

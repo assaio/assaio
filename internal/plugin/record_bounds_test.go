@@ -28,7 +28,7 @@ func TestRecordTimestampIsBounded(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := wireRecord{
 				SessionID: "s1", DedupeKey: "s1:0", Model: "m",
-				Granularity: "turn", Timestamp: tt.timestamp,
+				Granularity: "turn", Timestamp: tt.timestamp, OutputTokens: tokens(5),
 			}
 			_, err := w.toRecordAt("demo", now)
 			if (err != nil) != tt.wantErr {
@@ -45,12 +45,14 @@ func TestRecordRejectsReasoningAboveOutput(t *testing.T) {
 	now := time.Date(2026, 8, 9, 12, 0, 0, 0, time.UTC)
 	w := wireRecord{
 		SessionID: "s1", DedupeKey: "s1:0", Model: "m", Granularity: "turn",
-		Timestamp: "2026-08-09T09:00:00Z", OutputTokens: 100, ReasoningTokens: 200,
+		Timestamp: "2026-08-09T09:00:00Z", OutputTokens: tokens(100), ReasoningTokens: tokens(200),
 	}
 	if _, err := w.toRecordAt("demo", now); err == nil {
 		t.Fatal("want error for reasoning_tokens above output_tokens, got nil")
 	}
 }
+
+func tokens(n int64) *int64 { return &n }
 
 // TestMetricWireCarriesTheCacheTier: a metric plugin re-pricing the rows it is handed has to
 // see both the 1-hour portion and its rate, or it necessarily bills every cache write at the

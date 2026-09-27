@@ -17,15 +17,17 @@ const (
 )
 
 // record is one AI turn. Granularity is "turn" or "session" and has no default, because silence
-// about the grain is not the turn grain.
+// about the grain is not the turn grain. Leave a counter nil when your tool does not record it. A
+// record with no counter at all is refused; one left nil beside a stated counter is still stored
+// as 0, so leaving it out does not yet mean "not measured".
 type record struct {
 	SessionID        string `json:"session_id"`
 	Timestamp        string `json:"timestamp"`
 	Model            string `json:"model"`
-	InputTokens      int64  `json:"input_tokens"`
-	OutputTokens     int64  `json:"output_tokens"`
-	CacheReadTokens  int64  `json:"cache_read_tokens"`
-	CacheWriteTokens int64  `json:"cache_write_tokens"`
+	InputTokens      *int64 `json:"input_tokens,omitempty"`
+	OutputTokens     *int64 `json:"output_tokens,omitempty"`
+	CacheReadTokens  *int64 `json:"cache_read_tokens,omitempty"`
+	CacheWriteTokens *int64 `json:"cache_write_tokens,omitempty"`
 	DedupeKey        string `json:"dedupe_key"`
 	Project          string `json:"project"`
 	Granularity      string `json:"granularity"`

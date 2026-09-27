@@ -57,7 +57,7 @@ func TestPrefixWriterBoundsNewlineFreeFlood(t *testing.T) {
 
 func TestScanOutputStdoutWithinCapParses(t *testing.T) {
 	out := []byte(`{"assaio_plugin":1,"tool":"demo"}` + "\n" +
-		`{"session_id":"s1","timestamp":"2026-07-01T10:00:00Z","model":"m","dedupe_key":"s1:0","granularity":"turn"}` + "\n")
+		`{"session_id":"s1","timestamp":"2026-07-01T10:00:00Z","model":"m","output_tokens":5,"dedupe_key":"s1:0","granularity":"turn"}` + "\n")
 	recs, _, stats, err := scanOutput(out, "demo", false)
 	if err != nil {
 		t.Fatal(err)

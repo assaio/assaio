@@ -248,11 +248,14 @@ to stdout:</p>
 <code>1</code>, and <code>tool</code> must match the configured <code>name</code>; otherwise the run fails.</li>
 <li><strong>Records</strong> (each later line): one snake_case JSON object per line:</li>
 </ol>
-<pre><code class="language-json">{&quot;session_id&quot;:&quot;s1&quot;,&quot;timestamp&quot;:&quot;2026-07-01T10:00:00Z&quot;,&quot;model&quot;:&quot;some-model&quot;,&quot;input_tokens&quot;:100,&quot;output_tokens&quot;:200,&quot;cache_read_tokens&quot;:0,&quot;cache_write_tokens&quot;:0,&quot;reasoning_tokens&quot;:0,&quot;dedupe_key&quot;:&quot;s1:0&quot;,&quot;project&quot;:&quot;myrepo&quot;,&quot;git_branch&quot;:&quot;main&quot;,&quot;entrypoint&quot;:&quot;cli&quot;,&quot;granularity&quot;:&quot;turn&quot;}
+<pre><code class="language-json">{&quot;session_id&quot;:&quot;s1&quot;,&quot;timestamp&quot;:&quot;2026-07-01T10:00:00Z&quot;,&quot;model&quot;:&quot;some-model&quot;,&quot;input_tokens&quot;:100,&quot;output_tokens&quot;:200,&quot;dedupe_key&quot;:&quot;s1:0&quot;,&quot;project&quot;:&quot;myrepo&quot;,&quot;git_branch&quot;:&quot;main&quot;,&quot;entrypoint&quot;:&quot;cli&quot;,&quot;granularity&quot;:&quot;turn&quot;}
 </code></pre>
 <p>Required: <code>session_id</code>, <code>timestamp</code> (RFC3339), <code>model</code>, <code>dedupe_key</code>, and <code>granularity</code> (<code>turn</code> or
 <code>session</code>; plugins follow the same <a href="https://assaio.dev/docs/data-source#granularity-honesty-hard-rule">granularity honesty
-rule</a> as in-tree parsers). Token fields default to 0.
+rule</a> as in-tree parsers). A record needs at least one
+of <code>input_tokens</code>, <code>output_tokens</code>, <code>cache_read_tokens</code> or <code>cache_write_tokens</code>. The other token
+fields default to 0 and count as measured: a plugin that never sends <code>cache_read_tokens</code> shows a 0%
+cache hit, and one that never sends <code>reasoning_tokens</code> lowers the reasoning share (<code>B212</code>).
 <code>project</code>, <code>git_branch</code>, and <code>entrypoint</code> are optional. <strong>A field the protocol does not define is
 rejected</strong>: writing <code>outputTokens</code> instead of <code>output_tokens</code> would otherwise store zero as valid
 data. Emit only the fields above. The <a href="https://assaio.dev/docs/data-source#the-usagerecord-contract"><code>usage.Record</code>
@@ -305,15 +308,20 @@ invariants, as in-tree parsers do with corrupt log lines:</p>
 <td>a string field over 512 bytes</td>
 <td>these are identities and labels, not free text.</td>
 </tr>
+<tr>
+<td>no token field at all</td>
+<td>since v0.31. assaio treats every plugin source as counting tokens, so a record with no count would show as 0 tokens and $0.00 instead of <code>—</code>. An explicit <code>0</code> is still accepted.</td>
+</tr>
+<tr>
+<td>a second JSON value on the line, or text after the record</td>
+<td>since v0.31. One line holds one record. Before, a second object was silently dropped and the line still counted as valid.</td>
+</tr>
 </tbody>
 </table>
 <p>Stored records get the tool label <code>plugin:&lt;name&gt;</code>, so a plugin can never impersonate a
 built-in source and its dedupe keyspace <code>(tool, dedupe_key)</code> never collides with anyone
 else's. A plugin that exits non-zero, times out, or fails the handshake is reported as
 failed for that run; the rest of the backfill continues. Stdout is capped at 64 MiB per run.</p>
-<p>Unknown fields are currently ignored, unlike in the metric and rule protocols. A misspelled key
-therefore stores zero instead of raising a violation. This inconsistency is tracked as <code>B143</code> and
-will change only with a handshake version bump.</p>
 <h2 id="a-complete-example-python">A complete example (Python)</h2>
 <pre><code class="language-python">#!/usr/bin/env python3
 &quot;&quot;&quot;assaio-parser-mytool: emit usage records for the fictional mytool CLI.&quot;&quot;&quot;
@@ -343,11 +351,12 @@ records ok: 42
 skipped:    1
 violations:
   line 17: empty dedupe_key
+error: mytool: 1 record line(s) violate the protocol
 $ assaio-agent plugins list
 mytool            /path/to/assaio-parser-mytool  (timeout 1m0s)
 </code></pre>
-<p>After <code>verify</code> passes, <code>assaio-agent backfill</code> ingests the plugin after built-in sources and reports
-a <code>plugin:mytool</code> line beside them.</p>
+<p><code>verify</code> exits non-zero if the run fails or any line is rejected, so it can gate the plugin's CI.
+<code>backfill</code> skips and counts those lines and stores the rest. After <code>verify</code> passes, <code>assaio-agent backfill</code> ingests the plugin after built-in sources and reports a <code>plugin:mytool</code> line beside them.</p>
 <hr>
 <nav class="pager" aria-label="Previous and next"><a class="prev" href="https://assaio.dev/docs/rule-plugin"><span class="dir">Previous</span> Write a rule plugin (any language)</a><a class="next" href="https://assaio.dev/docs/data-source"><span class="dir">Next</span> Add a data source</a></nav></main>
 </div>
