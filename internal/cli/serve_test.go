@@ -11,10 +11,9 @@ import (
 	"github.com/assaio/assaio/internal/server"
 )
 
-// TestServeAddrDefaultsToLoopback locks in the fix: binding all interfaces by default
-// made an unauthenticated dashboard (GET /) reachable from any network the host is on
-// unless the operator remembered to override --addr. The default must now be loopback,
-// so exposing beyond localhost is an explicit, deliberate choice.
+// TestServeAddrDefaultsToLoopback: binding every interface by default would expose the team
+// dashboard to any network the host is on unless the operator overrode --addr, so the default
+// is loopback and exposing beyond localhost is an explicit choice.
 func TestServeAddrDefaultsToLoopback(t *testing.T) {
 	f := newServeCmd().Flags().Lookup("addr")
 	if f == nil {

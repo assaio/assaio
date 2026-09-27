@@ -74,16 +74,16 @@ func BuildDashboard(ctx context.Context, st *store.Store) (dashboard.Data, error
 		in.HistoryStart = oldest
 	}
 	// The sequences are deliberately NOT read here, for the reason the metric plugins are not: this
-	// handler is unauthenticated and rebuilds on every request with no cache, and Timelines is a
+	// handler rebuilds on every request with no cache, for any caller holding a token, and Timelines is a
 	// full scan of the step table plus a GROUP BY over the window's records -- about 2.5s on a
 	// 339,000-step store, run before it can know whether any step exists. A store filled by `sync`
 	// holds none at all, since the team-server contract carries usage records and not sequences
 	// (ADR 0012), so the read would cost that on every request to return nothing. The detectors
 	// therefore report no sequences here and say why, which is true of this surface (`B171`).
 	const anonymize = true
-	// Exec metric plugins are deliberately nil here: GET / is unauthenticated and
-	// rebuilds per request, and spawning config-declared subprocesses per request would
-	// be a denial-of-service vector. Compiled-in validators still run; exec metrics are
-	// a local-CLI surface (ADR 0004).
+	// Exec metric plugins are deliberately nil here: GET / rebuilds per request with no cache,
+	// so spawning config-declared subprocesses on every read would let any token holder
+	// multiply the server's work. Compiled-in validators still run; exec metrics are a
+	// local-CLI surface (ADR 0004).
 	return dashboard.Build(in, "last 30 days", anonymize, nil, nil), nil
 }

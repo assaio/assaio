@@ -12,7 +12,7 @@ import (
 
 // maxStringField bounds any single string field on a pushed record: these are identities
 // and labels, not free text. It blocks a client from smuggling a multi-megabyte model or
-// dedupe_key into the shared store and the unauthenticated dashboard it feeds.
+// dedupe_key into the shared store and the team dashboard it feeds.
 const maxStringField = 512
 
 // knownTools is the exact set of Tool values assaio's built-in parsers emit, read from the
@@ -38,7 +38,7 @@ var pluginToolPattern = regexp.MustCompile(`^plugin:[a-z0-9-]+$`)
 // rather than enumerated: the vocabulary is the vendor's to grow, so pinning today's six
 // values here would reject a record a future parser reads correctly. What it does block is
 // the reason being free text -- the value is rendered as the "top miss cause" on the shared
-// unauthenticated dashboard, and it keys a GROUP BY. Empty is allowed: most turns state none.
+// team dashboard, and it keys a GROUP BY. Empty is allowed: most turns state none.
 var cacheMissReasonPattern = regexp.MustCompile(`^[a-z0-9_]{0,64}$`)
 
 // knownGranularities is the exact set of Granularity values usage.Record documents.

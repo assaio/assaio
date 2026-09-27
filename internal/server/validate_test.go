@@ -146,7 +146,7 @@ func TestValidateRecordRejectsEmptyDedupeKey(t *testing.T) {
 
 // TestValidateRecordRejectsOversizedStringField guards the boundary cap: a token-holding
 // client cannot push a multi-megabyte string field into the shared store and the
-// unauthenticated dashboard it feeds -- including Tool, whose "plugin:<name>" regex is
+// team dashboard it feeds -- including Tool, whose "plugin:<name>" regex is
 // otherwise length-unbounded.
 func TestValidateRecordRejectsOversizedStringField(t *testing.T) {
 	r := newValidRecord()
@@ -162,7 +162,7 @@ func TestValidateRecordRejectsOversizedStringField(t *testing.T) {
 	}
 }
 
-// The miss reason is rendered as a value on the shared unauthenticated dashboard and keys a
+// The miss reason is rendered as a value on the shared team dashboard and keys a
 // GROUP BY, so a push may not put free text in it. The shape is matched rather than the
 // vocabulary enumerated: the vendor may add a token, and rejecting a record a future parser
 // reads correctly would be the worse failure.

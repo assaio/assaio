@@ -246,9 +246,8 @@ func TestHandleUsageInsertFailureReturnsGenericError(t *testing.T) {
 	}
 }
 
-// TestDashboardHandlerBuildFailureReturnsGenericError is the unauthenticated-caller case
-// fix 5 is strictest about: GET / must never echo internal (DB/schema) detail, even on
-// failure.
+// TestDashboardHandlerBuildFailureReturnsGenericError: GET / must never echo internal (DB/schema)
+// detail, even on failure -- a caller holding a token is not thereby trusted with a schema.
 func TestDashboardHandlerBuildFailureReturnsGenericError(t *testing.T) {
 	s, st := newTestServer(t)
 	if err := st.Close(); err != nil {
