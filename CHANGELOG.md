@@ -33,6 +33,13 @@ Discussion.
 
 ## [Unreleased]
 
+### Fixed
+
+- Since v0.24, each upgrade re-read every transcript still on disk. If a session's working directory
+  was gone, a re-read could rename its stored project to the directory's own name. Re-reads now keep
+  the stored project; renamed rows cannot be rebuilt
+  ([correction](docs/corrections.md#a-re-read-rewrote-a-stored-project-when-its-directory-was-gone)).
+
 ## [0.31.0] - 2026-09-27
 
 ### Breaking

@@ -31,6 +31,24 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+<a id="a-re-read-rewrote-a-stored-project-when-its-directory-was-gone"></a>
+
+### A re-read rewrote a stored project when its directory was gone
+
+*Corrected in v0.32.0.*
+
+Since v0.24.0, a re-read assigns the project and subpath it resolves. If a session's working
+directory was gone, ingest could resolve only the directory's own name or, for a removed clone
+nested in another repository, the outer repository. The re-read wrote that over the project resolved
+while the directory existed. Skip state is kept per build, so every upgrade re-read every transcript
+still on disk and could rename sessions from removed worktrees or moved checkouts. Per-project
+figures then attributed their lines, `$`/100 lines, and session counts to a directory name; so did
+the project joins used by `survival` and `evidence`. A re-read now offers no project for a directory
+that is gone, keeping the stored one. A first read still stores the best available label. Rows
+already renamed cannot be rebuilt because the directory that resolved them is gone. Reproduced with
+a constructed test; not measured on the maintainer's store, which held no rows when the fix was
+made.
+
 ## [0.31.0] - 2026-09-27
 
 <a id="parser-plugin-record-without-a-count-stored-zero-spend"></a>

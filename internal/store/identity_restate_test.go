@@ -238,3 +238,37 @@ func storedProjectPath(t *testing.T, st *Store) (project, subpath string) {
 	}
 	return project, subpath
 }
+
+// TestRestateNeverReplacesAProjectWithAGuess: once a session's working directory is gone, what
+// ingest resolves for it is a guess. A re-read must keep the project resolved while the checkout
+// existed; a first read still stores the guess, since it is the only label there is.
+func TestRestateNeverReplacesAProjectWithAGuess(t *testing.T) {
+	at := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+	resolved := identityTurn(at, "mono", "cli", "main")
+	resolved.Subpath = "apps/mobile"
+	guess := identityTurn(at, "mobile", "cli", "main")
+	guess.ProjectGuessed = true
+	tests := []struct {
+		name        string
+		reads       []usage.Record
+		wantProject string
+		wantSubpath string
+	}{
+		{"a guessed re-read keeps the resolved project", []usage.Record{resolved, guess}, "mono", "apps/mobile"},
+		{"a first read stores the guess", []usage.Record{guess}, "mobile", ""},
+		{"a resolved re-read still replaces a guess", []usage.Record{guess, resolved}, "mono", "apps/mobile"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st := openTempStore(t)
+			for _, r := range tt.reads {
+				if _, _, err := st.InsertLocal(context.Background(), []usage.Record{r}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if project, subpath := storedProjectPath(t, st); project != tt.wantProject || subpath != tt.wantSubpath {
+				t.Fatalf("stored = (%q, %q), want (%q, %q)", project, subpath, tt.wantProject, tt.wantSubpath)
+			}
+		})
+	}
+}
