@@ -110,11 +110,17 @@ insert is idempotent on `(tool, dedupe_key)`, and the three entry points differ 
 
 - `Store.InsertLocal` — for files this store read itself. A duplicate is handed to
   `restateActivitySQL`: token counts take `MAX(stored, offered)` because they are the
-  vendor's own figure read off an append-only log, while every count assaio *derived* is
-  assigned, so a corrected attribution rule can reach history. A restatement that moves a
-  figure **down** is counted separately (`Result.Lowered`, printed as `restated-down`) —
-  from the store's side a fix landing and a parser regression look identical, so the number
-  is reported rather than inferred.
+  vendor's own figure read off an append-only log; every count assaio *derived* is assigned
+  so a corrected attribution rule can reach history. A name (model, skill, agent, cache-miss
+  reason, entrypoint, branch, project) is replaced only when a re-read states one. For
+  Claude Code, whose responses a forked sub-agent can replay into a second transcript, the
+  time takes the earliest line that carries the response; other sources assign it. A project
+  resolved for a directory that no longer exists is never written over a stored one. Changes
+  are counted before restatement (`restate_watch.go`): a figure moved **down**
+  (`restated-down`), an identity replaced (`identity-changed`) or kept against a blank
+  (`identity-kept`), or a step changed (`steps-changed`). From the store's side, a fix and a
+  parser regression look identical, so it reports the counts rather than inferring the
+  cause.
 - `Store.Insert` — first-write-wins, for rows whose caller does not own the input: exec
   parser plugins, `demo`, `share`.
 - `Store.InsertSynced` — `InsertLocal`'s restate on a central store, safe only because the

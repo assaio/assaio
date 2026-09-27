@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/assaio/assaio/internal/store"
 	"github.com/assaio/assaio/internal/usage"
@@ -19,7 +20,7 @@ func ingestParsed(ctx context.Context, st *store.Store, cache projectCache, res 
 	if parseErr != nil {
 		res.Failed++
 	}
-	recs, undated := dated(recs)
+	recs, undated := dated(recs, time.Now())
 	res.Skipped += skipped + undated
 	if len(recs) == 0 {
 		return nil
@@ -27,25 +28,28 @@ func ingestParsed(ctx context.Context, st *store.Store, cache projectCache, res 
 	resolveProjects(recs, cache)
 	res.Records += len(recs)
 	res.ZeroToken += zeroTokenCount(recs)
-	n, lowered, err := st.InsertLocal(ctx, recs)
+	n, w, err := st.InsertLocal(ctx, recs)
 	if err != nil {
 		return err
 	}
 	res.Inserted += n
-	res.Lowered += lowered
+	res.Lowered += w.Lowered
+	res.Identity.Add(w.Identity)
 	return nil
 }
 
-// dated drops records a log gave no timestamp and reports how many went. Every report,
-// every validator and every dashboard window is bounded by `ts >= ?`, so a record stamped
-// with the zero time is stored and then invisible to all of them while still counting toward
-// the store's size and its row totals -- present in one place, absent in every other. Counted
-// as skipped, which is the honest word for evidence that could not be read and the number the
-// drift canaries already watch.
-func dated(recs []usage.Record) (kept []usage.Record, dropped int) {
+// dated drops records a log gave no plausible timestamp -- none, or one outside the range the
+// sync and plugin boundaries already enforce (usage.CheckTimestamp) -- and reports how many
+// went. Every report, validator and dashboard window is bounded by `ts >= ?`, so a record
+// stamped with the zero time is stored and then invisible to all of them while still counting
+// toward the store's size and its row totals; and a Claude Code row keeps the earliest time a
+// re-read offers, so an implausibly early one would never be corrected. Counted as skipped,
+// which is the honest word for evidence that could not be read and the number the drift
+// canaries already watch.
+func dated(recs []usage.Record, now time.Time) (kept []usage.Record, dropped int) {
 	kept = recs[:0]
 	for i := range recs {
-		if recs[i].Timestamp.IsZero() {
+		if usage.CheckTimestamp(recs[i].Timestamp, now) != nil {
 			dropped++
 			continue
 		}

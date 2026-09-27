@@ -34,19 +34,19 @@ func TestInsertStepsIsIdempotent(t *testing.T) {
 		step("a", 1, usage.StepAssistant, at),
 		step("b", 2, usage.StepRead, at),
 	}
-	n, _, err := s.InsertSteps(ctx, steps)
+	w, err := s.InsertSteps(ctx, steps)
 	if err != nil {
 		t.Fatalf("InsertSteps: %v", err)
 	}
-	if n != 2 {
-		t.Fatalf("first insert = %d, want 2", n)
+	if w.Inserted != 2 {
+		t.Fatalf("first insert = %d, want 2", w.Inserted)
 	}
-	n, _, err = s.InsertSteps(ctx, steps)
+	w, err = s.InsertSteps(ctx, steps)
 	if err != nil {
 		t.Fatalf("re-insert: %v", err)
 	}
-	if n != 0 {
-		t.Errorf("re-insert reported %d new rows: re-reading a transcript must not append a second copy", n)
+	if w.Inserted != 0 {
+		t.Errorf("re-insert reported %d new rows: re-reading a transcript must not append a second copy", w.Inserted)
 	}
 	h, err := s.Steps(ctx)
 	if err != nil {
@@ -70,14 +70,14 @@ func TestReReadCompletesAStepWithoutDegradingIt(t *testing.T) {
 	// The target is the same in both reads: it is settled on the line that creates the step, so
 	// a longer prefix never completes it. What a re-read may do to it is the next test.
 	partial.TargetRef = 7
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{partial}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{partial}); err != nil {
 		t.Fatalf("InsertSteps: %v", err)
 	}
 
 	complete := partial
 	complete.Outcome = usage.OutcomeOK
 	complete.Tokens = 250
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{complete}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{complete}); err != nil {
 		t.Fatalf("restate: %v", err)
 	}
 	var outcome string
@@ -95,7 +95,7 @@ func TestReReadCompletesAStepWithoutDegradingIt(t *testing.T) {
 	// files, so a later read of an append-only transcript is a superset, and the alternative --
 	// keeping the stored answer -- is what stops a corrected rule reaching a stored row. See
 	// TestRestateLowersAStepTotalFromACorrectedRule.
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{partial}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{partial}); err != nil {
 		t.Fatalf("re-read: %v", err)
 	}
 	row = s.db.QueryRowContext(ctx,
@@ -118,12 +118,12 @@ func TestRestateLowersAStepOutcomeFromACorrectedRule(t *testing.T) {
 
 	wrong := step("a", 1, usage.StepEdit, time.Now().UTC())
 	wrong.Outcome = usage.OutcomeOK
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{wrong}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{wrong}); err != nil {
 		t.Fatalf("InsertSteps: %v", err)
 	}
 	corrected := wrong
 	corrected.Outcome = usage.OutcomeDenied
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{corrected}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{corrected}); err != nil {
 		t.Fatalf("restate: %v", err)
 	}
 	var outcome string
@@ -148,12 +148,12 @@ func TestRestateLowersAStepTotalFromACorrectedRule(t *testing.T) {
 
 	inflated := step("a", 1, usage.StepAssistant, at)
 	inflated.Tokens = 1_000_000
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{inflated}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{inflated}); err != nil {
 		t.Fatalf("InsertSteps: %v", err)
 	}
 	corrected := inflated
 	corrected.Tokens = 10
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{corrected}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{corrected}); err != nil {
 		t.Fatalf("restate: %v", err)
 	}
 	var tokens int64
@@ -177,13 +177,13 @@ func TestReReadRenumbersPositionRatherThanKeepingTheHigher(t *testing.T) {
 
 	before := step("a", 9, usage.StepEdit, at)
 	before.TargetRef = 7
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{before}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{before}); err != nil {
 		t.Fatalf("InsertSteps: %v", err)
 	}
 	after := before
 	after.Ordinal = 4
 	after.TargetRef = 3
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{after}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{after}); err != nil {
 		t.Fatalf("re-read: %v", err)
 	}
 	var ordinal, target int64
@@ -204,7 +204,7 @@ func TestPruneStepsDropsOnlyWhatIsPastTheHorizon(t *testing.T) {
 	s := stepStore(t)
 	now := time.Now().UTC()
 	old := now.AddDate(0, 0, -40)
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{
+	if _, err := s.InsertSteps(ctx, []usage.Step{
 		step("old", 1, usage.StepRead, old),
 		step("new", 2, usage.StepRead, now),
 	}); err != nil {
@@ -243,7 +243,8 @@ func TestStepsOutsideTheVocabularyAreRejected(t *testing.T) {
 			return st
 		}(),
 	}
-	n, rejected, err := s.InsertSteps(ctx, bad)
+	w, err := s.InsertSteps(ctx, bad)
+	n, rejected := w.Inserted, w.Rejected
 	if err != nil {
 		t.Fatalf("InsertSteps: %v", err)
 	}
@@ -275,7 +276,7 @@ func TestClearErasesTheTimelineUnderTheSameScope(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			s := stepStore(t)
-			if _, _, err := s.InsertSteps(ctx, []usage.Step{
+			if _, err := s.InsertSteps(ctx, []usage.Step{
 				step("old", 1, usage.StepRead, now.AddDate(0, 0, -20)),
 				step("new", 2, usage.StepRead, now),
 			}); err != nil {
@@ -308,7 +309,7 @@ func TestTwoTimelinesMayShareADedupeKey(t *testing.T) {
 	fork := origin
 	fork.Timeline = "fork1"
 
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{origin, fork}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{origin, fork}); err != nil {
 		t.Fatalf("InsertSteps: %v", err)
 	}
 	h, err := s.Steps(ctx)
@@ -334,10 +335,10 @@ func TestRestateCorrectsAStepKind(t *testing.T) {
 	s := stepStore(t)
 	at := time.Now().UTC()
 
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{step("a", 1, usage.StepRead, at)}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{step("a", 1, usage.StepRead, at)}); err != nil {
 		t.Fatalf("InsertSteps: %v", err)
 	}
-	if _, _, err := s.InsertSteps(ctx, []usage.Step{step("a", 1, usage.StepEdit, at)}); err != nil {
+	if _, err := s.InsertSteps(ctx, []usage.Step{step("a", 1, usage.StepEdit, at)}); err != nil {
 		t.Fatalf("restate: %v", err)
 	}
 

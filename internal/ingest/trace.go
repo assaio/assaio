@@ -29,11 +29,12 @@ func ingestSteps(ctx context.Context, st *store.Store, res *Result, steps []usag
 	if len(steps) == 0 {
 		return nil
 	}
+	now := time.Now()
 	kept := steps[:0]
 	for i := range steps {
-		// A step with no timestamp is invisible to every window that reads it and would still
-		// occupy a row, which is the same trade dated() refuses for records.
-		if steps[i].Timestamp.IsZero() {
+		// A step with no plausible timestamp is invisible to every window that reads it, or
+		// pins its row to a wrong earliest time, which is the same trade dated() refuses.
+		if usage.CheckTimestamp(steps[i].Timestamp, now) != nil {
 			res.Skipped++
 			continue
 		}
@@ -52,12 +53,13 @@ func ingestSteps(ctx context.Context, st *store.Store, res *Result, steps []usag
 		}
 		kept = append(kept, steps[i])
 	}
-	n, rejected, err := st.InsertSteps(ctx, kept)
+	w, err := st.InsertSteps(ctx, kept)
 	if err != nil {
 		return err
 	}
-	res.Steps += n
-	res.Skipped += rejected
+	res.Steps += w.Inserted
+	res.Skipped += w.Rejected
+	res.StepsChanged += w.Changed
 	return nil
 }
 

@@ -65,10 +65,11 @@ func runBackfill(cmd *cobra.Command, opts ingest.Options) error {
 }
 
 func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
-	pruned, lowered := false, 0
+	pruned := false
+	var restated restateTotals
 	for i := range results {
 		r := &results[i]
-		lowered += r.Lowered
+		restated.add(r)
 		cmd.Printf("%-12s  files=%d", r.Tool, r.Files)
 		if r.Unchanged != 0 {
 			cmd.Printf("  unchanged=%d", r.Unchanged)
@@ -90,6 +91,15 @@ func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
 		if r.Lowered != 0 {
 			cmd.Printf("  restated-down=%d", r.Lowered)
 		}
+		if r.Identity.Rows != 0 {
+			cmd.Printf("  identity-changed=%d", r.Identity.Rows)
+		}
+		if r.Identity.Kept != 0 {
+			cmd.Printf("  identity-kept=%d", r.Identity.Kept)
+		}
+		if r.StepsChanged != 0 {
+			cmd.Printf("  steps-changed=%d", r.StepsChanged)
+		}
 		if r.Failed != 0 {
 			cmd.Printf("  failed=%d", r.Failed)
 		}
@@ -100,10 +110,5 @@ func printBackfillResults(cmd *cobra.Command, results []ingest.Result) {
 		cmd.Println("steps-pruned is the whole run's, not that source's: the horizon is applied to the store in one pass, which cannot say whose history went")
 		cmd.Println("pruned steps free pages inside the store without shrinking it — run 'assaio-agent compact' to reclaim them")
 	}
-	if lowered > 0 {
-		cmd.Printf("restated-down: %d stored row(s) had a figure lowered by this re-read.\n", lowered)
-		cmd.Println("  That is what a corrected attribution rule looks like from here, and also what a parser")
-		cmd.Println("  regression looks like. If this build did not change how a signal is counted, the drop is")
-		cmd.Println("  the thing to explain — the store cannot tell the two apart, which is why it says so.")
-	}
+	restated.print(cmd)
 }
