@@ -23,7 +23,8 @@ const shareDefaultOutput = "assaio-share.html"
 // which is the promise every other entry point keeps.
 const shareFirstRunNotice = `No usage stored yet -- reading this machine's existing AI session logs first.
 Only accounting metadata and counts are stored. Prompts and model output are not extracted;
-recorded diff and file content is read transiently for counts. Nothing leaves this machine.`
+recorded diff and file content is read transiently for counts. assaio itself sends nothing off
+this machine; a parser plugin from your config runs as your own program.`
 
 func newShareCmd() *cobra.Command {
 	var since, output, format string

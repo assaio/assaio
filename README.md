@@ -88,8 +88,9 @@ Then run the guided import:
 $ assaio-agent init
 ```
 
-`init` shows which local logs it will read, imports their history and writes the first report. It
-sends nothing over the network.
+`init` shows which local logs it will read and which configured parser plugins it will run, imports
+their history and writes the first report. assaio itself sends nothing over the network; a parser
+plugin from your config is your own program (see [PRIVACY.md](PRIVACY.md)).
 
 The usual loop is short:
 

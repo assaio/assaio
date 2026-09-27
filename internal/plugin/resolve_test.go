@@ -1,6 +1,8 @@
 package plugin
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -39,10 +41,26 @@ func TestResolveLooksUpNonAbsoluteCommand(t *testing.T) {
 }
 
 func TestResolveUnknownCommand(t *testing.T) {
-	_, err := Resolve(config.PluginConfig{Name: "demo", Command: "assaio-plugin-does-not-exist"})
-	if err == nil {
-		t.Fatal("Resolve() err = nil, want lookup failure")
+	for name, command := range map[string]string{
+		"not on PATH":                "assaio-plugin-does-not-exist",
+		"absolute path missing":      filepath.Join(t.TempDir(), "missing"),
+		"absolute path not runnable": notExecutable(t),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := Resolve(config.PluginConfig{Name: "demo", Command: command}); err == nil {
+				t.Fatalf("Resolve(%q) err = nil, want a lookup failure before anything is started", command)
+			}
+		})
 	}
+}
+
+func notExecutable(t *testing.T) string {
+	t.Helper()
+	p := filepath.Join(t.TempDir(), "plugin")
+	if err := os.WriteFile(p, []byte("#!/bin/sh\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return p
 }
 
 func TestResolveRejectsInvalidName(t *testing.T) {

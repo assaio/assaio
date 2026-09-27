@@ -49,6 +49,9 @@ Discussion.
   Single-model columns reproduce cost; the missing 1-hour tier was $2,582.38 for `claude-opus-5` on
   the maintainer's store. `cache_write_1h` is `null` when no source states the tier; both are the
   last CSV columns.
+- `init` lists and runs configured parser plugins instead of stopping at "no supported tool's logs
+  were found" (`B214`). If nothing is found, it names every source key. `init` and `share` say a
+  plugin is your own program, which assaio neither reads nor limits.
 
 ## [0.30.0] - 2026-09-26
 

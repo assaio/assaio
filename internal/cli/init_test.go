@@ -72,3 +72,69 @@ func TestInitWritesNoConfigWhenDefaultsWork(t *testing.T) {
 		t.Fatal("defaults worked, so init must not leave a config file behind")
 	}
 }
+
+// TestInitImportsAConfiguredParserPlugin: a machine whose only source is a parser plugin is a
+// supported setup, so init must run it rather than print the no-logs hint.
+func TestInitImportsAConfiguredParserPlugin(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	cfgDir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", cfgDir)
+	cfgPath := filepath.Join(cfgDir, "assaio", "config.yaml")
+	if err := os.MkdirAll(filepath.Dir(cfgPath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	body := "plugins:\n  - name: demo\n    command: " + pluginScript(t, "good.sh") + "\n    timeout: 5s\n"
+	if err := os.WriteFile(cfgPath, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(t.TempDir())
+	out, err := runCommand(t, "init", "--non-interactive")
+	if err != nil {
+		t.Fatalf("init: %v\n%s", err, out)
+	}
+	if strings.Contains(out, "No supported tool's logs were found") {
+		t.Fatalf("init ignored the configured plugin: %q", out)
+	}
+	if !strings.Contains(out, initPluginNotice) {
+		t.Fatalf("the privacy line describes assaio's own parsers; with a plugin it must say what it cannot vouch for: %q", out)
+	}
+	pluginIdx := strings.Index(out, "plugin:demo")
+	importIdx := strings.Index(out, "imported")
+	if pluginIdx < 0 || importIdx < 0 || pluginIdx > importIdx {
+		t.Fatalf("init must name the plugin before running it, then import: %q", out)
+	}
+	if _, statErr := os.Stat(dashboardDefaultOutput); statErr != nil {
+		t.Fatalf("init wrote no report: %v", statErr)
+	}
+}
+
+// TestInitWithAPluginThatCannotRunExplainsItself: a configured plugin whose command does not
+// exist is named with the reason, is not counted as a source, and leaves the no-data hint.
+func TestInitWithAPluginThatCannotRunExplainsItself(t *testing.T) {
+	for name, command := range map[string]string{
+		"not on PATH":           "assaio-parser-not-on-path",
+		"absolute path missing": filepath.Join(t.TempDir(), "missing"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			t.Setenv("USERPROFILE", home)
+			t.Setenv("XDG_DATA_HOME", t.TempDir())
+			t.Chdir(t.TempDir())
+			cfgPath := filepath.Join(t.TempDir(), "config.yaml")
+			if err := os.WriteFile(cfgPath, []byte("plugins:\n  - name: demo\n    command: "+command+"\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			out, err := runCommand(t, "init", "--non-interactive", "--config", cfgPath)
+			if err != nil {
+				t.Fatalf("init: %v\n%s", err, out)
+			}
+			if !strings.Contains(out, "plugin demo: command") || !strings.Contains(out, initSourceHint) {
+				t.Fatalf("init must name the unrunnable plugin and fall back to the hint: %q", out)
+			}
+		})
+	}
+}
