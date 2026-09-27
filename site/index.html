@@ -347,7 +347,7 @@ footer{border-top:1px solid var(--line); padding:3rem 0 3.5rem; background:var(-
     <div class="head"><h2>How it works</h2></div>
     <ol class="steps">
       <li><h3>Install the binary</h3><p>Install the single static Go binary with <code>brew install assaio/tap/assaio-agent</code> or <code>go install github.com/assaio/assaio/cmd/assaio-agent@latest</code>.</p><div class="term"><code>brew install assaio/tap/assaio-agent</code></div></li>
-      <li><h3>Run <code>assaio-agent init</code></h3><p><code>assaio-agent init</code> detects tools, shows every directory before reading it, imports your logs, then writes the report in about sixty seconds.</p><div class="term"><code>assaio-agent init</code></div></li>
+      <li><h3>Run <code>assaio-agent init</code></h3><p><code>assaio-agent init</code> detects tools and configured parser plugins, shows every directory or command before using it, imports your logs, then writes the report in about sixty seconds.</p><div class="term"><code>assaio-agent init</code></div></li>
       <li><h3>Read your reports</h3><p><code>report</code> prints tokens and estimated cost by project/model/tool/day. <code>analyze</code> states what grounds each directional read and withholds unsupported grades. <code>dashboard</code> writes one self-contained offline HTML file.</p><div class="term"><code>assaio-agent analyze</code></div></li>
     </ol>
   </div>

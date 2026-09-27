@@ -3,16 +3,17 @@ package plugin
 import (
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/assaio/assaio/internal/analyze"
 	"github.com/assaio/assaio/internal/config"
 )
 
-// Resolve validates a config.PluginConfig and turns it into a Config ready for Run:
-// the command is resolved to an absolute path via exec.LookPath when it is not already
-// one. Validation happens here so every caller path (ingest, verify) enforces it.
+// Resolve validates a config.PluginConfig and turns it into a Config ready for Run: the
+// command is looked up with exec.LookPath, which searches PATH for a bare name and checks a
+// path directly, so a command that does not exist or cannot execute fails here rather than
+// looking runnable until it is started. Validation happens here so every caller path
+// (ingest, verify, init) enforces it.
 func Resolve(pc config.PluginConfig) (Config, error) { return resolve(pc, pc.Validate) }
 
 // ResolveMetric is Resolve for an entry under `metrics:`, the one kind that may declare the
@@ -35,13 +36,9 @@ func resolve(pc config.PluginConfig, validate func() error) (Config, error) {
 		return Config{}, fmt.Errorf("plugin %s: %w", pc.Name, err)
 	}
 
-	command := pc.Command
-	if !filepath.IsAbs(command) {
-		resolved, err := exec.LookPath(command)
-		if err != nil {
-			return Config{}, fmt.Errorf("plugin %s: command %q not found: %w", pc.Name, command, err)
-		}
-		command = resolved
+	command, err := exec.LookPath(pc.Command)
+	if err != nil {
+		return Config{}, fmt.Errorf("plugin %s: command %q not found: %w", pc.Name, pc.Command, err)
 	}
 	return Config{Name: pc.Name, Command: command, Timeout: timeout, Allow: allow}, nil
 }

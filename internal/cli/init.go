@@ -6,13 +6,16 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/assaio/assaio/internal/config"
 	"github.com/assaio/assaio/internal/ingest"
 	"github.com/assaio/assaio/internal/paths"
+	"github.com/assaio/assaio/internal/plugin"
 )
 
 // initSourceHint is what a machine with no detected tool needs: the exact shape of the
 // config key that points assaio somewhere else, rather than a bare "nothing found".
-const initSourceHint = `No supported tool's logs were found in the default locations.
+const initSourceHint = `No supported tool's logs were found in the default locations, and no configured parser
+plugin can run.
 
 If your logs live elsewhere, point assaio at them in config.yaml:
 
@@ -20,22 +23,32 @@ sources:
   claude: [/path/to/.claude/projects]
   codex:  [/path/to/.codex/sessions]
 
+gemini, cline, copilot and agy take the same form. For a tool assaio does not read, a parser
+plugin listed under plugins: can supply the records; 'assaio-agent plugins init --kind parser'
+prints a starting point.
+
 Run 'assaio-agent doctor' to see the locations that were checked, or 'assaio-agent demo'
 to see a full report on bundled sample data first.`
+
+// initPluginNotice qualifies the privacy line above it: that line describes assaio's own
+// parsers, and a plugin is a program assaio neither reads nor limits.
+const initPluginNotice = `A parser plugin reads whatever its own code reads; assaio stores only the
+accounting fields the plugin prints.`
 
 func newInitCmd() *cobra.Command {
 	var nonInteractive bool
 	c := &cobra.Command{
 		Use:   "init",
 		Short: "Set up a first run: show what will be read, import it, write the report",
-		Long: `Walk a first run end to end: detect which supported tools have logs on this machine,
-print exactly which directories will be read before reading anything, import them, and
-write the offline Assay report.
+		Long: `Walk a first run end to end: detect which supported tools have logs on this machine
+and which parser plugins your config declares, print exactly what will be read or run
+before doing it, import it, and write the offline Assay report.
 
-Nothing leaves the machine and nothing is written outside assaio's own data directory and
-the report file. A config file is written only if one is actually needed -- with the
-default log locations there is nothing to configure, and a file that restates the defaults
-is one more thing to maintain.
+assaio itself sends nothing off the machine and writes nothing outside its own data directory
+and the report file. A parser plugin from your config is your own program: it runs with your
+permissions and does whatever its code does (see PRIVACY.md). A config file is written only
+if one is actually needed -- with the default log locations there is nothing to configure,
+and a file that restates the defaults is one more thing to maintain.
 
 --non-interactive skips the confirmation, for packaging smoke tests and scripted setup.
 
@@ -73,6 +86,8 @@ func runInit(cmd *cobra.Command, nonInteractive bool) error {
 		cmd.Printf("  %-12s %s\n", scans[i].tool, strings.Join(scans[i].roots, ", "))
 		cmd.Printf("  %-12s %s\n", "", scans[i].activity)
 	}
+	plugins := listParserPlugins(cmd, cfg.Plugins)
+	found += plugins
 	if found == 0 {
 		cmd.Println(initSourceHint)
 		return nil
@@ -81,6 +96,9 @@ func runInit(cmd *cobra.Command, nonInteractive bool) error {
 	cmd.Println("Only accounting metadata and counts are stored. Prompts and model output are")
 	cmd.Println("not extracted; recorded diff and file content is read transiently for counts.")
 	cmd.Println("See PRIVACY.md.")
+	if plugins > 0 {
+		cmd.Println(initPluginNotice)
+	}
 	cmd.Println()
 
 	if !nonInteractive && !confirmed(cmd) {
@@ -88,6 +106,23 @@ func runInit(cmd *cobra.Command, nonInteractive bool) error {
 		return nil
 	}
 	return importAndReport(cmd)
+}
+
+// listParserPlugins names every configured parser plugin init will run, and returns how many
+// can be. A machine whose only source is a plugin is a supported setup, not an empty one.
+func listParserPlugins(cmd *cobra.Command, plugins []config.PluginConfig) int {
+	runnable := 0
+	for _, pc := range plugins {
+		resolved, err := plugin.Resolve(pc)
+		if err != nil {
+			cmd.Printf("  %v\n", err)
+			continue
+		}
+		runnable++
+		cmd.Printf("  %-12s %s\n", "plugin:"+pc.Name, resolved.Command)
+		cmd.Printf("  %-12s %s\n", "", "a parser plugin from your config; it runs as your own program")
+	}
+	return runnable
 }
 
 // confirmed asks once before anything is read. A first run is the moment a user most wants
