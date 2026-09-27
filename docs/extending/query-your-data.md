@@ -107,9 +107,11 @@ no other cost. Each pass prunes `ingest_file` to files on disk; `ingest_source` 
 newest runs per tool. None grows with installation age. Run `assaio-agent compact` to return freed
 pages to the filesystem; SQLite does not do this automatically.
 
-**Stability.** The schema may change before v1.0. Changes will be additive where possible, using new
-nullable columns instead of renames. Treat direct queries as tied to a pinned version, not a frozen
-contract. Report/JSON/CSV output is more stable.
+**Stability.** The schema is not a public API, before or after v1.0
+([compatibility](../compatibility.md)): a release may add, reshape or rewrite tables when a
+correction needs it. Pin direct queries to the version you wrote them against. For anything another
+program depends on, read `report`, `analyze` or `evidence` with `--format json`; those outputs are
+what v1.0 freezes.
 
 ## Ready-made queries
 

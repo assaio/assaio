@@ -188,8 +188,8 @@ envelope. The [roadmap](ROADMAP.md) lists these gates.
 ## Extension points
 
 Executables in any language can add a parser, metric or `check` rule. Each protocol has a handshake,
-versioned JSON contract, boundary validation and `verify` command. The core does not import plugin
-internals.
+a versioned JSON contract and boundary validation. Parser and metric plugins have a `verify`
+command; a rule plugin is checked by running `check`. The core does not import plugin internals.
 
 Start with [docs/extending.md](docs/extending.md). The binary can also export the full
 machine-readable reference:

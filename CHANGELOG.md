@@ -52,6 +52,9 @@ Discussion.
 - `init` lists and runs configured parser plugins instead of stopping at "no supported tool's logs
   were found" (`B214`). If nothing is found, it names every source key. `init` and `share` say a
   plugin is your own program, which assaio neither reads nor limits.
+- The query-your-data guide no longer implies the SQLite schema freezes at v1.0. It now agrees with
+  the compatibility page: the schema is never a public API, and the machine-readable outputs are
+  what v1.0 freezes.
 
 ## [0.30.0] - 2026-09-26
 

@@ -92,12 +92,39 @@ Make the current local product easy to evaluate and hard to misunderstand.
 - Keep one documented first-run path: `demo`, `init`, `dashboard`, then `digest`.
 - Keep source coverage, parser version, restatements and unpriced share visible.
 - Calibrate Gemini CLI, Cline and reconciliation against contributed real captures.
-- Add SAST, keep dependency and fuzzing automation quiet enough that alerts retain meaning.
+- Keep SAST, dependency and fuzzing automation quiet enough that alerts retain meaning.
 - Stop adding validators that do not change a named decision.
+- Close the corrections a reader can hit today before adding figures: a re-read cannot yet
+  correct a stored `model` (B116), and line rates keep denominators wider than their
+  numerators (B118).
+- Measure the first run (B214): on a stated fixture and machine, record the time to a
+  written report, the coverage it shows, and whether the reader reached a decision.
 
 **Exit:** three external teams complete a first report; at least two return for a later
 digest or provide a second capture; no known wrong figure is presented as complete; the
 first-run path is tested on a clean machine.
+
+### 1A. A public analytical export
+
+Users can already write exec parsers, metrics and rules and script over `report` and
+`analyze` JSON. The untested need is a fuller analytical contract that outside programs can
+rely on. Test it small before building a framework around it.
+
+- Ship a versioned NDJSON snapshot with a manifest, source capability, cost basis including
+  every cache tier, price and parser provenance, correction state, excluded and unpriced
+  shares, and repository-identity status (B211); publish its schema and accept/refuse
+  vectors (B06, B99).
+- Separate repository identity from the display name: `project` is a repository basename
+  today, so two unrelated repositories named `api` merge (B218). The snapshot may report
+  identity as unresolved; cross-repository totals and graph edges may not.
+- Give plugins typed `denied`, `unavailable` and `failed` states with freshness (B213), then
+  optional parser counters beyond tokens, designed against real producers (B212).
+- Prove it with worked examples in Python and DuckDB that use only public contracts (B217).
+
+**Exit:** an out-of-tree consumer reproduces eligible totals from the snapshot, including a
+corrected historical row, and can name the excluded, unpriced, denied and failed
+populations; same-basename repositories never merge silently. If nobody outside the project
+uses the export, activation and data health come before broader contracts.
 
 ### 2. Evidence graph: session to shipped change
 
@@ -111,6 +138,8 @@ Build the differentiating outcome path before expanding the UI or connector coun
 - Add outcome signals only when their populations are comparable: merged changes, review
   rounds, CI result, batch size and survival at a fixed age.
 - Prefer cost per merged or surviving change over cost per generated line.
+- Resolve the repository behind a session, or mark it ambiguous, before joining across
+  repositories (B218); temporal proximity does not resolve it.
 
 **Exit:** a local report can account for matched and unmatched sessions and changes; a
 known-ambiguous corpus stays ambiguous; re-import is idempotent; no prompt, code, diff or PR
@@ -141,6 +170,8 @@ Harden `serve` and `sync` only alongside design partners who need the shared loo
 - Retention, deletion, backup and a restore drill.
 - Cached team views and a measured single-node storage/query envelope.
 - TLS deployment guidance and documented failure/recovery procedures.
+- Start team data reuse from a server-side run of the B211 export; an authenticated, bounded
+  HTTP read follows a named consumer, and no HTTP read starts a program (B42).
 
 **Exit:** at least three external teams use the relevant surfaces across two releases; an
 interrupted sync resumes without loss or duplication; a restore drill succeeds; an
@@ -167,6 +198,8 @@ unauthorized caller cannot read a report or submit another member's identity.
 | Production team server | Starts with milestone 4 design partners, not in anticipation of them. |
 | Managed cloud | Starts only after the self-hosted team loop is repeatable and its operating envelope is measured. |
 | In-process Go plugin API | Waits for the v1 contract freeze; exec protocols remain the stable path. |
+| Parquet, OpenMetrics, a query interface, an OpenTelemetry mapping (B47, B44, B98) | Each waits for a named consumer after the NDJSON snapshot works; opt-in, with a pinned schema and a content allowlist. No general BI platform and no OTLP backend. |
+| Plugin marketplace or WASM runtime | Waits for a demonstrated limit of the exec protocols plus public contracts; no automatic installation or execution. |
 
 ## What v1.0 has to mean
 
@@ -181,6 +214,7 @@ The release decision should use these gates, not feature count:
 | Local output diagnostics | directional and useful | outcome language never leaks into output-only metrics |
 | Evidence graph | first local session→commit slice; no persisted graph or outcome joins | PR/review/CI/merge joins and unmatched populations pass their conformance corpora |
 | Recommendations | proposed-only | interventions can be accepted, measured and closed |
+| Public analytical export | aggregated `report` and `analyze` rows and `evidence` results; no versioned snapshot of the stored records | an out-of-tree consumer reproduces totals from a versioned snapshot and repository identity cannot merge silently |
 | Team server | MVP | milestone 4 security, recovery and scale gates pass |
 | Managed cloud | not built | repeated self-hosted demand justifies operating it |
 

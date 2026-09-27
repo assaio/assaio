@@ -32,8 +32,10 @@ These guarantees take its place:
 - **Forward migration** from any released version to any later one, applied automatically and tested
   from the oldest supported version. A shipped migration's name and content never change (see
   [RELEASING.md](../RELEASING.md#schema-changes-hard-rule)).
-- **Export.** Machine-readable outputs above expose everything in the store, and those outputs *are*
-  frozen. Analysis and export need no network, server, or license.
+- **Export.** At v1.0 the machine-readable outputs above expose everything in the store, and those
+  outputs *are* frozen. Today they are aggregates and do not yet expose every stored record a
+  consumer needs to reproduce its totals; the versioned snapshot that closes that gap is `B211` in
+  the backlog. Analysis and export need no network, server, or license.
 - **Backup.** The store is one file. Copy it while `assaio` is idle for a complete backup.
 
 The v0.12 migration corrected a semantic error by rewriting stored rows, and more corrections may be

@@ -95,6 +95,69 @@ condition.
   vendor writes, and each trace already declares which it is (`capture: real|constructed`). Needs
   one redacted capture per source from anybody who runs them.
 
+## Next — "Reusable contracts"
+
+Proposed by the 2026-09-26 framework audit. Users can already write exec parsers, metrics and
+rules and script over `report` and `analyze` JSON; what is untested is a fuller analytical
+contract outside programs can rely on. [ROADMAP.md](ROADMAP.md#1a-a-public-analytical-export)
+owns the order: open corrections first (`B116`, `B118` in the code-health pool), then repository
+identity and a small export, then typed plugin states and richer parser counters.
+
+- [ ] **B211 · a versioned analytical snapshot** — M · both — a deterministic NDJSON export: a
+  manifest (window end, grain, build, price-table date), then allow-listed usage and session
+  records and, where stored, bounded step sequences. Each record states its source capability,
+  cost basis including every cache tier, price and parser provenance, correction state and
+  repository-identity status; the manifest counts rejected, unpriced and truncated input. An
+  unknown price or an absent counter stays `null`, never `0`. Today's `report` rows do not meet
+  that: `cache_write` exports 0 for Codex and Gemini CLI, which do not record it, and
+  `reasoning` exports 0 for Claude Code and Cline, which do not record it. A CLI consumer
+  fixture reproduces the eligible totals, including after an older row is corrected. Never
+  exported: full ingest paths, secrets, private tables. Backup and incremental sync are separate
+  contracts; an incremental export needs correction and deletion semantics, not a timestamp
+  cursor. Today's aggregate outputs do not yet meet the v1 export guarantee in
+  [compatibility](docs/compatibility.md#not-frozen-and-guaranteed-instead); this is the path to
+  it. `B06` and `B99` then publish its schema and vectors.
+- [ ] **B218 · repository identity apart from the display name** — M · both —
+  `internal/projectid` resolves a repository root and subpath, but the stored `project` is the
+  root's basename, so two unrelated repositories named `api` share every aggregate, and a later
+  pseudonym cannot separate them again. Design an opaque, versioned local repository key beside
+  the label, with `unknown` and `ambiguous` as stored states, a deliberate local disclosure and
+  an explicit, privacy-reviewed team mapping. Fixtures: the same basename in different roots,
+  clones, worktrees, monorepo subpaths, moves, no repository, collisions. Never export a full
+  path or a hash of one. Any migration is a new file with its own digest. The `B211` snapshot
+  may report identity as unresolved; cross-repository totals and graph edges (`B85`) may not.
+- [ ] **B213 · typed completeness for plugin inputs and results** — M · both — a metric plugin
+  denied an input it declared learns it from `withheld`, but its verdict records the refusal
+  only as a caveat, and a rule plugin receives verdicts with no machine-readable state for it.
+  The host records `denied`, `unavailable` and `failed` per input, with generation time,
+  staleness, coverage and provenance; a plugin may state an observation, and the host sets
+  confidence. One real rule or query consumer must tell the states apart without parsing prose.
+  Only then a typed numeric figure (signal, unit, layer, scope, numerator, denominator), with
+  today's display figures kept through an adapter. No secrets in error text.
+- [ ] **B212 · a parser plugin can say what it does not measure** — M/L · both — v0.31 refuses a
+  record that states no token counter at all rather than storing it as $0.00. The other half
+  remains: a record from an activity-only source, and a counter the source does not keep,
+  expressed as unsupported rather than refused or zeroed. Until then a counter omitted beside
+  another is stored as 0, and every plugin is taken to answer cache-read and reasoning signals,
+  so a plugin that never sends `reasoning_tokens` lowers the reasoning share and a missing
+  `cache_read_tokens` reads as a 0% cache hit. The fix needs a versioned wire that declares
+  which counters the source measures, the current reader kept through a stated deprecation path,
+  and line, edit or tool-call counters designed against two real out-of-tree producers. Golden
+  and fuzz vectors refuse unknown and content-bearing fields; ordered traces wait for a producer
+  and a consumer.
+- [ ] **B214 · measure the first run** — S/M · both — v0.31's `init` names and runs a configured
+  parser plugin instead of reporting that no logs exist. What remains is measurement: on a
+  stated fixture and machine, the time to a written report, the coverage it shows, and whether
+  the reader reached a decision or a precise account of what is missing. Five solo users and
+  three teams are targets for voluntary sessions, not telemetry and not results.
+- [ ] **B217 · worked solutions built only on public contracts** — M · both — three examples
+  that run in the test suite: a Python metric plus rule, a DuckDB query over the `B211`
+  snapshot, and an offline project digest or CI check. They cover one repository and a monorepo,
+  mixed tools, unpriced and activity-only records and unresolved repository identity, and import
+  no internal Go package and no SQLite table. It counts as proof when at least two people
+  outside the project adapt one and record whether it helped a decision. No marketplace, no
+  automatic install or execution.
+
 ## Shipped — "Worth opening twice"
 
 Everything that decided whether the analysis already shipped reaches anybody: findings that
@@ -260,7 +323,7 @@ does not ship.
   deprecation window and a conformance fixture, and **lands with the protocol freeze (`B23`)**
   rather than before it — settled by [ADR 0016](docs/adr/0016-usage-is-a-store-row-not-an-event.md),
   which puts that breaking type change behind the evidence graph and with the contract
-  freeze. See [ADR 0008](docs/adr/0008-signal-catalog.md).
+  freeze. See [ADR 0008](docs/adr/0008-signal-catalog.md). A public export adapter (`B211`) does not wait for this: it reads the store types and publishes records of its own.
   **Three requirements came out of building the git collector** rather than being guessed at:
   (1) a validator receives `[]store.UsageRow`, so there is no shape in which it could read a
   commit observation at all — the context has to serve *heterogeneous* observation streams
@@ -555,9 +618,11 @@ was under the v1.0 heading while its own text said it is not a v1.0 condition.
 
 ## Pool — team
 
-- [ ] **B42 · server-side exec metrics** — M · team — lift the ADR 0004 non-goal
-  safely: compute metric-plugin results on sync-write or a TTL cache, never per
-  unauthenticated request.
+- [ ] **B42 · server-side exec metrics** — M · team — lift the ADR 0004 non-goal safely: trusted
+  server configuration, budgeted background runs, and validated results cached for reads. An
+  HTTP read never starts a program, and a member's upload never installs one. Team data reuse
+  starts from a server-side run of the `B211` export; an authenticated, bounded HTTP query
+  follows a named consumer. `B22` owns scopes, resumable sync, retention and recovery.
 - [ ] **B12 · GitHub Action** — M · team — packaged action running `check` as a gate
   plus a PR comment with movers/effectiveness for the changed window.
 
@@ -634,9 +699,9 @@ that item (`B60`) rather than becoming a new one.
   target reading, which CI caught on Windows (`targetKey` is the shape the fix should take here).
   Pre-existing, not introduced by that change, and it needs a `backfill` to restate the names it
   already stored.
-- [ ] **B171 · the served dashboard cannot show the detectors** — S/M · both — `serve` renders
-  `GET /` unauthenticated and rebuilds it on every request with no cache, so it deliberately does
-  not read the step sequences: `store.Timelines` is a full scan of the step table plus a GROUP BY
+- [ ] **B171 · the served dashboard cannot show the detectors** — S/M · both — `serve` rebuilds
+  `GET /` on every request for any token holder, with no cache, so it deliberately does not read
+  the step sequences: `store.Timelines` is a full scan of the step table plus a GROUP BY
   over the window's records, about 2.5s on a 339,000-step store, and it costs that before it can
   know whether a step exists. On the store this surface is built for the answer is always none --
   `sync` carries usage records and not sequences (ADR 0012) -- so today the detectors correctly
@@ -694,8 +759,8 @@ that item (`B60`) rather than becoming a new one.
   project drill), the flagship DX piece once the small wins land.
 - [ ] **B46 · completions + man pages** — S · both — cobra generators, shipped via
   goreleaser.
-- [ ] **B47 · exports** — M · team — OpenMetrics endpoint on `serve` for Grafana;
-  ndjson/parquet dump for data teams.
+- [ ] **B47 · exports** — M · team — an OpenMetrics endpoint on `serve` for Grafana and a
+  Parquet dump, each after a named consumer; the NDJSON snapshot is `B211`.
 - [ ] **B66 · Scoop bucket (Windows)** — S · both — `scoops:` block in goreleaser
   publishing to a new `assaio/scoop-bucket` repo. Prerequisite: extend the release
   PAT's repository access to that bucket, or the next tag's release fails at the
