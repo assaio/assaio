@@ -11,7 +11,9 @@ set -eu
 printf '{"assaio_plugin":%s,"tool":"%s"}\n' '{{.Protocol}}' '{{.Name}}'
 
 # Emit one line per turn below. Nothing is written until you do: a parser that invents a record
-# puts a number in someone's store that never happened.
+# puts a number in someone's store that never happened. Include only the token counters your tool
+# records. A record with no counter is refused; one left out beside a stated counter is still
+# stored as 0, so leaving it out does not yet mean "not measured".
 #
 # printf '{"session_id":"s1","timestamp":"2026-08-12T09:00:00Z","model":"m",'
-# printf '"input_tokens":0,"output_tokens":0,"dedupe_key":"s1:1","granularity":"turn"}\n'
+# printf '"input_tokens":1200,"output_tokens":340,"dedupe_key":"s1:1","granularity":"turn"}\n'

@@ -85,6 +85,27 @@
       "expect": "invalid JSON",
       "why": "a plugin that logged to stdout",
       "doc": "scanning ~/.claude/projects ..."
+    },
+    {
+      "id": "token-counters-absent",
+      "accept": false,
+      "expect": "no token counter",
+      "why": "a record without any token count is not a measurement of zero; stored, it would show as $0.00 spent",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"2026-08-12T09:00:00Z\", \"model\": \"m\", \"dedupe_key\": \"s1:1\", \"granularity\": \"turn\"}"
+    },
+    {
+      "id": "second-object",
+      "accept": false,
+      "expect": "exactly one JSON object",
+      "why": "one line is one record; a second object on the same line would otherwise be dropped silently",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"2026-08-12T09:00:00Z\", \"model\": \"m\", \"output_tokens\": 200, \"dedupe_key\": \"s1:1\", \"granularity\": \"turn\"}{\"session_id\": \"s1\", \"timestamp\": \"2026-08-12T09:01:00Z\", \"model\": \"m\", \"output_tokens\": 50, \"dedupe_key\": \"s1:2\", \"granularity\": \"turn\"}"
+    },
+    {
+      "id": "trailing-garbage",
+      "accept": false,
+      "expect": "exactly one JSON object",
+      "why": "text after the record means the line is not what the plugin meant to write",
+      "doc": "{\"session_id\": \"s1\", \"timestamp\": \"2026-08-12T09:00:00Z\", \"model\": \"m\", \"output_tokens\": 200, \"dedupe_key\": \"s1:1\", \"granularity\": \"turn\"} done"
     }
   ]
 }

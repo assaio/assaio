@@ -27,6 +27,7 @@ fuzz:
 	go test ./internal/plugin/ -fuzz '^FuzzMetricResult$$' -fuzztime $(FUZZTIME)
 	go test ./internal/plugin/ -fuzz '^FuzzRuleAlerts$$' -fuzztime $(FUZZTIME)
 	go test ./internal/plugin/ -fuzz '^FuzzMetricDeclaration$$' -fuzztime $(FUZZTIME)
+	go test ./internal/plugin/ -fuzz '^FuzzParseRecord$$' -fuzztime $(FUZZTIME)
 lint:
 	$(GOLANGCI_LINT_PINNED)
 	gofmt -l .

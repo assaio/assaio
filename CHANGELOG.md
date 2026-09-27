@@ -33,6 +33,19 @@ Discussion.
 
 ## [Unreleased]
 
+### Breaking
+
+- **Emit one parser record per line with at least one of `input_tokens`, `output_tokens`,
+  `cache_read_tokens` or `cache_write_tokens`** (`B216`). No count showed 0 tokens and $0.00 for
+  priced models
+  ([correction](docs/corrections.md#parser-plugin-record-without-a-count-stored-zero-spend)); second
+  objects were dropped. Handshake stays `1`.
+
+### Fixed
+
+- `plugins verify` exits non-zero when any record line violates the protocol, so it can gate a
+  plugin's CI (`B216`). `backfill` still skips and counts those lines.
+
 ## [0.30.0] - 2026-09-26
 
 ### Breaking

@@ -53,7 +53,10 @@ func newPluginsVerifyCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "verify <name>",
 		Short: "Run a configured plugin and report protocol conformance, without storing results",
-		Args:  cobra.ExactArgs(1),
+		Long: `Run a configured parser plugin once and report protocol conformance, without storing
+anything. Exits non-zero when the run fails or any record line violates the protocol, so it can
+gate the plugin's own CI. A backfill stays lenient: it skips and counts the same lines.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runPluginsVerify(cmd, args[0])
 		},
@@ -79,6 +82,9 @@ func runPluginsVerify(cmd *cobra.Command, name string) error {
 		return err
 	}
 	printVerifyReport(cmd, name, violations, stats)
+	if len(violations) > 0 {
+		return fmt.Errorf("%s: %d record line(s) violate the protocol", name, len(violations))
+	}
 	return nil
 }
 

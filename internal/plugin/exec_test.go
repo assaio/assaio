@@ -72,9 +72,10 @@ func TestRunInvalidRecordsSkippedAndCounted(t *testing.T) {
 	if stats.Records != 1 {
 		t.Fatalf("stats.Records = %d, want 1", stats.Records)
 	}
-	// negative token, empty dedupe_key, bad timestamp, invalid granularity, invalid JSON.
-	if stats.Skipped != 5 {
-		t.Fatalf("stats.Skipped = %d, want 5", stats.Skipped)
+	// negative token, empty dedupe_key, bad timestamp, invalid granularity, invalid JSON,
+	// unknown field, no token counter, a second object, trailing garbage.
+	if stats.Skipped != 9 {
+		t.Fatalf("stats.Skipped = %d, want 9", stats.Skipped)
 	}
 	if len(recs) != 1 {
 		t.Fatalf("len(recs) = %d, want 1", len(recs))

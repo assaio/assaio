@@ -119,8 +119,9 @@ reference](https://assaio.dev/docs/reference) is authoritative; the README omits
 | Impact | not shipped | a delivery, quality or business result changed |
 
 Every metric includes source coverage, sample size, freshness and parser version. If a source lacks
-a field, `assaio` leaves it out of the denominator instead of counting it as zero. A missing model
-price appears as `—`/`null`, not `$0`.
+a field, `assaio` excludes it from the denominator rather than counting it as zero. For an exec
+parser plugin, omitted token counters are still stored as 0 (`B212`). A missing model price appears
+as `—`/`null`, not `$0`.
 
 Run:
 

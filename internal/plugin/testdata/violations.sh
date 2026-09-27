@@ -8,3 +8,7 @@ echo '{"session_id":"s1","timestamp":"2026-07-01T10:02:00Z","model":"m","input_t
 echo '{"session_id":"s1","timestamp":"not-a-time","model":"m","input_tokens":10,"output_tokens":20,"dedupe_key":"s1:3","granularity":"turn"}'
 echo '{"session_id":"s1","timestamp":"2026-07-01T10:04:00Z","model":"m","input_tokens":10,"output_tokens":20,"dedupe_key":"s1:4","granularity":"weekly"}'
 echo 'not even json'
+echo '{"session_id":"s1","timestamp":"2026-07-01T10:05:00Z","model":"m","outputTokens":20,"dedupe_key":"s1:5","granularity":"turn"}'
+echo '{"session_id":"s1","timestamp":"2026-07-01T10:06:00Z","model":"m","dedupe_key":"s1:6","granularity":"turn"}'
+echo '{"session_id":"s1","timestamp":"2026-07-01T10:07:00Z","model":"m","output_tokens":20,"dedupe_key":"s1:7","granularity":"turn"}{"session_id":"s1","timestamp":"2026-07-01T10:08:00Z","model":"m","output_tokens":20,"dedupe_key":"s1:8","granularity":"turn"}'
+echo '{"session_id":"s1","timestamp":"2026-07-01T10:09:00Z","model":"m","output_tokens":20,"dedupe_key":"s1:9","granularity":"turn"} trailing'

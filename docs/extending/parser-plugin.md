@@ -93,12 +93,15 @@ to stdout:
 2. **Records** (each later line): one snake_case JSON object per line:
 
 ```json
-{"session_id":"s1","timestamp":"2026-07-01T10:00:00Z","model":"some-model","input_tokens":100,"output_tokens":200,"cache_read_tokens":0,"cache_write_tokens":0,"reasoning_tokens":0,"dedupe_key":"s1:0","project":"myrepo","git_branch":"main","entrypoint":"cli","granularity":"turn"}
+{"session_id":"s1","timestamp":"2026-07-01T10:00:00Z","model":"some-model","input_tokens":100,"output_tokens":200,"dedupe_key":"s1:0","project":"myrepo","git_branch":"main","entrypoint":"cli","granularity":"turn"}
 ```
 
 Required: `session_id`, `timestamp` (RFC3339), `model`, `dedupe_key`, and `granularity` (`turn` or
 `session`; plugins follow the same [granularity honesty
-rule](data-source.md#granularity-honesty-hard-rule) as in-tree parsers). Token fields default to 0.
+rule](data-source.md#granularity-honesty-hard-rule) as in-tree parsers). A record needs at least one
+of `input_tokens`, `output_tokens`, `cache_read_tokens` or `cache_write_tokens`. The other token
+fields default to 0 and count as measured: a plugin that never sends `cache_read_tokens` shows a 0%
+cache hit, and one that never sends `reasoning_tokens` lowers the reasoning share (`B212`).
 `project`, `git_branch`, and `entrypoint` are optional. **A field the protocol does not define is
 rejected**: writing `outputTokens` instead of `output_tokens` would otherwise store zero as valid
 data. Emit only the fields above. The [`usage.Record`
@@ -125,15 +128,13 @@ invariants, as in-tree parsers do with corrupt log lines:
 | a negative count, or one above 1,000,000,000 | a negative renders impossible percentages; an overflow-magnitude one distorts every `SUM()` it lands in. |
 | `reasoning_tokens` above `output_tokens` | since v0.14. Reasoning is a *subset* of output, and a record claiming more renders a reasoning share above 100%. |
 | a string field over 512 bytes | these are identities and labels, not free text. |
+| no token field at all | since v0.31. assaio treats every plugin source as counting tokens, so a record with no count would show as 0 tokens and $0.00 instead of `—`. An explicit `0` is still accepted. |
+| a second JSON value on the line, or text after the record | since v0.31. One line holds one record. Before, a second object was silently dropped and the line still counted as valid. |
 
 Stored records get the tool label `plugin:<name>`, so a plugin can never impersonate a
 built-in source and its dedupe keyspace `(tool, dedupe_key)` never collides with anyone
 else's. A plugin that exits non-zero, times out, or fails the handshake is reported as
 failed for that run; the rest of the backfill continues. Stdout is capped at 64 MiB per run.
-
-Unknown fields are currently ignored, unlike in the metric and rule protocols. A misspelled key
-therefore stores zero instead of raising a violation. This inconsistency is tracked as `B143` and
-will change only with a handshake version bump.
 
 ## A complete example (Python)
 
@@ -169,11 +170,13 @@ records ok: 42
 skipped:    1
 violations:
   line 17: empty dedupe_key
+error: mytool: 1 record line(s) violate the protocol
 $ assaio-agent plugins list
 mytool            /path/to/assaio-parser-mytool  (timeout 1m0s)
 ```
 
-After `verify` passes, `assaio-agent backfill` ingests the plugin after built-in sources and reports
-a `plugin:mytool` line beside them.
+`verify` exits non-zero if the run fails or any line is rejected, so it can gate the plugin's CI.
+`backfill` skips and counts those lines and stores the rest. After `verify` passes, `assaio-agent
+backfill` ingests the plugin after built-in sources and reports a `plugin:mytool` line beside them.
 
 ---

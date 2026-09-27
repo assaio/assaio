@@ -31,6 +31,35 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+<a id="parser-plugin-record-without-a-count-stored-zero-spend"></a>
+
+### A parser plugin record with no token count was stored as zero spend
+
+*Corrected in v0.31.0.*
+
+Since v0.1, a parser plugin record with no token field at all passed the boundary. The protocol
+defaults a missing counter to 0, and assaio treats every plugin source as one that counts tokens, so
+`report` showed that record as 0 tokens with `tokened: true` and, for a model in the price table,
+`priced: true` and `cost: 0`. A source that measured nothing was reported as having spent nothing.
+Found with a constructed reproduction; no real plugin is known to have emitted such records, and
+assaio has no telemetry to tell. A record now needs at least one of `input_tokens`, `output_tokens`,
+`cache_read_tokens` or `cache_write_tokens`; an explicit `0` is still a measurement. Rows already
+stored are unchanged, and a re-read does not remove them. The query below counts a plugin's stored
+rows whose four counters are all zero; the store cannot tell an omitted counter from an explicit
+`0`, so it is an upper bound. To rebuild, run `plugins verify` to confirm the plugin still emits its
+whole history, then `assaio-agent clear --tool plugin:<name> --yes` and `backfill`; `clear` deletes
+every row of that plugin, so history the plugin can no longer re-emit is lost. Rows already synced
+to a team server stay as they are. An activity-only record cannot be expressed yet (`B212`).
+
+```sql
+SELECT tool, COUNT(*) AS rows_with_no_count
+FROM usage_record
+WHERE tool LIKE 'plugin:%'
+  AND input_tokens = 0 AND output_tokens = 0
+  AND cache_read_tokens = 0 AND cache_write_tokens = 0
+GROUP BY tool;
+```
+
 ## [0.30.0] - 2026-09-26
 
 <a id="runtime-inspect-reported-published-vllm-metrics-as-unavailable"></a>
