@@ -31,11 +31,13 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-09-27
+
 <a id="parser-plugin-record-without-a-count-stored-zero-spend"></a>
 
 ### A parser plugin record with no token count was stored as zero spend
 
-*Corrected in v0.31.0.*
+*Corrected in v0.31.0, released 2026-09-27.*
 
 Since v0.1, a parser plugin record with no token field at all passed the boundary. The protocol
 defaults a missing counter to 0, and assaio treats every plugin source as one that counts tokens, so

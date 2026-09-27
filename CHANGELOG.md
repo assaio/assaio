@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-09-27
+
 ### Breaking
 
 - **Emit one parser record per line with at least one of `input_tokens`, `output_tokens`,
@@ -40,6 +42,13 @@ Discussion.
   priced models
   ([correction](docs/corrections.md#parser-plugin-record-without-a-count-stored-zero-spend)); second
   objects were dropped. Handshake stays `1`.
+
+### Changed
+
+- The 2026-09-27 LiteLLM snapshot adds 15 provider-prefixed ids, such as
+  `databricks/databricks-claude-opus-5-5`, and reprices 14, such as
+  `openrouter/deepseek/deepseek-v4-pro` and `azure/gpt-4o-mini`. No unprefixed id is added, repriced
+  or dropped; 55 ids still rely on their last listed price.
 
 ### Fixed
 
@@ -1715,7 +1724,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.30.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.31.0...HEAD
+[0.31.0]: https://github.com/assaio/assaio/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/assaio/assaio/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/assaio/assaio/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/assaio/assaio/compare/v0.27.0...v0.28.0
