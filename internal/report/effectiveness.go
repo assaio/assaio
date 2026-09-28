@@ -55,11 +55,17 @@ type EffRow struct {
 	// LineCapableCost is the priced cost of this group's line-recording usage, the numerator
 	// CostPer100Lines divides; nil when there is no rate.
 	LineCapableCost *float64 `json:"line_capable_cost"`
-	// LineCapableUnpricedTokens is line-recording usage with no known price, left out of the
-	// ratio on both sides.
+	// LineCapableUnpricedTokens is line-recording usage with no complete price, left out of the
+	// ratio on both sides (LineRateBasis.UnpricedLineTokens).
 	LineCapableUnpricedTokens int64 `json:"line_capable_unpriced_tokens"`
+	// LineCapableSharedTokens is, under --by model, usage from sessions that count their lines
+	// once across several models, left out of every model's ratio (LineRateBasis.SharedTokens).
+	LineCapableSharedTokens int64 `json:"line_capable_shared_tokens"`
 	// lineRate is the population CostPer100Lines divides and what it leaves out.
 	lineRate LineRateBasis
+	// windowRate is lineRate with no per-model split, the share of the footer's population this
+	// group holds: TOTAL is the window's ratio whichever dimension the rows are grouped by.
+	windowRate LineRateBasis
 	// editBlindRows counts this group's usage rows from sources recording no edit.
 	editBlindRows int
 	// Tokened reports whether any row in this group came from a source that counts tokens at
@@ -76,11 +82,12 @@ func BuildEffectiveness(rows []store.UsageRow, t pricing.Table, by string) ([]Ef
 		return nil, err
 	}
 
+	credit, perModel := NewLineCredit(rows, t), by == "model"
 	out := groupBy(
 		len(rows),
 		func(i int) string { return usageDimValue(&rows[i], by) },
 		func(key string) EffRow { return EffRow{Group: key} },
-		func(g *EffRow, i int) { accumulateEff(g, &rows[i], t) },
+		func(g *EffRow, i int) { accumulateEff(g, &rows[i], t, credit, perModel) },
 	)
 	for i := range out {
 		if out[i].LineCapable {
@@ -88,6 +95,7 @@ func BuildEffectiveness(rows []store.UsageRow, t pricing.Table, by string) ([]Ef
 			out[i].LineCapableCost = out[i].lineRate.LineCost()
 		}
 		out[i].LineCapableUnpricedTokens = out[i].lineRate.UnpricedLineTokens
+		out[i].LineCapableSharedTokens = out[i].lineRate.SharedTokens
 	}
 	return out, nil
 }
@@ -117,7 +125,8 @@ func usageDimValue(u *store.UsageRow, by string) string {
 }
 
 // accumulateEff folds u's activity counts and, when u.Model is priced, its cost into g.
-func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table) {
+// perModel says g is one model's row, where credit keeps a session's lines off any one model.
+func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table, credit LineCredit, perModel bool) {
 	g.LineCapable = g.LineCapable || parser.RecordsLines(u.Tool)
 	if parser.Answers(u.Tool, parser.SignalEditsCount) {
 		g.EditCapable = true
@@ -134,7 +143,8 @@ func accumulateEff(g *EffRow, u *store.UsageRow, t pricing.Table) {
 	g.TokensTotal += RowTokens(u)
 
 	cost, ok := t.CostTokens(u.Model, pricing.Tokens{In: u.In, Out: u.Out, CacheWrite: u.CacheWrite, CacheRead: u.CacheRead, CacheWrite1h: u.CacheWrite1h})
-	g.lineRate.Add(u.Tool, u.LinesAdded, RowTokens(u), cost, ok)
+	credit.Fold(&g.lineRate, u, cost, ok, perModel)
+	credit.Fold(&g.windowRate, u, cost, ok, false)
 	if !ok {
 		g.HasUnpriced = true
 		g.UnpricedTokens += RowTokens(u)

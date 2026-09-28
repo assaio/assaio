@@ -139,10 +139,6 @@ func figureFor(figures []Figure, label string) Figure {
 // edit count Cline never writes, because the other silent source records lines and hid it.
 // Which fields to fill is read from the matrix rather than listed per tool, so a parser
 // landing tomorrow is covered by this without touching it.
-//
-// `LinesAdded` is deliberately left out: a source that records no line contributes a true
-// zero to a line *total*, and a line *rate* divides only line-recording usage (ADR 0011) in some
-// validators but not yet in every one (`B221`), so the field joins this test once all of them do.
 func TestNoValidatorReadsAFieldItsSourceCannotRecord(t *testing.T) {
 	for _, tool := range []string{sessionTotalTool, costOnlyTool} {
 		quiet, loud := silentAndFilledWindow(tool)
@@ -180,9 +176,15 @@ func silentAndFilledWindow(tool string) (quiet, loud Input) {
 	quietRow := store.UsageRow{
 		Day: validatorsTestNow.Format("2006-01-02"), Tool: tool,
 		Model: "claude-sonnet-4-5", Project: "p", Granularity: "session",
-		In: 1000, Out: 1000, LinesAdded: 300,
+		In: 1000, Out: 1000,
+	}
+	if !cannot(parser.SignalLinesAdded) {
+		quietRow.LinesAdded = 300
 	}
 	loudRow := quietRow
+	if cannot(parser.SignalLinesAdded) {
+		loudRow.LinesAdded = 300
+	}
 	if cannot(parser.SignalEditsCount) {
 		loudRow.Edits = 40
 	}

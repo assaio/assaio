@@ -10,6 +10,7 @@ import (
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/pseudonym"
+	"github.com/assaio/assaio/internal/report"
 	"github.com/assaio/assaio/internal/store"
 )
 
@@ -37,7 +38,9 @@ func buildMetricInput(in *analyze.Input, p Projection) metricInput {
 			Tokens: in.Totals.Tokens, Input: in.Totals.Input, Output: in.Totals.Output,
 			CacheRead: in.Totals.CacheRead, CacheWrite: in.Totals.CacheWrite,
 			Lines: in.Totals.Lines, Cost: in.Totals.Cost, Priced: in.Totals.Priced,
-			CacheEfficiency: in.Totals.CacheEfficiency,
+			CacheEfficiency:  in.Totals.CacheEfficiency,
+			LineCapableLines: in.Totals.LineRate.Lines, LineCapableTokens: in.Totals.LineRate.Tokens,
+			LineCapableCost: lineCapableCost(&in.Totals.LineRate),
 		}
 	}
 	if p.grants(analyze.CapSessions) {
@@ -133,11 +136,14 @@ func sessionWire(rows []store.SessionRow) []metricSessionRow {
 
 func modelWire(stats []analyze.ModelStat) []metricModelStat {
 	out := make([]metricModelStat, 0, len(stats))
-	for _, m := range stats {
+	for i := range stats {
+		m := &stats[i]
 		out = append(out, metricModelStat{
 			Model: m.Model, Tier: m.Tier, Tokens: m.Tokens, Input: m.Input,
 			Output: m.Output, CacheRead: m.CacheRead, CacheWrite: m.CacheWrite,
 			Lines: m.Lines, Cost: m.Cost, Priced: m.Priced, TokenShare: m.TokenShare,
+			LineCapableLines: m.LineRate.Lines, LineCapableTokens: m.LineRate.Tokens,
+			LineCapableCost: lineCapableCost(&m.LineRate),
 		})
 	}
 	return out
@@ -145,13 +151,24 @@ func modelWire(stats []analyze.ModelStat) []metricModelStat {
 
 func projectWire(stats []analyze.ProjectStat) []metricProjectStat {
 	out := make([]metricProjectStat, 0, len(stats))
-	for _, p := range stats {
+	for i := range stats {
+		p := &stats[i]
 		out = append(out, metricProjectStat{
 			Project: p.Project, Lines: p.Lines, Cost: p.Cost, Priced: p.Priced,
-			TokenShare: p.TokenShare,
+			TokenShare: p.TokenShare, LineCapableLines: p.LineRate.Lines, LineCapableTokens: p.LineRate.Tokens,
+			LineCapableCost: lineCapableCost(&p.LineRate),
 		})
 	}
 	return out
+}
+
+// lineCapableCost is b's priced cost, nil when no usage entered it.
+func lineCapableCost(b *report.LineRateBasis) *float64 {
+	if b.Tokens == 0 {
+		return nil
+	}
+	cost := b.Cost
+	return &cost
 }
 
 // pricesWire resolves a price for every distinct model present in the window's usage,

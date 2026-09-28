@@ -185,9 +185,9 @@ func TestValidatorsEmptyInputSafe(t *testing.T) {
 // of the split.
 func TestModelFitUnrecognizedModelIsNeitherTier(t *testing.T) {
 	models := []ModelStat{{Model: "gpt-5", Tier: tierUnknown, Tokens: 200}}
-	premium, cheaper, other, _, _ := modelTierTotals(models)
-	if premium != 0 || cheaper != 0 || other != 200 {
-		t.Fatalf("unpriced model must land entirely in other, got premium=%d cheaper=%d other=%d", premium, cheaper, other)
+	got := modelTierTotals(models)
+	if got.premium != 0 || got.cheaper != 0 || got.other != 200 {
+		t.Fatalf("unpriced model must land entirely in other, got premium=%d cheaper=%d other=%d", got.premium, got.cheaper, got.other)
 	}
 }
 

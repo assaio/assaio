@@ -69,10 +69,13 @@ example declares everything; undeclared sections are **absent from the document*
   "delegation": {"sub":0,"total":0},
   "byModel":   [{"model":"...","tier":"premium","tokens":0,"input":0,"output":0,
                  "cacheRead":0,"cacheWrite":0,"lines":0,"cost":1.23,"priced":true,
-                 "tokenShare":0.5}],
-  "byProject": [{"project":"...","lines":0,"cost":null,"priced":false,"tokenShare":0.5}],
+                 "tokenShare":0.5,"lineCapableLines":0,"lineCapableTokens":0,
+                 "lineCapableCost":null}],
+  "byProject": [{"project":"...","lines":0,"cost":null,"priced":false,"tokenShare":0.5,
+                 "lineCapableLines":0,"lineCapableTokens":0,"lineCapableCost":null}],
   "totals":    {"tokens":0,"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"lines":0,
-                "cost":null,"priced":false,"cacheEfficiency":0.9},
+                "cost":null,"priced":false,"cacheEfficiency":0.9,"lineCapableLines":0,
+                "lineCapableTokens":0,"lineCapableCost":null},
   "prices":    {"claude-opus-4-8":{"input":0.000015,"output":0.000075,
                 "cacheRead":0.0000015,"cacheWrite":0.00001875,
                 "cacheWrite1h":0.00003}},
@@ -194,6 +197,17 @@ else:
     result["confidence"] = {"signalCoverage": reach, "samples": len(capable),
                             "samplesUnit": "usage rows"}
 ```
+
+A line rate needs the same care. `lines`, `tokens` and `cost` on `byModel`, `byProject` and `totals`
+cover every source, so dividing them sets lines against usage that could record none.
+`lineCapableLines`, `lineCapableTokens` and `lineCapableCost` are what the built-in `$`/100 lines
+divides: priced usage from sources that record added lines. Usage from a source that counts a
+session's lines once is left out in all three sections when several models ran on one day and
+project and one has no known price. In `byModel`, it is left out whenever several models ran there.
+`tokens` minus `lineCapableTokens` is everything these fields leave out. They are not the population
+of a rate that needs no price, such as lines per token: the built-in figures also count
+line-recording usage on unpriced models, which is absent here. `lineCapableTokens` of 0 means no
+such usage, and `lineCapableCost` is then `null`.
 
 Only tools in the window are sent. The plugin needs their capabilities, not the whole matrix, which
 would publish it again in the envelope.

@@ -42,6 +42,9 @@ type Inventory struct {
 	// not the whole window rather than implying it is.
 	Unattributed                     int
 	Models, Tools, Entrypoints, Days int
+	// TokenDays counts the days on which a source that counts tokens ran: the days a cost could
+	// fall on. Days also counts a day on which only a source with no token counter ran.
+	TokenDays int
 	// TotalCost is USD cost summed from priced usage only; nil when nothing priced.
 	TotalCost *float64
 	// HasUnpriced reports whether some usage was excluded from TotalCost because its
@@ -124,10 +127,12 @@ func BuildInventory(rows []store.UsageRow, t pricing.Table) Inventory {
 	tools := make(map[string]struct{})
 	entrypoints := make(map[string]struct{})
 	days := make(map[string]struct{})
+	tokenDays := make(map[string]struct{})
 
 	var inv Inventory
 	var cost float64
 	var hasCost bool
+	credit := NewLineCredit(rows, t)
 	for i := range rows {
 		r := &rows[i]
 		if attributed(r) {
@@ -143,12 +148,15 @@ func BuildInventory(rows []store.UsageRow, t pricing.Table) Inventory {
 		tools[r.Tool] = struct{}{}
 		entrypoints[r.Entrypoint] = struct{}{}
 		days[r.Day] = struct{}{}
+		if parser.Answers(r.Tool, parser.SignalTokensTotal) {
+			tokenDays[r.Day] = struct{}{}
+		}
 		inv.TotalLinesAdded += r.LinesAdded
 
 		tokens := RowTokens(r)
 		inv.Unpriced.Total += tokens
 		c, ok := t.CostTokens(r.Model, pricing.Tokens{In: r.In, Out: r.Out, CacheWrite: r.CacheWrite, CacheRead: r.CacheRead, CacheWrite1h: r.CacheWrite1h})
-		inv.LineRate.Add(r.Tool, r.LinesAdded, tokens, c, ok)
+		credit.Fold(&inv.LineRate, r, c, ok, false)
 		if ok {
 			cost += c
 			hasCost = true
@@ -162,6 +170,7 @@ func BuildInventory(rows []store.UsageRow, t pricing.Table) Inventory {
 		}
 	}
 	inv.Projects, inv.Models, inv.Tools, inv.Entrypoints, inv.Days = len(projects), len(models), len(tools), len(entrypoints), len(days)
+	inv.TokenDays = len(tokenDays)
 	if hasCost {
 		inv.TotalCost = &cost
 	}

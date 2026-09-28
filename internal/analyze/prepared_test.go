@@ -24,10 +24,10 @@ func preparedTestPrices() pricing.Table {
 
 func TestBuildInputByModelSumsClassifiesAndShares(t *testing.T) {
 	usage := []store.UsageRow{
-		{Model: "premium-model", Project: "p", In: 1000, Out: 2000, CacheRead: 100, CacheWrite: 50, Reasoning: 10, LinesAdded: 30},
-		{Model: "premium-model", Project: "p", In: 500, Out: 500, LinesAdded: 20},
-		{Model: "cheap-model", Project: "p", In: 2000, Out: 4000, LinesAdded: 100},
-		{Model: "unknown-model", Project: "p", In: 300, Out: 300, LinesAdded: 5},
+		{Tool: "claude-code", Model: "premium-model", Project: "p", In: 1000, Out: 2000, CacheRead: 100, CacheWrite: 50, Reasoning: 10, LinesAdded: 30},
+		{Tool: "claude-code", Model: "premium-model", Project: "p", In: 500, Out: 500, LinesAdded: 20},
+		{Tool: "claude-code", Model: "cheap-model", Project: "p", In: 2000, Out: 4000, LinesAdded: 100},
+		{Tool: "claude-code", Model: "unknown-model", Project: "p", In: 300, Out: 300, LinesAdded: 5},
 	}
 	in := BuildInput(usage, nil, preparedTestPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
 
@@ -90,9 +90,9 @@ func TestBuildInputByModelSumsClassifiesAndShares(t *testing.T) {
 
 func findModelStat(t *testing.T, models []ModelStat, name string) ModelStat {
 	t.Helper()
-	for _, m := range models {
-		if m.Model == name {
-			return m
+	for i := range models {
+		if models[i].Model == name {
+			return models[i]
 		}
 	}
 	t.Fatalf("no ModelStat named %q in %+v", name, models)
@@ -101,9 +101,9 @@ func findModelStat(t *testing.T, models []ModelStat, name string) ModelStat {
 
 func TestBuildInputByProjectSumsAndSorts(t *testing.T) {
 	usage := []store.UsageRow{
-		{Model: "cheap-model", Project: "web", In: 1000, Out: 1000, LinesAdded: 50},
-		{Model: "unknown-model", Project: "web", In: 500, Out: 500, LinesAdded: 200},
-		{Model: "cheap-model", Project: "api", In: 2000, Out: 2000, LinesAdded: 80},
+		{Tool: "claude-code", Model: "cheap-model", Project: "web", In: 1000, Out: 1000, LinesAdded: 50},
+		{Tool: "claude-code", Model: "unknown-model", Project: "web", In: 500, Out: 500, LinesAdded: 200},
+		{Tool: "claude-code", Model: "cheap-model", Project: "api", In: 2000, Out: 2000, LinesAdded: 80},
 	}
 	in := BuildInput(usage, nil, preparedTestPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
 
@@ -137,8 +137,8 @@ func TestBuildInputByProjectSumsAndSorts(t *testing.T) {
 
 func TestBuildInputTotalsAndCacheEfficiency(t *testing.T) {
 	usage := []store.UsageRow{
-		{Model: "cheap-model", In: 100, Out: 50, CacheRead: 300, CacheWrite: 20, Reasoning: 5, LinesAdded: 10},
-		{Model: "unknown-model", In: 200, Out: 50, LinesAdded: 4},
+		{Tool: "claude-code", Model: "cheap-model", In: 100, Out: 50, CacheRead: 300, CacheWrite: 20, Reasoning: 5, LinesAdded: 10},
+		{Tool: "claude-code", Model: "unknown-model", In: 200, Out: 50, LinesAdded: 4},
 	}
 	tot := BuildInput(usage, nil, preparedTestPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{}).Totals
 
@@ -168,7 +168,7 @@ func TestBuildInputTotalsAndCacheEfficiency(t *testing.T) {
 }
 
 func TestBuildInputCacheEfficiencyZeroDenominatorIsZero(t *testing.T) {
-	usage := []store.UsageRow{{Model: "cheap-model", Out: 100, LinesAdded: 1}}
+	usage := []store.UsageRow{{Tool: "claude-code", Model: "cheap-model", Out: 100, LinesAdded: 1}}
 	tot := BuildInput(usage, nil, preparedTestPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{}).Totals
 	if tot.CacheEfficiency != 0 {
 		t.Fatalf("CacheEfficiency = %v, want 0 when CacheRead and Input are both zero", tot.CacheEfficiency)
@@ -195,7 +195,7 @@ func TestBuildInputEmptyUsageIsSafeAndZero(t *testing.T) {
 // TestBuildInputNilPricesIsSafe asserts a nil pricing.Table never panics -- every model
 // reads as unpriced/unknown, not a crash.
 func TestBuildInputNilPricesIsSafe(t *testing.T) {
-	usage := []store.UsageRow{{Model: "m", In: 10, Out: 10, LinesAdded: 1}}
+	usage := []store.UsageRow{{Tool: "claude-code", Model: "m", In: 10, Out: 10, LinesAdded: 1}}
 	in := BuildInput(usage, nil, nil, validatorsTestNow, 7*24*time.Hour, Delegation{})
 	if len(in.ByModel) != 1 || in.ByModel[0].Priced {
 		t.Fatalf("ByModel = %+v, want one unpriced entry", in.ByModel)
@@ -210,8 +210,8 @@ func TestBuildInputNilPricesIsSafe(t *testing.T) {
 // same usage BuildInput classifies must match Analyze's rendered shares exactly.
 func TestModelFitReadsByModelDirectly(t *testing.T) {
 	usage := []store.UsageRow{
-		{Model: "premium-model", Project: "p", In: 1000, Out: 3000, LinesAdded: 40},
-		{Model: "cheap-model", Project: "p", In: 1000, Out: 1000, LinesAdded: 60},
+		{Tool: "claude-code", Model: "premium-model", Project: "p", In: 1000, Out: 3000, LinesAdded: 40},
+		{Tool: "claude-code", Model: "cheap-model", Project: "p", In: 1000, Out: 1000, LinesAdded: 60},
 	}
 	in := BuildInput(usage, nil, preparedTestPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{Sub: 10, Total: 100})
 	v, ok := Get(modelFitName)

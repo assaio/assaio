@@ -169,3 +169,20 @@ func TestTheTokenAxisIsNotAssumed(t *testing.T) {
 		t.Errorf("SourcesAnswering(cost) = %v, want agy absent so every $ figure excludes it", got)
 	}
 }
+
+// A session-credited line count is still a line count: the flag narrows how a source's lines
+// may be split, so a source carrying it without recording lines would be a contradiction.
+func TestOnlyALineRecordingSourceCreditsLinesPerSession(t *testing.T) {
+	for _, d := range depths {
+		if d.LinesPerSession && !RecordsLines(d.Tool) {
+			t.Errorf("%s credits lines per session but records none", d.Tool)
+		}
+	}
+	for tool, want := range map[string]bool{
+		"copilot-cli": true, "claude-code": false, "codex": false, PluginPrefix + "x": false, "unknown": false,
+	} {
+		if got := CreditsLinesPerSession(tool); got != want {
+			t.Errorf("CreditsLinesPerSession(%q) = %v, want %v", tool, got, want)
+		}
+	}
+}

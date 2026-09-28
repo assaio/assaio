@@ -31,6 +31,60 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+<a id="a-copilot-cli-sessions-lines-were-credited-to-one-model"></a>
+
+### A Copilot CLI session's lines were credited to one model
+
+*Corrected in v0.34.0, released 2026-09-28.*
+
+Copilot CLI records a session's changed lines once. assaio credits them all to the model that made
+the most requests. Figures split by model treated those lines as that model's own: `effectiveness
+--by model` set them against only its cost, making it look cheaper per line while the other models
+showed cost and no lines. `model-fit` put all the lines in one tier's lines per 1M tokens. When a
+session also ran a model with no known price, whole-window `$`/100 lines paired its lines with only
+the priced cost, making AI-written code look cheaper per line. If the lines were credited to the
+unpriced model, the priced model's cost had no lines, making it look costlier. The model split and
+the first mispairing began in v0.6.0 with Copilot CLI support; the row-level price gate introduced
+the case with the lines on the unpriced model in v0.33.0. A usage row carries no session id, so
+Copilot CLI rows sharing a day, project, entrypoint, member, grain and session labels are now read
+as one unit. Where that unit ran several models, it is left out of `$`/100 lines whole if one model
+has no known price. A split by model leaves it out of every model's `$`/100 lines and names it in
+the note; the AI-lines column still shows its lines on the busiest model's row. Two sessions sharing
+a unit are left out together even when each ran one model; nothing is paired with the wrong cost.
+The `effectiveness` TOTAL no longer depends on `--by`. Reproduced with constructed windows; the
+maintainer's transcripts contain no Copilot CLI session, so no figure there moves.
+
+<a id="model-fit-and-concentration-divided-by-usage-that-records-no-lines"></a>
+
+### `model-fit` and `concentration` divided by usage that records no lines
+
+*Corrected in v0.34.0, released 2026-09-28.*
+
+The v0.33.0 correction left two figures dividing by usage from sources that record no lines. Since
+v0.1.0, `model-fit`'s lines per 1M tokens per tier included tokens from Gemini CLI and Cline in the
+denominator. Both record no lines, so the tier looked less productive per token. Since v0.3.0,
+`concentration`'s widest spend gap compared a project's share of all tokens with its share of AI
+lines. Tokens from a parser plugin, which records no lines, widened the gap for a project that also
+ran a source that does. They also shrank every other project's token share, narrowing those gaps.
+Projects running only on sources that record no lines have been excluded since v0.10.0. Both figures
+now divide only usage from sources that record lines. `model-fit` reports the share of tiered tokens
+left out; `concentration` counts projects that ran partly on sources that record no lines and shows
+their share of line-recording tokens in its bars. Reproduced with constructed windows; `assaio-agent
+demo` and the maintainer's transcripts contain neither mix, so only their wording moves.
+
+<a id="cost-per-active-day-counted-days-with-no-token-counter"></a>
+
+### Cost per active day counted days with no token counter
+
+*Corrected in v0.34.0, released 2026-09-28.*
+
+Since v0.25.0, when Antigravity CLI support shipped, the dashboard's cost basis divided the window's
+cost by every active day, including days when only Antigravity CLI ran. Antigravity CLI has no token
+counter and thus no cost, so cost per active day looked lower than spend per day with a source that
+could carry cost. It now divides by days on which a source that counts tokens ran and reports how
+many days it left out. Reproduced with a constructed window; the maintainer's real store is empty,
+and `demo` has no Antigravity CLI day.
+
 ## [0.33.0] - 2026-09-28
 
 <a id="line-rates-divided-by-usage-that-records-no-lines"></a>

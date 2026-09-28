@@ -37,7 +37,7 @@ func RenderEffectivenessTable(w io.Writer, rows []EffRow, by string) error {
 	}
 	totals.Coverage.TotalTokens = unpriced.Total
 	// Coverage counts usage rows: a group that mixes sources is not all line-recording.
-	totals.Coverage.LineCapableTokens = totals.LineRate.Tokens + totals.LineRate.UnpricedLineTokens
+	totals.Coverage.LineCapableTokens = totals.LineRate.OwnTokens() + totals.LineRate.SharedTokens
 	totals.Coverage.LineBlindRows = totals.LineRate.LineBlindRows
 	tw.AppendFooter(effTotalRow(&totals))
 	tw.Render()
@@ -73,8 +73,9 @@ type effTotals struct {
 	// call; Coverage carries the same count for the line and edit columns.
 	RefusableRows int
 	Coverage      effCoverage
-	// LineRate is the footer's $/100-lines population: every group's, merged, so the footer
-	// divides the same usage its rows do rather than the COST column's whole total.
+	// LineRate is the footer's $/100-lines population: every group's share of the window's,
+	// merged, so the footer divides line-recording usage rather than the COST column's whole
+	// total, and reads the same under every --by.
 	LineRate LineRateBasis
 }
 
@@ -84,7 +85,7 @@ type effTotals struct {
 func (t *effTotals) add(r *EffRow, priced float64) {
 	t.Cost += priced
 	t.AnyPriced = t.AnyPriced || r.Cost != nil
-	t.LineRate.Merge(&r.lineRate)
+	t.LineRate.Merge(&r.windowRate)
 	if r.LineCapable {
 		t.Coverage.LineCapableRows++
 		t.Lines += r.LinesAdded

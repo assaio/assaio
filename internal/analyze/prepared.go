@@ -1,5 +1,7 @@
 package analyze
 
+import "github.com/assaio/assaio/internal/report"
+
 // ModelStat is one model's usage across the queried window: token/line totals, its
 // already-classified tier, and its priced cost. BuildInput computes ByModel once, so a
 // validator reads this directly instead of grouping Usage by model and calling modelTier
@@ -18,8 +20,12 @@ type ModelStat struct {
 	// CacheWrite1h is the portion of CacheWrite that bought a 1-hour cache lifetime and is
 	// billed at its own higher rate -- a subset, never added to a total.
 	CacheWrite1h int64
-	// Lines is AI-added code lines summed across this model's usage.
+	// Lines is AI-added code lines summed across this model's usage from sources that record
+	// them.
 	Lines int64
+	// LineRate is this model's share of the population a line rate divides. A session-credited
+	// session that ran several models is shared rather than this model's (report.LineCredit).
+	LineRate report.LineRateBasis
 	// Cost is USD cost priced from Prices; nil when Priced is false.
 	Cost *float64
 	// Priced is false when Model has no known price in Prices -- Cost is then unknown,
@@ -35,8 +41,11 @@ type ModelStat struct {
 type ProjectStat struct {
 	// Project is the project name (store.UsageRow.Project); "" for unattributed usage.
 	Project string
-	// Lines is AI-added code lines summed across this project's usage.
+	// Lines is AI-added code lines summed across this project's usage from sources that
+	// record them.
 	Lines int64
+	// LineRate is the population a line rate over this project divides, and what it leaves out.
+	LineRate report.LineRateBasis
 	// Cost is USD cost priced from Prices, summed from this project's priced usage only;
 	// nil when none of its usage priced.
 	Cost *float64
@@ -57,8 +66,10 @@ type Totals struct {
 	// needs the per-source capability gate a window total cannot express, so it reads
 	// Usage directly (see cache.go).
 	Input, Output, CacheRead, CacheWrite int64
-	// Lines is AI-added code lines summed across all Usage.
+	// Lines is AI-added code lines summed across all Usage from sources that record them.
 	Lines int64
+	// LineRate is the population a line rate over the window divides, and what it leaves out.
+	LineRate report.LineRateBasis
 	// Cost is USD cost priced from Prices, summed from priced usage only; nil when
 	// nothing priced.
 	Cost *float64

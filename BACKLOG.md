@@ -83,9 +83,7 @@ the offline reconciliation against a vendor's own export, shipped after it — a
 price table nothing watched, which was the largest error left in the `$` figure. All three are in
 [CHANGELOG.md](CHANGELOG.md). One item remains and it cannot be closed here at all: `B144` needs
 a redacted real capture, the same contribution `B19`'s column aliases need — which now carries
-its own id (`B192`) and a milestone to arrive through, above. The milestone also depends on
-`B221`, which lives in the code-health pool below because it corrects a shipped mechanism rather
-than calibration work.
+its own id (`B192`) and a milestone to arrive through, above.
 
 - [ ] **B144 · calibrate Gemini CLI and Cline against a real capture** — S · both — both are
   calibrated today against a *constructed* sample in the source's shape, because the maintainer's
@@ -99,9 +97,9 @@ than calibration work.
 Proposed by the 2026-09-26 framework audit. Users can already write exec parsers, metrics and
 rules and script over `report` and `analyze` JSON; a fuller analytical contract that outside
 programs can rely on remains untested. [ROADMAP.md](ROADMAP.md#2b-a-public-analytical-export)
-owns the order: open corrections first (`B221` in the code-health pool), then the evidence graph
-starting with repository identity (`B218`, now in that section) and the agent skill, then a
-small export, then typed plugin states and richer parser counters.
+owns the order: the evidence graph starting with repository identity (`B218`, now in that
+section) and the agent skill, then a small export, then typed plugin states and richer parser
+counters.
 
 - [ ] **B211 · a versioned analytical snapshot** — M · both — a deterministic NDJSON export: a
   manifest (window end, grain, build, price-table date), then allow-listed usage and session
@@ -971,21 +969,6 @@ they wait behind features but keep the growing metric surface maintainable.
   field landed.) The i18n one is the interesting case rather than the largest: it is a block of
   prose per metric, so splitting it by metric group is a different judgement from splitting
   code, and doing it badly makes the catalog harder to translate (`B08`), not easier.
-- [ ] **B221 · the rest of B118: model-fit, concentration and the plugin envelope** — M · both —
-  v0.33 gated `$`/100 lines and lines per active day. Still ungated: `model-fit`'s lines per 1M
-  tokens per tier, where a source-level gate is not enough because Copilot CLI credits all its
-  lines to its busiest model; `concentration`'s spend-versus-output gap, which moves only for
-  `plugin:` rows that carry a project; line-capable counterparts of `lines`, `cost` and `tokens`
-  in the metric-plugin envelope, so an out-of-tree metric cannot repeat the bug; and the
-  capability invariant test, which can include `LinesAdded` only once every numerator is gated.
-  The same per-session credit reaches `$`/100 lines: when a Copilot session mixes priced and
-  unpriced models, the row-level price gate pairs the session's lines with only part of its cost,
-  or its cost with none of its lines.
-- [ ] **B222 · the dashboard's cost per active day counts days with no cost** — S · both —
-  `internal/dashboard/costbasis.go` divides the window's cost by every active day, including
-  days on which only Antigravity CLI ran, which carries no token counter and so no cost. The
-  same shape as `B118`: divide by days on which a tokened source ran, and state the days left
-  out.
 - [ ] **B117 · `metrics verify` prints a blank confidence label** — S · both — the verify path
   renders a plugin's `Result` without `analyze.Stamp`, so the label the summary leads with is
   empty (`Confidence:  · 3 usage rows · activity coverage 0%`) while the coverage axes beside

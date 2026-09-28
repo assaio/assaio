@@ -1989,6 +1989,19 @@
         "type": "number"
       },
       {
+        "path": "byModel[].lineCapableCost",
+        "type": "number",
+        "nullable": true
+      },
+      {
+        "path": "byModel[].lineCapableLines",
+        "type": "number"
+      },
+      {
+        "path": "byModel[].lineCapableTokens",
+        "type": "number"
+      },
+      {
         "path": "byModel[].lines",
         "type": "number"
       },
@@ -2024,6 +2037,19 @@
         "path": "byProject[].cost",
         "type": "number",
         "nullable": true
+      },
+      {
+        "path": "byProject[].lineCapableCost",
+        "type": "number",
+        "nullable": true
+      },
+      {
+        "path": "byProject[].lineCapableLines",
+        "type": "number"
+      },
+      {
+        "path": "byProject[].lineCapableTokens",
+        "type": "number"
       },
       {
         "path": "byProject[].lines",
@@ -2242,6 +2268,19 @@
       },
       {
         "path": "totals.input",
+        "type": "number"
+      },
+      {
+        "path": "totals.lineCapableCost",
+        "type": "number",
+        "nullable": true
+      },
+      {
+        "path": "totals.lineCapableLines",
+        "type": "number"
+      },
+      {
+        "path": "totals.lineCapableTokens",
         "type": "number"
       },
       {

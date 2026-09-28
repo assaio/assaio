@@ -127,6 +127,11 @@ func TestSnapshotRoundTripsAndRejectsAnotherVersion(t *testing.T) {
 	if _, ok := Parse([]byte(`{"version":99}`)); ok {
 		t.Error("a snapshot from another version was accepted")
 	}
+	// Version 4 builds read concentration's gap over all tokens; comparing against one would
+	// report this build's verdict as a change in the work.
+	if _, ok := Parse([]byte(`{"version":4}`)); ok {
+		t.Error("a snapshot from before the line-recording gap was accepted")
+	}
 	if _, ok := Parse([]byte(`not json`)); ok {
 		t.Error("a corrupt payload was accepted")
 	}

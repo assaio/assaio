@@ -2,6 +2,7 @@ package report
 
 import (
 	"bytes"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -67,7 +68,7 @@ func TestLineRateDividesOnlyWhatCouldHaveFedItsLines(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var b LineRateBasis
 			for _, r := range tt.rows {
-				b.Add(r.tool, r.lines, r.tokens, r.cost, r.priced)
+				b.add(r.tool, r.lines, r.tokens, r.cost, r.priced)
 			}
 			got := b.Per100()
 			switch {
@@ -178,14 +179,15 @@ func TestTheFooterStatesUnpricedLinesInLines(t *testing.T) {
 }
 
 // TestEffectivenessCSVAppendsTheLineRateColumns: a consumer reading CSV by position keeps working,
-// because the two columns this basis added come after every column it already read.
+// because the columns this basis added come after every column it already read.
 func TestEffectivenessCSVAppendsTheLineRateColumns(t *testing.T) {
 	eff, err := BuildEffectiveness(mixedProject("d"), table(), "project")
 	if err != nil {
 		t.Fatal(err)
 	}
 	header := effCSVRecords(t, eff)[0]
-	if got := header[len(header)-2:]; got[0] != "line_capable_cost" || got[1] != "line_capable_unpriced_tokens" {
-		t.Fatalf("header ends %q, want the line-rate columns last", got)
+	want := []string{"line_capable_cost", "line_capable_unpriced_tokens", "line_capable_shared_tokens"}
+	if got := header[len(header)-len(want):]; !slices.Equal(got, want) {
+		t.Fatalf("header ends %q, want the line-rate columns last: %q", got, want)
 	}
 }
