@@ -17,7 +17,7 @@ paths:
 - **A correction must reach history**: say whether rows written under the old rule are rebuilt by
   `backfill --full`, corrected by a restate path, or unreachable — and a `MAX`-style restate cannot
   lower a figure (`B116`).
-- **The real store is `~/.local/share/assaio/assaio.db`** (170 MB, days the sources deleted).
+- **The real store is `~/.local/share/assaio/assaio.db`** (days the sources deleted).
   `backfill`, `clear`, `compact`, `serve`, `statusline` have no `--db`: every local run sets
-  `XDG_DATA_HOME=$(mktemp -d)`. The hook denies `clear` without it.
+  `XDG_DATA_HOME=$(mktemp -d)`. The hook denies any run without it bar `version` and `help`.
 - Claude Code deletes transcripts after 30 days; history beyond it exists only here.

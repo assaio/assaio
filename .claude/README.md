@@ -54,9 +54,9 @@ may run a model that is never a working model here.
 
 ## Hooks
 
-`hooks/guard.sh` runs on every Bash, Write and Edit. It denies: the deletion subcommand
-without a redirected `XDG_DATA_HOME` (the real store is 170 MB of history the sources have
-deleted); rewriting or deleting a tag or force-pushing `main`; an AI-authorship trailer;
+`hooks/guard.sh` runs on every Bash, Write and Edit. It denies: any run of the binary bar
+`version` and `help` without a throwaway `XDG_DATA_HOME` in the same command (the real store
+holds history the sources have deleted); rewriting or deleting a tag or force-pushing `main`; an AI-authorship trailer;
 `--no-verify`; `git add .`/`-A`/`commit -a` (another session's work may be in the tree);
 staging or printing a secret file; assigning a Fable/Mythos model id; a push to `main` or a PR
 merge while `docs/work/` holds an open file (a merge publishes the site). It asks before

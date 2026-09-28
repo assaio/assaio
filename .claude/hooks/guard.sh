@@ -70,17 +70,26 @@ wip_files() {
 	ls "${CLAUDE_PROJECT_DIR:-.}"/docs/work/*.md 2>/dev/null | grep -v 'TEMPLATE' || true
 }
 
+# Every run of the binary opens whatever DataDir() resolves to -- the maintainer's real store
+# unless XDG_DATA_HOME points at a throwaway. Shell state does not survive between tool calls,
+# so the redirect has to be in the same command: a fresh mktemp, a temp directory, or a
+# variable that command itself set from mktemp. Only version and help open nothing.
+binary_run='^(([^[:space:]]*/)?(assaio-agent|assaio)|go[[:space:]]+run[[:space:]].*assaio-agent(/|@[^[:space:]]*)?)([[:space:]]|$)'
+store_free='(assaio-agent|assaio)/?[[:space:]]+(version|--version|help)([[:space:]]|$)|[[:space:]](-h|--help)([[:space:]]|$)'
+throwaway_data_home() {
+	printf '%s' "$cmd" | grep -qE 'XDG_DATA_HOME=["'"'"']?(\$\(mktemp|\$\{?TMPDIR|/tmp/|/private/tmp/|/var/folders/)' && return 0
+	var=$(printf '%s' "$cmd" | sed -nE 's/.*XDG_DATA_HOME=["'"'"']?\$\{?([A-Za-z_][A-Za-z0-9_]*).*/\1/p' | head -n1)
+	[ -n "$var" ] && printf '%s' "$cmd" | grep -qE "(^|[^A-Za-z0-9_])${var}=[\"']?\\\$\\(mktemp"
+}
+data_home=real
+throwaway_data_home && data_home=throwaway
+
 while IFS= read -r seg; do
 	bare=$(strip_prefix "$seg")
 	[ -n "$bare" ] || continue
 
-	# The deletion subcommand has no --db: it opens whatever DataDir() resolves to, which is the
-	# maintainer's real store unless XDG_DATA_HOME was redirected to a throwaway first. That
-	# redirect is the only accepted way to run it, so it is required in the same segment.
-	if printf '%s' "$bare" | grep -qE '^(([^[:space:]]*/)?(assaio-agent|assaio)|go[[:space:]]+run[[:space:]]+[^[:space:]]*assaio-agent)[[:space:]]' &&
-		printf '%s' "$bare" | grep -qE '[[:space:]]clear([[:space:]]|$)' &&
-		! printf '%s' "$seg" | grep -qE 'XDG_DATA_HOME=("|\$\(mktemp|/tmp/|/private/tmp/|/var/folders/)'; then
-		deny "This subcommand has no --db and would open the real store (~/.local/share/assaio/assaio.db, 170 MB of history older than the sources keep). Point it at a throwaway in the same command: XDG_DATA_HOME=\$(mktemp -d) assaio-agent ..."
+	if [ "$data_home" = real ] && printf '%s' "$bare" | grep -qE "$binary_run" && ! printf '%s' "$bare" | grep -qE "$store_free"; then
+		deny "Every run of the binary opens the store XDG_DATA_HOME resolves to, and without a redirect that is the maintainer's real one (~/.local/share/assaio/assaio.db). Point it at a throwaway in the same command: XDG_DATA_HOME=\$(mktemp -d) assaio-agent ..."
 	fi
 
 	# Other sessions may hold uncommitted work in this tree. A commit names its paths.
