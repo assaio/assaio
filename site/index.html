@@ -298,14 +298,15 @@ footer{border-top:1px solid var(--line); padding:3rem 0 3.5rem; background:var(-
           <table>
             <thead><tr><th scope="col">project</th><th scope="col">AI lines</th><th scope="col">cost $</th><th scope="col">$/100 lines</th></tr></thead>
             <tbody>
-              <tr><td>api-service</td><td>1,163</td><td>1.70</td><td>0.15</td></tr>
-              <tr><td>data-pipeline</td><td>1,298</td><td>1.89<span class="star">*</span></td><td>0.15<span class="star">*</span></td></tr>
-              <tr><td>web-app</td><td>889</td><td>1.37</td><td>0.15</td></tr>
-              <tr class="total"><td>total</td><td>3,350</td><td>4.95</td><td>0.15</td></tr>
+              <tr><td>api-service</td><td>1,109</td><td>1.74</td><td>0.16</td></tr>
+              <tr><td>data-pipeline</td><td>1,022</td><td>1.39<span class="star">*</span></td><td>0.18<span class="star">†</span></td></tr>
+              <tr><td>web-app</td><td>1,052</td><td>1.87</td><td>0.18</td></tr>
+              <tr class="total"><td>total</td><td>3,183</td><td>5.00</td><td>0.17<span class="star">†</span></td></tr>
             </tbody>
           </table>
         </div>
-        <p class="note"><span class="star">*</span> data-pipeline omits 10.4% of its tokens, on a model the price table lacks; those tokens are excluded, never counted as $0.</p>
+        <p class="note"><span class="star">*</span> data-pipeline's cost omits 7.2% of the table's tokens, on a model the price table lacks; those tokens are excluded, never counted as $0.</p>
+        <p class="note"><span class="star">†</span> $/100 lines uses only priced usage from sources that record changed lines, excluding those tokens and the 267 of 3,183 AI lines written on them from both sides of the ratio.</p>
       </div>
     </figure>
   </div>
