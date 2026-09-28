@@ -103,7 +103,46 @@ Make the current local product easy to evaluate and hard to misunderstand.
 digest or provide a second capture; no known wrong figure is presented as complete; the
 first-run path is tested on a clean machine.
 
-### 1A. A public analytical export
+### 2. Evidence graph: session to shipped change
+
+Build the differentiating outcome path before expanding the UI or connector count.
+
+- Separate repository identity from the display name (B218): `project` is a repository
+  basename today, so two unrelated repositories named `api` merge. Resolve the repository
+  behind a session, or mark it ambiguous, before joining across repositories; temporal
+  proximity does not resolve it.
+- Add content-free commit, pull-request, review and check-run observations, with GitHub as
+  the first end-to-end connector and an importable contract for other forges.
+- Extend the shipped local session→commit slice — already graded by the attribution corpus and
+  already reporting coverage, competing candidates and abstention — to shipped changes.
+- Report coverage and competing candidates for every additional join.
+- Add outcome signals only when their populations are comparable: merged changes, review
+  rounds, CI result, batch size and survival at a fixed age.
+- Prefer cost per merged or surviving change over cost per generated line.
+- Join resolved issues (GitHub Issues, Jira) only through an exec port for text-free
+  observations and out-of-tree connectors (B225), and only once the PR join passes its
+  conformance corpus. Issue digests and transition times still identify work, so the edge
+  stays local-only by default (B100).
+
+**Exit:** a local report can account for matched and unmatched sessions and changes; a
+known-ambiguous corpus stays ambiguous; re-import is idempotent; no prompt, code, diff or PR
+body is stored.
+
+### 2A. An agent skill over the evidence
+
+Put the product inside the coding agent once it can show delivery evidence alongside spend.
+
+- Ship the `assaio` agent skill (B223): one `npx skills add` guides the first run inside Claude
+  Code, Codex, Gemini CLI or Copilot. It installs the CLI only with consent. It quotes figures,
+  evidence edges and `recommend` records instead of restating them, and says that what it
+  reads reaches the model provider.
+- B214 times the skill path beside the plain CLI path. The skill moves toward ongoing advice
+  only as the engine gains outcome joins and verified experiments.
+
+**Exit:** On Claude Code, Codex and Gemini CLI, the skill installs only after consent and shows
+every figure with its scope. First reports arrive through it. It adds no advice of its own.
+
+### 2B. A public analytical export
 
 Users can already write exec parsers, metrics and rules and script over `report` and
 `analyze` JSON. The untested need is a fuller analytical contract that outside programs can
@@ -113,9 +152,8 @@ rely on. Test it small before building a framework around it.
   every cache tier, price and parser provenance, correction state, excluded and unpriced
   shares, and repository-identity status (B211); publish its schema and accept/refuse
   vectors (B06, B99).
-- Separate repository identity from the display name: `project` is a repository basename
-  today, so two unrelated repositories named `api` merge (B218). The snapshot may report
-  identity as unresolved; cross-repository totals and graph edges may not.
+- Carry repository identity as milestone 2 resolves it (B218): the snapshot may report it
+  as unresolved; cross-repository totals and graph edges may not.
 - Give plugins typed `denied`, `unavailable` and `failed` states with freshness (B213), then
   optional parser counters beyond tokens, designed against real producers (B212).
 - Prove it with worked examples in Python and DuckDB that use only public contracts (B217).
@@ -124,25 +162,6 @@ rely on. Test it small before building a framework around it.
 corrected historical row, and can name the excluded, unpriced, denied and failed
 populations; same-basename repositories never merge silently. If nobody outside the project
 uses the export, activation and data health come before broader contracts.
-
-### 2. Evidence graph: session to shipped change
-
-Build the differentiating outcome path before expanding the UI or connector count.
-
-- Add content-free commit, pull-request, review and check-run observations, with GitHub as
-  the first end-to-end connector and an importable contract for other forges.
-- Extend the shipped local session→commit slice — already graded by the attribution corpus and
-  already reporting coverage, competing candidates and abstention — to shipped changes.
-- Report coverage and competing candidates for every additional join.
-- Add outcome signals only when their populations are comparable: merged changes, review
-  rounds, CI result, batch size and survival at a fixed age.
-- Prefer cost per merged or surviving change over cost per generated line.
-- Resolve the repository behind a session, or mark it ambiguous, before joining across
-  repositories (B218); temporal proximity does not resolve it.
-
-**Exit:** a local report can account for matched and unmatched sessions and changes; a
-known-ambiguous corpus stays ambiguous; re-import is idempotent; no prompt, code, diff or PR
-body is stored.
 
 ### 3. Verified experiments
 
@@ -199,6 +218,7 @@ unauthorized caller cannot read a report or submit another member's identity.
 | In-process Go plugin API | Waits for the v1 contract freeze; exec protocols remain the stable path. |
 | Parquet, OpenMetrics, a query interface, an OpenTelemetry mapping (B47, B44, B98) | Each waits for a named consumer after the NDJSON snapshot works; opt-in, with a pinned schema and a content allowlist. No general BI platform and no OTLP backend. |
 | Plugin marketplace or WASM runtime | Waits for a demonstrated limit of the exec protocols plus public contracts; no automatic installation or execution. |
+| Advice from the agent skill (costly models or effort without value, missing setup) | The skill relays `recommend` records and adds no advice of its own. Advice about value waits for outcome joins (milestone 2) and verified experiments (milestone 3); advice about effort waits until a source's effort setting is stored (B224). |
 
 ## What v1.0 has to mean
 

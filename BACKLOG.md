@@ -94,13 +94,14 @@ than calibration work.
   vendor writes, and each trace already declares which it is (`capture: real|constructed`). Needs
   one redacted capture per source from anybody who runs them.
 
-## Next — "Reusable contracts"
+## After the agent skill — "Reusable contracts"
 
 Proposed by the 2026-09-26 framework audit. Users can already write exec parsers, metrics and
-rules and script over `report` and `analyze` JSON; what is untested is a fuller analytical
-contract outside programs can rely on. [ROADMAP.md](ROADMAP.md#1a-a-public-analytical-export)
-owns the order: open corrections first (`B221` in the code-health pool), then repository
-identity and a small export, then typed plugin states and richer parser counters.
+rules and script over `report` and `analyze` JSON; a fuller analytical contract that outside
+programs can rely on remains untested. [ROADMAP.md](ROADMAP.md#2b-a-public-analytical-export)
+owns the order: open corrections first (`B221` in the code-health pool), then the evidence graph
+starting with repository identity (`B218`, now in that section) and the agent skill, then a
+small export, then typed plugin states and richer parser counters.
 
 - [ ] **B211 · a versioned analytical snapshot** — M · both — a deterministic NDJSON export: a
   manifest (window end, grain, build, price-table date), then allow-listed usage and session
@@ -116,15 +117,6 @@ identity and a small export, then typed plugin states and richer parser counters
   cursor. Today's aggregate outputs do not yet meet the v1 export guarantee in
   [compatibility](docs/compatibility.md#not-frozen-and-guaranteed-instead); this is the path to
   it. `B06` and `B99` then publish its schema and vectors.
-- [ ] **B218 · repository identity apart from the display name** — M · both —
-  `internal/projectid` resolves a repository root and subpath, but the stored `project` is the
-  root's basename, so two unrelated repositories named `api` share every aggregate, and a later
-  pseudonym cannot separate them again. Design an opaque, versioned local repository key beside
-  the label, with `unknown` and `ambiguous` as stored states, a deliberate local disclosure and
-  an explicit, privacy-reviewed team mapping. Fixtures: the same basename in different roots,
-  clones, worktrees, monorepo subpaths, moves, no repository, collisions. Never export a full
-  path or a hash of one. Any migration is a new file with its own digest. The `B211` snapshot
-  may report identity as unresolved; cross-repository totals and graph edges (`B85`) may not.
 - [ ] **B213 · typed completeness for plugin inputs and results** — M · both — a metric plugin
   denied an input it declared learns it from `withheld`, but its verdict records the refusal
   only as a caveat, and a rule plugin receives verdicts with no machine-readable state for it.
@@ -312,6 +304,15 @@ change it produced — commit, pull request, review, CI, merge, survival — car
 confidence and the ambiguity of every link. Everything here ships with its error bars or it
 does not ship.
 
+- [ ] **B218 · repository identity apart from the display name** — M · both —
+  `internal/projectid` resolves a repository root and subpath, but the stored `project` is the
+  root's basename, so two unrelated repositories named `api` share every aggregate, and a later
+  pseudonym cannot separate them again. Design an opaque, versioned local repository key beside
+  the label, with `unknown` and `ambiguous` as stored states, a deliberate local disclosure and
+  an explicit, privacy-reviewed team mapping. Fixtures: the same basename in different roots,
+  clones, worktrees, monorepo subpaths, moves, no repository, collisions. Never export a full
+  path or a hash of one. Any migration is a new file with its own digest. The `B211` snapshot
+  may report identity as unresolved; cross-repository totals and graph edges (`B85`) may not.
 - [ ] **B102 · AnalyzerContext: retire the store types from the analyzer surface** — L · both
   — the half of `B90` deliberately not shipped with the catalog. Validators already do not
   query SQLite; what leaks is *types*, since `analyze.Input` carries `[]store.UsageRow`,
@@ -355,6 +356,16 @@ does not ship.
   runs, merge time and method, detectable revert relations. GitHub Cloud first, with the
   interface shaped so Enterprise Server and GitLab can follow without contaminating the core
   model. Credentials never reach reports or plugins.
+- [ ] **B225 · an exec port for issue-tracker observations** — L · both — resolved issues are
+  the one delivery edge with no item here. It follows the ADR 0003 posture: an ADR and a
+  feasibility spike first (can GitHub and Jira return issue→PR links without reading issue
+  bodies?), then a subprocess protocol emitting text-free observations: a keyed issue digest,
+  type, state transitions with times, and explicit links to a branch, PR or commit found by the
+  connector. It carries no title, body, label text or assignee, is validated at the boundary
+  and is namespaced like `plugin:`. Joins go only through PR or branch edges (after `B85` and
+  `B92`), with coverage and abstention; never by time. Digests and transition times still
+  identify work, so the edge is local-only by default and `B100` extends to it. GitHub Issues
+  and Jira ship as out-of-tree reference connectors.
 - [ ] **B85 · attribution engine + edges (session → commit / PR)** — L · both — versioned,
   confidence-bearing candidate and confirmed edges carrying their method (explicit marker,
   repo/branch match, bounded temporal proximity, file-category compatibility, identity
@@ -413,6 +424,25 @@ does not ship.
   `local-only`, not persisted or synced; the command exposes no `--db`, rejects member-bearing
   rows, and its result type has no person or ranking field. The connector's field-level sync,
   retention, cohort and re-identification policy remain open.
+
+## Then — "The agent skill, over the evidence"
+
+Roadmap milestone 2A. The skill ships after the delivery joins, so inside an agent it shows
+spend beside what that spend delivered, not spend alone.
+
+- [ ] **B223 · the `assaio` agent skill** — M · both — `skills/assaio/SKILL.md` in this
+  repository, installed with `npx skills add assaio/assaio --skill assaio` into any host that
+  reads the Agent Skills format. It detects `assaio-agent` or installs it after asking (`brew`,
+  or a release checked against `checksums.txt` and `gh attestation verify`), walks the first-run
+  path, maps a question to a command with `--format json`, quotes each figure with its layer,
+  confidence, coverage and `—`, relays `recommend` records verbatim, and refuses per-person
+  ranking. It says that whatever it reads from `assaio-agent` enters the model's context and
+  reaches the model provider, project names included, and prefers aggregated and pseudonymized
+  outputs. v1 ships no hooks or scripts. Proof: evals on Claude Code, Codex and Gemini CLI that
+  check each control holds per host, the skills.sh audits passing, and `B214` timing the skill
+  path beside the plain CLI path. A skills.sh install count is the skills CLI's telemetry, not
+  users. First check whether `npx skills add assaio/assaio` also offers the harness skills under
+  `.claude/skills/`; if it does, the product skill moves to its own repository.
 
 ## Then — "Harness intelligence & verified improvement"
 
@@ -585,6 +615,10 @@ was under the v1.0 heading while its own text said it is not a v1.0 condition.
 
 ## Pool — needs a schema or parser extension
 
+- [ ] **B224 · find where sources record reasoning effort** — S · both — no parser stores the
+  effort setting a turn ran at, so no figure can say a high effort bought nothing. Collect
+  fixtures from real captures and define the setting first; store it only where a source writes
+  a stable field, and declare it unanswered for every other source.
 - [ ] **B79 · local-day bucketing** — M · both — `UsageRow.Day` is `substr(ts,1,10)` over
   timestamps normalised to UTC, so every day-based figure (active days, lines/active-day,
   week-over-week, burn-anomaly's baseline) counts UTC calendar days while `rhythm` reads
