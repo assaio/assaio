@@ -31,11 +31,13 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-09-28
+
 <a id="line-rates-divided-by-usage-that-records-no-lines"></a>
 
 ### Line rates divided by usage that records no lines
 
-*Corrected in v0.33.0.*
+*Corrected in v0.33.0, released 2026-09-28.*
 
 Every figure relating AI lines to something else divided by more than could have produced a line.
 `$`/100 lines — the `status` headline and Hot projects, `effectiveness` rows for groups that mix

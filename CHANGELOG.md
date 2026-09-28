@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-09-28
+
 ### Breaking
 
 - **`$`/100 lines now divides only priced usage from sources that record changed lines** (`B118`)
@@ -1772,7 +1774,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.32.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.33.0...HEAD
+[0.33.0]: https://github.com/assaio/assaio/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/assaio/assaio/compare/v0.31.0...v0.32.0
 [0.31.0]: https://github.com/assaio/assaio/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/assaio/assaio/compare/v0.29.0...v0.30.0
