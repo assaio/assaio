@@ -33,6 +33,25 @@ Discussion.
 
 ## [Unreleased]
 
+### Breaking
+
+- **`$`/100 lines now divides only priced usage from sources that record changed lines** (`B118`)
+  in `status` (headline and Hot projects), `effectiveness` rows and TOTAL, and the `share` card. A ratio
+  that leaves usage out gets † and a note saying what it leaves out. `throughput`'s
+  `lines/active-day` counts only days on which such a source ran
+  ([correction](docs/corrections.md#line-rates-divided-by-usage-that-records-no-lines)). Values move in
+  `effectiveness --format json|csv` and `analyze --format json`; `effectiveness` adds
+  `line_capable_cost` and `line_capable_unpriced_tokens`, last in CSV. The old `$`/100 lines is
+  `cost` / (`lines_added` / 100); the old lines per active day is `AI lines total` over `adoption`'s
+  `active days`.
+
+### Fixed
+
+- A `share` card for a window whose sources record no lines no longer prints "0 lines", and its hook
+  line and post carry `$` per 100 lines only when the figure leaves no usage out.
+- `effectiveness` no longer claims every source in the table records changed lines and edits when a
+  row mixes in a source that records neither or only one of them, as `--by day` can.
+
 ## [0.32.0] - 2026-09-27
 
 ### Added

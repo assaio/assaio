@@ -36,6 +36,9 @@ func RenderEffectivenessTable(w io.Writer, rows []EffRow, by string) error {
 		tw.AppendRow(effTableRow(r, cost))
 	}
 	totals.Coverage.TotalTokens = unpriced.Total
+	// Coverage counts usage rows: a group that mixes sources is not all line-recording.
+	totals.Coverage.LineCapableTokens = totals.LineRate.Tokens + totals.LineRate.UnpricedLineTokens
+	totals.Coverage.LineBlindRows = totals.LineRate.LineBlindRows
 	tw.AppendFooter(effTotalRow(&totals))
 	tw.Render()
 
@@ -49,6 +52,12 @@ func RenderEffectivenessTable(w io.Writer, rows []EffRow, by string) error {
 	}
 	if _, err := fmt.Fprintln(w, effCoverageNote(&totals.Coverage)); err != nil {
 		return err
+	}
+	// With no line-recording row, the coverage note above already withholds the ratio.
+	if note := lineRateNote(&totals.LineRate, "this table"); note != "" && totals.LineRate.LineRows > 0 {
+		if _, err := fmt.Fprintln(w, note); err != nil {
+			return err
+		}
 	}
 	_, err := fmt.Fprintln(w, CostEstimateDisclosure)
 	return err
@@ -64,6 +73,9 @@ type effTotals struct {
 	// call; Coverage carries the same count for the line and edit columns.
 	RefusableRows int
 	Coverage      effCoverage
+	// LineRate is the footer's $/100-lines population: every group's, merged, so the footer
+	// divides the same usage its rows do rather than the COST column's whole total.
+	LineRate LineRateBasis
 }
 
 // add folds one group into the footer, each column under its own capability. One condition for
@@ -72,11 +84,12 @@ type effTotals struct {
 func (t *effTotals) add(r *EffRow, priced float64) {
 	t.Cost += priced
 	t.AnyPriced = t.AnyPriced || r.Cost != nil
+	t.LineRate.Merge(&r.lineRate)
 	if r.LineCapable {
 		t.Coverage.LineCapableRows++
 		t.Lines += r.LinesAdded
-		t.Coverage.LineCapableTokens += r.TokensTotal
 	}
+	t.Coverage.EditBlindRows += r.editBlindRows
 	if r.EditCapable {
 		t.Coverage.EditCapableRows++
 		t.Edits += r.Edits
@@ -100,7 +113,7 @@ func effTotalRow(t *effTotals) prettytable.Row {
 		capableCell(humanize.Int(t.Edits), t.Coverage.EditCapableRows > 0),
 		capableCell(humanize.Int(t.Rejected), t.RefusableRows > 0),
 		capableCell(humanize.USDCell(t.Cost), t.AnyPriced),
-		capableCell(footerRatio(t.Cost, t.Lines), lineCapable && t.AnyPriced),
+		capableCell(ratioCell(&t.LineRate), lineCapable),
 	}
 }
 
@@ -127,18 +140,6 @@ func formatEffCost(r *EffRow) (cell string, priced float64) {
 	return cell, priced
 }
 
-// formatCostPer100 renders r's $/100-lines cell, "—" when the ratio is undefined.
-func formatCostPer100(r *EffRow) string {
-	if r.CostPer100Lines == nil {
-		return "—"
-	}
-	cell := humanize.USDCell(*r.CostPer100Lines)
-	if r.HasUnpriced {
-		cell += "*"
-	}
-	return cell
-}
-
 // effTableRow builds one data row, substituting a placeholder for an empty group label. Each
 // activity cell answers for its own source capability: the three are recorded apart and a
 // group can answer any one of them without the others.
@@ -153,15 +154,20 @@ func effTableRow(r *EffRow, cost string) prettytable.Row {
 		capableCell(humanize.Int(r.Edits), r.EditCapable),
 		capableCell(humanize.Int(r.Rejected), r.Refusable),
 		cost,
-		formatCostPer100(r),
+		ratioCell(&r.lineRate),
 	}
 }
 
-// footerRatio recomputes $/100 lines from column totals rather than averaging each
-// row's ratio, and is "—" when no group in the report has any AI lines.
-func footerRatio(totalCost float64, totalLines int64) string {
-	if totalLines == 0 {
+// ratioCell renders a population's $/100 lines, "—" when it has none, and marks with "†" a
+// ratio that leaves some of its usage out, which the disclosure below the table quantifies.
+func ratioCell(b *LineRateBasis) string {
+	r := b.Per100()
+	if r == nil {
 		return "—"
 	}
-	return humanize.USDCell(totalCost / (float64(totalLines) / 100))
+	cell := humanize.USDCell(*r)
+	if b.Partial() {
+		cell += "†"
+	}
+	return cell
 }

@@ -1,31 +1,71 @@
 package report
 
-import "github.com/assaio/assaio/internal/humanize"
+import (
+	"strings"
+
+	"github.com/assaio/assaio/internal/humanize"
+)
 
 // The sentences a figure travels with. They live apart from the renderers because more than one
-// surface prints the same figure and a disclosure written twice is two answers to one question --
-// the reason `$/100 lines` was disclosed on `effectiveness` and bare on `status`.
+// surface prints the same figure, and a disclosure written twice is two answers to one question.
 
 // statusCaveat states that the dashboard's efficiency signal is directional and scoped to
 // projects, never a per-person performance metric -- the deliberate difference from a named team
 // leaderboard.
 const statusCaveat = "Efficiency is directional and shown per project only -- never a per-person metric."
 
-// LineCoverageDisclosure states how far a line figure reaches on this window, and what that
-// makes of a ratio built on one. `effectiveness` discloses it and the dashboard colophon
-// discloses it; `status` printed the same two figures with neither disclosure.
-func LineCoverageDisclosure(inv *Inventory) string {
+// lineRateNote states what a $/100-lines figure covers, or why there is none, under the "†"
+// ratioCell puts on a ratio that leaves usage out. place names the set its shares are of ("this
+// window", "this table"): a share printed under rows drawn from a narrower set reads as their
+// own. `status` and `effectiveness` both print it, so one ratio never carries two answers.
+func lineRateNote(b *LineRateBasis, place string) string {
+	note := lineRateDisclosure(b, place)
+	if note != "" && b.Partial() {
+		return "† " + note
+	}
+	return note
+}
+
+// lineRateDisclosure keeps "no source records lines" apart from "the line-recording usage has no
+// price" and from "every line came from unpriced usage", and quantifies what a ratio leaves out
+// in tokens -- a line-blind source running an unpriced model has no cost share to state, and a
+// sentence triggered on cost would print nothing over it.
+func lineRateDisclosure(b *LineRateBasis, place string) string {
 	switch {
-	case inv.Days == 0:
-		// An empty window says nothing about what any source records. Two different absences
-		// given one answer is the confusion ADR 0011 exists to separate.
+	case b.LineRows == 0 && b.LineBlindRows == 0:
 		return ""
-	case inv.LineCapableRows == 0:
-		return "No source in this window records changed lines, so the AI-line count and $/100 lines are withheld -- absent, not zero."
-	case inv.LineCapableTokens < inv.TotalTokens:
-		return "AI lines come only from the sources that record them (" +
-			humanize.Percent(float64(inv.LineCapableTokens)/float64(inv.TotalTokens)) +
-			" of this window's tokens), while the cost in $/100 lines is the whole window's."
+	case b.LineRows == 0:
+		return "No source in " + place + " records changed lines, so the AI-line count and $/100 lines are withheld -- absent, not zero."
+	case b.Partial():
+		return lineRateLeftOut(b, place)
+	case b.Per100() != nil:
+		return ""
+	case b.Tokens == 0 && b.UnpricedLineTokens > 0:
+		return "The sources that record changed lines in " + place + " ran only models with no known price, so $/100 lines is withheld rather than priced from other sources' cost."
+	case b.Lines == 0 && b.UnpricedLines > 0:
+		return "Every AI line in " + place + " came from usage with no known price, so $/100 lines is withheld rather than set against the cost of usage that recorded none."
 	}
 	return ""
+}
+
+// lineRateLeftOut quantifies a partial ratio's exclusions: line-blind usage as a token share and,
+// when priced, a cost share; unpriced line-recording usage as a token share and in lines, because
+// the AI-line count printed beside the ratio includes them.
+func lineRateLeftOut(b *LineRateBasis, place string) string {
+	total := float64(b.Tokens + b.LineBlindTokens + b.UnpricedLineTokens)
+	var parts []string
+	if b.LineBlindTokens > 0 {
+		part := humanize.Percent(float64(b.LineBlindTokens)/total) + " from sources that record no lines"
+		if b.LineBlindCost > 0 {
+			part += " (" + humanize.Percent(b.LineBlindCost/(b.Cost+b.LineBlindCost)) + " of the priced cost)"
+		}
+		parts = append(parts, part)
+	}
+	if b.UnpricedLineTokens > 0 {
+		parts = append(parts, humanize.Percent(float64(b.UnpricedLineTokens)/total)+
+			" on line-recording models with no known price ("+humanize.Int(b.UnpricedLines)+" of "+
+			humanize.Int(b.Lines+b.UnpricedLines)+" AI lines)")
+	}
+	return "$/100 lines divides only priced usage from sources that record changed lines. Of the tokens in " +
+		place + ", it leaves out " + strings.Join(parts, " and ") + "."
 }

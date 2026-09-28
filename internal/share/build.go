@@ -11,9 +11,9 @@ import (
 
 // Build shapes one window into the card, the reel and the post beside them. results is
 // the same analyze output the text report and the dashboard render, and every figure here
-// is read from it or from the prepared aggregates those validators read -- nothing is
-// computed for the card alone. basis.Sample marks a run on bundled demo usage, which the first
-// frame then says out loud.
+// is read from it or from the prepared aggregates those validators read. The one exception is
+// per 100 lines, divided over the line-rate basis `status` builds from the same usage rows.
+// basis.Sample marks a run on bundled demo usage, which the first frame then says out loud.
 //
 //nolint:gocritic // Input is the value bundle the validator framework threads everywhere; taking it the same way keeps this one more reader of it.
 func Build(in analyze.Input, results []analyze.Result, window string, basis Basis) Assay {
@@ -116,7 +116,7 @@ func ledgerStats(f *facts) []Stat {
 		out = append(out, Stat{Label: "lines the AI wrote", Value: humanize.Int(f.lines)})
 	}
 	if f.perHundred != "" {
-		out = append(out, Stat{Label: "per 100 lines", Value: f.perHundred, Note: pricedNote(f)})
+		out = append(out, Stat{Label: "per 100 lines", Value: f.perHundred, Note: perHundredNote(f)})
 	}
 	switch {
 	case f.multiple != "" && f.planPaysOff:
@@ -134,21 +134,23 @@ func ledgerStats(f *facts) []Stat {
 	return out
 }
 
-// perHundred is the cost efficiency figure the effectiveness report already publishes per
-// project, recomputed here over the window's own totals -- the one figure a card is
-// incomplete without, because it is the answer to the criticism the whole category attracts.
+// perHundredNote says what the ratio covers. It divides priced usage from the sources that
+// record lines, so it is never a floor the way the cost is; when it leaves usage out, the note
+// says how much.
+func perHundredNote(f *facts) string {
+	const estimate = "an estimate at public API prices, not a bill"
+	b := &f.lineRate
+	if !b.LeavesOut() {
+		return estimate
+	}
+	left := b.LineBlindTokens + b.UnpricedLineTokens
+	return estimate + "; based only on priced usage from sources that record lines; " +
+		humanize.Percent(float64(left)/float64(left+b.Tokens)) + " of tokens left out"
+}
+
 // withTokens drops models that carried none. It exists for "<synthetic>", Claude Code's
 // marker for its own locally-generated turns: it has no tokens by construction, so publishing
 // it spends a palette slot on a labelled 0.0% band and counts a model nobody ran.
-// pricedNote marks a cost figure the price table could not fully cover, the way report marks
-// the same figure with an asterisk. Silence here would publish a floor as a total.
-func pricedNote(f *facts) string {
-	if f.costIsComplete() {
-		return "an estimate at public API prices, not a bill"
-	}
-	return "a floor: only " + f.pricedCoverage + " of this window's usage is priced"
-}
-
 func withTokens(byModel []analyze.ModelStat) []analyze.ModelStat {
 	out := make([]analyze.ModelStat, 0, len(byModel))
 	for i := range byModel {
@@ -159,14 +161,17 @@ func withTokens(byModel []analyze.ModelStat) []analyze.ModelStat {
 	return out
 }
 
+// perHundred is the cost efficiency figure the effectiveness report already publishes per
+// project, over the same line-rate basis `status` divides -- the one figure a card is
+// incomplete without, because it is the answer to the criticism the whole category attracts.
 func perHundred(f *facts) string {
-	if f.cost == nil || !f.linesOK || f.lines <= 0 {
+	r := f.lineRate.Per100()
+	if r == nil || !f.linesOK {
 		return ""
 	}
-	// USDCell keeps the cents this figure lives in, where USDCompact would round $4.19 to "$4";
-	// its sub-cent bound is unreachable here because a window with lines and a cost cannot
-	// divide below it without also being unpriced, which pricedNote states.
-	return "$" + humanize.USDCell(*f.cost/float64(f.lines)*100)
+	// USDCell keeps the cents this figure lives in, where USDCompact would round $4.19 to "$4",
+	// and states a bound below its floor rather than rounding to zero.
+	return "$" + humanize.USDCell(*r)
 }
 
 func modelSlices(byModel []analyze.ModelStat) []Slice {

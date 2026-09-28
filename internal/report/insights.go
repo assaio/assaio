@@ -20,8 +20,12 @@ type GroupStat struct {
 	HasUnpriced bool `json:"has_unpriced"`
 	// LinesAdded is AI-added code lines.
 	LinesAdded int64 `json:"lines_added"`
-	// CostPer100Lines is Cost per 100 AI lines; nil when LinesAdded is zero or Cost is unknown.
+	// CostPer100Lines is the cost of the group's priced line-recording usage per 100 of its AI
+	// lines; nil when that usage has no line or no price.
 	CostPer100Lines *float64 `json:"cost_per_100_lines"`
+	// lineRate is the population CostPer100Lines divides: the group's priced usage from
+	// sources that record changed lines.
+	lineRate LineRateBasis
 	// LastActive is the most recent Day this group had any usage.
 	LastActive string `json:"last_active"`
 }
@@ -47,17 +51,11 @@ type Inventory struct {
 	Unpriced    Unpriced
 	// TotalLinesAdded is AI-added code lines across all queried usage.
 	TotalLinesAdded int64
-	// TotalTokens is every queried row's billable tokens.
-	TotalTokens int64
-	// LineCapableRows is how many queried rows come from a source that records a changed line
-	// at all, and LineCapableTokens their tokens. Zero rows means the window could not answer
-	// the question, which is a different fact from a window in which the AI added nothing
-	// (ADR 0011): Gemini CLI and Cline answer no line signal, so their users read "0 AI lines"
-	// every day forever. The tokens say how far the answer reaches when only some sources
-	// record it -- which is also what makes $/100 lines a ratio between two populations, the
-	// whole window's cost over one subset's lines.
-	LineCapableRows   int
-	LineCapableTokens int64
+	// LineRate is the population $/100 lines divides, and what it leaves out. Its LineRows
+	// being zero means the window could not answer the question, which is a different fact
+	// from a window in which the AI added nothing (ADR 0011): Gemini CLI and Cline answer no
+	// line signal, so their users would read "0 AI lines" every day forever.
+	LineRate LineRateBasis
 }
 
 // Insights is a pure, dependency-free snapshot of usage patterns computed from stored
@@ -148,13 +146,10 @@ func BuildInventory(rows []store.UsageRow, t pricing.Table) Inventory {
 		inv.TotalLinesAdded += r.LinesAdded
 
 		tokens := RowTokens(r)
-		inv.TotalTokens += tokens
 		inv.Unpriced.Total += tokens
-		if parser.HasLineOutput(r.Tool) {
-			inv.LineCapableRows++
-			inv.LineCapableTokens += tokens
-		}
-		if c, ok := t.CostTokens(r.Model, pricing.Tokens{In: r.In, Out: r.Out, CacheWrite: r.CacheWrite, CacheRead: r.CacheRead, CacheWrite1h: r.CacheWrite1h}); ok {
+		c, ok := t.CostTokens(r.Model, pricing.Tokens{In: r.In, Out: r.Out, CacheWrite: r.CacheWrite, CacheRead: r.CacheRead, CacheWrite1h: r.CacheWrite1h})
+		inv.LineRate.Add(r.Tool, r.LinesAdded, tokens, c, ok)
+		if ok {
 			cost += c
 			hasCost = true
 		} else {

@@ -60,9 +60,9 @@ func (pricingCoverage) Propose(e *Evidence) []Record {
 		// the models are unpriced, so their rate is exactly what nobody here knows -- and
 		// quoting the token share as the size of the cost error would be the predicted number
 		// Record.Effect forbids.
-		Effect: "Cost, `$`/100 lines and subscription-fit stop understating. The direction is certain; the size is not, " +
+		Effect: "Cost and subscription-fit stop understating. The direction is certain; the size is not, " +
 			"and cannot be until the prices are in: the share above is a share of tokens, and an unpriced model can bill " +
-			"well above or well below this window's average rate.",
+			"well above or well below this window's average rate." + lineRateEffect(e.Input),
 		Risks: []string{
 			"A wrong price is worse than no price: it turns a disclosed gap into a confident wrong number. Copy the figure, do not estimate it.",
 		},
@@ -81,4 +81,14 @@ func modelLine(all, named []string) string {
 		line += " (and " + strconv.Itoa(len(all)-len(named)) + " more)"
 	}
 	return line
+}
+
+// lineRateEffect is the part of the effect `$`/100 lines has a share in. The ratio leaves unpriced
+// usage out on both sides, so a price moves it only when that usage came from a source that
+// records lines, and then in either direction.
+func lineRateEffect(in *analyze.Input) string {
+	if report.BuildInventory(in.Usage, in.Prices).LineRate.UnpricedLineTokens == 0 {
+		return ""
+	}
+	return " `$`/100 lines leaves unpriced line-recording usage out today. Covering it can move the figure either way."
 }

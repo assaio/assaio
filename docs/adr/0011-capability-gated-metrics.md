@@ -1,7 +1,10 @@
 # 11. A metric reads only the sources that record its field
 
 ## Status
-Accepted (2026-08-05)
+Accepted (2026-08-05). Amended (2026-09-27): a rate built on a line count divides only the
+population that could have produced a line — priced usage, tokens or days from sources that
+record changed lines — and states what it leaves out beside the figure. `$`/100 lines
+answers per line-visible spend, not per dollar.
 
 ## Context
 [ADR 0008](0008-signal-catalog.md) gave every signal a `ZeroMeans` line, because "zero rework"

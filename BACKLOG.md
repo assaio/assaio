@@ -84,7 +84,7 @@ price table nothing watched, which was the largest error left in the `$` figure.
 [CHANGELOG.md](CHANGELOG.md). One item remains and it cannot be closed here at all: `B144` needs
 a redacted real capture, the same contribution `B19`'s column aliases need — which now carries
 its own id (`B192`) and a milestone to arrive through, above. The milestone also depends on
-`B118`, which lives in the code-health pool below because it corrects a shipped mechanism rather
+`B221`, which lives in the code-health pool below because it corrects a shipped mechanism rather
 than calibration work.
 
 - [ ] **B144 · calibrate Gemini CLI and Cline against a real capture** — S · both — both are
@@ -99,7 +99,7 @@ than calibration work.
 Proposed by the 2026-09-26 framework audit. Users can already write exec parsers, metrics and
 rules and script over `report` and `analyze` JSON; what is untested is a fuller analytical
 contract outside programs can rely on. [ROADMAP.md](ROADMAP.md#1a-a-public-analytical-export)
-owns the order: open corrections first (`B118` in the code-health pool), then repository
+owns the order: open corrections first (`B221` in the code-health pool), then repository
 identity and a small export, then typed plugin states and richer parser counters.
 
 - [ ] **B211 · a versioned analytical snapshot** — M · both — a deterministic NDJSON export: a
@@ -937,28 +937,21 @@ they wait behind features but keep the growing metric surface maintainable.
   field landed.) The i18n one is the interesting case rather than the largest: it is a block of
   prose per metric, so splitting it by metric group is a different judgement from splitting
   code, and doing it badly makes the catalog harder to translate (`B08`), not easier.
-- [ ] **B118 · does a cross-source line rate get to keep its denominator?** — M · both — a
-  source recording no changed line contributes a true zero to a line *total*, so `AI lines
-  total` is honest. A **rate** is the open question: `throughput`'s lines/active-day counts
-  days on which only a cost-only source ran, `model-fit`'s lines/1M tok counts its tokens,
-  `concentration` divides by the window's whole `Totals.Lines`, and `$`/100 lines — the
-  `status` headline and all of `effectiveness` — divides a cost from every source by lines
-  from only some. Each denominator is then larger than the population that could have fed the
-  numerator, which understates the rate. **Measured:** zero effect on the audited store, whose
-  two sources both record lines; it bites the moment a Gemini or Cline window exists. This is
-  a decision before it is a patch — gating the denominator makes `$`/100 lines answer "per
-  line-visible spend" rather than "per dollar", which is a different and arguably less useful
-  question — so it wants a paragraph in [ADR 0011](docs/adr/0011-capability-gated-metrics.md)
-  and its own real-data proof, not a quiet change to a figure people quote. The generic
-  invariant test deliberately leaves `LinesAdded` out until this is settled.
-  **Settled, pending the patch:** the denominator is gated by capability, and the share it
-  excludes is quantified beside the figure — the shape `B139` established for unpriced tokens.
-  `$`/100 lines then answers "per line-visible spend" and says so; a window where sources
-  recording no lines carry a material share of the cost states that share rather than letting
-  the rate read as if it covered everything. Leaving the denominator and disclosing an
-  understatement was rejected: it keeps a known-wrong number on screen, and the honest rate is
-  the one a reader can act on. Still needs the ADR 0011 paragraph and its own proof — zero
-  effect on the audited store means the proof will be `constructed`.
+- [ ] **B221 · the rest of B118: model-fit, concentration and the plugin envelope** — M · both —
+  v0.33 gated `$`/100 lines and lines per active day. Still ungated: `model-fit`'s lines per 1M
+  tokens per tier, where a source-level gate is not enough because Copilot CLI credits all its
+  lines to its busiest model; `concentration`'s spend-versus-output gap, which moves only for
+  `plugin:` rows that carry a project; line-capable counterparts of `lines`, `cost` and `tokens`
+  in the metric-plugin envelope, so an out-of-tree metric cannot repeat the bug; and the
+  capability invariant test, which can include `LinesAdded` only once every numerator is gated.
+  The same per-session credit reaches `$`/100 lines: when a Copilot session mixes priced and
+  unpriced models, the row-level price gate pairs the session's lines with only part of its cost,
+  or its cost with none of its lines.
+- [ ] **B222 · the dashboard's cost per active day counts days with no cost** — S · both —
+  `internal/dashboard/costbasis.go` divides the window's cost by every active day, including
+  days on which only Antigravity CLI ran, which carries no token counter and so no cost. The
+  same shape as `B118`: divide by days on which a tokened source ran, and state the days left
+  out.
 - [ ] **B117 · `metrics verify` prints a blank confidence label** — S · both — the verify path
   renders a plugin's `Result` without `analyze.Stamp`, so the label the summary leads with is
   empty (`Confidence:  · 3 usage rows · activity coverage 0%`) while the coverage axes beside

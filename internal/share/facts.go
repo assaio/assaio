@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/assaio/assaio/internal/analyze"
+	"github.com/assaio/assaio/internal/report"
 )
 
 // num is a figure that may not exist in this window. The bool is not a nicety: a missing
@@ -86,7 +87,10 @@ type facts struct {
 	vsAPI       string
 	apiEquiv    string
 	perHundred  string
-	focusedP95  string
+	// lineRate is the population perHundred divides: priced usage from sources that record
+	// changed lines, and what it leaves out -- the same basis `status` and `effectiveness` use.
+	lineRate   report.LineRateBasis
+	focusedP95 string
 }
 
 func gather(in *analyze.Input, v verdicts) facts {
@@ -98,6 +102,7 @@ func gather(in *analyze.Input, v verdicts) facts {
 		models:   countModels(in.ByModel),
 	}
 	f.tools = distinctTools(in.Usage)
+	f.lineRate = report.BuildInventory(in.Usage, in.Prices).LineRate
 	if n, ok := v.count("adoption", "active days"); ok {
 		f.activeDays = n
 	}

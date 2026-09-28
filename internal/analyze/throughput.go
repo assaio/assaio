@@ -1,16 +1,19 @@
 package analyze
 
 import (
+	"strconv"
+
 	"github.com/assaio/assaio/internal/humanize"
 	"github.com/assaio/assaio/internal/layer"
 	"github.com/assaio/assaio/internal/parser"
 	"github.com/assaio/assaio/internal/report"
+	"github.com/assaio/assaio/internal/store"
 )
 
 const (
 	throughputName     = "throughput"
 	throughputTitle    = "Throughput"
-	throughputDescribe = "Total AI-added lines, lines per active day, top projects by lines, and the week-over-week trend."
+	throughputDescribe = "Total AI-added lines, lines per day on which a line-recording source ran, top projects by lines, and the week-over-week trend."
 	// throughputHowToRead is Result.HowToRead for this validator -- see its doc comment.
 	throughputHowToRead = "Lines added is an output-volume signal and nothing more. More lines is not better work and fewer is not worse, so this reports the count and its direction and grades neither -- read it beside rework and model fit before deciding what a change in it means."
 	// throughputTopN caps the top-projects bars shown in the report.
@@ -46,17 +49,18 @@ func (throughputValidator) Analyze(in Input) Result {
 		r.noData("active days", "No source in this window records a changed line, so output cannot be read from it.")
 		return r
 	}
-	// inv is still needed for Days (Totals carries no distinct-day count); TotalLinesAdded
-	// is the same sum as the prepared in.Totals.Lines, so figures read that instead.
-	r.restsOn(activeDays(&in), "active days")
-	inv := report.BuildInventory(in.Usage, in.Prices)
+	// A rate of lines per day divides only the days a line could have been recorded on: a day
+	// on which only a source that records no lines ran would otherwise read as a day of zero
+	// output. The read rests on those same days.
+	lineDays, allDays := lineRecordingDays(in.Usage)
+	r.restsOn(lineDays, "line-recording days")
 	tr := readTrend(&in, linesTrend, linesTrendFloor)
 
 	r.Read = reportedRead
 	r.Purity = neutralPurity
 	r.Figures = []Figure{
 		{Label: "AI lines total", Value: humanize.Int(in.Totals.Lines)},
-		{Label: "lines/active-day", Value: perActiveDay(in.Totals.Lines, int64(inv.Days))},
+		{Label: "lines/active-day", Value: perActiveDay(in.Totals.Lines, int64(lineDays)), Note: excludedDaysNote(lineDays, allDays)},
 		tr.figure(linesTrend),
 	}
 	r.Bars = topProjectBars(in.ByProject, throughputTopN)
@@ -65,6 +69,27 @@ func (throughputValidator) Analyze(in Input) Result {
 	r.Caveats = append(r.Caveats,
 		"No verdict on purpose: a rising line count is an output measure, and promoting one to a claim about value is the most likely way this project starts lying (B180). The direction is here; what it is worth is not something a line count knows.")
 	return r
+}
+
+// lineRecordingDays counts the distinct days on which a source recording added lines ran, and
+// every active day.
+func lineRecordingDays(rows []store.UsageRow) (lineDays, allDays int) {
+	line, all := make(map[string]bool), make(map[string]bool)
+	for i := range rows {
+		all[rows[i].Day] = true
+		if parser.RecordsLines(rows[i].Tool) {
+			line[rows[i].Day] = true
+		}
+	}
+	return len(line), len(all)
+}
+
+// excludedDaysNote names the active days the rate leaves out, or nothing when it leaves none.
+func excludedDaysNote(lineDays, allDays int) string {
+	if lineDays == allDays {
+		return ""
+	}
+	return strconv.Itoa(allDays-lineDays) + " of " + strconv.Itoa(allDays) + " active days had only sources that record no lines"
 }
 
 // throughputTakeaway states the count and its direction without colouring either, and names

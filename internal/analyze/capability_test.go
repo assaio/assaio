@@ -141,9 +141,8 @@ func figureFor(figures []Figure, label string) Figure {
 // landing tomorrow is covered by this without touching it.
 //
 // `LinesAdded` is deliberately left out: a source that records no line contributes a true
-// zero to a line *total*, and whether a per-day or per-token line *rate* may keep its
-// denominator is an open question with its own entry (`B118`), not one this test should
-// freeze either way.
+// zero to a line *total*, and a line *rate* divides only line-recording usage (ADR 0011) in some
+// validators but not yet in every one (`B221`), so the field joins this test once all of them do.
 func TestNoValidatorReadsAFieldItsSourceCannotRecord(t *testing.T) {
 	for _, tool := range []string{sessionTotalTool, costOnlyTool} {
 		quiet, loud := silentAndFilledWindow(tool)

@@ -155,8 +155,8 @@ func TestBuildInsightsHotTieBreaksByName(t *testing.T) {
 
 func groupNames(stats []GroupStat) []string {
 	names := make([]string, len(stats))
-	for i, g := range stats {
-		names[i] = g.Name
+	for i := range stats {
+		names[i] = stats[i].Name
 	}
 	return names
 }

@@ -72,7 +72,8 @@ const explainThroughput = `Throughput
 
 What it measures
   Total AI-added lines, lines per active day, the top projects by lines, and the
-  week-over-week trend.
+  week-over-week trend. Lines per active day counts only days on which a source that
+  records lines ran; its note states how many active days had none.
   'week-over-week AI lines' compares the last two complete UTC weeks. Its note gives
   both date ranges and both sums. It prints '—' with a reason when the window or store
   history cannot support the comparison, or when the busier week has fewer than 20

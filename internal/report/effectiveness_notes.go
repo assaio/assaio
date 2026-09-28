@@ -20,7 +20,10 @@ func effCaveat(by string) string {
 // only source records none.
 type effCoverage struct {
 	Rows, LineCapableRows, EditCapableRows int
-	LineCapableTokens, TotalTokens         int64
+	// LineBlindRows and EditBlindRows count usage rows, not groups, from sources recording no
+	// changed line or no edit: a group mixing sources is capable without every row being so.
+	LineBlindRows, EditBlindRows   int
+	LineCapableTokens, TotalTokens int64
 }
 
 // effCoverageNote discloses which columns this table withholds and how far the AI-line column
@@ -38,10 +41,9 @@ func effCoverageNote(c *effCoverage) string {
 		return ""
 	case c.LineCapableRows == 0 || c.EditCapableRows == 0:
 		return effWithheldNote(c)
-	case c.LineCapableRows == c.Rows && c.EditCapableRows == c.Rows &&
-		(c.TotalTokens == 0 || c.LineCapableTokens == c.TotalTokens):
+	case c.LineBlindRows == 0 && c.EditBlindRows == 0:
 		return "Every source in this table records changed lines and edits."
-	case c.TotalTokens == 0:
+	case c.TotalTokens == 0 || c.LineCapableTokens == c.TotalTokens:
 		return "AI lines and edits come only from the sources that record them; a group showing — in a column contributes nothing to it. Run `assaio-agent signals coverage` for what your own data supports."
 	}
 	return "AI lines come only from the sources that record them (" +

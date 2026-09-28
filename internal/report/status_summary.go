@@ -36,7 +36,7 @@ func RenderStatusSummary(w io.Writer, in *Insights) error {
 			return err
 		}
 	}
-	if note := LineCoverageDisclosure(&in.Inventory); note != "" {
+	if note := lineRateNote(&in.Inventory.LineRate, "this window"); note != "" {
 		if _, err := fmt.Fprintln(w, note); err != nil {
 			return err
 		}
@@ -93,15 +93,25 @@ func writeHeadline(w io.Writer, in *Insights) error {
 // nothing rather than a source that never said (ADR 0011, applied throughout internal/analyze
 // and nowhere here). Gemini CLI and Cline answer no line signal, so their users read it daily.
 func lineFigures(inv *Inventory) (lines, ratio string) {
-	if inv.LineCapableRows == 0 {
+	if inv.LineRate.LineRows == 0 {
 		return "—", "—"
 	}
-	lines = strconv.FormatInt(inv.TotalLinesAdded, 10)
-	ratio = "—"
-	if r := costPer100Lines(inv.TotalCost, inv.TotalLinesAdded); r != nil {
-		ratio = "$" + strconv.FormatFloat(*r, 'f', 4, 64)
+	return strconv.FormatInt(inv.TotalLinesAdded, 10), statusRatio(&inv.LineRate)
+}
+
+// statusRatio renders a basis's $/100 lines to four places, "—" when it has none, and marks
+// with "†" a ratio leaving usage out -- a Hot project's own exclusions included, since the
+// window-level note below quantifies them only in aggregate.
+func statusRatio(b *LineRateBasis) string {
+	r := b.Per100()
+	if r == nil {
+		return "—"
 	}
-	return lines, ratio
+	cell := "$" + strconv.FormatFloat(*r, 'f', 4, 64)
+	if b.Partial() {
+		cell += "†"
+	}
+	return cell
 }
 
 func writeHotSection(w io.Writer, in *Insights) error {
@@ -113,8 +123,8 @@ func writeHotSection(w io.Writer, in *Insights) error {
 	if len(in.Hot) == 0 {
 		return writeLineAndBlank(w, "  No usage in the last 7 days.")
 	}
-	for _, g := range in.Hot {
-		if err := writeGroupCostLine(w, g); err != nil {
+	for i := range in.Hot {
+		if err := writeGroupCostLine(w, &in.Hot[i]); err != nil {
 			return err
 		}
 	}
@@ -123,7 +133,7 @@ func writeHotSection(w io.Writer, in *Insights) error {
 }
 
 // writeGroupCostLine renders one Hot row: name, cost, and cost-per-100-lines.
-func writeGroupCostLine(w io.Writer, g GroupStat) error {
+func writeGroupCostLine(w io.Writer, g *GroupStat) error {
 	cost := "—"
 	if g.Cost != nil {
 		cost = "$" + strconv.FormatFloat(*g.Cost, 'f', 4, 64)
@@ -131,11 +141,7 @@ func writeGroupCostLine(w io.Writer, g GroupStat) error {
 	if g.HasUnpriced {
 		cost += "*"
 	}
-	ratio := "—"
-	if g.CostPer100Lines != nil {
-		ratio = "$" + strconv.FormatFloat(*g.CostPer100Lines, 'f', 4, 64)
-	}
-	_, err := fmt.Fprintf(w, "  %s — %s · %s/100 lines\n", groupLabel(g), cost, ratio)
+	_, err := fmt.Fprintf(w, "  %s — %s · %s/100 lines\n", groupLabel(g), cost, statusRatio(&g.lineRate))
 	return err
 }
 
@@ -146,7 +152,8 @@ func writeGoingStaleSection(w io.Writer, in *Insights) error {
 	if len(in.GoingStale) == 0 {
 		return writeLineAndBlank(w, "  Nothing has gone quiet.")
 	}
-	for _, g := range in.GoingStale {
+	for i := range in.GoingStale {
+		g := &in.GoingStale[i]
 		if _, err := fmt.Fprintf(w, "  %s — last active %s\n", groupLabel(g), g.LastActive); err != nil {
 			return err
 		}
@@ -163,8 +170,8 @@ func writeDormantSection(w io.Writer, in *Insights) error {
 	if _, err := fmt.Fprintln(w, "Dormant tools"); err != nil {
 		return err
 	}
-	for _, g := range in.DormantTools {
-		if _, err := fmt.Fprintf(w, "  %s — set up, no recent activity\n", groupLabel(g)); err != nil {
+	for i := range in.DormantTools {
+		if _, err := fmt.Fprintf(w, "  %s — set up, no recent activity\n", groupLabel(&in.DormantTools[i])); err != nil {
 			return err
 		}
 	}
@@ -173,7 +180,7 @@ func writeDormantSection(w io.Writer, in *Insights) error {
 
 // groupLabel substitutes "(unknown)" for an empty group name, mirroring the
 // effectiveness table's convention for an unset dimension value.
-func groupLabel(g GroupStat) string {
+func groupLabel(g *GroupStat) string {
 	if g.Name == "" {
 		return "(unknown)"
 	}

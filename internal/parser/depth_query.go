@@ -119,6 +119,11 @@ func HasFullActivity(tool string) bool { return answersAll(tool, answers(lineSig
 // question behind "cost only", and it is not the same one as full activity capture.
 func HasLineOutput(tool string) bool { return answersAll(tool, lineSignals) }
 
+// RecordsLines reports whether tool records added lines: the population a rate built on an
+// AI-line count divides (ADR 0011). HasLineOutput asks the wider question of both halves of a
+// change.
+func RecordsLines(tool string) bool { return Answers(tool, SignalLinesAdded) }
+
 func answersAll(tool string, ids []string) bool {
 	for _, id := range ids {
 		if !Answers(tool, id) {

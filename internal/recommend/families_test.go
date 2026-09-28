@@ -37,6 +37,28 @@ func TestPricingEvidenceNeverPredictsACostSize(t *testing.T) {
 	}
 }
 
+// TestPricingNamesTheLineRateOnlyWhenAPriceCanMoveIt: $/100 lines leaves unpriced usage out on
+// both sides, so pricing a source that records no lines leaves the ratio where it is.
+func TestPricingNamesTheLineRateOnlyWhenAPriceCanMoveIt(t *testing.T) {
+	prices := pricing.Table{"priced": {Input: 1e-6, Output: 2e-6}}
+	for _, tt := range []struct {
+		tool string
+		want bool
+	}{{"claude-code", true}, {"gemini-cli", false}} {
+		in := analyze.BuildInput([]store.UsageRow{
+			{Day: "2026-07-01", Tool: tt.tool, Model: "unpriced-local", In: 1_000_000, Out: 1000},
+			{Day: "2026-07-01", Tool: "claude-code", Model: "priced", In: 1000, Out: 100, LinesAdded: 10},
+		}, nil, prices, time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC), 0, analyze.Delegation{})
+		got := (pricingCoverage{}).Propose(&Evidence{Input: &in})
+		if len(got) != 1 {
+			t.Fatalf("%s: proposed %d records, want 1", tt.tool, len(got))
+		}
+		if strings.Contains(got[0].Effect, "100 lines") != tt.want {
+			t.Fatalf("%s unpriced: Effect = %q, want $/100 lines named = %v", tt.tool, got[0].Effect, tt.want)
+		}
+	}
+}
+
 // TestRightSizingNamesTheFlatPlanCase: the verdict it reads from says a subscription user gets
 // speed rather than money, and the record has a field built for exactly that.
 func TestRightSizingNamesTheFlatPlanCase(t *testing.T) {
