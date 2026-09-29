@@ -13,15 +13,16 @@ figure that was supposed to move, moved — and the ones that were not, did not.
 
 ## The rule that comes before everything
 
-**Never write to `~/.local/share/assaio/assaio.db`.** It holds 170 MB, including days the
-sources themselves have already deleted. Every run of yours redirects the store:
+**Never write to `~/.local/share/assaio/assaio.db`.** It holds days the sources themselves
+have already deleted. Every run of yours redirects the store:
 
 ```sh
 export XDG_DATA_HOME=$(mktemp -d)
 ```
 
 `clear`, `backfill`, `sync` and `init` all resolve their path through `paths.DataDir()`, so
-that one export is the whole isolation. A session-level guard denies `clear` without it.
+that one export is the whole isolation. A session-level guard denies a run of `assaio-agent`
+without it in the same command.
 
 ## A/B on the real corpus
 
