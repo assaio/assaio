@@ -257,12 +257,13 @@ Git observations contain only commit hashes, timestamps, parent and line counts,
 and counts across six file categories. The collector briefly reads paths and commit subjects to
 derive categories and revert indications. Prompts, model responses, code, diffs, commit messages,
 and branch names never appear in observations, edges, or output.</p>
-<p>A session is a candidate only when its rows resolved to the repository <code>--repo</code> names
-(<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0019-repository-identity.md">ADR 0019</a>): another checkout with the same name is another
-project, and a session whose repository never resolved — stored before v0.35.0, or read after its
-directory was gone — is counted in <code>identityUnresolvedSessions</code>, never matched. When no stored usage resolved to that repository, the document's <code>project</code> is empty (the text shows <code>—</code>) rather than another repository's name. Commit
-observations lack authors, so identity cannot distinguish overlapping users; the conformance
-corpus requires that case to stay ambiguous. Output
+<p>A session is a candidate only when its rows resolved to the repository <code>--repo</code> names (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0019-repository-identity.md">ADR
+0019</a>): another checkout with the same name is another project, and
+a session whose repository never resolved — stored before assaio recorded repositories, or read
+after its directory was gone — is counted in <code>identityUnresolvedSessions</code>, never matched. When no
+stored usage resolved to that repository, the document's <code>project</code> is empty (the text shows <code>—</code>)
+rather than another repository's name. Commit observations lack authors, so identity cannot
+distinguish overlapping users; the conformance corpus requires that case to stay ambiguous. Output
 has no member, person, score, or rank field and is not intended for performance evaluation.</p>
 <p>A <code>matched</code> label is an attribution observation. It does not prove an AI session caused a commit or
 show AI impact. v0.27 has no PR, review, CI, merge, attributable-survival, or other outcome

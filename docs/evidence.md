@@ -59,12 +59,13 @@ and counts across six file categories. The collector briefly reads paths and com
 derive categories and revert indications. Prompts, model responses, code, diffs, commit messages,
 and branch names never appear in observations, edges, or output.
 
-A session is a candidate only when its rows resolved to the repository `--repo` names
-([ADR 0019](adr/0019-repository-identity.md)): another checkout with the same name is another
-project, and a session whose repository never resolved — stored before v0.35.0, or read after its
-directory was gone — is counted in `identityUnresolvedSessions`, never matched. When no stored usage resolved to that repository, the document's `project` is empty (the text shows `—`) rather than another repository's name. Commit
-observations lack authors, so identity cannot distinguish overlapping users; the conformance
-corpus requires that case to stay ambiguous. Output
+A session is a candidate only when its rows resolved to the repository `--repo` names ([ADR
+0019](adr/0019-repository-identity.md)): another checkout with the same name is another project, and
+a session whose repository never resolved — stored before assaio recorded repositories, or read
+after its directory was gone — is counted in `identityUnresolvedSessions`, never matched. When no
+stored usage resolved to that repository, the document's `project` is empty (the text shows `—`)
+rather than another repository's name. Commit observations lack authors, so identity cannot
+distinguish overlapping users; the conformance corpus requires that case to stay ambiguous. Output
 has no member, person, score, or rank field and is not intended for performance evaluation.
 
 A `matched` label is an attribution observation. It does not prove an AI session caused a commit or
