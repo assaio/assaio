@@ -32,6 +32,7 @@ var shippedMigrations = map[string]string{
 	"0011_digest_snapshot.sql":        "05228f8d1d5c2e9f3de40e4334b800241418fa5050fa185cdd6bf480d7d54775",
 	"0012_session_step.sql":           "6639b5363c24a15f4055507cbac446988d52cae9d564fa39b358ea4857bfb7c7",
 	"0013_project_conflict.sql":       "d40e44cf6d847cff77b4e3016ec86c7f2eaa977382ef9b2dd07214f258c995a5",
+	"0014_repository_identity.sql":    "d2493110363a19df92bacce5856228eea2f2971918399c2038719e5a25dca6e4",
 }
 
 // TestShippedMigrationsAreImmutableInNameAndContent is the guard RELEASING.md's hard rule never

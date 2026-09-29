@@ -75,7 +75,7 @@ func collect(t *testing.T, dir string) []event.Event {
 	if err != nil {
 		t.Fatal(err)
 	}
-	events, skipped, err := Collect(context.Background(), root, allTime, observedAt, "v0.7.0")
+	events, skipped, err := Collect(context.Background(), root, Project(root), allTime, observedAt, "v0.7.0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func TestCollectHonoursTheWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	events, _, err := Collect(context.Background(), root, time.Now().Add(time.Hour), observedAt, "v0.7.0")
+	events, _, err := Collect(context.Background(), root, Project(root), time.Now().Add(time.Hour), observedAt, "v0.7.0")
 	if err != nil {
 		t.Fatal(err)
 	}

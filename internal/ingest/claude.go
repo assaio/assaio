@@ -13,7 +13,7 @@ import (
 // transcript's completed-sub-agent aggregate is only a last-turn summary (and is missing
 // entirely for background/async Tasks), so any parent aggregate whose sub-agent has a file
 // is suppressed to avoid double-counting. cache memoizes project resolution across files.
-func ingestClaude(ctx context.Context, st *store.Store, sk *skipper, mainFiles, subFiles []string, cache projectCache, horizon time.Time) (Result, error) {
+func ingestClaude(ctx context.Context, st *store.Store, sk *skipper, mainFiles, subFiles []string, cache *projectCache, horizon time.Time) (Result, error) {
 	covered := claude.CoveredAgents(subFiles)
 	if err := dropSupersededAggregates(ctx, st, covered); err != nil {
 		return Result{Tool: claudeTool}, err

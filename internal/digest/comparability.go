@@ -34,6 +34,9 @@ func comparabilityCaveats(now, prev *Snapshot) []string {
 	if note := staleBasisCaveat(now, prev); note != "" {
 		out = append(out, note)
 	}
+	if note := splitNamesCaveat(now, prev); note != "" {
+		out = append(out, note)
+	}
 	if now.Window != prev.Window {
 		out = append(out, fmt.Sprintf(
 			"The windows differ (%s → %s), so these totals cover spans of different lengths and "+
@@ -120,4 +123,28 @@ func roundDuration(d time.Duration) string {
 		return fmt.Sprintf("%.0f day(s)", d.Hours()/24)
 	}
 	return fmt.Sprintf("%.0f hour(s)", d.Hours())
+}
+
+// splitNamesCaveat fires when a project name stands for a different set of repositories than
+// it did in the last run -- one split, rejoined, or kept its split while its first repository
+// changed -- because the movement under that name is then partly a renaming. It counts names
+// rather than naming them, because a caveat is not passed through the project pseudonym.
+func splitNamesCaveat(now, prev *Snapshot) string {
+	changed := 0
+	for name, repos := range now.Splits {
+		if prev.Splits[name] != repos {
+			changed++
+		}
+	}
+	for name := range prev.Splits {
+		if _, ok := now.Splits[name]; !ok {
+			changed++
+		}
+	}
+	if changed == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d project name(s) began or stopped being shared by more than one repository between "+
+		"these runs, so some movement below may reflect usage moving between names rather than a change in "+
+		"how the tools were used.", changed)
 }

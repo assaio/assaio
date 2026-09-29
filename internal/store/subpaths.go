@@ -17,14 +17,16 @@ type SubpathRow struct {
 	Sessions int64
 }
 
-// Subpaths returns per-subpath AI-line and session totals for project's usage_record rows with
-// timestamp >= since, ranked by lines descending. Sessions counts distinct session_id values,
-// not rows, so a session touching a subpath across many turns counts once.
+// Subpaths returns per-subpath AI-line and session totals for the usage_record rows shown under
+// project (shownNames) with timestamp >= since, ranked by lines descending. Sessions counts
+// distinct session_id values, not rows, so a session touching a subpath across many turns
+// counts once.
 func (s *Store) Subpaths(ctx context.Context, project string, since time.Time) ([]SubpathRow, error) {
 	rows, err := s.db.QueryContext(ctx, `
+        WITH`+shownNames+`
         SELECT subpath, SUM(lines_added), COUNT(DISTINCT session_id)
-        FROM usage_record
-        WHERE project = ? AND ts >= ?
+        FROM usage_record`+shownNameJoin+`
+        WHERE COALESCE(shown_name.name, project) = ? AND ts >= ?
         GROUP BY subpath
         ORDER BY SUM(lines_added) DESC, subpath`, project, since.UTC().Format(time.RFC3339))
 	if err != nil {

@@ -168,7 +168,7 @@ func TestFailedInputIsNotRecorded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := ingestSource(ctx, st, sk, source{tool: "claude-code", files: []string{path}, parse: recordsOnly(failing)}, make(projectCache), time.Time{})
+	res, err := ingestSource(ctx, st, sk, source{tool: "claude-code", files: []string{path}, parse: recordsOnly(failing)}, newProjectCache(nil), time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}

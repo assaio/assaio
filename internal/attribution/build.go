@@ -43,7 +43,7 @@ func (s *Scenario) Build(dir string) (Fixture, error) {
 	// The collector's window spans the whole fixture: a scenario may commit before its
 	// sessions start, and history a scenario built but the corpus cannot see is a fixture
 	// that silently tests something narrower than it says.
-	commits, skipped, err := vcs.Collect(ctx, dir, epoch.Add(-7*24*time.Hour), epoch, "corpus")
+	commits, skipped, err := vcs.Collect(ctx, dir, vcs.Project(dir), epoch.Add(-7*24*time.Hour), epoch, "corpus")
 	if err != nil {
 		return Fixture{}, err
 	}

@@ -65,7 +65,7 @@ func analyzed(t *testing.T, dir string, aiLines int64) Result {
 		t.Fatal(err)
 	}
 	since := time.Now().Add(-time.Hour)
-	commits, skipped, err := vcs.Collect(ctx, root, since, time.Now(), "test")
+	commits, skipped, err := vcs.Collect(ctx, root, vcs.Project(root), since, time.Now(), "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func analyzed(t *testing.T, dir string, aiLines int64) Result {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := Analyze(ctx, root, commits, files, aiLines)
+	res, err := Analyze(ctx, root, vcs.Project(root), commits, files, aiLines)
 	if err != nil {
 		t.Fatal(err)
 	}

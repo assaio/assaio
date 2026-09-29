@@ -48,11 +48,11 @@ func runSurvival(cmd *cobra.Command, since, repo string) error {
 	if err != nil {
 		return err
 	}
-	aiLines, err := projectAILines(cmd, vcs.Project(root), start)
+	ai, err := repositoryAILines(cmd, root, start)
 	if err != nil {
 		return err
 	}
-	commits, skipped, err := vcs.Collect(cmd.Context(), root, start, time.Now(), version.Version)
+	commits, skipped, err := vcs.Collect(cmd.Context(), root, ai.project, start, time.Now(), version.Version)
 	if err != nil {
 		return err
 	}
@@ -60,34 +60,46 @@ func runSurvival(cmd *cobra.Command, since, repo string) error {
 	if err != nil {
 		return err
 	}
-	res, err := survival.Analyze(cmd.Context(), root, commits, files, aiLines)
+	res, err := survival.Analyze(cmd.Context(), root, ai.project, commits, files, ai.lines)
 	if err != nil {
 		return err
 	}
-	return renderSurvival(cmd, &res, since, skipped)
+	return renderSurvival(cmd, &res, &ai, since, skipped)
 }
 
-// projectAILines sums the AI lines the store recorded for project since start.
-func projectAILines(cmd *cobra.Command, project string, start time.Time) (int64, error) {
+// repositoryAI is what the store holds for survival's AI-lines figure: the lines resolved to
+// root's repository, whether any were, and the lines under its name whose repository is not
+// recorded -- this one's or another's, so they are stated beside the figure, never inside it.
+type repositoryAI struct {
+	project       string
+	lines         int64
+	known         bool
+	unplaced      int64
+	label, reason string
+}
+
+func repositoryAILines(cmd *cobra.Command, root string, start time.Time) (repositoryAI, error) {
 	st, err := openReportStore(cmd)
 	if err != nil {
-		return 0, err
+		return repositoryAI{}, err
 	}
 	defer func() { _ = st.Close() }()
-	rows, err := st.Usage(cmd.Context(), start)
+	here, err := repositoryAt(cmd.Context(), st, root)
 	if err != nil {
-		return 0, err
+		return repositoryAI{}, err
 	}
-	var lines int64
-	for i := range rows {
-		if rows[i].Project == project {
-			lines += rows[i].LinesAdded
-		}
+	lines, unplaced, err := st.RepositoryLines(cmd.Context(), here.Repository, start)
+	if err != nil {
+		return repositoryAI{}, err
 	}
-	return lines, nil
+	ai := repositoryAI{project: here.Name, lines: lines, known: here.ID > 0, unplaced: unplaced, label: here.Label}
+	if !ai.known {
+		ai.project, ai.reason = here.Label, unresolvedNote(&here)
+	}
+	return ai, nil
 }
 
-func renderSurvival(cmd *cobra.Command, res *survival.Result, since string, skipped int) error {
+func renderSurvival(cmd *cobra.Command, res *survival.Result, ai *repositoryAI, since string, skipped int) error {
 	rate := "—"
 	if res.SurvivalRate >= 0 {
 		rate = fmt.Sprintf("%.0f%%", res.SurvivalRate*100)
@@ -104,7 +116,14 @@ func renderSurvival(cmd *cobra.Command, res *survival.Result, since string, skip
 			res.Merges, res.MergeLines)
 	}
 	cmd.Println()
-	cmd.Printf("  AI lines (assaio):   %d\n", res.AILines)
+	if ai.known {
+		cmd.Printf("  AI lines (assaio):   %d\n", res.AILines)
+	} else {
+		cmd.Printf("  AI lines (assaio):   —  (%s)\n", ai.reason)
+	}
+	if ai.unplaced > 0 {
+		cmd.Printf("  not counted:         %d AI line(s) under %q whose repository is not recorded\n", ai.unplaced, ai.label)
+	}
 	cmd.Printf("  Lines added (git):   %d\n", res.GitAdded)
 	cmd.Printf("  Surviving in HEAD:   %d  (%s)\n", res.Surviving, rate)
 	cmd.Printf("%s\n\n", survivalAgeLine(res, time.Now()))

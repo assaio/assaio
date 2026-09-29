@@ -47,6 +47,10 @@ type SessionRow struct {
 	// absent from the metric-plugin wire (internal/plugin.sessionWire): annotations are
 	// local, and widening what leaves this machine is a decision, not a side effect.
 	Task, Outcome, Difficulty string
+	// RepoID is the one repository the session's rows resolved to (store.RepositoryAt), 0 when
+	// none or more than one did. A local row id, meaningless outside this store; Project is the
+	// name a reader sees for it.
+	RepoID int64
 }
 
 // activeGapCeilingMinutes bounds an inter-turn gap counted as focused work: a longer gap
@@ -58,8 +62,9 @@ const activeGapCeilingMinutes = 30
 // pair rather than session_id alone matters only for a central store: it keeps two
 // different members' usage_record rows apart even in the never-expected case that their
 // locally generated session_ids collide, instead of silently blending their activity into
-// one row under whichever member sorts last. Project/Tool/Model use MAX to keep the query
-// strict-SQL and portable; Project and Tool are genuinely constant within a (session_id,
+// one row under whichever member sorts last. Project is the session's shown name
+// (sessionLabelExpr, shownNames): empty when its rows name two projects. Tool/Model use MAX to
+// keep the query strict-SQL and portable; Tool is genuinely constant within a (session_id,
 // member) group, but Model is not, since a Task sub-agent record shares its parent
 // session_id under a different model -- see SessionRow.Model. ActiveMinutes sums, via a
 // window function over each group's ordered turns, only the inter-turn gaps <=
@@ -100,28 +105,35 @@ const (
             FROM gaps
             WHERE gap_min IS NOT NULL AND gap_min <= ?
             GROUP BY session_id, member
-        )
-        SELECT r.session_id,
-               CASE WHEN MAX(r.project_conflict) = 1
-                          OR COUNT(DISTINCT NULLIF(r.project, '')) > 1
-                    THEN '' ELSE MAX(r.project) END,
-               MAX(r.tool), MAX(r.model), r.member,
-               MIN(r.ts), MAX(r.ts),
-               SUM(CASE WHEN r.granularity = 'turn' THEN 1 ELSE 0 END),
-               SUM(r.output_tokens),
-               COALESCE(MAX(CASE WHEN r.granularity = 'turn'
-                                 THEN r.cache_read_tokens + r.input_tokens END), 0),
-               SUM(r.edits), SUM(r.compactions),
-               COALESCE(MAX(a.active_min), 0.0),
-               COALESCE(MAX(sl.task), ''), COALESCE(MAX(sl.outcome), ''), COALESCE(MAX(sl.difficulty), '')
-        FROM usage_record r
-        LEFT JOIN active a ON a.session_id = r.session_id AND a.member = r.member
-        LEFT JOIN session_label sl ON sl.session_id = r.session_id AND sl.member = r.member
-        WHERE r.ts >= ?`
+        ),` + shownNames + `,
+        grouped AS (
+            SELECT r.session_id, r.member,
+                   ` + sessionLabelExpr + ` AS label,
+                   ` + sessionRepoExpr + ` AS repo_id,
+                   MAX(r.tool) AS tool, MAX(r.model) AS model,
+                   MIN(r.ts) AS first_ts, MAX(r.ts) AS last_ts,
+                   SUM(CASE WHEN r.granularity = 'turn' THEN 1 ELSE 0 END) AS turns,
+                   SUM(r.output_tokens) AS output_tokens,
+                   COALESCE(MAX(CASE WHEN r.granularity = 'turn'
+                                     THEN r.cache_read_tokens + r.input_tokens END), 0) AS peak,
+                   SUM(r.edits) AS edits, SUM(r.compactions) AS compactions,
+                   COALESCE(MAX(a.active_min), 0.0) AS active_min,
+                   COALESCE(MAX(sl.task), '') AS task, COALESCE(MAX(sl.outcome), '') AS outcome,
+                   COALESCE(MAX(sl.difficulty), '') AS difficulty
+            FROM usage_record r
+            LEFT JOIN active a ON a.session_id = r.session_id AND a.member = r.member
+            LEFT JOIN session_label sl ON sl.session_id = r.session_id AND sl.member = r.member
+            WHERE r.ts >= ?`
 
 	sessionsGroup = `
-        GROUP BY r.session_id, r.member
-        ORDER BY r.session_id, r.member`
+            GROUP BY r.session_id, r.member
+        )
+        SELECT g.session_id, COALESCE(shown_name.name, g.label), g.tool, g.model, g.member,
+               g.first_ts, g.last_ts, g.turns, g.output_tokens, g.peak, g.edits, g.compactions,
+               g.active_min, g.task, g.outcome, g.difficulty, g.repo_id
+        FROM grouped g
+        LEFT JOIN shown_name ON shown_name.label = g.label AND shown_name.repo_id = g.repo_id
+        ORDER BY g.session_id, g.member`
 
 	sessionsQuery = sessionsSelect + sessionsGroup
 
@@ -160,7 +172,7 @@ func scanSessionRow(rows *sql.Rows) (SessionRow, error) {
 	if err := rows.Scan(&r.SessionID, &r.Project, &r.Tool, &r.Model, &r.Member,
 		&firstTs, &lastTs, &r.Turns, &r.OutputTokens, &r.PeakContextTokens,
 		&r.Edits, &r.Compactions, &r.ActiveMinutes,
-		&r.Task, &r.Outcome, &r.Difficulty); err != nil {
+		&r.Task, &r.Outcome, &r.Difficulty, &r.RepoID); err != nil {
 		return SessionRow{}, err
 	}
 	first, err := time.Parse(time.RFC3339, firstTs)

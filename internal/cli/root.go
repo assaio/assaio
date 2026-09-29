@@ -38,7 +38,7 @@ content is never extracted. The optional team server (serve/sync) is self-hosted
 		newConfigCmd(), newPluginsCmd(), newMetricsCmd(), newServeCmd(), newSyncCmd(), newSurvivalCmd(),
 		newStatuslineCmd(), newExplainCmd(), newMarkCmd(), newSignalsCmd(), newReconcileCmd(),
 		newDigestCmd(), newDocsCmd(), newShareCmd(), newRecommendCmd(), newRepriceCmd(),
-		newEvidenceCmd())
+		newEvidenceCmd(), newReposCmd())
 	return root
 }
 

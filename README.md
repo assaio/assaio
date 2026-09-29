@@ -133,10 +133,10 @@ $ assaio-agent signals coverage
 to see what your data supports. [FEATURES.md](FEATURES.md) lists shipped features;
 [docs/corrections.md](docs/corrections.md) records published figures later found to be wrong.
 
-`evidence` observes attribution; it is not an outcome metric. It uses a stored project basename and
-bounded time proximity, labels results `matched`, `ambiguous` or `unmatched`, and shows competing
-commits. A match does not show that the session caused the commit. See [how to read the
-result](docs/evidence.md).
+`evidence` observes attribution; it is not an outcome metric. It joins a repository's commits
+only with sessions whose rows resolved to that repository, uses bounded time proximity, labels
+results `matched`, `ambiguous` or `unmatched`, and shows competing commits. A match does not
+show that the session caused the commit. See [how to read the result](docs/evidence.md).
 
 ## Supported AI coding tools
 

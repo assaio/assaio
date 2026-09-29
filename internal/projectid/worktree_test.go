@@ -17,7 +17,7 @@ func TestRelativeGitdirPointerRollsUp(t *testing.T) {
 	mustMkdirAll(t, wt)
 	mustWriteFile(t, filepath.Join(wt, ".git"), "gitdir: ../.git/worktrees/wt\n")
 
-	gotRoot, gotSubpath := Resolve(wt)
+	gotRoot, gotSubpath, _ := Resolve(wt)
 	if gotRoot != root {
 		t.Errorf("root = %q, want %q", gotRoot, root)
 	}
@@ -39,7 +39,7 @@ func TestWorktreeOutsideItsRepoHasNoSubpath(t *testing.T) {
 	mustWriteFile(t, filepath.Join(wt, ".git"),
 		"gitdir: "+filepath.Join(root, ".git", "worktrees", "feature")+"\n")
 
-	gotRoot, gotSubpath := Resolve(wt)
+	gotRoot, gotSubpath, _ := Resolve(wt)
 	if gotRoot != root {
 		t.Errorf("root = %q, want %q", gotRoot, root)
 	}

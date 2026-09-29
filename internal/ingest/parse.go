@@ -16,7 +16,7 @@ import (
 // fatal condition partway through (e.g. a scanner error on a corrupt trailing line)
 // still returns every record it recovered before that point, and skip-and-count means
 // good data is inserted, not thrown away because the rest of the file was not (AGENTS.md).
-func ingestParsed(ctx context.Context, st *store.Store, cache projectCache, res *Result, recs []usage.Record, skipped int, parseErr error) error {
+func ingestParsed(ctx context.Context, st *store.Store, cache *projectCache, res *Result, recs []usage.Record, skipped int, parseErr error) error {
 	if parseErr != nil {
 		res.Failed++
 	}

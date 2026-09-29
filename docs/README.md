@@ -129,3 +129,7 @@ all in the shipping PR.
 - [ADR 0018](adr/0018-local-session-commit-evidence.md) — local **session→commit evidence** is
   recomputed from content-free observations, preserves ambiguity and abstention, and stores no
   edge; the connector-backed graph remains future scope.
+- [ADR 0019](adr/0019-repository-identity.md) — a **repository's identity** is a local key beside
+  its name: rows name their repository without holding its path, a name two repositories share is
+  split, joins from a directory never go through an unresolved identity, and nothing new leaves
+  the machine.

@@ -106,10 +106,10 @@ first-run path is tested on a clean machine.
 
 Build the differentiating outcome path before expanding the UI or connector count.
 
-- Separate repository identity from the display name (B218): `project` is a repository
-  basename today, so two unrelated repositories named `api` merge. Resolve the repository
-  behind a session, or mark it ambiguous, before joining across repositories; temporal
-  proximity does not resolve it.
+- Repository identity is separate from the display name (v0.35.0, ADR 0019): a session's
+  repository is resolved, or recorded as unresolved or ambiguous, before any join across
+  repositories. An explicit team mapping of local repositories to shared names (B226) waits for
+  the team server's re-push and retention rules.
 - Add content-free commit, pull-request, review and check-run observations, with GitHub as
   the first end-to-end connector and an importable contract for other forges.
 - Extend the shipped local session→commit slice — already graded by the attribution corpus and
@@ -151,8 +151,8 @@ rely on. Test it small before building a framework around it.
   every cache tier, price and parser provenance, correction state, excluded and unpriced
   shares, and repository-identity status (B211); publish its schema and accept/refuse
   vectors (B06, B99).
-- Carry repository identity as milestone 2 resolves it (B218): the snapshot may report it
-  as unresolved; cross-repository totals and graph edges may not.
+- Carry repository identity (ADR 0019): the snapshot may report it as unresolved or ambiguous;
+  cross-repository totals and graph edges may not join through it.
 - Give plugins typed `denied`, `unavailable` and `failed` states with freshness (B213), then
   optional parser counters beyond tokens, designed against real producers (B212).
 - Prove it with worked examples in Python and DuckDB that use only public contracts (B217).

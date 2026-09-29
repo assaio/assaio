@@ -177,7 +177,7 @@ func TestIngestSourceInsertsRecordsRecoveredBeforeAParseError(t *testing.T) {
 	write(t, path, "irrelevant: parsing is stubbed for this test\n")
 
 	s := source{tool: "claude-code", files: []string{path}, parse: recordsOnly(partial)}
-	res, err := ingestSource(context.Background(), st, &skipper{full: true}, s, make(projectCache), time.Time{})
+	res, err := ingestSource(context.Background(), st, &skipper{full: true}, s, newProjectCache(nil), time.Time{})
 	if err != nil {
 		t.Fatalf("ingestSource() err = %v, want nil (a per-file parse error must not abort the run)", err)
 	}

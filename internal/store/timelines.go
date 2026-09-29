@@ -66,10 +66,18 @@ const (
 	// above: joining the aggregate onto every step row cost 1.05s against 0.31s for the plain
 	// scan on a 340,000-step store, to attach two values that repeat for a whole sequence.
 	sessionScopeQuery = `
-        SELECT session_id, member, MAX(entrypoint), MAX(project)
-        FROM usage_record
-        WHERE ts >= ?
-        GROUP BY session_id, member`
+        WITH` + shownNames + `,
+        scope AS (
+            SELECT session_id, member, MAX(entrypoint) AS entrypoint,
+                   ` + sessionLabelExpr + ` AS label,
+                   ` + sessionRepoExpr + ` AS repo_id
+            FROM usage_record
+            WHERE ts >= ?
+            GROUP BY session_id, member
+        )
+        SELECT scope.session_id, scope.member, scope.entrypoint, COALESCE(shown_name.name, scope.label)
+        FROM scope
+        LEFT JOIN shown_name ON shown_name.label = scope.label AND shown_name.repo_id = scope.repo_id`
 )
 
 // sessionScope is the per-session facts a step row does not carry, keyed the way every read

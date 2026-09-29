@@ -96,15 +96,17 @@ categories, and a revert indication. Git paths are held only while assigning a c
 commit subject only while checking git's generated revert prefix. No path, branch, subject,
 diff or file body enters `event.Event`. Invalid headers and events are skipped and counted.
 
-**What `evidence` adds:** the default local store's session id, tool, project basename and
-first/last timestamps. The command has no `--db`, rejects any member-bearing row, writes no
-observation or edge and exposes no person or ranking field. A repository can control commit
+**What `evidence` adds:** the default local store's session id, tool, project name, the
+repository its rows resolved to, and first/last timestamps. The command has no `--db`, rejects
+any member-bearing row, writes no observation or edge and exposes no person or ranking field. A repository can control commit
 hashes, timestamps and change counts and therefore distort its own candidate results; every
 answer is labelled as bounded proximity with confidence or abstention, never as causation.
 
-**Residual:** project identity is a basename. Two same-named repositories cannot be separated,
-and commit observations carry no author, so overlapping users cannot be separated. Both limits
-are reported instead of repaired by inspecting content or identity.
+**Residual:** a repository is known only by its root's path on this machine, so two clones,
+or one checkout before and after a move, are two repositories, and history stored before
+v0.35.0 whose transcript is gone has no repository at all. Commit observations carry no
+author, so overlapping users cannot be separated. These limits are reported instead of
+repaired by inspecting content or identity.
 
 ### The team server — network
 

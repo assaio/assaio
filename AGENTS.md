@@ -122,7 +122,7 @@ internal/plugin/         runs out-of-tree exec plugins (parser, metric, rule pro
                          validating everything at the boundary
 internal/pricing/        loads the vendored LiteLLM price table, prices usage records
 internal/pseudonym/      the stable label every export boundary renders a chosen name through
-internal/projectid/      resolves a session's cwd to its git repository root + subpath
+internal/projectid/      resolves a session's cwd to its git repository root, subpath and local key
 internal/recommend/      typed experiment records: evidence, rollback, follow-up (ADR 0015)
 internal/reconcile/      compares a vendor's own export against the local estimate
 internal/report/         aggregates stored usage into priced rows; renders table/JSON/CSV

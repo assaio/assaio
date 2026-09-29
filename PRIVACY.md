@@ -82,6 +82,17 @@ From each session log, the parsers extract only usage accounting fields:
   The full working-directory path is read only transiently to do that walk — it is
   never written to the store. If two transcripts assign the same completed sub-agent
   aggregate to different projects, neither name is retained for that record.
+- repository — which repository root the record came from, as an opaque local key: an
+  HMAC of the root's path, keyed by a random salt kept in the same database. It is stored
+  once per repository in a `repository` table, and records point at it by number. It is set
+  only when the working directory still existed and a `.git` was found; a worktree shares
+  its main checkout's key. It exists so two repositories with one name are never counted as
+  one project. It is never exported, synced, shared, sent to a plugin or printed —
+  `assaio-agent repos` tells you which name a directory's usage is stored under when you
+  name the directory. Unlike the step `target` below, it has to be a hash, because the same
+  repository must be recognised in every later session; and because the salt sits in the
+  same file, anyone holding the database can test whether a guessed path was one of your
+  repositories. That is the exposure `ingest_file` (below) already has.
 - subpath — the working directory's path **relative to the project's repository root**
   (e.g. `apps/mobile`), or empty when the session ran at the root. Always relative:
   never an absolute path, never the home directory.
@@ -266,6 +277,13 @@ Unlike the three above it is **not** a cache: nothing can rebuild it, so it is t
 `clear` never removes without being asked. Its size is bounded by how many sessions you
 marked by hand (~80 bytes each), not by how much you have ingested.
 
+Two more tables hold repository identity: `repository`, one row per repository root seen —
+its name, its key and the number it is shown with when the name is shared — and
+`repository_salt`, the 32 random bytes the keys are derived with. Neither leaves this
+machine. `clear --older-than` and `clear --tool` keep both, so a repository keeps its number;
+`clear --all` empties `repository` and replaces the salt, so no repository name or keyed hash
+of a path remains.
+
 ## How to delete it
 
 ```sh
@@ -275,8 +293,9 @@ assaio-agent compact          # actually return the freed space to the filesyste
 
 `clear` refuses to run without an explicit scope (`--all`, `--older-than`, `--tool`, or
 `--labels`) and the `--yes` confirmation flag. The first three delete usage records and keep
-your session labels, reporting how many they kept; `--labels` is the deliberate way to
-delete those too, and deleting the database file removes everything at once. Note that deleting rows frees pages *inside* the
+your session labels, reporting how many they kept; `--labels` is the deliberate way to delete
+those too. `--all` also deletes the repository names and keys described above, and deleting the
+database file removes everything at once. Note that deleting rows frees pages *inside* the
 database file without shrinking it — `compact` is what returns that space to your
 filesystem. You can also simply delete the database file. Because all data is local and
 self-contained, this makes `assaio` straightforward to operate under GDPR-style deletion
@@ -355,7 +374,9 @@ believing the name in its body.
 Each synced member is **pseudonymized by default** (a stable `member-xxxx` label); team
 views are aggregated by default. A per-member, real-name view is never silent — it is a
 deliberate, governed opt-in an admin enables, not what the default configuration produces,
-and never a performance-evaluation leaderboard.
+and never a performance-evaluation leaderboard. `sync` sends a project's name, never the key
+or number that identifies its repository on your machine. When two of your repositories share
+a name, `sync` says so before pushing, because the server counts them as one project.
 
 The pseudonym holds on the way **out** as well as on the way in. Reading a central store with
 `report` labels members in every format — table, JSON and CSV alike — and a metric plugin, which

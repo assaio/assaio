@@ -33,6 +33,50 @@ Discussion.
 
 ## [Unreleased]
 
+### Breaking
+
+- **A project name that two local repositories share is now split, and joins from a directory
+  use only that repository** (`B218`). Each usage row records which repository it came from, by
+  a local key that never leaves the store. When two repositories share a name, the first keeps it,
+  the others are numbered (`api (2)`), and rows that cannot be placed under either are shown as
+  `api (?)` ([correction](docs/corrections.md#two-repositories-with-one-name-shared-every-figure)).
+  Where a name is shared, the `project` value moves in `report` and `effectiveness` JSON and CSV,
+  `analyze --format json`, `evidence --format json`, the metric-plugin envelope and `digest`
+  snapshots. `report` totals for a name only one repository holds still include rows whose
+  repository is not recorded, as before. `evidence`, `survival` and `mark` use only sessions and
+  rows resolved to the repository they run in, whether or not a name is shared: after upgrading,
+  a session whose transcript is already gone (Claude Code keeps about 30 days by default) is
+  counted in `identityUnresolvedSessions` or listed as not counted, never joined. A checkout that
+  moved, or a store restored where repositories live at other paths, gets new keys, so its name
+  splits; `repos` shows which directory is which. Run `assaio-agent backfill` once after
+  upgrading: rows whose transcript is still on disk gain their repository.
+
+### Added
+
+- `assaio-agent repos` lists the project names local sessions are stored under and, given
+  directories, prints the name each one's usage is stored under
+  ([ADR 0019](docs/adr/0019-repository-identity.md)). The store holds no path, so this is how you
+  tell `api` from `api (2)`. It prints no key and sends nothing.
+- `evidence --format json` adds `identityUnresolvedSessions`: sessions under this repository's name
+  whose repository never resolved. They are counted, never matched.
+- `sync` warns when more than one local repository has a name it is about to send. The team server
+  still pools usage by name and receives no new field.
+- `digest` records which names are split and adds a caveat when that changes between runs.
+
+### Changed
+
+- Store migration 0014 adds `usage_record.repo_id`, a `repository` table and a per-store random salt,
+  and makes the next `backfill` re-read Claude Code, Codex CLI and Copilot CLI transcripts. It costs
+  about 13 bytes per usage row whose repository resolved: 2.9 MB on a 221,168-row store, 2.3 MB of
+  it an index. `clear --all` also empties the repository table and draws a new salt.
+
+### Fixed
+
+- `survival`, `evidence` and `mark` no longer read another repository with the same name. `evidence`
+  run in a worktree now finds its repository's sessions, and names no project when no stored usage
+  resolved to the repository instead of borrowing another repository's name
+  ([correction](docs/corrections.md#two-repositories-with-one-name-shared-every-figure)).
+
 ## [0.34.0] - 2026-09-29
 
 ### Breaking

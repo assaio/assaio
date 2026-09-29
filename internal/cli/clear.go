@@ -28,7 +28,11 @@ it accompanies -- and only ever takes the label of a session the clear removes e
 
 A clear that is not time-scoped also forgets it ever read the inputs, so the next backfill
 rebuilds what it deleted. --older-than keeps that memory on purpose: pruning history is a
-request to forget records, not to re-import them.`,
+request to forget records, not to re-import them.
+
+--all also forgets every repository the store has seen and draws a new salt for their keys, so
+no repository name or keyed hash of a directory path remains. --older-than and --tool keep them,
+so each repository keeps the number it is shown with.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runClear(cmd, clearRequest{all: all, yes: yes, labels: labels, olderThan: olderThan, tool: tool})

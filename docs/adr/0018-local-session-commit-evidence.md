@@ -1,7 +1,9 @@
 # 18. Local session-to-commit evidence is recomputed, content-free and allowed to abstain
 
 ## Status
-Accepted (2026-09-15)
+Accepted (2026-09-15). Amended (2026-09-29) by [ADR 0019](0019-repository-identity.md): a session
+is a candidate only when its rows resolved to the repository the command stands in, not when it
+merely shares the basename; same-named sessions with no resolved repository are counted apart.
 
 ## Context
 The git collector already emits content-free commit observations (ADR 0009), and the

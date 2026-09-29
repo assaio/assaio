@@ -21,7 +21,7 @@ func TestUnreadableFilesAreCountedNotSilentlyDropped(t *testing.T) {
 	runGit(t, dir, "commit", "-m", "one")
 
 	since := time.Now().Add(-time.Hour)
-	commits, _, err := vcs.Collect(ctx, dir, since, time.Now(), "test")
+	commits, _, err := vcs.Collect(ctx, dir, vcs.Project(dir), since, time.Now(), "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestUnreadableFilesAreCountedNotSilentlyDropped(t *testing.T) {
 	// looks like from here, and exactly what a mis-decoded path looks like too.
 	files = append(files, "gone-from-head.go")
 
-	res, err := Analyze(ctx, dir, commits, files, 0)
+	res, err := Analyze(ctx, dir, vcs.Project(dir), commits, files, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

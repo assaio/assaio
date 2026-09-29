@@ -24,8 +24,9 @@ Each project-scoped session has exactly one outcome:
 
 The summary uses the same project-session population for both fractions: candidate coverage is
 `(matched + ambiguous) / population`, and resolved coverage is `matched / population`. It reports
-sessions from other stored projects and sessions with unavailable projects separately, excluding
-both from that denominator.
+sessions from other stored projects, sessions with unavailable projects, and sessions under this
+repository's name whose repository never resolved (`identityUnresolvedSessions`) separately,
+excluding all three from that denominator.
 
 The document identifies algorithm `session-commit/v1`. Each result includes method, confidence,
 provenance, ambiguity, reason, candidates, and alternatives. Each candidate includes its commit hash
@@ -40,7 +41,7 @@ The engine uses only evidence in the current contracts:
 | Method | Result | Confidence | Rule |
 |---|---|---|---|
 | `manual-confirmation` | matched | high | A confirmed commit wins; other plausible candidates remain alternatives. The public command has no correction UI or ledger yet. |
-| `project-time-overlap` | matched | medium | Every commit in the same stored project whose time falls inside the session remains linked. Several commits are a valid many-to-many answer, not ambiguity by count alone. |
+| `project-time-overlap` | matched | medium | Every commit in the same repository whose time falls inside the session remains linked. Several commits are a valid many-to-many answer, not ambiguity by count alone. |
 | `project-time-following` | matched | low | When no commit overlaps the session, exactly one same-project commit occurs after it and no later than 48 hours after it. |
 | `project-time-following` | ambiguous | insufficient | When no commit overlaps the session, several following commits fit the same bound; no available signal separates them. |
 | `none` | unmatched | insufficient | No candidate or no usable evidence. The reason says which. |
@@ -51,15 +52,19 @@ commits are sorted by stable identifiers and times before matching.
 
 ## Privacy and limits
 
-The command reads each stored session's id, tool, project basename, and first and last timestamps.
+The command reads each stored session's id, tool, project name, the repository its rows resolved
+to, and first and last timestamps.
 Git observations contain only commit hashes, timestamps, parent and line counts, revert indication,
 and counts across six file categories. The collector briefly reads paths and commit subjects to
 derive categories and revert indications. Prompts, model responses, code, diffs, commit messages,
 and branch names never appear in observations, edges, or output.
 
-Project identity uses only the basename assaio stores, so this method cannot distinguish
-repositories with the same basename. Commit observations lack authors, so identity cannot
-distinguish overlapping users; the conformance corpus requires that case to stay ambiguous. Output
+A session is a candidate only when its rows resolved to the repository `--repo` names
+([ADR 0019](adr/0019-repository-identity.md)): another checkout with the same name is another
+project, and a session whose repository never resolved — stored before v0.35.0, or read after its
+directory was gone — is counted in `identityUnresolvedSessions`, never matched. When no stored usage resolved to that repository, the document's `project` is empty (the text shows `—`) rather than another repository's name. Commit
+observations lack authors, so identity cannot distinguish overlapping users; the conformance
+corpus requires that case to stay ambiguous. Output
 has no member, person, score, or rank field and is not intended for performance evaluation.
 
 A `matched` label is an attribution observation. It does not prove an AI session caused a commit or

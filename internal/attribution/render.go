@@ -8,13 +8,17 @@ import (
 
 // RenderText writes the human projection of the same document JSON exposes.
 func RenderText(w io.Writer, doc *Document) error {
+	project := doc.Project
+	if project == "" {
+		project = "—"
+	}
 	if _, err := fmt.Fprintf(w, "Evidence · %s   algorithm: %s   following window: %dh\n",
-		doc.Project, doc.Algorithm, doc.MaxGapSeconds/3600); err != nil {
+		project, doc.Algorithm, doc.MaxGapSeconds/3600); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintf(w,
-		"  population: %d session(s) for this project · %d other-project · %d project-unknown\n",
-		doc.Summary.Population, doc.OtherProjects, doc.ProjectUnknown); err != nil {
+		"  population: %d session(s) for this project · %d other-project · %d project-unknown · %d repository-unresolved\n",
+		doc.Summary.Population, doc.OtherProjects, doc.ProjectUnknown, doc.IdentityUnresolved); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintf(w,

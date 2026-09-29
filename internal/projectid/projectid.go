@@ -18,21 +18,22 @@ const worktreeSegment = "/.git/worktrees/"
 // Resolve walks up from cwd to the nearest directory containing a .git entry and
 // returns it as repoRoot, rolling a git worktree up to its main repository. subpath is
 // cwd relative to repoRoot, or "" when cwd is the root itself. If no .git is found —
-// including when cwd does not exist — repoRoot is cwd and subpath is "". Resolve never
-// errors or panics: a stat or read failure just falls back to the next directory up.
-func Resolve(cwd string) (repoRoot, subpath string) {
+// including when cwd does not exist — repoRoot is cwd, subpath is "" and found is false.
+// Resolve never errors or panics: a stat or read failure just falls back to the next
+// directory up.
+func Resolve(cwd string) (repoRoot, subpath string, found bool) {
 	if cwd == "" {
-		return "", ""
+		return "", "", false
 	}
 	cwd = filepath.Clean(cwd)
 	repoRoot = findRepoRoot(cwd)
 	if repoRoot == "" {
-		return cwd, ""
+		return cwd, "", false
 	}
 	if rel, err := filepath.Rel(repoRoot, cwd); err == nil && rel != "." && !escapes(rel) {
 		subpath = rel
 	}
-	return repoRoot, subpath
+	return repoRoot, subpath, true
 }
 
 // escapes reports whether rel climbs out of the root it was computed against. A worktree
