@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-30
+
 ### Breaking
 
 - **A project name that two local repositories share is now split, and joins from a directory
@@ -69,6 +71,10 @@ Discussion.
   and makes the next `backfill` re-read Claude Code, Codex CLI and Copilot CLI transcripts. It costs
   about 13 bytes per usage row whose repository resolved: 2.9 MB on a 221,168-row store, 2.3 MB of
   it an index. `clear --all` also empties the repository table and draws a new salt.
+- Refreshed the vendored LiteLLM price table from a later 2026-09-29 snapshot: 4,431 to 4,435 table
+  entries (4,430 to 4,434 model keys), with 4 added, none removed and 21 repriced. `openai.gpt-6.1-sol`,
+  `global.openai.gpt-6.1-sol` and `openrouter/anthropic/claude-sonnet-5.5:batch` now carry a price;
+  `moonshotai.kimi-k3` costs 10% more, as LiteLLM now lists it.
 
 ### Fixed
 
@@ -1857,7 +1863,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.34.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.35.0...HEAD
+[0.35.0]: https://github.com/assaio/assaio/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/assaio/assaio/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/assaio/assaio/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/assaio/assaio/compare/v0.31.0...v0.32.0

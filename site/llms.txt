@@ -34,12 +34,14 @@ metrics give a figure without a grade. For the generated list of signals, source
 commands and settings, use <https://assaio.dev/docs/reference> or `assaio-agent docs export`
 for JSON. Do not infer counts or capabilities from this file.
 
-The local `evidence` command compares sessions sharing a stored project basename with
-content-free local git commits. It reports population coverage and `matched`, `ambiguous` or
-`unmatched` results. Results include method, confidence, provenance, candidates, alternatives
-and abstention reason; the document stamps the algorithm version. A match uses project and
-bounded time proximity. It does not establish that a session caused a commit. The command
-stores nothing, has no team-store mode and never ranks people.
+The local `evidence` command compares content-free local git commits with the sessions whose
+stored rows resolved to that repository; a session that only shares the repository's name is never
+a candidate, and same-named sessions with no resolved repository are counted apart. It reports
+population coverage and `matched`, `ambiguous` or `unmatched` results. Results include method,
+confidence, provenance, candidates, alternatives and abstention reason; the document stamps the
+algorithm version. A match uses repository identity and bounded time proximity. It does not
+establish that a session caused a commit. The command stores nothing, has no team-store mode and
+never ranks people.
 
 The local `survival` command reports how much code changed by a repository's commits in the
 window remains in `HEAD`. It does not assign those lines to AI sessions. Session-to-PR,
