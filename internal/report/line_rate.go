@@ -22,10 +22,16 @@ type LineRateBasis struct {
 	// price; their lines are left out of the ratio with their tokens.
 	UnpricedLineTokens int64
 	UnpricedLines      int64
+	// SharedTokens and SharedLines are rows of a session-credited source from a group that ran
+	// several models (LineCredit), left out whole when its lines cannot be paired with its cost:
+	// in a basis that is one model's share, or when one of its models has no known price.
+	SharedTokens int64
+	SharedLines  int64
 }
 
-// Add folds one row into b; cost and priced are the row's price lookup.
-func (b *LineRateBasis) Add(tool string, lines, tokens int64, cost float64, priced bool) {
+// add folds one row into b; cost and priced are the row's price lookup. Callers go through
+// LineCredit.Fold, which settles a session-credited row's price before it lands here.
+func (b *LineRateBasis) add(tool string, lines, tokens int64, cost float64, priced bool) {
 	switch {
 	case !parser.RecordsLines(tool):
 		b.LineBlindRows++
@@ -56,6 +62,8 @@ func (b *LineRateBasis) Merge(o *LineRateBasis) {
 	b.LineBlindCost += o.LineBlindCost
 	b.UnpricedLineTokens += o.UnpricedLineTokens
 	b.UnpricedLines += o.UnpricedLines
+	b.SharedTokens += o.SharedTokens
+	b.SharedLines += o.SharedLines
 }
 
 // Per100 is the basis's cost per 100 added lines; nil when it holds no line or no token, so a
@@ -70,7 +78,7 @@ func (b *LineRateBasis) Per100() *float64 {
 
 // LeavesOut reports whether the population holds usage the ratio does not cover.
 func (b *LineRateBasis) LeavesOut() bool {
-	return b.LineBlindTokens > 0 || b.UnpricedLineTokens > 0
+	return b.LineBlindTokens > 0 || b.UnpricedLineTokens > 0 || b.SharedTokens > 0
 }
 
 // Partial reports whether there is a ratio and it leaves usage out -- the ratio a "†" marks.
@@ -84,3 +92,10 @@ func (b *LineRateBasis) LineCost() *float64 {
 	c := b.Cost
 	return &c
 }
+
+// OwnTokens and OwnLines are the line-recording usage whose lines are its own, priced or not:
+// the population a rate that needs no price divides, such as lines per token or a line share.
+func (b *LineRateBasis) OwnTokens() int64 { return b.Tokens + b.UnpricedLineTokens }
+
+// OwnLines is OwnTokens' line count.
+func (b *LineRateBasis) OwnLines() int64 { return b.Lines + b.UnpricedLines }

@@ -3,13 +3,18 @@ package analyze
 import "sort"
 
 // projectShare pairs a project's share of the window's tokens with its share of the
-// window's AI lines -- the two quantities whose gap the concentration metric is about.
-// Sorted by TokenShare descending.
+// window's AI lines. LineTokenShare is its share of the tokens from sources that record lines,
+// the one the gap compares LineShare against; it is set only across named projects
+// (namedProjects). Sorted by TokenShare descending.
 type projectShare struct {
-	Project    string
-	TokenShare float64
-	LineShare  float64
-	Lines      int64
+	Project        string
+	TokenShare     float64
+	LineTokenShare float64
+	LineShare      float64
+	Lines          int64
+	// lineTokens and lineBlindTokens split the project's tokens by whether their source records
+	// lines.
+	lineTokens, lineBlindTokens int64
 }
 
 // projectShares converts the prepared per-project view into token-versus-line shares,
@@ -26,33 +31,32 @@ func projectShares(projects []ProjectStat, totalLines int64) []projectShare {
 			lineShare = float64(projects[i].Lines) / float64(totalLines)
 		}
 		out = append(out, projectShare{
-			Project:    projects[i].Project,
-			TokenShare: projects[i].TokenShare,
-			LineShare:  lineShare,
-			Lines:      projects[i].Lines,
+			Project:         projects[i].Project,
+			TokenShare:      projects[i].TokenShare,
+			LineShare:       lineShare,
+			Lines:           projects[i].Lines,
+			lineTokens:      projects[i].LineRate.OwnTokens(),
+			lineBlindTokens: projects[i].LineRate.LineBlindTokens,
 		})
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].TokenShare > out[j].TokenShare })
 	return out
 }
 
-// widestSpendGap returns the largest token-share-minus-line-share gap among projects big
+// widestSpendGap returns the largest line-token-share-minus-line-share gap among projects big
 // enough to matter (concentrationMinTokenShare). found is false when no project clears
 // that floor, so a window of many tiny projects reports no gap rather than a loud one
-// computed off noise. lineBlind names the projects no source could have reported lines for;
-// they are skipped, since their gap measures the source rather than the project.
-func widestSpendGap(shares []projectShare, lineBlind map[string]bool) (gap float64, found bool) {
+// computed off noise. A project no source could have reported lines for has no line-recording
+// tokens, so its share is zero and the floor skips it: its gap would measure the source.
+func widestSpendGap(shares []projectShare) (gap float64, found bool) {
 	for i := range shares {
 		// The unattributed bucket is not a project: it is every tool that logs no working
 		// directory, pooled. It writes no lines by construction, so scoring it would make
 		// its whole token share the widest gap and blame a project that does not exist.
-		if shares[i].Project == "" || shares[i].TokenShare < concentrationMinTokenShare {
+		if shares[i].Project == "" || shares[i].LineTokenShare < concentrationMinTokenShare {
 			continue
 		}
-		if lineBlind[shares[i].Project] {
-			continue
-		}
-		if d := shares[i].TokenShare - shares[i].LineShare; !found || d > gap {
+		if d := shares[i].LineTokenShare - shares[i].LineShare; !found || d > gap {
 			gap, found = d, true
 		}
 	}
@@ -108,6 +112,7 @@ func topNShare(shares []projectShare, n int) float64 {
 func namedProjects(shares []projectShare) []projectShare {
 	out := make([]projectShare, 0, len(shares))
 	var tokens, lines float64
+	var lineTokens int64
 	for i := range shares {
 		if shares[i].Project == "" {
 			continue
@@ -115,10 +120,12 @@ func namedProjects(shares []projectShare) []projectShare {
 		out = append(out, shares[i])
 		tokens += shares[i].TokenShare
 		lines += shares[i].LineShare
+		lineTokens += shares[i].lineTokens
 	}
 	for i := range out {
 		out[i].TokenShare = rescale(out[i].TokenShare, tokens)
 		out[i].LineShare = rescale(out[i].LineShare, lines)
+		out[i].LineTokenShare = rescale(float64(out[i].lineTokens), float64(lineTokens))
 	}
 	return out
 }

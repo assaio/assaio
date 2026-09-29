@@ -2,9 +2,13 @@
 
 ## Status
 Accepted (2026-08-05). Amended (2026-09-27): a rate built on a line count divides only the
-population that could have produced a line — priced usage, tokens or days from sources that
-record changed lines — and states what it leaves out beside the figure. `$`/100 lines
-answers per line-visible spend, not per dollar.
+population that could have produced a line — priced usage, tokens or days from sources that record
+changed lines — and states what it leaves out beside the figure. `$`/100 lines answers per
+line-visible spend, not per dollar. Amended (2026-09-28): a source that counts a session's lines
+once (`Depth.LinesPerSession`, Copilot CLI) is read by day and project, the nearest unit a usage row
+carries. Where it ran several models there, a line rate pairs those lines with all their cost. It
+leaves that usage out when one model has no known price; a split by model gives none of the models
+its `$`/100 lines.
 
 ## Context
 [ADR 0008](0008-signal-catalog.md) gave every signal a `ZeroMeans` line, because "zero rework"

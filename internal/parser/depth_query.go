@@ -124,6 +124,13 @@ func HasLineOutput(tool string) bool { return answersAll(tool, lineSignals) }
 // change.
 func RecordsLines(tool string) bool { return Answers(tool, SignalLinesAdded) }
 
+// CreditsLinesPerSession reports whether tool's line counts belong to a whole session rather
+// than to the model on the record carrying them (Depth.LinesPerSession).
+func CreditsLinesPerSession(tool string) bool {
+	d, ok := DepthOf(tool)
+	return ok && d.LinesPerSession
+}
+
 func answersAll(tool string, ids []string) bool {
 	for _, id := range ids {
 		if !Answers(tool, id) {

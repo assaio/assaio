@@ -137,3 +137,56 @@ func TestConcentrationEmptyInputSafe(t *testing.T) {
 		t.Fatalf("empty Input = %+v, want the no-data read and takeaway", got)
 	}
 }
+
+// TestConcentrationGapCountsOnlyLineRecordingTokens: a plugin row carrying a project records no
+// lines, so its tokens would read as spend that produced nothing. Counted, project "a" holds 10,000
+// of 16,000 tokens against half the lines; over line-recording tokens "a" and "b" are level, and
+// "c", which ran only on the plugin, is out of the gap.
+func TestConcentrationGapCountsOnlyLineRecordingTokens(t *testing.T) {
+	usage := []store.UsageRow{
+		{Day: "2026-07-10", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "a", In: 1000, LinesAdded: 100},
+		{Day: "2026-07-10", Tool: "plugin:x", Model: "claude-sonnet-4-5", Project: "a", In: 9000},
+		{Day: "2026-07-10", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "b", In: 1000, LinesAdded: 100},
+		{Day: "2026-07-10", Tool: "plugin:x", Model: "claude-sonnet-4-5", Project: "c", In: 5000},
+	}
+	in := BuildInput(usage, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
+	got := concentrationValidator{}.Analyze(in)
+
+	if v := figureFor(got.Figures, "widest spend gap").Value; v != "0pp" {
+		t.Errorf("widest spend gap = %q, want 0pp over line-recording tokens", v)
+	}
+	caveats := strings.Join(got.Caveats, "\n")
+	if !strings.Contains(caveats, "1 project(s) run partly on sources that record no lines") {
+		t.Errorf("Caveats = %q, want the partly line-blind project named", got.Caveats)
+	}
+	if !strings.Contains(caveats, "1 project(s) run entirely on sources that record no lines") {
+		t.Errorf("Caveats = %q, want the wholly line-blind project named", got.Caveats)
+	}
+	var bars []string
+	for _, b := range got.Bars {
+		bars = append(bars, b.Label+": "+b.Value)
+	}
+	if joined := strings.Join(bars, "\n"); !strings.Contains(joined, "a: 62% tokens · 50% of line-recording tokens · 50% lines") ||
+		strings.Contains(joined, "b: 6% tokens · 50% of") {
+		t.Errorf("Bars = %q, want the line-recording share shown only where it differs from the token share", joined)
+	}
+}
+
+// TestConcentrationCountsUnpricedLineRecordingTokens: the gap needs no price, so a project whose
+// line-recording source ran a model the price table lacks is neither line-blind nor out of the
+// gap; read over priced tokens only it would show a 50pp gap and be called line-blind.
+func TestConcentrationCountsUnpricedLineRecordingTokens(t *testing.T) {
+	usage := []store.UsageRow{
+		{Day: "2026-07-10", Tool: "claude-code", Model: "unpriced-model", Project: "a", In: 5000, LinesAdded: 100},
+		{Day: "2026-07-10", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "b", In: 5000, LinesAdded: 100},
+	}
+	in := BuildInput(usage, nil, testPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
+	got := concentrationValidator{}.Analyze(in)
+
+	if v := figureFor(got.Figures, "widest spend gap").Value; v != "0pp" {
+		t.Errorf("widest spend gap = %q, want 0pp", v)
+	}
+	if caveats := strings.Join(got.Caveats, "\n"); strings.Contains(caveats, "record no lines") {
+		t.Errorf("Caveats = %q, want no project called line-blind", got.Caveats)
+	}
+}

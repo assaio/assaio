@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/assaio/assaio/internal/layer"
+	"github.com/assaio/assaio/internal/report"
 
 	"github.com/assaio/assaio/internal/humanize"
 )
@@ -50,15 +51,15 @@ func (modelFitValidator) Analyze(in Input) Result {
 		return r
 	}
 	r.restsOn(activeDays(&in), "active days")
-	premiumTokens, cheaperTokens, otherTokens, premiumLines, cheaperLines := modelTierTotals(in.ByModel)
+	tiers := modelTierTotals(in.ByModel)
 
-	total := premiumTokens + cheaperTokens + otherTokens
-	known := premiumTokens + cheaperTokens
-	unpriceable := fracOf(otherTokens, total) > modelFitUnknownWatchCeiling
+	total := tiers.premium + tiers.cheaper + tiers.other
+	known := tiers.premium + tiers.cheaper
+	unpriceable := fracOf(tiers.other, total) > modelFitUnknownWatchCeiling
 
 	var premiumShare float64
 	if known > 0 {
-		premiumShare = float64(premiumTokens) / float64(known)
+		premiumShare = float64(tiers.premium) / float64(known)
 	}
 
 	r.Read = modelFitRead(unpriceable, known > 0)
@@ -68,12 +69,12 @@ func (modelFitValidator) Analyze(in Input) Result {
 	// third quantity in the denominator and made the two figures disagree with the sentence
 	// under them by exactly the unpriced share.
 	r.Figures = []Figure{
-		{Label: premiumTierLabel(), Value: humanize.PercentOrDash(premiumTokens, known, 1), Note: linesPerMTok(premiumLines, premiumTokens) + " lines/1M tok"},
-		{Label: cheaperTierLabel(), Value: humanize.PercentOrDash(cheaperTokens, known, 1), Note: linesPerMTok(cheaperLines, cheaperTokens) + " lines/1M tok"},
+		{Label: premiumTierLabel(), Value: humanize.PercentOrDash(tiers.premium, known, 1), Note: tierLineRate(&tiers.premiumLines)},
+		{Label: cheaperTierLabel(), Value: humanize.PercentOrDash(tiers.cheaper, known, 1), Note: tierLineRate(&tiers.cheaperLines)},
 	}
-	if otherTokens > 0 {
+	if tiers.other > 0 {
 		r.Figures = append(r.Figures, Figure{
-			Label: "unpriced (unknown model)", Value: humanize.PercentOrDash(otherTokens, total, 1),
+			Label: "unpriced (unknown model)", Value: humanize.PercentOrDash(tiers.other, total, 1),
 			Note: "of the whole window, and outside the denominator of the two shares above",
 		})
 	}
@@ -86,6 +87,10 @@ func (modelFitValidator) Analyze(in Input) Result {
 	}
 	if !unpriceable && known > 0 {
 		r.Caveats = append(r.Caveats, unsourcedLine("a premium-token share", ownHistoryWouldSettleIt))
+	}
+	if left := known - tiers.premiumLines.OwnTokens() - tiers.cheaperLines.OwnTokens(); left > 0 {
+		r.Caveats = append(r.Caveats, "Lines per 1M tokens count only usage whose source records lines for the model that ran. This leaves out "+
+			humanize.PercentOrDash(left, known, 0)+" of tiered tokens from sources that record no lines or "+report.SharedUsage+".")
 	}
 	r.Takeaway = modelFitTakeaway(unpriceable, known > 0, premiumShare)
 	return r
@@ -115,23 +120,37 @@ func modelFitTakeaway(unpriceable, known bool, premiumShare float64) string {
 	}
 }
 
-// modelTierTotals sums Tokens/Lines per ModelStat.Tier across models -- isolated from
-// Result-building so the tier accounting itself is directly unit-testable.
-func modelTierTotals(models []ModelStat) (premiumTokens, cheaperTokens, otherTokens, premiumLines, cheaperLines int64) {
+// tierTotals is the window's tokens per tier and, per priced tier, the population its lines per
+// token divide: usage whose lines are the lines of the model that ran.
+type tierTotals struct {
+	premium, cheaper, other    int64
+	premiumLines, cheaperLines report.LineRateBasis
+}
+
+// modelTierTotals sums each ModelStat into its tier -- isolated from Result-building so the tier
+// accounting itself is directly unit-testable.
+func modelTierTotals(models []ModelStat) tierTotals {
+	var t tierTotals
 	for i := range models {
 		m := &models[i]
 		switch m.Tier {
 		case tierPremium:
-			premiumTokens += m.Tokens
-			premiumLines += m.Lines
+			t.premium += m.Tokens
+			t.premiumLines.Merge(&m.LineRate)
 		case tierCheaper:
-			cheaperTokens += m.Tokens
-			cheaperLines += m.Lines
+			t.cheaper += m.Tokens
+			t.cheaperLines.Merge(&m.LineRate)
 		default:
-			otherTokens += m.Tokens
+			t.other += m.Tokens
 		}
 	}
-	return premiumTokens, cheaperTokens, otherTokens, premiumLines, cheaperLines
+	return t
+}
+
+// tierLineRate is one tier's figure note: lines per 1M tokens over the usage whose lines are its
+// own model's.
+func tierLineRate(b *report.LineRateBasis) string {
+	return linesPerMTok(b.OwnLines(), b.OwnTokens()) + " lines/1M tok"
 }
 
 // premiumTierLabel and cheaperTierLabel document the live price threshold in the label
@@ -152,7 +171,8 @@ func modelBars(models []ModelStat) []Bar {
 		maxTokens = models[0].Tokens
 	}
 	bars := make([]Bar, len(models))
-	for i, m := range models {
+	for i := range models {
+		m := &models[i]
 		bars[i] = Bar{Label: groupLabel(m.Model), Value: humanize.Count(m.Tokens) + " tokens", Frac: fracOf(m.Tokens, maxTokens)}
 	}
 	return bars

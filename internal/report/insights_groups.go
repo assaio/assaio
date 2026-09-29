@@ -67,11 +67,12 @@ func projectStats(rows []store.UsageRow, t pricing.Table) []GroupStat {
 // groupStats groups rows by keyAt into GroupStat, in groupBy's key-sorted order, with
 // CostPer100Lines filled in for each resulting group.
 func groupStats(rows []store.UsageRow, keyAt func(*store.UsageRow) string, t pricing.Table) []GroupStat {
+	credit := NewLineCredit(rows, t)
 	out := groupBy(
 		len(rows),
 		func(i int) string { return keyAt(&rows[i]) },
 		func(key string) GroupStat { return GroupStat{Name: key} },
-		func(g *GroupStat, i int) { accumulateGroupStat(g, &rows[i], t) },
+		func(g *GroupStat, i int) { accumulateGroupStat(g, &rows[i], t, credit) },
 	)
 	for i := range out {
 		out[i].CostPer100Lines = out[i].lineRate.Per100()
@@ -79,14 +80,15 @@ func groupStats(rows []store.UsageRow, keyAt func(*store.UsageRow) string, t pri
 	return out
 }
 
-// accumulateGroupStat folds u's AI lines, last-active day, and (when priced) cost into g.
-func accumulateGroupStat(g *GroupStat, u *store.UsageRow, t pricing.Table) {
+// accumulateGroupStat folds u's AI lines, last-active day, and (when priced) cost into g. A
+// group is a project or a tool, which never splits a session, so credit only settles price.
+func accumulateGroupStat(g *GroupStat, u *store.UsageRow, t pricing.Table, credit LineCredit) {
 	g.LinesAdded += u.LinesAdded
 	if u.Day > g.LastActive {
 		g.LastActive = u.Day
 	}
 	cost, ok := t.CostTokens(u.Model, pricing.Tokens{In: u.In, Out: u.Out, CacheWrite: u.CacheWrite, CacheRead: u.CacheRead, CacheWrite1h: u.CacheWrite1h})
-	g.lineRate.Add(u.Tool, u.LinesAdded, RowTokens(u), cost, ok)
+	credit.Fold(&g.lineRate, u, cost, ok, false)
 	if !ok {
 		g.HasUnpriced = true
 		return

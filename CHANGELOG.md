@@ -33,6 +33,40 @@ Discussion.
 
 ## [Unreleased]
 
+### Breaking
+
+- **Copilot CLI `$`/100 lines now uses cost from every model run on the same day and project**
+  (`B221`). Copilot CLI counts a session's changed lines once and credits them to its busiest model.
+  If one model has no known price, that day and project's usage is left out of `$`/100 lines;
+  `effectiveness --by model` leaves it out of every model's `$`/100 lines whenever several models
+  ran there. The AI-lines column still shows the lines on the busiest model's row, and TOTAL is the
+  same under every `--by`
+  ([correction](docs/corrections.md#a-copilot-cli-sessions-lines-were-credited-to-one-model)).
+  Values move in `effectiveness --format json|csv`, which adds `line_capable_shared_tokens`, last in
+  CSV. Rows with no Copilot CLI usage keep their v0.33 values. Re-run `effectiveness` for affected
+  values; they cannot be rebuilt from the new fields.
+
+### Added
+
+- The metric-plugin envelope now carries `lineCapableLines`, `lineCapableTokens` and
+  `lineCapableCost` on `byModel`, `byProject` and `totals`. These are the values the built-in
+  `$`/100 lines divides, so an out-of-tree cost-per-line figure can use the same population. The
+  protocol version stays 4.
+
+### Changed
+
+- The `digest` snapshot version moved to 5. The first digest after upgrading reports a first run
+  instead of reading this build's `concentration` verdict as a change in the work.
+
+### Fixed
+
+- `model-fit`'s lines per 1M tokens and `concentration`'s widest spend gap now divide only usage
+  from sources that record lines
+  ([correction](docs/corrections.md#model-fit-and-concentration-divided-by-usage-that-records-no-lines)).
+- The dashboard's cost per active day now divides only days on which a source that counts tokens ran
+  and reports how many days it left out (`B222`,
+  [correction](docs/corrections.md#cost-per-active-day-counted-days-with-no-token-counter)).
+
 ## [0.33.0] - 2026-09-28
 
 ### Breaking

@@ -5,23 +5,30 @@ import (
 	"testing"
 
 	"github.com/assaio/assaio/internal/humanize"
+	"github.com/assaio/assaio/internal/pricing"
 	"github.com/assaio/assaio/internal/report"
+	"github.com/assaio/assaio/internal/store"
 )
 
 // TestTheRatioTravelsOnlyWhereItsNoteCan: the hook line and the post cannot carry a note, so a
 // $/100-lines figure that leaves usage out stays in the ledger, where its note says how much.
 // A window whose sources record no lines never prints "0 lines" anywhere.
 func TestTheRatioTravelsOnlyWhereItsNoteCan(t *testing.T) {
+	tbl := pricing.Table{"m": {Input: 2e-3}}
+	lines := store.UsageRow{Tool: "claude-code", Model: "m", In: 1000, LinesAdded: 40}
+	blindRow := store.UsageRow{Tool: "gemini-cli", Model: "m", In: 3000}
+	basis := func(rows ...store.UsageRow) report.LineRateBasis { return report.BuildInventory(rows, tbl).LineRate }
+
 	full := facts{sessions: 3, tokens: 1000, lines: 40, linesOK: true}
-	full.lineRate.Add("claude-code", 40, 1000, 2, true)
+	full.lineRate = basis(lines)
 	full.perHundred = perHundred(&full)
 
 	mixed := full
-	mixed.lineRate.Add("gemini-cli", 0, 3000, 6, true)
+	mixed.lineRate = basis(lines, blindRow)
 	mixed.perHundred = perHundred(&mixed)
 
 	blind := facts{sessions: 3, tokens: 3000}
-	blind.lineRate.Add("gemini-cli", 0, 3000, 6, true)
+	blind.lineRate = basis(blindRow)
 	blind.perHundred = perHundred(&blind)
 
 	tests := []struct {

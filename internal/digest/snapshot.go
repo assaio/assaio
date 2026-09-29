@@ -23,7 +23,7 @@ import (
 // changing its mind, not the work changing. comparabilityCaveats compares ParsedBy -- the
 // ingesting build -- which does not move when the analyzing binary is upgraded, so this number is
 // the only thing that stops the first digest after such an upgrade reporting the change as findings.
-const SnapshotVersion = 4
+const SnapshotVersion = 5
 
 // Snapshot is what one digest recorded: the totals, the per-dimension weights it ranks
 // movers by, and each validator's verdict. Deliberately no prose and no sample rows -- a
@@ -90,11 +90,11 @@ func Take(in *analyze.Input, results []analyze.Result, opts Options) Snapshot {
 		Verdicts:     make(map[string]string, len(results)),
 		Confidence:   make(map[string]string, len(results)),
 	}
-	for _, m := range in.ByModel {
-		s.Models[m.Model] = m.Tokens
+	for i := range in.ByModel {
+		s.Models[in.ByModel[i].Model] = in.ByModel[i].Tokens
 	}
-	for _, p := range in.ByProject {
-		s.Projects[p.Project] = p.Lines
+	for i := range in.ByProject {
+		s.Projects[in.ByProject[i].Project] = in.ByProject[i].Lines
 	}
 	type ranked struct {
 		name string

@@ -6,9 +6,6 @@ import (
 	"github.com/assaio/assaio/internal/layer"
 
 	"github.com/assaio/assaio/internal/humanize"
-
-	"github.com/assaio/assaio/internal/parser"
-	"github.com/assaio/assaio/internal/store"
 )
 
 const (
@@ -54,11 +51,10 @@ func (concentrationValidator) Analyze(in Input) Result {
 	// project count and the concentration score alike. Its size is disclosed as a caveat.
 	named := namedProjects(all)
 	r.restsOn(len(named), "projects")
-	// A project whose tokens all come from a source that records no lines writes zero lines by
-	// construction, so its whole token share would read as the widest spend-to-output gap in
-	// the window. That is the source's silence, not a project failing to convert spend.
-	lineBlind := lineBlindProjects(in.Usage)
-	gap, gapFound := widestSpendGap(named, lineBlind)
+	// Tokens from a source that records no lines write zero lines by construction, so counted in
+	// a project's token share they widen its spend-to-output gap by the source's silence rather
+	// than by anything the project did. The gap compares lines with line-recording tokens only.
+	gap, gapFound := widestSpendGap(named)
 	// A gap has to have been computed for "aligned" to mean anything: with every project
 	// below the size floor there is nothing to align, and calling that a pass is a green
 	// check for an examination that never ran.
@@ -82,38 +78,33 @@ func (concentrationValidator) Analyze(in Input) Result {
 	if unattributed := unattributedShare(all); unattributed >= concentrationUnattributedFloor {
 		r.Caveats = append(r.Caveats, "Prov.: "+humanize.PercentAt(unattributed, 0)+" of tokens are unattributed -- a source that logs no working directory cannot be assigned to a project.")
 	}
-	if len(lineBlind) > 0 {
-		r.Caveats = append(r.Caveats, strconv.Itoa(len(lineBlind))+
-			" project(s) run entirely on sources that record no lines, so they are excluded from the spend-versus-output gap rather than counted as producing nothing.")
-	}
+	r.Caveats = append(r.Caveats, lineBlindCaveats(named)...)
 	return r
 }
 
-// lineBlindProjects names the projects whose every token came from a source that records no
-// changed lines. Read from the window's own rows, since the prepared per-project view carries
-// no tool and so cannot tell a project that wrote nothing from one nobody was watching.
-func lineBlindProjects(rows []store.UsageRow) map[string]bool {
-	seen := make(map[string]bool)
-	for i := range rows {
-		if rowTokens(&rows[i]) == 0 {
-			continue
-		}
-		project := rows[i].Project
-		if parser.HasLineOutput(rows[i].Tool) {
-			seen[project] = false
-			continue
-		}
-		if _, ok := seen[project]; !ok {
-			seen[project] = true
+// lineBlindCaveats names the projects whose tokens came, wholly or in part, from sources that
+// record no lines: the first are left out of the gap, the second enter it on their other tokens.
+func lineBlindCaveats(shares []projectShare) []string {
+	var whole, part int
+	for i := range shares {
+		switch {
+		case shares[i].lineBlindTokens == 0:
+		case shares[i].lineTokens == 0:
+			whole++
+		default:
+			part++
 		}
 	}
-	blind := make(map[string]bool, len(seen))
-	for project, isBlind := range seen {
-		if isBlind {
-			blind[project] = true
-		}
+	var out []string
+	if whole > 0 {
+		out = append(out, strconv.Itoa(whole)+
+			" project(s) run entirely on sources that record no lines, so they are excluded from the spend-versus-output gap rather than counted as producing nothing.")
 	}
-	return blind
+	if part > 0 {
+		out = append(out, strconv.Itoa(part)+
+			" project(s) run partly on sources that record no lines; the gap counts only their tokens from sources that do.")
+	}
+	return out
 }
 
 // concentrationRead reports the neutral no-verdict Read when a single project makes the
@@ -129,7 +120,7 @@ func concentrationRead(measurable bool) Read {
 // it belongs to: Figures are not pseudonymized under --anonymize, so the project behind
 // the gap is disclosed only through Bars, which are.
 func concentrationGapFigure(gap float64, found bool) Figure {
-	f := Figure{Label: "widest spend gap", Value: "—", Note: "tokens minus lines, share points"}
+	f := Figure{Label: "widest spend gap", Value: "—", Note: "line-recording tokens minus lines, share points"}
 	if found {
 		f.Value = gapLabel(gap)
 	}
@@ -160,13 +151,20 @@ func concentrationBars(shares []projectShare, topN int) []Bar {
 		if maxShare > 0 {
 			frac = kept[i].TokenShare / maxShare
 		}
-		bars[i] = Bar{
-			Label: groupLabel(kept[i].Project),
-			Value: humanize.PercentAt(kept[i].TokenShare, 0) + " tokens · " + humanize.PercentAt(kept[i].LineShare, 0) + " lines",
-			Frac:  frac,
-		}
+		bars[i] = Bar{Label: groupLabel(kept[i].Project), Value: concentrationBarValue(&kept[i]), Frac: frac}
 	}
 	return bars
+}
+
+// concentrationBarValue shows the token share the bar is ranked by and the line share beside it;
+// a project that also ran a source recording no lines shows the share the gap reads as well, so
+// the project behind the gap can be found from the bars.
+func concentrationBarValue(s *projectShare) string {
+	value := humanize.PercentAt(s.TokenShare, 0) + " tokens · "
+	if s.lineBlindTokens > 0 {
+		value += humanize.PercentAt(s.LineTokenShare, 0) + " of line-recording tokens · "
+	}
+	return value + humanize.PercentAt(s.LineShare, 0) + " lines"
 }
 
 func concentrationTakeaway(measurable, gapFound bool, gap float64) string {
@@ -178,7 +176,7 @@ func concentrationTakeaway(measurable, gapFound bool, gap float64) string {
 	default:
 		// Share points, not a percent: the gap is a difference of two shares, and rendering it
 		// as "89%" invites the relative reading the figure above deliberately avoids.
-		return "The widest gap between a project's share of tokens and its share of AI lines is " +
+		return "The widest gap between a project's share of line-recording tokens and its share of AI lines is " +
 			gapLabel(gap) + " -- the project worth asking what those tokens bought. Lines are not value, so a gap is a question, not a fault."
 	}
 }

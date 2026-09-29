@@ -40,6 +40,10 @@ type Depth struct {
 	Answers []string
 	// Gaps names what this source does not carry, in a reader's terms. Required below Deep.
 	Gaps []string
+	// LinesPerSession marks a source that counts changed lines once per session and credits
+	// them whole to one of the session's models, so its lines belong to the session rather
+	// than to the model its record names.
+	LinesPerSession bool
 }
 
 // depths is the matrix, deepest first. A parser that gains a capability updates its row
@@ -139,7 +143,8 @@ var depths = []Depth{
 		Tokens: true, Activity: true, Attribution: false,
 		// Lines but nothing else: a whole-session total carries no turn, edit or tool-call
 		// count, so every per-turn signal is absent rather than zero.
-		Answers: answers(costSignals, cacheWriteSignals, reasoningSignals, lineSignals),
+		Answers:         answers(costSignals, cacheWriteSignals, reasoningSignals, lineSignals),
+		LinesPerSession: true,
 		Gaps: []string{
 			"no ordered step sequence: a whole-session total has no order to record",
 			"totals exist only when a session ends, so one record covers a whole session and per-turn figures exclude it",

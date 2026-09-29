@@ -234,10 +234,13 @@ example declares everything; undeclared sections are <strong>absent from the doc
   &quot;delegation&quot;: {&quot;sub&quot;:0,&quot;total&quot;:0},
   &quot;byModel&quot;:   [{&quot;model&quot;:&quot;...&quot;,&quot;tier&quot;:&quot;premium&quot;,&quot;tokens&quot;:0,&quot;input&quot;:0,&quot;output&quot;:0,
                  &quot;cacheRead&quot;:0,&quot;cacheWrite&quot;:0,&quot;lines&quot;:0,&quot;cost&quot;:1.23,&quot;priced&quot;:true,
-                 &quot;tokenShare&quot;:0.5}],
-  &quot;byProject&quot;: [{&quot;project&quot;:&quot;...&quot;,&quot;lines&quot;:0,&quot;cost&quot;:null,&quot;priced&quot;:false,&quot;tokenShare&quot;:0.5}],
+                 &quot;tokenShare&quot;:0.5,&quot;lineCapableLines&quot;:0,&quot;lineCapableTokens&quot;:0,
+                 &quot;lineCapableCost&quot;:null}],
+  &quot;byProject&quot;: [{&quot;project&quot;:&quot;...&quot;,&quot;lines&quot;:0,&quot;cost&quot;:null,&quot;priced&quot;:false,&quot;tokenShare&quot;:0.5,
+                 &quot;lineCapableLines&quot;:0,&quot;lineCapableTokens&quot;:0,&quot;lineCapableCost&quot;:null}],
   &quot;totals&quot;:    {&quot;tokens&quot;:0,&quot;input&quot;:0,&quot;output&quot;:0,&quot;cacheRead&quot;:0,&quot;cacheWrite&quot;:0,&quot;lines&quot;:0,
-                &quot;cost&quot;:null,&quot;priced&quot;:false,&quot;cacheEfficiency&quot;:0.9},
+                &quot;cost&quot;:null,&quot;priced&quot;:false,&quot;cacheEfficiency&quot;:0.9,&quot;lineCapableLines&quot;:0,
+                &quot;lineCapableTokens&quot;:0,&quot;lineCapableCost&quot;:null},
   &quot;prices&quot;:    {&quot;claude-opus-4-8&quot;:{&quot;input&quot;:0.000015,&quot;output&quot;:0.000075,
                 &quot;cacheRead&quot;:0.0000015,&quot;cacheWrite&quot;:0.00001875,
                 &quot;cacheWrite1h&quot;:0.00003}},
@@ -376,6 +379,16 @@ else:
     result[&quot;confidence&quot;] = {&quot;signalCoverage&quot;: reach, &quot;samples&quot;: len(capable),
                             &quot;samplesUnit&quot;: &quot;usage rows&quot;}
 </code></pre>
+<p>A line rate needs the same care. <code>lines</code>, <code>tokens</code> and <code>cost</code> on <code>byModel</code>, <code>byProject</code> and <code>totals</code>
+cover every source, so dividing them sets lines against usage that could record none.
+<code>lineCapableLines</code>, <code>lineCapableTokens</code> and <code>lineCapableCost</code> are what the built-in <code>$</code>/100 lines
+divides: priced usage from sources that record added lines. Usage from a source that counts a
+session's lines once is left out in all three sections when several models ran on one day and
+project and one has no known price. In <code>byModel</code>, it is left out whenever several models ran there.
+<code>tokens</code> minus <code>lineCapableTokens</code> is everything these fields leave out. They are not the population
+of a rate that needs no price, such as lines per token: the built-in figures also count
+line-recording usage on unpriced models, which is absent here. <code>lineCapableTokens</code> of 0 means no
+such usage, and <code>lineCapableCost</code> is then <code>null</code>.</p>
 <p>Only tools in the window are sent. The plugin needs their capabilities, not the whole matrix, which
 would publish it again in the envelope.</p>
 <p><strong>Session labels are absent from this document.</strong> In-tree validators can read task, outcome, and

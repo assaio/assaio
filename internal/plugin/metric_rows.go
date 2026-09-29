@@ -72,6 +72,15 @@ type metricModelStat struct {
 	Cost       *float64 `json:"cost"`
 	Priced     bool     `json:"priced"`
 	TokenShare float64  `json:"tokenShare"`
+	// LineCapableLines, LineCapableTokens and LineCapableCost are the population a cost-per-line
+	// figure divides: priced usage from sources that record added lines, less a session-credited
+	// source's usage its lines cannot be paired with (report.LineRateBasis). A rate that needs
+	// no price divides more than this, since unpriced line-recording usage is absent here.
+	// tokens minus LineCapableTokens is everything left out; LineCapableCost is null when no
+	// such usage ran, never a zero.
+	LineCapableLines  int64    `json:"lineCapableLines"`
+	LineCapableTokens int64    `json:"lineCapableTokens"`
+	LineCapableCost   *float64 `json:"lineCapableCost"`
 }
 
 type metricProjectStat struct {
@@ -80,6 +89,10 @@ type metricProjectStat struct {
 	Cost       *float64 `json:"cost"`
 	Priced     bool     `json:"priced"`
 	TokenShare float64  `json:"tokenShare"`
+	// LineCapableLines, LineCapableTokens and LineCapableCost: see metricModelStat.
+	LineCapableLines  int64    `json:"lineCapableLines"`
+	LineCapableTokens int64    `json:"lineCapableTokens"`
+	LineCapableCost   *float64 `json:"lineCapableCost"`
 }
 
 type metricTotals struct {
@@ -92,6 +105,10 @@ type metricTotals struct {
 	Cost            *float64 `json:"cost"`
 	Priced          bool     `json:"priced"`
 	CacheEfficiency float64  `json:"cacheEfficiency"`
+	// LineCapableLines, LineCapableTokens and LineCapableCost: see metricModelStat.
+	LineCapableLines  int64    `json:"lineCapableLines"`
+	LineCapableTokens int64    `json:"lineCapableTokens"`
+	LineCapableCost   *float64 `json:"lineCapableCost"`
 }
 
 type metricPrice struct {

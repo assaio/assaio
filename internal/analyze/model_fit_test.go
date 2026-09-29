@@ -89,3 +89,29 @@ func TestLinesPerMTokWithholdsATrivialBase(t *testing.T) {
 		t.Fatal("a rate over a million tokens was withheld")
 	}
 }
+
+// TestModelFitTierLinesComeOnlyFromTheirOwnModel: a tier's lines per 1M tokens divides only
+// usage whose source records the lines of the model that ran. A source that records no line
+// would dilute the rate, and a Copilot CLI session that ran two models credits every line to one
+// of them: counted, this window reads 636.4 for premium and 0.0 for cheaper.
+func TestModelFitTierLinesComeOnlyFromTheirOwnModel(t *testing.T) {
+	day := validatorsTestNow.Format("2006-01-02")
+	usage := []store.UsageRow{
+		{Day: day, Tool: "claude-code", Model: "premium-model", Project: "p", In: 1_000_000, LinesAdded: 500},
+		{Day: day, Tool: "gemini-cli", Model: "premium-model", Project: "p", In: 1_000_000},
+		{Day: day, Tool: "copilot-cli", Model: "premium-model", Project: "p", Granularity: "session", In: 200_000, LinesAdded: 900},
+		{Day: day, Tool: "copilot-cli", Model: "cheap-model", Project: "p", Granularity: "session", In: 200_000},
+	}
+	in := BuildInput(usage, nil, preparedTestPrices(), validatorsTestNow, 7*24*time.Hour, Delegation{})
+	got := modelFitValidator{}.Analyze(in)
+
+	if note := figureFor(got.Figures, premiumTierLabel()).Note; note != "500.0 lines/1M tok" {
+		t.Errorf("premium note = %q, want 500.0 lines/1M tok", note)
+	}
+	if note := figureFor(got.Figures, cheaperTierLabel()).Note; note != "— lines/1M tok" {
+		t.Errorf("cheaper note = %q, want a dash: its only usage is a session whose lines went to another model", note)
+	}
+	if !strings.Contains(strings.Join(got.Caveats, "\n"), "leaves out 58% of tiered tokens") {
+		t.Errorf("Caveats = %q, want the left-out tiered tokens stated", got.Caveats)
+	}
+}
