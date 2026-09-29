@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-09-29
+
 ### Breaking
 
 - **Copilot CLI `$`/100 lines now uses cost from every model run on the same day and project**
@@ -57,6 +59,9 @@ Discussion.
 
 - The `digest` snapshot version moved to 5. The first digest after upgrading reports a first run
   instead of reading this build's `concentration` verdict as a change in the work.
+- Refreshed the vendored LiteLLM price table to its 2026-09-29 snapshot: 4,395 to 4,431 table
+  entries (4,394 to 4,430 model keys), with 37 added, one removed and 12 repriced.
+  `claude-sonnet-5-5`, `gpt-6.1-sol` and `xai.grok-4.7` now carry a price.
 
 ### Fixed
 
@@ -1808,7 +1813,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.33.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.34.0...HEAD
+[0.34.0]: https://github.com/assaio/assaio/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/assaio/assaio/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/assaio/assaio/compare/v0.31.0...v0.32.0
 [0.31.0]: https://github.com/assaio/assaio/compare/v0.30.0...v0.31.0

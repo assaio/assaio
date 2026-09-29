@@ -31,11 +31,13 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-09-29
+
 <a id="a-copilot-cli-sessions-lines-were-credited-to-one-model"></a>
 
 ### A Copilot CLI session's lines were credited to one model
 
-*Corrected in v0.34.0, released 2026-09-28.*
+*Corrected in v0.34.0, released 2026-09-29.*
 
 Copilot CLI records a session's changed lines once. assaio credits them all to the model that made
 the most requests. Figures split by model treated those lines as that model's own: `effectiveness
@@ -58,7 +60,7 @@ maintainer's transcripts contain no Copilot CLI session, so no figure there move
 
 ### `model-fit` and `concentration` divided by usage that records no lines
 
-*Corrected in v0.34.0, released 2026-09-28.*
+*Corrected in v0.34.0, released 2026-09-29.*
 
 The v0.33.0 correction left two figures dividing by usage from sources that record no lines. Since
 v0.1.0, `model-fit`'s lines per 1M tokens per tier included tokens from Gemini CLI and Cline in the
@@ -76,7 +78,7 @@ demo` and the maintainer's transcripts contain neither mix, so only their wordin
 
 ### Cost per active day counted days with no token counter
 
-*Corrected in v0.34.0, released 2026-09-28.*
+*Corrected in v0.34.0, released 2026-09-29.*
 
 Since v0.25.0, when Antigravity CLI support shipped, the dashboard's cost basis divided the window's
 cost by every active day, including days when only Antigravity CLI ran. Antigravity CLI has no token
