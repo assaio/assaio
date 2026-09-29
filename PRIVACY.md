@@ -224,9 +224,10 @@ and file bodies are not part of the observation at all. Commit observations and 
 session→commit results are recomputed in memory and never written to SQLite.
 
 `evidence` combines those observations with the local store's session id, tool, project
-basename and first/last timestamps. Its text and JSON output include the project basename,
-session id and commit hash for local inspection, plus method, confidence, provenance,
-ambiguity, alternatives and coverage. It has no `--db`, refuses member-bearing team rows and
+name, the repository the session's rows resolved to (read as a local number and never printed)
+and first/last timestamps. Its text and JSON output include the project name — empty when no
+stored usage resolved to the repository — the session id and the commit hash for local
+inspection, plus method, confidence, provenance, ambiguity, alternatives and coverage. It has no `--db`, refuses member-bearing team rows and
 has no member, person, score or rank field. It is not a shareable artifact and is not intended
 for evaluating people. Prompt text, model responses, code, diffs, commit messages and branch
 names never enter its result.

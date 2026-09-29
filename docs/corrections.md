@@ -31,11 +31,13 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-30
+
 <a id="two-repositories-with-one-name-shared-every-figure"></a>
 
 ### Two repositories with one name shared every figure
 
-*Corrected in v0.35.0, released 2026-09-29.*
+*Corrected in v0.35.0, released 2026-09-30.*
 
 Since v0.1.0, assaio stored a session's project as the basename of its repository root and nothing
 else. Two unrelated repositories with one directory name, such as two checkouts named `api`,
