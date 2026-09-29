@@ -21,8 +21,9 @@ type Restated struct {
 }
 
 // IdentityChanges counts rows by the identity column a re-read changed. A row changing two
-// counted columns counts once in Rows and once in each; Project includes a subpath-only change,
-// and Label is skill, agent and cache-miss reason together. Filling a blank is not a change: a
+// counted columns counts once in Rows and once in each; Project includes a subpath-only change
+// and a repository replaced by another under the same name, and Label is skill, agent and
+// cache-miss reason together. Filling a blank is not a change: a
 // session read while it is still being written fills names later as a matter of course.
 type IdentityChanges struct {
 	Rows, Model, TS, Project, Entrypoint, Branch, Label int
@@ -52,7 +53,7 @@ const watchSQL = `
                 OR tool_reads > ? OR tool_searches > ? OR tool_commands > ?
                 OR tool_writes > ? OR tool_other > ? OR tool_errors > ?),
                ts, model, project, subpath, entrypoint, git_branch,
-               skill, agent, cache_miss_reason
+               skill, agent, cache_miss_reason, repo_id
         FROM usage_record WHERE tool = ? AND dedupe_key = ?`
 
 func watchArgs(r *usage.Record) []any {
@@ -68,20 +69,21 @@ func watchArgs(r *usage.Record) []any {
 type identityRow struct {
 	ts, model, project, subpath, entrypoint, branch string
 	skill, agent, missReason                        string
+	repoID                                          int64
 }
 
 // watch runs watchSQL for r. The row exists by construction -- the caller asks only after the
 // insert reported a conflict inside the same transaction -- so a missing row is an error, not
 // an agreement.
-func watch(ctx context.Context, stmt *sql.Stmt, r *usage.Record) (lowered bool, c IdentityChanges, err error) {
+func watch(ctx context.Context, stmt *sql.Stmt, r *usage.Record, repoID int64) (lowered bool, c IdentityChanges, err error) {
 	var s identityRow
 	err = stmt.QueryRowContext(ctx, watchArgs(r)...).Scan(&lowered,
 		&s.ts, &s.model, &s.project, &s.subpath, &s.entrypoint, &s.branch,
-		&s.skill, &s.agent, &s.missReason)
+		&s.skill, &s.agent, &s.missReason, &s.repoID)
 	if err != nil {
 		return false, IdentityChanges{}, fmt.Errorf("watching restate of %s %s: %w", r.Tool, r.DedupeKey, err)
 	}
-	return lowered, identityChanges(&s, r), nil
+	return lowered, identityChanges(&s, r, repoID), nil
 }
 
 // identityChanges compares one stored row with the record about to restate it, applying the
@@ -90,7 +92,7 @@ func watch(ctx context.Context, stmt *sql.Stmt, r *usage.Record) (lowered bool, 
 // read last, and its project_conflict state is only ever set on those rows. Its model and time
 // are watched: the model comes from the sub-agent itself, and the time settles on the earliest
 // carrier.
-func identityChanges(s *identityRow, r *usage.Record) IdentityChanges {
+func identityChanges(s *identityRow, r *usage.Record, repoID int64) IdentityChanges {
 	var c IdentityChanges
 	kept := false
 	named := func(stored, offered string, n *int) {
@@ -117,6 +119,11 @@ func identityChanges(s *identityRow, r *usage.Record) IdentityChanges {
 		if !r.ProjectGuessed {
 			named(s.project, r.Project, &c.Project)
 			if r.Project != "" && s.project == r.Project && s.subpath != r.Subpath {
+				c.Project = 1
+			}
+			// A repository replaced by another is a restatement; one filled in where the row had
+			// none is the first read of it.
+			if s.repoID > 0 && repoID > 0 && s.repoID != repoID {
 				c.Project = 1
 			}
 		}

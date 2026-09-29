@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"os"
@@ -24,7 +23,7 @@ func TestEvidenceRendersMatchedAmbiguousAndUnmatched(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	repo, now := evidenceRepo(t)
-	seedEvidenceStore(t, filepath.Base(repo), now)
+	seedEvidenceStore(t, repo, now)
 
 	textOutput := runEvidenceCommand(t, repo, "text")
 	for _, want := range []string{
@@ -82,8 +81,8 @@ func TestEvidenceHasNoTeamStoreFlag(t *testing.T) {
 }
 
 func TestEvidenceRejectsMemberRows(t *testing.T) {
-	rows := []store.SessionRow{{SessionID: "s1", Project: "repo", Member: "member"}}
-	if _, _, _, err := evidenceSessions(rows, "repo"); err == nil {
+	rows := []store.SessionRow{{SessionID: "s1", Project: "repo", Member: "member", RepoID: 1}}
+	if _, err := evidenceSessions(rows, 1, "repo", "repo"); err == nil {
 		t.Fatal("member row was accepted by the local-only evidence adapter")
 	}
 }
@@ -121,7 +120,14 @@ func gitCommitAt(t *testing.T, repo string, at time.Time, message string) {
 	}
 }
 
-func seedEvidenceStore(t *testing.T, project string, now time.Time) {
+// seedEvidenceStore stores three sessions from repo, resolved to it the way ingest resolves them.
+func seedEvidenceStore(t *testing.T, repo string, now time.Time) {
+	t.Helper()
+	dbPath := evidenceDBPath(t)
+	seedStoreAt(t, dbPath, evidenceSessionRecords(filepath.Base(repo), repoKeyIn(t, dbPath, repo), now, ""))
+}
+
+func evidenceDBPath(t *testing.T) string {
 	t.Helper()
 	dbPath, err := paths.DBPath()
 	if err != nil {
@@ -130,6 +136,12 @@ func seedEvidenceStore(t *testing.T, project string, now time.Time) {
 	if err := ensureParent(dbPath); err != nil {
 		t.Fatal(err)
 	}
+	return dbPath
+}
+
+// evidenceSessionRecords is the matched, ambiguous and unmatched session trio, two turns each,
+// labelled project and resolved to key; suffix keeps a second trio's ids apart.
+func evidenceSessionRecords(project, key string, now time.Time, suffix string) []usage.Record {
 	records := []usage.Record{}
 	for _, session := range []struct {
 		id         string
@@ -141,24 +153,11 @@ func seedEvidenceStore(t *testing.T, project string, now time.Time) {
 	} {
 		for turn, timestamp := range []time.Time{session.start, session.end} {
 			records = append(records, usage.Record{
-				Tool: "claude-code", SessionID: session.id, Timestamp: timestamp,
-				Model: "claude-sonnet-4-5", Project: project, Granularity: "turn",
-				DedupeKey: session.id + string(rune('0'+turn)),
+				Tool: "claude-code", SessionID: session.id + suffix, Timestamp: timestamp,
+				Model: "claude-sonnet-4-5", Project: project, RepoKey: key, Granularity: "turn",
+				DedupeKey: session.id + suffix + string(rune('0'+turn)),
 			})
 		}
 	}
-	seedStoreAt(t, dbPath, records)
-}
-
-func runEvidenceCommand(t *testing.T, repo, format string) string {
-	t.Helper()
-	root := NewRootCmd()
-	var output bytes.Buffer
-	root.SetOut(&output)
-	root.SetErr(&output)
-	root.SetArgs([]string{"evidence", "--repo", repo, "--since", "30d", "--format", format})
-	if err := root.Execute(); err != nil {
-		t.Fatalf("evidence: %v", err)
-	}
-	return output.String()
+	return records
 }

@@ -140,27 +140,40 @@ func TestLatestSession(t *testing.T) {
 	s, ctx := newStore(t), context.Background()
 	ts := time.Date(2026, 7, 1, 10, 0, 0, 0, time.UTC)
 	_, err := s.Insert(ctx, []usage.Record{
-		{Tool: "t", SessionID: "old", Timestamp: ts, Model: "m", Project: "web", DedupeKey: "1"},
-		{Tool: "t", SessionID: "new", Timestamp: ts.Add(2 * time.Hour), Model: "m", Project: "api", DedupeKey: "2"},
+		{Tool: "t", SessionID: "old", Timestamp: ts, Model: "m", Project: "web", RepoKey: "v1:w", DedupeKey: "1"},
+		{Tool: "t", SessionID: "new", Timestamp: ts.Add(2 * time.Hour), Model: "m", Project: "api", RepoKey: "v1:a", DedupeKey: "2"},
+		// The newest session touching web also ran in a second repository, so its rows name two
+		// projects; it is still web's newest session.
+		{Tool: "t", SessionID: "both", Timestamp: ts.Add(time.Hour), Model: "m", Project: "web", RepoKey: "v1:w", DedupeKey: "3"},
+		{Tool: "t", SessionID: "both", Timestamp: ts.Add(time.Hour), Model: "m", Project: "lib", RepoKey: "v1:l", DedupeKey: "4"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	if ref, ok, err := s.LatestSession(ctx); err != nil || !ok || ref.SessionID != "new" {
+		t.Fatalf("LatestSession = %q, %v, %v; want new", ref.SessionID, ok, err)
+	}
+	web, err := s.RepositoryAt(ctx, "web", "v1:w")
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, tc := range []struct {
-		name, project, want string
-		wantOK              bool
+		name   string
+		id     int64
+		want   string
+		wantOK bool
 	}{
-		{name: "any project", want: "new", wantOK: true},
-		{name: "scoped to project", project: "web", want: "old", wantOK: true},
-		{name: "project with no sessions", project: "ghost"},
+		{"scoped to a repository, even through a session that names two", web.ID, "both", true},
+		{"a repository with no sessions", web.ID + 100, "", false},
+		{"no repository", 0, "", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ref, ok, err := s.LatestSession(ctx, tc.project)
+			ref, ok, err := s.LatestSessionIn(ctx, tc.id)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if ok != tc.wantOK || ref.SessionID != tc.want {
-				t.Fatalf("LatestSession(%q) = %q,%v want %q,%v", tc.project, ref.SessionID, ok, tc.want, tc.wantOK)
+				t.Fatalf("LatestSessionIn(%d) = %q,%v want %q,%v", tc.id, ref.SessionID, ok, tc.want, tc.wantOK)
 			}
 		})
 	}

@@ -47,6 +47,10 @@ type Record struct {
 	// "apps/mobile"), or "" at the root or when unresolved. Set by ingest, never by a
 	// parser; always relative, never an absolute path.
 	Subpath string
+	// RepoKey is the local identity of the repository Project names (internal/projectid.Key),
+	// "" when unresolved. Set by ingest, never by a parser. A keyed hash of a path: it stays
+	// in the local store and is never serialized, so sync cannot send it.
+	RepoKey string `json:"-"`
 	// ProjectGuessed marks a Project resolved for a working directory that no longer exists, so
 	// it was computed with less of the filesystem than a read made while the directory existed
 	// (a removed clone nested in another repository resolves to the outer one). TRANSIENT, like

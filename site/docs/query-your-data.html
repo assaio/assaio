@@ -381,6 +381,11 @@ retention horizon.</p>
 <td><code>INTEGER</code></td>
 <td><code>1</code> when the same completed Claude sub-agent aggregate carried competing non-empty projects. Its <code>project</code> and <code>subpath</code> stay empty; usage remains counted once.</td>
 </tr>
+<tr>
+<td><code>repo_id</code></td>
+<td><code>INTEGER</code></td>
+<td>The row's repository: an id in the <code>repository</code> table, <code>0</code> when unresolved, <code>-1</code> when two reads of the row named different repositories. <code>report</code> shows a name two repositories share split (<code>api (2)</code>, <code>api (?)</code>); grouping by <code>project</code> alone sums every repository with that name.</td>
+</tr>
 </tbody>
 </table>
 <p>Claude Code and Codex parsers populate the activity columns (<code>lines_added</code> … <code>rework_lines</code>). Since

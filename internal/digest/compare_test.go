@@ -243,7 +243,7 @@ func TestLeadsAreStoredInRankOrderNotResultOrder(t *testing.T) {
 		{Name: "zzz-ranked-first", Lead: &analyze.Lead{Rank: 1}},
 		{Name: "not-a-lead"},
 	}
-	s := Take(&analyze.Input{}, results, Options{Window: "7d", At: at(11)})
+	s := Take(&analyze.Input{}, results, &Options{Window: "7d", At: at(11)})
 	want := []string{"zzz-ranked-first", "alphabetically-first"}
 	if len(s.Leads) != len(want) {
 		t.Fatalf("leads = %v, want %v", s.Leads, want)
@@ -260,7 +260,7 @@ func TestLeadsAreStoredInRankOrderNotResultOrder(t *testing.T) {
 // that appeared beside one that vanished.
 func TestTheStoredKeyIsTheRealNameAndTheRenderIsPseudonymized(t *testing.T) {
 	in := analyze.Input{ByProject: []analyze.ProjectStat{{Project: "acme-web", Lines: 9}}}
-	now := Take(&in, nil, Options{Window: "7d", At: at(11)})
+	now := Take(&in, nil, &Options{Window: "7d", At: at(11)})
 	now.Priced, now.ParsedBy = true, "same"
 	if now.Projects["acme-web"] != 9 {
 		t.Fatalf("stored projects = %v, want the real name as the comparison key", now.Projects)

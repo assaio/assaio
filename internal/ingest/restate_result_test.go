@@ -46,7 +46,7 @@ func TestReReadsReachTheResult(t *testing.T) {
 			}
 			defer func() { _ = st.Close() }()
 			var first Result
-			if err := ingestParsed(ctx, st, make(projectCache), &first, []usage.Record{rec}, 0, nil); err != nil {
+			if err := ingestParsed(ctx, st, newProjectCache(nil), &first, []usage.Record{rec}, 0, nil); err != nil {
 				t.Fatal(err)
 			}
 			if err := ingestSteps(ctx, st, &first, []usage.Step{step}); err != nil {
@@ -60,7 +60,7 @@ func TestReReadsReachTheResult(t *testing.T) {
 				tt.step(&againStep)
 			}
 			var res Result
-			if err := ingestParsed(ctx, st, make(projectCache), &res, []usage.Record{again}, 0, nil); err != nil {
+			if err := ingestParsed(ctx, st, newProjectCache(nil), &res, []usage.Record{again}, 0, nil); err != nil {
 				t.Fatal(err)
 			}
 			if err := ingestSteps(ctx, st, &res, []usage.Step{againStep}); err != nil {

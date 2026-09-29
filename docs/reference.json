@@ -1388,6 +1388,12 @@
       ]
     },
     {
+      "path": "repos",
+      "short": "Show which project name each directory's usage is stored under and which names repositories share",
+      "hidden": false,
+      "flags": []
+    },
+    {
       "path": "reprice",
       "short": "Which plan and which model mix this window's own numbers support",
       "hidden": false,

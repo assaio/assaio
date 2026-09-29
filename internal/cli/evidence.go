@@ -52,30 +52,36 @@ func runEvidence(cmd *cobra.Command, since, repo, format string) error {
 	if err != nil {
 		return err
 	}
-	project := vcs.Project(root)
 	st, err := openReportStore(cmd)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = st.Close() }()
+	here, err := repositoryAt(cmd.Context(), st, root)
+	if err != nil {
+		return err
+	}
+	if here.ID == 0 {
+		cmd.PrintErrln("note: " + unresolvedNote(&here))
+	}
 	rows, err := st.Sessions(cmd.Context(), start)
 	if err != nil {
 		return err
 	}
-	sessions, otherProjects, unknownProjects, err := evidenceSessions(rows, project)
+	pop, err := evidenceSessions(rows, here.ID, here.Name, here.Unplaced)
 	if err != nil {
 		return err
 	}
-	commits, skipped, err := vcs.Collect(cmd.Context(), root, start, now, version.Version)
+	commits, skipped, err := vcs.Collect(cmd.Context(), root, here.Name, start, now, version.Version)
 	if err != nil {
 		return err
 	}
-	results := attribution.Match(sessions, commits, nil, now)
+	results := attribution.Match(pop.sessions, commits, nil, now)
 	doc := attribution.Document{
-		Algorithm: attribution.Algorithm, Project: project, Since: start, ObservedAt: now,
+		Algorithm: attribution.Algorithm, Project: here.Name, Since: start, ObservedAt: now,
 		MaxGapSeconds: int64(attribution.DefaultMaxGap.Seconds()), WindowSessions: len(rows),
-		OtherProjects: otherProjects, ProjectUnknown: unknownProjects, SkippedCommits: skipped,
-		Summary: attribution.Summarize(results), Results: results,
+		OtherProjects: pop.other, ProjectUnknown: pop.unknown, IdentityUnresolved: pop.unresolved,
+		SkippedCommits: skipped, Summary: attribution.Summarize(results), Results: results,
 	}
 	if format == "text" {
 		return attribution.RenderText(cmd.OutOrStdout(), &doc)
@@ -85,25 +91,36 @@ func runEvidence(cmd *cobra.Command, since, repo, format string) error {
 	return enc.Encode(doc)
 }
 
-func evidenceSessions(rows []store.SessionRow, project string) ([]attribution.Session, int, int, error) {
-	sessions := make([]attribution.Session, 0, len(rows))
-	var otherProjects, unknownProjects int
+// evidencePopulation is the window's sessions sorted by what they are to the repository the
+// command stands in.
+type evidencePopulation struct {
+	sessions                   []attribution.Session
+	other, unknown, unresolved int
+}
+
+// evidenceSessions keeps the sessions whose rows resolved to repository id -- never one merely
+// sharing its name. A session under the name its unplaced rows carry, with no repository of its
+// own, is counted unresolved: it may be this repository's, and a graph edge does not guess.
+func evidenceSessions(rows []store.SessionRow, id int64, project, unplaced string) (evidencePopulation, error) {
+	pop := evidencePopulation{sessions: make([]attribution.Session, 0, len(rows))}
 	for i := range rows {
 		row := &rows[i]
 		if row.Member != "" {
-			return nil, 0, 0, errors.New("evidence is local-only and cannot read member rows from a team store")
+			return evidencePopulation{}, errors.New("evidence is local-only and cannot read member rows from a team store")
 		}
 		switch {
 		case row.Project == "":
-			unknownProjects++
-		case row.Project != project:
-			otherProjects++
-		default:
-			sessions = append(sessions, attribution.Session{
-				ID: row.SessionID, Project: row.Project, Tool: row.Tool,
+			pop.unknown++
+		case id > 0 && row.RepoID == id:
+			pop.sessions = append(pop.sessions, attribution.Session{
+				ID: row.SessionID, Project: project, Tool: row.Tool,
 				StartedAt: row.FirstTs, EndedAt: row.LastTs,
 			})
+		case row.RepoID == 0 && row.Project == unplaced:
+			pop.unresolved++
+		default:
+			pop.other++
 		}
 	}
-	return sessions, otherProjects, unknownProjects, nil
+	return pop, nil
 }

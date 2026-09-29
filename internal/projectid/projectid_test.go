@@ -8,29 +8,33 @@ import (
 
 func TestResolve(t *testing.T) {
 	tests := []struct {
-		name  string
-		setup func(t *testing.T) (cwd, wantRoot, wantSubpath string)
+		name      string
+		setup     func(t *testing.T) (cwd, wantRoot, wantSubpath string)
+		wantFound bool
 	}{
-		{"repo root itself", setupAtRepoRoot},
-		{"nested subdirectory", setupNestedSubdir},
-		{"deep nesting", setupDeepNesting},
-		{"worktree checkout directory rolls up to main repo", setupWorktreeDir},
-		{"subdirectory under a worktree rolls up too", setupWorktreeSubdir},
-		{"submodule-shaped git file stays put", setupSubmoduleShape},
-		{"malformed gitdir pointer falls back to its own dir", setupMalformedPointer},
-		{"directory with no git anywhere", setupNoGit},
-		{"nonexistent path", setupNonexistent},
-		{"empty cwd", func(t *testing.T) (string, string, string) { return "", "", "" }},
+		{"repo root itself", setupAtRepoRoot, true},
+		{"nested subdirectory", setupNestedSubdir, true},
+		{"deep nesting", setupDeepNesting, true},
+		{"worktree checkout directory rolls up to main repo", setupWorktreeDir, true},
+		{"subdirectory under a worktree rolls up too", setupWorktreeSubdir, true},
+		{"submodule-shaped git file stays put", setupSubmoduleShape, true},
+		{"malformed gitdir pointer falls back to its own dir", setupMalformedPointer, true},
+		{"directory with no git anywhere", setupNoGit, false},
+		{"nonexistent path", setupNonexistent, false},
+		{"empty cwd", func(t *testing.T) (string, string, string) { return "", "", "" }, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cwd, wantRoot, wantSubpath := tt.setup(t)
-			gotRoot, gotSubpath := Resolve(cwd)
+			gotRoot, gotSubpath, gotFound := Resolve(cwd)
 			if gotRoot != wantRoot {
 				t.Errorf("Resolve(%q) root = %q, want %q", cwd, gotRoot, wantRoot)
 			}
 			if gotSubpath != wantSubpath {
 				t.Errorf("Resolve(%q) subpath = %q, want %q", cwd, gotSubpath, wantSubpath)
+			}
+			if gotFound != tt.wantFound {
+				t.Errorf("Resolve(%q) found = %v, want %v", cwd, gotFound, tt.wantFound)
 			}
 		})
 	}
@@ -40,9 +44,9 @@ func TestResolve(t *testing.T) {
 // order: the same cwd must resolve identically every time.
 func TestResolveDeterministic(t *testing.T) {
 	_, sub := setupNestedSubdirPair(t)
-	wantRoot, wantSubpath := Resolve(sub)
+	wantRoot, wantSubpath, _ := Resolve(sub)
 	for range 5 {
-		gotRoot, gotSubpath := Resolve(sub)
+		gotRoot, gotSubpath, _ := Resolve(sub)
 		if gotRoot != wantRoot || gotSubpath != wantSubpath {
 			t.Fatalf("Resolve(%q) not deterministic: got (%q,%q), want (%q,%q)", sub, gotRoot, gotSubpath, wantRoot, wantSubpath)
 		}
@@ -67,7 +71,7 @@ func TestRealFilesystemMonorepo(t *testing.T) {
 	if !dirExists(sub) {
 		sub = repo
 	}
-	root, subpath := Resolve(sub)
+	root, subpath, _ := Resolve(sub)
 	t.Logf("Resolve(%q) = (root: %q, subpath: %q)", sub, root, subpath)
 	if root != repo {
 		t.Errorf("Resolve(%q) root = %q, want %q", sub, root, repo)

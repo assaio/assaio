@@ -36,9 +36,11 @@ const revertPrefix = `Revert "`
 // could not be read -- the same skip-and-count policy the log parsers follow, since a git
 // version that prints something unexpected must not cost a caller the whole history.
 //
-// observedAt is passed in rather than read from the clock so one reading time stamps a whole
-// pass and the output is a pure function of the repository.
-func Collect(ctx context.Context, root string, since, observedAt time.Time, build string) ([]event.Event, int, error) {
+// project is the name the observations are attributed to: the caller resolves which repository
+// root is, since a worktree's own basename is not its repository's. observedAt is passed in
+// rather than read from the clock so one reading time stamps a whole pass and the output is a
+// pure function of the repository.
+func Collect(ctx context.Context, root, project string, since, observedAt time.Time, build string) ([]event.Event, int, error) {
 	out, err := gitOutput(ctx, root, "log", "--since="+sinceArg(since), "--format="+logFormat, "--numstat")
 	if err != nil {
 		return nil, 0, err
@@ -52,7 +54,7 @@ func Collect(ctx context.Context, root string, since, observedAt time.Time, buil
 			st.count(line)
 			continue
 		}
-		if e, c, ok := headerObservation(header, Project(root), observedAt, build); ok {
+		if e, c, ok := headerObservation(header, project, observedAt, build); ok {
 			st.start(&e, &c)
 		} else {
 			st.skip()

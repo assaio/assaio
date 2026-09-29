@@ -100,16 +100,20 @@ const usageAggregates = `
 // the reason attribution.go states: SQL in this package is never built by concatenating
 // anything but compile-time constants. usageSelect and usageGroup are shared so the
 // variants cannot drift apart on what a total contains or how it is keyed.
+// Project in every usage query is the name a reader sees (shownNames), so two repositories
+// sharing a basename are two groups.
 const (
 	usageSelect = `
-        SELECT substr(ts,1,10) AS day, tool, model, project, entrypoint, member, granularity,` +
+        WITH` + shownNames + `
+        SELECT substr(ts,1,10) AS day, tool, model, COALESCE(shown_name.name, project) AS shown,
+               entrypoint, member, granularity,` +
 		usageAggregates + `
-        FROM usage_record
+        FROM usage_record` + shownNameJoin + `
         WHERE ts >= ?`
 
 	usageGroup = `
-        GROUP BY day, tool, model, project, entrypoint, member, granularity
-        ORDER BY day, tool, model, project, entrypoint, member, granularity`
+        GROUP BY day, tool, model, shown, entrypoint, member, granularity
+        ORDER BY day, tool, model, shown, entrypoint, member, granularity`
 
 	usageQuery = usageSelect + usageGroup
 
@@ -119,13 +123,15 @@ const (
 	// join is USING rather than ON so the two shared columns merge and every other column
 	// stays unqualified. The annotation columns come last so one scan path serves them all.
 	usageByLabelQuery = `
-        SELECT substr(ts,1,10) AS day, tool, model, project, entrypoint, member, granularity,` +
+        WITH` + shownNames + `
+        SELECT substr(ts,1,10) AS day, tool, model, COALESCE(shown_name.name, project) AS shown,
+               entrypoint, member, granularity,` +
 		usageAggregates + `,
                COALESCE(task, ''), COALESCE(outcome, ''), COALESCE(difficulty, '')
-        FROM usage_record LEFT JOIN session_label USING (session_id, member)
+        FROM usage_record LEFT JOIN session_label USING (session_id, member)` + shownNameJoin + `
         WHERE ts >= ?
-        GROUP BY day, tool, model, project, entrypoint, member, granularity, task, outcome, difficulty
-        ORDER BY day, tool, model, project, entrypoint, member, granularity, task, outcome, difficulty`
+        GROUP BY day, tool, model, shown, entrypoint, member, granularity, task, outcome, difficulty
+        ORDER BY day, tool, model, shown, entrypoint, member, granularity, task, outcome, difficulty`
 )
 
 func (s *Store) usage(ctx context.Context, since time.Time, filter LabelFilter, byLabel bool) ([]UsageRow, error) {

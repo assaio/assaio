@@ -79,10 +79,10 @@ func (r *Result) MedianCommitAgeDays(asOf time.Time) (days int, ok bool) {
 }
 
 // Analyze reads the survival picture from the window's commit observations and the paths
-// they touched, given the AI lines the store recorded for the same window. files is
-// local-only by construction (see vcs.TouchedFiles) and never reaches the Result.
-func Analyze(ctx context.Context, root string, commits []event.Event, files []string, aiLines int64) (Result, error) {
-	res := Result{Project: vcs.Project(root), AILines: aiLines}
+// they touched, given the AI lines the store recorded for the same window under project. files
+// is local-only by construction (see vcs.TouchedFiles) and never reaches the Result.
+func Analyze(ctx context.Context, root, project string, commits []event.Event, files []string, aiLines int64) (Result, error) {
+	res := Result{Project: project, AILines: aiLines}
 	inWindow := res.tally(commits)
 
 	blame, err := survivingLines(ctx, root, files, inWindow)

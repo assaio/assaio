@@ -87,8 +87,12 @@ func runDigest(cmd *cobra.Command, since string, weekly, dry bool) error {
 	analyze.MarkLead(results)
 
 	note, share := unpricedDisclosure(&in)
-	now := digest.Take(&in, results, digest.Options{
-		Window: since, UnpricedNote: note, UnpricedShare: share, At: time.Now(),
+	splits, err := st.SplitComposition(cmd.Context())
+	if err != nil {
+		return err
+	}
+	now := digest.Take(&in, results, &digest.Options{
+		Window: since, UnpricedNote: note, UnpricedShare: share, At: time.Now(), Splits: splits,
 	})
 	previous, err := previousSnapshot(cmd, st, now.TakenAt, since)
 	if err != nil {

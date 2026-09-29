@@ -26,10 +26,12 @@ type SessionRef struct {
 // treats a short revision that names two objects.
 func (s *Store) MatchSessions(ctx context.Context, prefix string) ([]SessionRef, error) {
 	rows, err := s.db.QueryContext(ctx, `
-        SELECT session_id, member, MAX(project), MAX(ts) FROM usage_record
-        WHERE session_id LIKE ? ESCAPE '\'
-        GROUP BY session_id, member
-        ORDER BY session_id, member`, escapeLike(prefix)+"%")
+        WITH`+shownNames+`,
+        refs AS (`+sessionRefsSelect+`
+            WHERE session_id LIKE ? ESCAPE '\'
+            GROUP BY session_id, member
+        )`+sessionRefsNamed+`
+        ORDER BY refs.session_id, refs.member`, escapeLike(prefix)+"%")
 	if err != nil {
 		return nil, err
 	}
@@ -45,17 +47,35 @@ func (s *Store) MatchSessions(ctx context.Context, prefix string) ([]SessionRef,
 	return out, rows.Err()
 }
 
-// LatestSession returns the most recently active session, restricted to project when it is
-// non-empty. This is what `mark` targets when the user names no session: the work they just
-// finished in the repository they are standing in.
-func (s *Store) LatestSession(ctx context.Context, project string) (ref SessionRef, ok bool, err error) {
-	row := s.db.QueryRowContext(ctx, `
-        SELECT session_id, member, MAX(project), MAX(ts) FROM usage_record
-        WHERE (? = '' OR project = ?)
-        GROUP BY session_id, member
-        ORDER BY MAX(ts) DESC, session_id
-        LIMIT 1`, project, project)
-	ref, err = scanSessionRef(row)
+// LatestSession returns the most recently active session anywhere in the store.
+func (s *Store) LatestSession(ctx context.Context) (ref SessionRef, ok bool, err error) {
+	return scanLatest(s.db.QueryRowContext(ctx, `
+        WITH`+shownNames+`,
+        refs AS (`+sessionRefsSelect+`
+            GROUP BY session_id, member
+        )`+sessionRefsNamed+`
+        ORDER BY refs.last_ts DESC, refs.session_id
+        LIMIT 1`))
+}
+
+// LatestSessionIn returns the most recently active session with a row resolved to repository
+// id. This is what `mark` targets when the user names no session: the work they just finished
+// in the repository they are standing in -- never a session that only shares its name.
+func (s *Store) LatestSessionIn(ctx context.Context, id int64) (ref SessionRef, ok bool, err error) {
+	return scanLatest(s.db.QueryRowContext(ctx, `
+        WITH`+shownNames+`,
+        mine AS (SELECT DISTINCT session_id, member FROM usage_record WHERE repo_id > 0 AND repo_id = ?),
+        refs AS (`+sessionRefsSelect+`
+            WHERE EXISTS (SELECT 1 FROM mine
+                          WHERE mine.session_id = usage_record.session_id AND mine.member = usage_record.member)
+            GROUP BY session_id, member
+        )`+sessionRefsNamed+`
+        ORDER BY refs.last_ts DESC, refs.session_id
+        LIMIT 1`, id))
+}
+
+func scanLatest(row *sql.Row) (SessionRef, bool, error) {
+	ref, err := scanSessionRef(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return SessionRef{}, false, nil
 	}
@@ -64,6 +84,19 @@ func (s *Store) LatestSession(ctx context.Context, project string) (ref SessionR
 	}
 	return ref, true, nil
 }
+
+// sessionRefsSelect and sessionRefsNamed are the two halves of both lookups: one row per
+// session with its label and repository, then the name a reader sees for them.
+const (
+	sessionRefsSelect = `
+            SELECT session_id, member, ` + sessionLabelExpr + ` AS label,
+                   ` + sessionRepoExpr + ` AS repo_id, MAX(ts) AS last_ts
+            FROM usage_record`
+	sessionRefsNamed = `
+        SELECT refs.session_id, refs.member, COALESCE(shown_name.name, refs.label) AS name, refs.last_ts
+        FROM refs
+        LEFT JOIN shown_name ON shown_name.label = refs.label AND shown_name.repo_id = refs.repo_id`
+)
 
 // scanSessionRef scans the identity-plus-context shape both lookups select.
 func scanSessionRef(row interface{ Scan(...any) error }) (SessionRef, error) {

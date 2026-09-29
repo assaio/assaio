@@ -61,6 +61,10 @@ type Snapshot struct {
 	// same findings `analyze` leads with, rather than inventing a second order of
 	// importance for the same data.
 	Leads []string `json:"leads"`
+	// Splits maps each project name more than one repository shared when the run was taken to
+	// the repositories behind it (store.SplitComposition). A name splits the first time a second
+	// repository with it is read, with no build change, and moves usage between names in Projects.
+	Splits map[string]string `json:"splits,omitempty"`
 }
 
 // Options is what the caller knows that the window does not. UnpricedNote is the disclosure
@@ -71,12 +75,13 @@ type Options struct {
 	UnpricedNote  string
 	UnpricedShare float64
 	At            time.Time
+	Splits        map[string]string
 }
 
 // Take reads the window every other surface reads. results are the validator Results the
 // same run produced, so a digest never re-derives a verdict a different way than `analyze`
 // would have.
-func Take(in *analyze.Input, results []analyze.Result, opts Options) Snapshot {
+func Take(in *analyze.Input, results []analyze.Result, opts *Options) Snapshot {
 	window, unpricedNote, at := opts.Window, opts.UnpricedNote, opts.At
 	s := Snapshot{
 		Version: SnapshotVersion, TakenAt: at, Window: window, ParsedBy: in.ParsedBy,
@@ -89,6 +94,7 @@ func Take(in *analyze.Input, results []analyze.Result, opts Options) Snapshot {
 		Projects:     make(map[string]int64, len(in.ByProject)),
 		Verdicts:     make(map[string]string, len(results)),
 		Confidence:   make(map[string]string, len(results)),
+		Splits:       opts.Splits,
 	}
 	for i := range in.ByModel {
 		s.Models[in.ByModel[i].Model] = in.ByModel[i].Tokens

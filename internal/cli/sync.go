@@ -10,12 +10,15 @@ import (
 	"os"
 	"os/signal"
 	"os/user"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/assaio/assaio/internal/server"
+	"github.com/assaio/assaio/internal/store"
+	"github.com/assaio/assaio/internal/usage"
 )
 
 // memberHexLen is the sync-member pseudonym's hex length ("member-a1b2c3d4e5"): 40 bits,
@@ -83,6 +86,9 @@ func runSync(cmd *cobra.Command, serverURL, token, member, since *string) error 
 	if err != nil {
 		return err
 	}
+	if err := warnPooledNames(cmd, st, recs); err != nil {
+		return err
+	}
 
 	result, err := pushUsage(ctx, *serverURL, *token, memberID, recs)
 	if err != nil {
@@ -90,6 +96,31 @@ func runSync(cmd *cobra.Command, serverURL, token, member, since *string) error 
 	}
 	cmd.Printf("synced as %s: sent %d, server inserted %d (of %d received)\n",
 		memberID, len(recs), result.Inserted, result.Received)
+	return nil
+}
+
+// warnPooledNames names the projects in recs that more than one local repository shares. The
+// server receives a project's name and never the repository behind it, so it counts their
+// usage as one project's.
+func warnPooledNames(cmd *cobra.Command, st *store.Store, recs []usage.Record) error {
+	split, err := st.SplitLabels(cmd.Context())
+	if err != nil {
+		return err
+	}
+	sent := make(map[string]bool, len(recs))
+	for i := range recs {
+		sent[recs[i].Project] = true
+	}
+	var pooled []string
+	for _, name := range split {
+		if sent[name] {
+			pooled = append(pooled, name)
+		}
+	}
+	if len(pooled) > 0 {
+		cmd.PrintErrf("warning: more than one repository on this machine is named %s; "+
+			"the team server counts each of these names as one project.\n", strings.Join(pooled, ", "))
+	}
 	return nil
 }
 

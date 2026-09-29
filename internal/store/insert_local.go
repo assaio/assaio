@@ -74,6 +74,12 @@ import (
 // source identity, so two non-empty projects on that identity are competing claims rather than
 // a correction. project_conflict is sticky and keeps both project and subpath empty; applying
 // that rule to ordinary turns would make the B116 correction path unreachable.
+//
+// repo_id follows project with two differences. A re-read offering the same label but no
+// repository keeps the stored one: a directory that is no longer a repository saw less than the
+// read that found one. And for the sub-agent aggregate, two repositories under one label are
+// competing claims too, but about the repository only: the label stays and repo_id becomes -1.
+// -1 is checked first and is sticky, as is project_conflict, which sets it.
 const restateActivitySQL = `
         UPDATE usage_record SET
             granularity = ?,
@@ -98,6 +104,15 @@ const restateActivitySQL = `
                      AND ? <> '' AND project <> '' AND project <> ? THEN ''
                 WHEN ? <> '' THEN ?
                 ELSE subpath
+            END,
+            repo_id = CASE
+                WHEN project_conflict = 1 OR repo_id = -1 THEN -1
+                WHEN tool = 'claude-code' AND dedupe_key LIKE 'agent:%'
+                     AND ((? <> '' AND project <> '' AND project <> ?)
+                          OR (? > 0 AND repo_id > 0 AND repo_id <> ?)) THEN -1
+                WHEN ? > 0 THEN ?
+                WHEN ? <> '' AND ? <> project THEN 0
+                ELSE repo_id
             END,
             entrypoint = CASE WHEN ? <> '' THEN ? ELSE entrypoint END,
             git_branch = CASE WHEN ? <> '' THEN ? ELSE git_branch END,
@@ -142,12 +157,12 @@ func (s *Store) InsertSynced(ctx context.Context, recs []usage.Record) (int, err
 	return inserted, err
 }
 
-// activityRestateArgs binds r to restateActivitySQL's placeholders. A guessed project is
-// offered as no answer, so the stored one is kept.
-func activityRestateArgs(r *usage.Record) []any {
+// activityRestateArgs binds r and its repository to restateActivitySQL's placeholders. A guessed
+// project is offered as no answer, so the stored one is kept.
+func activityRestateArgs(r *usage.Record, repoID int64) []any {
 	project, subpath := r.Project, r.Subpath
 	if r.ProjectGuessed {
-		project, subpath = "", ""
+		project, subpath, repoID = "", "", 0
 	}
 	return []any{
 		r.Granularity,
@@ -156,6 +171,7 @@ func activityRestateArgs(r *usage.Record) []any {
 		project, project,
 		project, project, project, project,
 		project, project, project, subpath,
+		project, project, repoID, repoID, repoID, repoID, project, project,
 		r.Entrypoint, r.Entrypoint,
 		r.GitBranch, r.GitBranch,
 		r.InputTokens, r.OutputTokens, r.CacheReadTokens, r.CacheWriteTokens, r.ReasoningTokens,

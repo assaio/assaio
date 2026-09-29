@@ -40,8 +40,9 @@ func (s *Store) Insert(ctx context.Context, recs []usage.Record) (int, error) {
 	return inserted, err
 }
 
-// signalsRestateArgs binds r to restateSignalsSQL's placeholders.
-func signalsRestateArgs(r *usage.Record) []any {
+// signalsRestateArgs binds r to restateSignalsSQL's placeholders; the repository is not one of
+// the columns it fills.
+func signalsRestateArgs(r *usage.Record, _ int64) []any {
 	return []any{
 		r.ToolReads, r.ToolSearches, r.ToolCommands, r.ToolWrites, r.ToolOther,
 		r.ToolErrors, r.Sidechain, r.Skill, r.Agent, r.Tool, r.DedupeKey,
@@ -55,13 +56,17 @@ func signalsRestateArgs(r *usage.Record) []any {
 // and also the one way a parser regression erases evidence with nothing to show for it. Off on
 // the paths whose restate cannot do either, or whose operator cannot act on it.
 func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL string,
-	restateArgs func(*usage.Record) []any, watched bool,
+	restateArgs func(*usage.Record, int64) []any, watched bool,
 ) (inserted int, w Restated, err error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, w, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	ids, err := registerRepositories(ctx, tx, recs)
+	if err != nil {
+		return 0, w, err
+	}
 	restate, err := tx.PrepareContext(ctx, restateSQL)
 	if err != nil {
 		return 0, w, err
@@ -84,8 +89,8 @@ func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL 
            member,
            tool_reads, tool_searches, tool_commands, tool_writes, tool_other,
            tool_errors, sidechain, skill, agent,
-           cache_write_1h, cache_miss_reason)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           cache_write_1h, cache_miss_reason, repo_id)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(tool, dedupe_key) DO NOTHING`)
 	if err != nil {
 		return 0, w, err
@@ -93,6 +98,7 @@ func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL 
 	defer func() { _ = stmt.Close() }()
 	for i := range recs {
 		r := &recs[i]
+		id := repoID(ids, r)
 		res, err := stmt.ExecContext(ctx, r.Tool, r.SessionID, r.Timestamp.UTC().Format(time.RFC3339),
 			r.Model, r.InputTokens, r.OutputTokens, r.CacheReadTokens, r.CacheWriteTokens,
 			r.ReasoningTokens, r.DedupeKey, r.Project, r.Subpath, r.GitBranch, r.Entrypoint, r.Granularity,
@@ -100,7 +106,7 @@ func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL 
 			r.Member,
 			r.ToolReads, r.ToolSearches, r.ToolCommands, r.ToolWrites, r.ToolOther,
 			r.ToolErrors, r.Sidechain, r.Skill, r.Agent,
-			r.CacheWrite1hTokens, r.CacheMissReason)
+			r.CacheWrite1hTokens, r.CacheMissReason, id)
 		if err != nil {
 			return inserted, w, err
 		}
@@ -110,7 +116,7 @@ func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL 
 			continue
 		}
 		if look != nil {
-			down, c, err := watch(ctx, look, r)
+			down, c, err := watch(ctx, look, r, id)
 			if err != nil {
 				return inserted, w, err
 			}
@@ -119,7 +125,7 @@ func (s *Store) insertWith(ctx context.Context, recs []usage.Record, restateSQL 
 			}
 			w.Identity.Add(c)
 		}
-		if _, err := restate.ExecContext(ctx, restateArgs(r)...); err != nil {
+		if _, err := restate.ExecContext(ctx, restateArgs(r, id)...); err != nil {
 			return inserted, w, err
 		}
 	}

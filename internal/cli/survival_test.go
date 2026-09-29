@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/assaio/assaio/internal/usage"
 )
 
 func gitIn(t *testing.T, dir string, args ...string) {
@@ -106,5 +109,66 @@ func TestSurvivalReportsWhatTheWindowChanged(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("output missing %q:\n%s", want, got)
 		}
+	}
+}
+
+// TestSurvivalCountsOnlyThisRepositorysAILines: another checkout with the same name contributes
+// nothing to this one's AI lines, and when the store holds the name only for that other
+// checkout, the command says so instead of borrowing its lines.
+func TestSurvivalCountsOnlyThisRepositorysAILines(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	for _, tt := range []struct {
+		name      string
+		seedHere  bool
+		wantLines string
+		wantNote  bool
+	}{
+		{"both checkouts stored", true, "AI lines (assaio):   7\n", false},
+		{"only the other checkout stored", false, "AI lines (assaio):   —  (no stored usage resolved to this repository", true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("XDG_DATA_HOME", t.TempDir())
+			dir := filepath.Join(t.TempDir(), "api")
+			if err := os.Mkdir(dir, 0o750); err != nil {
+				t.Fatal(err)
+			}
+			gitIn(t, dir, "init")
+			gitIn(t, dir, "config", "user.email", "t@t.test")
+			gitIn(t, dir, "config", "user.name", "Test")
+			if err := os.WriteFile(filepath.Join(dir, "a.go"), []byte("x\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			gitIn(t, dir, "add", ".")
+			gitIn(t, dir, "commit", "-m", "c1")
+			other := filepath.Join(t.TempDir(), "api")
+			if err := os.MkdirAll(filepath.Join(other, ".git"), 0o750); err != nil {
+				t.Fatal(err)
+			}
+			dbPath := evidenceDBPath(t)
+			rec := func(key, id string, lines int64) usage.Record {
+				return usage.Record{
+					Tool: "claude-code", SessionID: id, Timestamp: time.Now().UTC().Add(-time.Hour),
+					Model: "m", Project: "api", RepoKey: key, Granularity: "turn", DedupeKey: id, LinesAdded: lines,
+				}
+			}
+			records := []usage.Record{rec(repoKeyIn(t, dbPath, other), "o", 100), rec("", "u", 30)}
+			if tt.seedHere {
+				records = append(records, rec(repoKeyIn(t, dbPath, dir), "h", 7))
+			}
+			seedStoreAt(t, dbPath, records)
+
+			got := runSurvivalCmd(t, dir)
+			if !strings.Contains(got, tt.wantLines) {
+				t.Fatalf("output missing %q:\n%s", tt.wantLines, got)
+			}
+			if !strings.Contains(got, "not counted:         30 AI line(s) under \"api\"") {
+				t.Fatalf("output does not state the lines no repository was recorded for:\n%s", got)
+			}
+			if strings.Contains(got, "assaio-agent repos") != tt.wantNote {
+				t.Fatalf("note naming 'assaio-agent repos' present = %v, want %v:\n%s", !tt.wantNote, tt.wantNote, got)
+			}
+		})
 	}
 }

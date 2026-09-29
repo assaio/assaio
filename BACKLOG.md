@@ -97,9 +97,8 @@ its own id (`B192`) and a milestone to arrive through, above.
 Proposed by the 2026-09-26 framework audit. Users can already write exec parsers, metrics and
 rules and script over `report` and `analyze` JSON; a fuller analytical contract that outside
 programs can rely on remains untested. [ROADMAP.md](ROADMAP.md#2b-a-public-analytical-export)
-owns the order: the evidence graph starting with repository identity (`B218`, now in that
-section) and the agent skill, then a small export, then typed plugin states and richer parser
-counters.
+owns the order: the evidence graph (repository identity shipped in v0.35.0) and the agent skill,
+then a small export, then typed plugin states and richer parser counters.
 
 - [ ] **B211 · a versioned analytical snapshot** — M · both — a deterministic NDJSON export: a
   manifest (window end, grain, build, price-table date), then allow-listed usage and session
@@ -302,15 +301,14 @@ change it produced — commit, pull request, review, CI, merge, survival — car
 confidence and the ambiguity of every link. Everything here ships with its error bars or it
 does not ship.
 
-- [ ] **B218 · repository identity apart from the display name** — M · both —
-  `internal/projectid` resolves a repository root and subpath, but the stored `project` is the
-  root's basename, so two unrelated repositories named `api` share every aggregate, and a later
-  pseudonym cannot separate them again. Design an opaque, versioned local repository key beside
-  the label, with `unknown` and `ambiguous` as stored states, a deliberate local disclosure and
-  an explicit, privacy-reviewed team mapping. Fixtures: the same basename in different roots,
-  clones, worktrees, monorepo subpaths, moves, no repository, collisions. Never export a full
-  path or a hash of one. Any migration is a new file with its own digest. The `B211` snapshot
-  may report identity as unresolved; cross-repository totals and graph edges (`B85`) may not.
+- [ ] **B226 · an explicit team mapping for repository names** — M · team — `sync` sends a
+  project's name and the team server pools usage by it, so two local repositories with one name
+  are one project there; `sync` only warns. A member-declared mapping from a local checkout to a
+  team name must relabel every stored row of that repository, not only the rolling window a push
+  re-sends, and must say what happens to rows whose repository never resolved, or one repository
+  shows under two names on the server. It sends no key, id or path, changes PRIVACY.md and
+  docs/threat-model.md in the same commit, and waits for the team server's re-push and retention
+  rules (milestone 4).
 - [ ] **B102 · AnalyzerContext: retire the store types from the analyzer surface** — L · both
   — the half of `B90` deliberately not shipped with the catalog. Validators already do not
   query SQLite; what leaks is *types*, since `analyze.Input` carries `[]store.UsageRow`,

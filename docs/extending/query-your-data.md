@@ -62,6 +62,7 @@ retention horizon.
 | `cache_write_1h` | `INTEGER` | The portion of `cache_write_tokens` that bought a 1-hour lifetime. A subset, never added to it. |
 | `cache_miss_reason` | `TEXT` | The vendor's own stated reason a cache read missed, `''` when unstated. |
 | `project_conflict` | `INTEGER` | `1` when the same completed Claude sub-agent aggregate carried competing non-empty projects. Its `project` and `subpath` stay empty; usage remains counted once. |
+| `repo_id` | `INTEGER` | The row's repository: an id in the `repository` table, `0` when unresolved, `-1` when two reads of the row named different repositories. `report` shows a name two repositories share split (`api (2)`, `api (?)`); grouping by `project` alone sums every repository with that name. |
 
 Claude Code and Codex parsers populate the activity columns (`lines_added` … `rework_lines`). Since
 v0.6, GitHub Copilot CLI also populates `lines_added`/`lines_removed` once per session, not per

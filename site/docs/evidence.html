@@ -195,8 +195,9 @@ usable time window.</li>
 </ul>
 <p>The summary uses the same project-session population for both fractions: candidate coverage is
 <code>(matched + ambiguous) / population</code>, and resolved coverage is <code>matched / population</code>. It reports
-sessions from other stored projects and sessions with unavailable projects separately, excluding
-both from that denominator.</p>
+sessions from other stored projects, sessions with unavailable projects, and sessions under this
+repository's name whose repository never resolved (<code>identityUnresolvedSessions</code>) separately,
+excluding all three from that denominator.</p>
 <p>The document identifies algorithm <code>session-commit/v1</code>. Each result includes method, confidence,
 provenance, ambiguity, reason, candidates, and alternatives. Each candidate includes its commit hash
 and time, plus the git observation's source, time source, provenance, privacy class, and
@@ -224,7 +225,7 @@ candidate in their local repository.</p>
 <td><code>project-time-overlap</code></td>
 <td>matched</td>
 <td>medium</td>
-<td>Every commit in the same stored project whose time falls inside the session remains linked. Several commits are a valid many-to-many answer, not ambiguity by count alone.</td>
+<td>Every commit in the same repository whose time falls inside the session remains linked. Several commits are a valid many-to-many answer, not ambiguity by count alone.</td>
 </tr>
 <tr>
 <td><code>project-time-following</code></td>
@@ -250,13 +251,18 @@ candidate in their local repository.</p>
 collector sees only commits reachable from <code>HEAD</code>. Input order does not affect results: sessions and
 commits are sorted by stable identifiers and times before matching.</p>
 <h2 id="privacy-and-limits">Privacy and limits</h2>
-<p>The command reads each stored session's id, tool, project basename, and first and last timestamps.
+<p>The command reads each stored session's id, tool, project name, the repository its rows resolved
+to, and first and last timestamps.
 Git observations contain only commit hashes, timestamps, parent and line counts, revert indication,
 and counts across six file categories. The collector briefly reads paths and commit subjects to
 derive categories and revert indications. Prompts, model responses, code, diffs, commit messages,
 and branch names never appear in observations, edges, or output.</p>
-<p>Project identity uses only the basename assaio stores, so this method cannot distinguish
-repositories with the same basename. Commit observations lack authors, so identity cannot
+<p>A session is a candidate only when its rows resolved to the repository <code>--repo</code> names (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0019-repository-identity.md">ADR
+0019</a>): another checkout with the same name is another project, and
+a session whose repository never resolved — stored before assaio recorded repositories, or read
+after its directory was gone — is counted in <code>identityUnresolvedSessions</code>, never matched. When no
+stored usage resolved to that repository, the document's <code>project</code> is empty (the text shows <code>—</code>)
+rather than another repository's name. Commit observations lack authors, so identity cannot
 distinguish overlapping users; the conformance corpus requires that case to stay ambiguous. Output
 has no member, person, score, or rank field and is not intended for performance evaluation.</p>
 <p>A <code>matched</code> label is an attribution observation. It does not prove an AI session caused a commit or

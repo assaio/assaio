@@ -13,7 +13,9 @@ import (
 // unread, so a plain `backfill` rebuilds what was deleted. Without that, every input still
 // matches on size/mtime/version and the re-import silently imports nothing. A time-scoped
 // clear deliberately keeps them: pruning history is a request to forget records, not to
-// re-read them on the next run.
+// re-read them on the next run. A clear of everything also empties the repository registry and
+// draws a new salt: with no usage row left, a repository name or a keyed hash of a path has no
+// figure to serve.
 func (s *Store) Clear(ctx context.Context, before time.Time, tool string) (int64, error) {
 	hasBefore := !before.IsZero()
 	hasTool := tool != ""
@@ -49,6 +51,11 @@ func (s *Store) Clear(ctx context.Context, before time.Time, tool string) (int64
 	}
 	if !hasBefore {
 		if err := forgetIngested(ctx, tx, tool); err != nil {
+			return 0, err
+		}
+	}
+	if !hasBefore && !hasTool {
+		if err := forgetRepositories(ctx, tx); err != nil {
 			return 0, err
 		}
 	}

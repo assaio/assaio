@@ -66,11 +66,13 @@ native `FuzzParse` with a seed corpus.
 `usage.Step` is the ordered reading of the same transcript
 ([ADR 0012](adr/0012-session-step-timeline.md)).
 
-Two fields are decided here rather than by the parser. `ingest.resolveProjects` passes each
+Three fields are decided here rather than by the parser. `ingest.resolveProjects` passes each
 record's `Cwd` to `projectid.Resolve`, which walks up to the nearest `.git` and returns the
 repository root's basename and the working directory's path relative to it — so a monorepo's
-subdirectories roll up into one project. `Record.Cwd` is tagged `json:"-"` and is never a
-stored column; the full path exists only in memory for the length of that walk.
+subdirectories roll up into one project — and, when the directory exists, `projectid.Key` names
+the repository by an HMAC of its root, keyed by the store's salt
+([ADR 0019](adr/0019-repository-identity.md)). `Record.Cwd` and `Record.RepoKey` are tagged
+`json:"-"`; the full path exists only in memory for the length of that walk.
 
 `ingest.dated` drops a record whose timestamp is the zero value and counts it as skipped.
 The reason is that every report, validator and dashboard window is bounded by `ts >= ?`: a

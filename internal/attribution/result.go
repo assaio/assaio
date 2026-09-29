@@ -76,7 +76,8 @@ type Summary struct {
 	ResolvedCoverage  float64 `json:"resolvedCoverage"`
 }
 
-// Document is the stable public output of one local attribution pass.
+// Document is the stable public output of one local attribution pass. Project is "" when no
+// stored usage resolved to the repository: no name the store shows belongs to it.
 type Document struct {
 	Algorithm      string    `json:"algorithm"`
 	Project        string    `json:"project"`
@@ -86,7 +87,10 @@ type Document struct {
 	WindowSessions int       `json:"windowSessions"`
 	OtherProjects  int       `json:"otherProjectSessions"`
 	ProjectUnknown int       `json:"projectUnknownSessions"`
-	SkippedCommits int       `json:"skippedCommits"`
-	Summary        Summary   `json:"summary"`
-	Results        []Result  `json:"results"`
+	// IdentityUnresolved counts sessions under this repository's name whose rows never resolved
+	// to a repository, so they are neither matched nor counted as another project's.
+	IdentityUnresolved int      `json:"identityUnresolvedSessions"`
+	SkippedCommits     int      `json:"skippedCommits"`
+	Summary            Summary  `json:"summary"`
+	Results            []Result `json:"results"`
 }

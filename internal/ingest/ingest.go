@@ -51,7 +51,11 @@ type dirSource struct {
 //
 //nolint:gocritic // sources is a small value bundle read once per backfill run, not a hot path.
 func Run(ctx context.Context, home string, st *store.Store, sources config.Sources, plugins []config.PluginConfig, opts Options) ([]Result, error) {
-	cache := make(projectCache)
+	salt, err := st.RepositorySalt(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cache := newProjectCache(salt)
 	var results []Result
 	seen := make(map[string]map[string]bool)
 
@@ -132,7 +136,7 @@ func Run(ctx context.Context, home string, st *store.Store, sources config.Sourc
 // ingestInput skips one input this build already parsed unchanged, and otherwise parses
 // and inserts it. Only a clean parse is recorded, so a file that fails keeps being retried
 // and keeps being counted in Failed rather than disappearing from it on the next run.
-func ingestInput(ctx context.Context, st *store.Store, sk *skipper, cache projectCache, res *Result,
+func ingestInput(ctx context.Context, st *store.Store, sk *skipper, cache *projectCache, res *Result,
 	in input, parse func() (parsed, error),
 ) error {
 	if sk.skip(in) {
@@ -154,7 +158,7 @@ func ingestInput(ctx context.Context, st *store.Store, sk *skipper, cache projec
 
 // ingestSource parses and inserts every file for one tool source, counting failed
 // files without aborting the rest. cache memoizes project resolution across files.
-func ingestSource(ctx context.Context, st *store.Store, sk *skipper, s source, cache projectCache, horizon time.Time) (Result, error) {
+func ingestSource(ctx context.Context, st *store.Store, sk *skipper, s source, cache *projectCache, horizon time.Time) (Result, error) {
 	res := Result{Tool: s.tool, Files: len(s.files), horizon: horizon}
 	for _, path := range s.files {
 		err := ingestInput(ctx, st, sk, cache, &res, fileInput(path, s.tool), func() (parsed, error) {
@@ -170,7 +174,7 @@ func ingestSource(ctx context.Context, st *store.Store, sk *skipper, s source, c
 
 // ingestDirs parses and inserts every directory-shaped input for one tool, counting failed
 // directories without aborting the rest. cache memoizes project resolution across dirs.
-func ingestDirs(ctx context.Context, st *store.Store, sk *skipper, s dirSource, cache projectCache, horizon time.Time) (Result, error) {
+func ingestDirs(ctx context.Context, st *store.Store, sk *skipper, s dirSource, cache *projectCache, horizon time.Time) (Result, error) {
 	res := Result{Tool: s.tool, Files: len(s.dirs), horizon: horizon}
 	for _, dir := range s.dirs {
 		err := ingestInput(ctx, st, sk, cache, &res, dirInput(dir, res.Tool), func() (parsed, error) {

@@ -31,6 +31,36 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+<a id="two-repositories-with-one-name-shared-every-figure"></a>
+
+### Two repositories with one name shared every figure
+
+*Corrected in v0.35.0, released 2026-09-29.*
+
+Since v0.1.0, assaio stored a session's project as the basename of its repository root and nothing
+else. Two unrelated repositories with one directory name, such as two checkouts named `api`,
+appeared as one project in `report`, `effectiveness`, `analyze`, the dashboard, `digest` and metric
+plugins, and a pseudonym derived from that name merged them in shared output too. `survival` added
+the other repository's AI lines to this one's; `evidence` offered the other repository's sessions as
+candidates for this repository's commits; `mark` could label the other checkout's newest session.
+Since v0.27.0, `evidence` run in a worktree compared the worktree directory's own name, found none
+of the repository's sessions and left every commit unmatched. Each row now records which repository
+it came from, by a local key that never leaves the store. A shared name is split, and `evidence`,
+`survival` and `mark` use only rows resolved to the repository they run in; rows under its name
+whose repository is not recorded are reported apart — `identityUnresolvedSessions`, `survival`'s
+not-counted line — and never joined. Figures move both ways: a shared name's totals fall by what the
+other repository and the rows that cannot be placed held, and `api (2)` and `api (?)` appear with
+those amounts; `evidence`'s population and `survival`'s AI lines fall by what no longer resolves.
+A name only one repository holds still includes those rows in `report` totals, as before. Rows
+whose transcript is still on disk gain their repository on the next `backfill`. Older rows cannot:
+their working directory was never stored. Measured on the maintainer's transcripts re-imported
+into a fresh store: 206,227 of 221,168 rows (93%) resolved to one of 23 repositories and no name
+was shared, so `report`, `effectiveness` and `analyze` JSON was byte-identical to v0.34.0's; on
+this repository, `evidence` found the same 11 sessions, and `survival` over 90 days counted 7,471
+AI lines against v0.34.0's 7,695 and listed the other 224 as not counted. The split, the worktree
+case and the joins were reproduced with constructed tests. Rows that exist only in the maintainer's
+own store, whose transcripts are gone, were not measured.
+
 ## [0.34.0] - 2026-09-29
 
 <a id="a-copilot-cli-sessions-lines-were-credited-to-one-model"></a>

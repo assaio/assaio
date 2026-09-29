@@ -4,19 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
-	"github.com/assaio/assaio/internal/projectid"
 	"github.com/assaio/assaio/internal/store"
 )
 
 // resolveMarkTarget picks the session to act on: the named prefix, the most recent session
 // anywhere, or -- the default -- the most recent one in the repository holding the working
-// directory. The project name is derived exactly as ingest derives it, so what is typed here
-// and what was stored cannot disagree.
+// directory, found the way ingest resolves a session's repository (repositoryAt).
 func resolveMarkTarget(cmd *cobra.Command, st *store.Store, args []string, last bool) (store.SessionRef, error) {
 	if len(args) == 1 && last {
 		return store.SessionRef{}, errors.New("--last targets the newest session and cannot be combined with a session id")
@@ -24,24 +21,42 @@ func resolveMarkTarget(cmd *cobra.Command, st *store.Store, args []string, last 
 	if len(args) == 1 {
 		return resolveSessionPrefix(cmd, st, args[0])
 	}
-	project := ""
 	if !last {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return store.SessionRef{}, err
-		}
-		root, _ := projectid.Resolve(cwd)
-		project = filepath.Base(root)
+		return latestHere(cmd, st)
 	}
-	ref, ok, err := st.LatestSession(cmd.Context(), project)
+	ref, ok, err := st.LatestSession(cmd.Context())
 	if err != nil {
 		return store.SessionRef{}, err
 	}
-	if !ok && project != "" {
-		return store.SessionRef{}, fmt.Errorf("no stored session for project %q -- pass --last, a session id, or run 'mark --list'", project)
-	}
 	if !ok {
 		return store.SessionRef{}, errors.New(emptyStoreHint(cmd, "No session to mark."))
+	}
+	return ref, nil
+}
+
+// latestHere is the newest session with usage resolved to the repository holding the working
+// directory. A session that only shares the repository's name is never it.
+func latestHere(cmd *cobra.Command, st *store.Store) (store.SessionRef, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return store.SessionRef{}, err
+	}
+	here, err := repositoryAt(cmd.Context(), st, cwd)
+	if err != nil {
+		return store.SessionRef{}, err
+	}
+	if here.ID == 0 {
+		if n, err := st.Count(cmd.Context()); err != nil || n == 0 {
+			return store.SessionRef{}, errors.Join(err, errors.New(emptyStoreHint(cmd, "No session to mark.")))
+		}
+		return store.SessionRef{}, fmt.Errorf("%s -- pass --last, a session id, or run 'mark --list'", unresolvedNote(&here))
+	}
+	ref, ok, err := st.LatestSessionIn(cmd.Context(), here.ID)
+	if err != nil {
+		return store.SessionRef{}, err
+	}
+	if !ok {
+		return store.SessionRef{}, fmt.Errorf("no stored session for project %q -- pass --last, a session id, or run 'mark --list'", here.Name)
 	}
 	return ref, nil
 }
