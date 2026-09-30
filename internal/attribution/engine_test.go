@@ -84,7 +84,7 @@ func honestEngine(s *Scenario, f *Fixture) Links {
 			continue
 		}
 		if want := s.Expect[id]; len(want.Candidates) > 0 {
-			out[id] = Link{Commits: f.hashesFor(want.Candidates), Ambiguous: want.Ambiguous}
+			out[id] = Link{Commits: f.hashesFor(want.Candidates), Ambiguous: want.Ambiguous, Change: s.changeNumber(want.Change)}
 		}
 	}
 	return out

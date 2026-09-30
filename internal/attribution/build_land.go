@@ -71,7 +71,11 @@ func splitIdentity(id string) (name, email string) {
 // message of the installed git decides the fixture; a rebase replays one commit with
 // cherry-pick, which keeps its author and takes the committer from the environment.
 func land(ctx context.Context, dir string, spec *commitSpec, hashes map[string]string) (string, error) {
-	if err := git(ctx, dir, "checkout", "-f", mainBranch); err != nil {
+	onto := spec.Onto
+	if onto == "" {
+		onto = mainBranch
+	}
+	if err := git(ctx, dir, "checkout", "-f", onto); err != nil {
 		return "", err
 	}
 	if spec.Lands == "rebase" {
@@ -79,12 +83,12 @@ func land(ctx context.Context, dir string, spec *commitSpec, hashes map[string]s
 		if source == "" {
 			return "", fmt.Errorf("rebase of unknown commit %q", spec.From)
 		}
-		if err := gitEnv(ctx, dir, committerOnly(identity(spec)), "cherry-pick", source); err != nil {
+		if err := gitEnv(ctx, dir, committerOnly(identity(spec)), "cherry-pick", "--allow-empty", source); err != nil {
 			return "", err
 		}
 		return revParse(ctx, dir, "HEAD")
 	}
-	parents := []string{"-p", mainBranch}
+	parents := []string{"-p", onto}
 	switch spec.Lands {
 	case "squash":
 	case "merge":
@@ -97,8 +101,25 @@ func land(ctx context.Context, dir string, spec *commitSpec, hashes map[string]s
 	if err != nil {
 		return "", fmt.Errorf("commit-tree: %w", err)
 	}
-	if err := git(ctx, dir, "update-ref", "refs/heads/"+mainBranch, hash); err != nil {
+	if err := git(ctx, dir, "update-ref", "refs/heads/"+onto, hash); err != nil {
 		return "", err
 	}
-	return hash, git(ctx, dir, "checkout", "-f", mainBranch)
+	return hash, git(ctx, dir, "checkout", "-f", onto)
+}
+
+// fetched writes a commit the way a fetch delivers a teammate's: onto a remote-tracking ref, from
+// the main line, so no reflog of this clone records making it. CheckedOut then moves HEAD onto it
+// and back, as a reviewer does.
+func fetched(ctx context.Context, dir string, spec *commitSpec) (string, error) {
+	hash, err := gitOut(ctx, dir, identity(spec), "commit-tree", mainBranch+"^{tree}", "-p", mainBranch, "-m", spec.Tag)
+	if err != nil {
+		return "", fmt.Errorf("commit-tree: %w", err)
+	}
+	if err := git(ctx, dir, "update-ref", "refs/remotes/origin/"+spec.Branch, hash); err != nil || !spec.CheckedOut {
+		return hash, err
+	}
+	if err := git(ctx, dir, "checkout", "--detach", hash); err != nil {
+		return "", err
+	}
+	return hash, git(ctx, dir, "checkout", mainBranch)
 }

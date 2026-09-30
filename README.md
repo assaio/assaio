@@ -102,7 +102,8 @@ $ assaio-agent doctor --strict
 ```
 
 - `dashboard` creates a self-contained offline HTML report.
-- `evidence` compares local sessions with local commit observations without storing an edge.
+- `evidence` compares local sessions with local commit observations without storing an edge;
+  `--github` adds the repository's pull requests, read through your own `gh`.
 - `digest` reports what changed since the previous run and whether the comparison is sound.
 - `doctor` reports source coverage, format drift, store health and unpriced usage.
 
@@ -136,7 +137,7 @@ to see what your data supports. [FEATURES.md](FEATURES.md) lists shipped feature
 `evidence` observes attribution; it is not an outcome metric. It joins a repository's commits
 only with sessions whose rows resolved to that repository, uses bounded time proximity, labels
 results `matched`, `ambiguous` or `unmatched`, and shows competing commits. A match does not
-show that the session caused the commit. See [how to read the result](docs/evidence.md).
+show that the session caused the commit. With `--github` it also reads the repository's pull requests through your own `gh` and names the pull requests a session's candidate commits belong to; a pull request's state is the pull request's, not the session's. See [how to read the result](docs/evidence.md).
 
 ## Supported AI coding tools
 
@@ -165,7 +166,8 @@ shows any unexplained remainder.
 
 On its normal offline analysis path, `assaio`:
 
-- makes no network request and has no telemetry;
+- makes no network request and has no telemetry; `evidence --github` asks GitHub for pull
+  requests through your own `gh` only when you run it;
 - does not extract or store prompt text, response text or repository file contents;
 - reads commit hashes, times and content-free change counts only when `evidence` or `survival` runs,
   and stores none of them;

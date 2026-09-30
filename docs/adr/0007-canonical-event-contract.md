@@ -4,7 +4,9 @@
 Accepted (2026-08-02). Amended by [ADR 0016](0016-usage-is-a-store-row-not-an-event.md), which
 withdraws the AI half of the vocabulary and the `usage.Record` adapter: AI usage stays a store
 row, and this contract covers the domains that have no store row of their own. The amendments
-are marked inline below; everything not marked stands.
+are marked inline below; everything not marked stands. Amended (2026-09-30) by [ADR 0022](0022-pull-requests-through-gh.md): `scm.pull_request.observed`
+lands with the grain `change`, and `scm.pull_request.commit.observed` (grain `commit`) states that a
+pull request lists a commit, because a payload holds no list; its id joins two keys.
 
 ## Context
 Everything assaio has stored for five releases is one shape: `usage.Record`, a per-turn or

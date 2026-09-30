@@ -79,9 +79,9 @@ type Privacy struct {
 }
 
 // Server holds `assaio-agent serve` defaults; explicit flags still take precedence. The
-// team server is the one non-offline exception in assaio: a self-hosted process you run
-// and control yourself (see internal/server's package doc for the MVP security
-// boundary), not a hosted assaio service.
+// team server is the one part of assaio that opens network connections itself: a
+// self-hosted process you run and control yourself (see internal/server's package doc for
+// the MVP security boundary), not a hosted assaio service.
 type Server struct {
 	// Addr is the listen address, e.g. ":8787". Override with ASSAIO_SERVER_ADDR.
 	Addr string `koanf:"addr"`

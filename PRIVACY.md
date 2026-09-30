@@ -235,6 +235,20 @@ has no member, person, score or rank field. It is not a shareable artifact and i
 for evaluating people. Prompt text, model responses, code, diffs, commit messages and branch
 names never enter its result.
 
+### `evidence --github`
+
+Only with `--github`, `evidence` runs your own GitHub CLI (`gh`) in the repository. `gh repo view`
+names the repository and its host; then one fixed GraphQL query asks for the pull requests updated
+since `--since`: each one's id, number, state, last-update and merge times, merge commit, and up to
+100 listed commit hashes with their total. It asks for no title, body, branch name, label, author,
+reviewer, comment or check. The request names the repository and a page cursor, never a commit, a
+session or anything from the store. `gh` holds your credentials; assaio reads, passes and stores no
+token. assaio then asks local git which listed commits a `HEAD` reflog of this clone records as made here
+— git matches the entries and returns hashes only — and reads those like any other commit. Pull requests, their commits and every link are
+printed locally and never stored, synced, exported or sent to a plugin. The repository's owner and
+name appear only in a note on standard error, never in the document. The query runs as you, so it
+can appear in your organization's API audit log.
+
 ## What it never retains
 
 - Prompt text
@@ -308,15 +322,17 @@ requirements.
 ## Network
 
 The core analysis commands — `backfill`, `report`, `effectiveness`, `analyze`, `status`,
-`dashboard`, `share`, `reconcile`, `evidence`, `survival` — make **no network calls**. The model price table is embedded into the binary
+`dashboard`, `share`, `reconcile`, `evidence` without `--github`, `survival` — make **no network calls**. The model price table is embedded into the binary
 at build time, so every report works fully offline; nothing is fetched, uploaded, or
 phoned home.
 
-Two **optional commands are the exception**, and only when you invoke them.
+Three **optional commands are the exception**, and only when you invoke them.
 `assaio-agent sync` uploads your usage records to a team server, and `assaio-agent serve` runs
 that server; both talk only to infrastructure **you** stand up and point them at (see below).
-If you never run those two, `assaio` itself never touches the network, and exec plugins
-(described at the top of this file) are your own programs.
+`evidence --github` is the only one that reaches a third party: your own `gh` asks
+GitHub for the repository's pull requests ([what it asks](#evidence---github)). If you never run
+those three, `assaio` itself never touches the network, and exec plugins (described at the top of
+this file) are your own programs.
 
 `assaio-agent share` is not an exception to this — it makes no request, and neither does the
 page it writes. After writing the file it can ask your desktop to open it (`open`, `xdg-open`,

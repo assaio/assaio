@@ -359,14 +359,16 @@ does not ship.
   migration, a size bound and a cleanup path, so none is worth guessing at. Path-level storage
   stays out entirely until something needs it: `B91` never records a path, so there is no
   opt-in to design yet. See [ADR 0009](docs/adr/0009-local-git-evidence-collector.md).
-- [ ] **B92 · GitHub connector v1** — L · both — read-only, least-privilege metadata only:
-  PR lifecycle, commits in a PR, review states and requested-changes rounds, check suites and
-  runs, merge time and method, detectable revert relations. GitHub Cloud first, with the
-  interface shaped so Enterprise Server and GitLab can follow without contaminating the core
-  model. Credentials never reach reports or plugins. Built against [ADR 0020](docs/adr/0020-correlation-privacy.md): a repository-and-window query
-  through the user's own `gh`, allowlisted fields, results `local-only`. The plan and its challenge
-  are parked in `docs/work/parked/2026-09-30-github-change-join.md`; it waits for the squash, rebase,
-  merge and stacked scenarios in the attribution corpus.
+- [ ] **B229 · review and check observations from the GitHub connector** — M · both — review
+  states and requested-changes rounds, check suites and runs, merge method and detectable revert
+  relations, through the same `gh` read as `evidence --github`. Each needs its reserved type
+  (`scm.review`, `ci.check`, ADR 0007) and names no reviewer or check; ADR 0020 applies, and no rate
+  is derived before `B94` sets comparable populations.
+- [ ] **B230 · attribution by this clone's configured git identity** — M · both — git can match
+  the configured author identity and return only hashes, which would tell a teammate's commits from
+  the user's where time alone cannot. It is the first use of identity in attribution, so it needs its
+  own ADR, a stated miss for commits made under another address, and a corpus scenario where it must
+  not resolve two people's commits (ADR 0022 rejected it for `evidence --github`).
 - [ ] **B225 · an exec port for issue-tracker observations** — L · both — resolved issues are
   the one delivery edge with no item here. It follows the ADR 0003 posture: an ADR and a
   feasibility spike first (can GitHub and Jira return issue→PR links without reading issue
@@ -396,8 +398,10 @@ does not ship.
   **v0.27 ships the local session→commit portion, not this whole item**: algorithm
   `session-commit/v1` emits confidence-bearing matched, ambiguous and unmatched results from
   project plus bounded time evidence, keeps alternatives, honours the corpus's confirmed links,
-  and stores nothing. Explicit markers, branch, identity and file-category compatibility,
-  persisted corrections, PR edges and durable replay remain open.
+  and stores nothing.
+  `evidence --github` (`session-commit/v3`, ADR 0022) names the pull requests a candidate
+  commit belongs to. Explicit markers, branch, identity and file-category compatibility,
+  persisted corrections, stored edges and durable replay remain open.
 - [ ] **B94 · `outcomes` funnel + `evidence explain`** — M · both — the first visible path:
   sessions → sessions with edits → linked commits → linked PRs → passing CI → merged →
   surviving, sliced by tool, model, project, task annotation and confidence band, always
@@ -406,7 +410,8 @@ does not ship.
   **v0.27 ships only the first visible row of this path**: `evidence` shows session→commit
   population coverage, candidates, alternatives, method, provenance, confidence and abstention
   reason in text or JSON. There is no edit-stage funnel, slicing, edge identifier or separate
-  `evidence explain`, and no PR/review/CI/merge/survival outcome join yet.
+  `evidence explain`, and no review, CI, merge or survival join yet; `evidence --github` names the pull requests
+  a candidate commit belongs to and their state, and derives no rate from them.
 - [ ] **B153 · what a change costs after it is written** — M/L · both — "AI lines" counts
   what was produced, never what it took to land. Once a session links to a pull request, the
   downstream burden becomes countable as named signals rather than adjectives: review rounds

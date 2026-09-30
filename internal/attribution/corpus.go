@@ -22,6 +22,9 @@ type Expectation struct {
 	// Confirmed is a commit tag a human confirmed by hand. It must win over whatever the
 	// evidence suggests, and must still win after the algorithm changes.
 	Confirmed string
+	// Change is the pull request, by tag, that every candidate belongs to when the forge's lists
+	// make it exactly one; empty when they do not, or when the scenario has no pull request.
+	Change string
 }
 
 // Link is one session's answer, reduced to what the corpus judges: the commits an engine
@@ -29,6 +32,8 @@ type Expectation struct {
 type Link struct {
 	Commits   []string
 	Ambiguous bool
+	// Change is the pull request number the engine placed every candidate in, 0 for none.
+	Change int64
 }
 
 // Links is an engine's whole answer for one scenario, keyed by session id. A session absent
@@ -47,14 +52,16 @@ type Scenario struct {
 	Sessions []sessionSpec
 	// Corrections are the links a human confirmed by hand, session id to commit tag.
 	Corrections map[string]string
-	Expect      map[string]Expectation
+	// Changes are the pull requests the scenario's forge reports.
+	Changes []changeSpec
+	Expect  map[string]Expectation
 }
 
 // Corpus is every scenario, in the order they are worth reading: the shapes a link can
 // take, then the noise an engine has to resist, then the cases where it must not answer.
 func Corpus() []Scenario {
-	out := make([]Scenario, 0, len(scenarios)+len(landingScenarios))
-	return append(append(out, scenarios...), landingScenarios...)
+	out := make([]Scenario, 0, len(scenarios)+len(landingScenarios)+len(changeScenarios))
+	return append(append(append(out, scenarios...), landingScenarios...), changeScenarios...)
 }
 
 // Get returns the scenario registered under name.

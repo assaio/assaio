@@ -31,6 +31,15 @@ func TestCorpusCoversEveryShapeAttributionHasToSurvive(t *testing.T) {
 		"amended-in-a-later-session",
 		"local-merge-carries-work",
 		"confirmed-forge-merge-survives",
+		"branch-commit-behind-a-squash",
+		"two-authors-one-change",
+		"stacked-changes",
+		"forge-update-branch-merge",
+		"rebase-merge-two-commits",
+		"one-candidate-outside-every-change",
+		"teammate-branch-commit-during-session",
+		"teammate-pull-request-checked-out-for-review",
+		"adjacent-rebase-merges",
 	}
 	var got []string
 	for _, s := range Corpus() {

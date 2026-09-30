@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,7 +22,14 @@ const maxLineBytes = 1 << 20
 // gitOutput runs `git -C root <args>` and returns stdout, wrapping any failure with the
 // trimmed stderr so a caller sees why git rejected the command.
 func gitOutput(ctx context.Context, root string, args ...string) ([]byte, error) {
+	return gitOutputFrom(ctx, root, nil, args...)
+}
+
+// gitOutputFrom is gitOutput with stdin, for the reads that take their revisions on it (--stdin)
+// rather than on a command line a long list would overflow.
+func gitOutputFrom(ctx context.Context, root string, stdin io.Reader, args ...string) ([]byte, error) {
 	cmd := gitCommand(ctx, root, args...)
+	cmd.Stdin = stdin
 	var out, errBuf bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &errBuf
