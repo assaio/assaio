@@ -133,3 +133,8 @@ all in the shipping PR.
   its name: rows name their repository without holding its path, a name two repositories share is
   split, joins from a directory never go through an unresolved identity, and nothing new leaves
   the machine.
+- [ADR 0020](adr/0020-correlation-privacy.md) — **correlating sessions with delivery data** stays
+  on the machine that ran it: connectors run only when asked, as the user, and ask for a
+  repository and a window; synced fields that join to an identity must leave only as keyed
+  digests, which branch names and the member label do not yet (`B227`); no server view may show
+  one member's changes.

@@ -33,6 +33,28 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+
+- [ADR 0020](docs/adr/0020-correlation-privacy.md) sets the privacy policy for joining sessions to
+  delivery data (`B100`): every such join stays on the machine that ran it; a connector runs only
+  on an explicit flag, through the user's own client, and asks for a repository and a window
+  rather than the commits AI sessions touched; no server view of such data shows one member's
+  changes or ranks anyone. The threat model and PRIVACY.md now name the ways a synced row can be
+  re-identified. Tests fail if the `evidence` document gains a field whose name contains a person
+  or rank word, or if a synced record gains a field.
+
+### Fixed
+
+- PRIVACY.md called the synced member label pseudonymous without saying it can be confirmed by
+  guessing a hostname and user name
+  ([correction](docs/corrections.md#the-synced-member-label-can-be-confirmed-by-guessing)).
+
+### Security
+
+- `evidence` and `survival` no longer let git fetch a missing object from the remote in a partial
+  clone: every git call runs with `GIT_NO_LAZY_FETCH=1`, so the read fails instead (git 2.44 and
+  later).
+
 ## [0.35.0] - 2026-09-30
 
 ### Breaking

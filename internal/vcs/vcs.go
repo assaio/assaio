@@ -128,8 +128,7 @@ func headerObservation(header, project string, observedAt time.Time, build strin
 		ObservedAt:  observedAt,
 		TimeSource:  event.TimeStated,
 		Grain:       event.GrainCommit,
-		// Repository evidence stays on the machine until the correlation threat model (B100)
-		// decides what a team may share; local-only is the answer that needs no decision.
+		// Repository evidence and every edge built on it stay on the machine (ADR 0020).
 		Privacy:    event.LocalOnly,
 		Provenance: event.Parsed,
 		Subject:    event.Subject{Project: project},

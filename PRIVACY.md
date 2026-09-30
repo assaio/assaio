@@ -375,9 +375,20 @@ believing the name in its body.
 Each synced member is **pseudonymized by default** (a stable `member-xxxx` label); team
 views are aggregated by default. A per-member, real-name view is never silent — it is a
 deliberate, governed opt-in an admin enables, not what the default configuration produces,
-and never a performance-evaluation leaderboard. `sync` sends a project's name, never the key
-or number that identifies its repository on your machine. When two of your repositories share
-a name, `sync` says so before pushing, because the server counts them as one project.
+and never a performance-evaluation leaderboard. The label is a SHA-256 of the machine's
+hostname and OS user name with no secret, so anyone holding the server's data can confirm a
+guessed host and user name against it; `B227` replaces it with a keyed digest. `sync` sends a
+project's name, never the key or number that identifies its repository on your machine. When
+two of your repositories share a name, `sync` says so before pushing, because the server counts
+them as one project.
+
+Two joins outside assaio can re-identify a synced row. Each record includes its branch name, and
+anyone who holds the server's data and can read the repository can join a branch and a time to
+the pull request built from it, and to its author. Each record also carries the coding tool's own
+session id, so where your organization collects that tool's telemetry recording the session id
+beside an account (Claude Code's OpenTelemetry export does), the two join. A member pseudonym
+does not protect against either reader. `sync` never sends pull-request numbers, commit hashes or
+session→commit results ([ADR 0020](docs/adr/0020-correlation-privacy.md)).
 
 The pseudonym holds on the way **out** as well as on the way in. Reading a central store with
 `report` labels members in every format — table, JSON and CSV alike — and a metric plugin, which

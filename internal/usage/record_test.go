@@ -2,6 +2,8 @@ package usage
 
 import (
 	"encoding/json"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -24,5 +26,37 @@ func TestRecordJSONCarriesNoLocalPath(t *testing.T) {
 	}
 	if r.Cwd != "" || r.RepoKey != "" {
 		t.Errorf("decoded record = (Cwd %q, RepoKey %q), want both empty", r.Cwd, r.RepoKey)
+	}
+}
+
+// syncedFields is every key a synced record carries: `sync` sends Record as JSON, whole
+// (internal/cli/sync_push.go), so a field added to Record leaves the machine unless it is tagged
+// `json:"-"`. Adding one here is a decision ADR 0020 asks to be made on purpose, with PRIVACY.md
+// and the threat model's sync row changed in the same commit.
+var syncedFields = []string{
+	"Agent", "CacheMissReason", "CacheReadTokens", "CacheWrite1hTokens", "CacheWriteTokens",
+	"Compactions", "DedupeKey", "Edits", "Entrypoint", "GitBranch", "Granularity", "InputTokens",
+	"LinesAdded", "LinesRemoved", "Member", "Model", "OutputTokens", "Project", "ReasoningTokens",
+	"Rejected", "ReworkLines", "SessionID", "Sidechain", "Skill", "Subpath", "Timestamp", "Tool",
+	"ToolCalls", "ToolCommands", "ToolErrors", "ToolOther", "ToolReads", "ToolSearches",
+	"ToolWrites",
+}
+
+func TestSyncedFieldsArePinned(t *testing.T) {
+	data, err := json.Marshal(Record{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	keys := make([]string, 0, len(got))
+	for k := range got {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	if !slices.Equal(keys, syncedFields) {
+		t.Fatalf("a synced record carries %v, the pinned set is %v", keys, syncedFields)
 	}
 }

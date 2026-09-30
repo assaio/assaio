@@ -31,6 +31,22 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+<a id="the-synced-member-label-can-be-confirmed-by-guessing"></a>
+
+### The synced member label can be confirmed by guessing
+
+*Corrected in the next release.*
+
+Since v0.1.0, PRIVACY.md and the threat model have called the label `sync` sends for a member
+pseudonymous, with nothing about how it is made. It is the first 40 bits, in hex, of a SHA-256
+of the machine's hostname and OS user name, with no secret. Anyone holding the team server's data
+can hash guessed host and user names and confirm which member is whom, without access to any
+repository; a reader deciding whether to sync to a server they do not run was told less than
+that. The documents now say how the label is made and name two other joins that re-identify a
+synced row: its branch name to a pull request's author, and its session id to a telemetry
+account. Nothing in the payload changed. `B227` replaces the label with a keyed digest, which
+will give every member a new label on the server. Read from the code; no attack was run.
+
 ## [0.35.0] - 2026-09-30
 
 <a id="two-repositories-with-one-name-shared-every-figure"></a>
