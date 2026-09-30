@@ -18,6 +18,16 @@ type commitSpec struct {
 	// Author is the git identity that made it, for the scenarios where two people are
 	// working in the same window.
 	Author string
+	// Authored is the author time when it differs from At, the committer time: an amend, a
+	// rebase or a cherry-pick keeps the time the commit was first written.
+	Authored *time.Duration
+	// Forge commits as the forge's own identity, the way GitHub.com writes the commits it makes.
+	Forge bool
+	// Lands brings work onto the main line the way a forge merges a pull request: "squash" writes
+	// one commit with the tree of branch From, "merge" a two-parent commit joining it, "rebase"
+	// replays the commit tagged From. Empty is an ordinary commit.
+	Lands string
+	From  string
 }
 
 // sessionSpec is one AI session that ran against the repository: who ran it, when it

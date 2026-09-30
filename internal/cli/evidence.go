@@ -81,7 +81,8 @@ func runEvidence(cmd *cobra.Command, since, repo, format string) error {
 		Algorithm: attribution.Algorithm, Project: here.Name, Since: start, ObservedAt: now,
 		MaxGapSeconds: int64(attribution.DefaultMaxGap.Seconds()), WindowSessions: len(rows),
 		OtherProjects: pop.other, ProjectUnknown: pop.unknown, IdentityUnresolved: pop.unresolved,
-		SkippedCommits: skipped, Summary: attribution.Summarize(results), Results: results,
+		SkippedCommits: skipped, Forge: attribution.ForgeOf(commits, results),
+		Summary: attribution.Summarize(results), Results: results,
 	}
 	if format == "text" {
 		return attribution.RenderText(cmd.OutOrStdout(), &doc)

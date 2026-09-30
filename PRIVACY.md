@@ -214,9 +214,12 @@ pull your account data.
 
 `assaio-agent evidence --repo <path>` and `assaio-agent survival --repo <path>` read a local
 git repository only when invoked. The collector returns one content-free observation per
-commit reachable from `HEAD`: commit hash and time, parent count, added/removed line counts,
-changed-file count, a test/source/docs/config/generated/other category split, and whether git
-itself gave the commit a generated revert subject.
+commit reachable from `HEAD`: commit hash, the time it was written (git's author time) and the
+time it reached its branch, parent count, added/removed line counts, changed-file count, a
+test/source/docs/config/generated/other category split, whether git itself gave the commit a
+generated revert subject, and whether GitHub.com's own identity committed it. For that last fact,
+git matches the committer itself and returns only commit hashes, so assaio reads no author or
+committer name or e-mail.
 
 Git paths are read in memory only to choose a category. The commit subject is read only to
 recognize that revert prefix. Neither is returned, stored or printed, and branch names, diffs

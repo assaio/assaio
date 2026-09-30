@@ -198,11 +198,13 @@ usable time window.</li>
 sessions from other stored projects, sessions with unavailable projects, and sessions under this
 repository's name whose repository never resolved (<code>identityUnresolvedSessions</code>) separately,
 excluding all three from that denominator.</p>
-<p>The document identifies algorithm <code>session-commit/v1</code>. Each result includes method, confidence,
+<p>On forge-merged history, coverage measures what commit timing can link, not what shipped: a session
+whose work reached <code>main</code> in a squash can stay ambiguous or unmatched.</p>
+<p>The document identifies algorithm <code>session-commit/v2</code>. Each result includes method, confidence,
 provenance, ambiguity, reason, candidates, and alternatives. Each candidate includes its commit hash
-and time, plus the git observation's source, time source, provenance, privacy class, and
-content-free file-category counts. The hash is git's stable identifier and lets readers inspect the
-candidate in their local repository.</p>
+and time, the time used to judge its relation (<code>evidenceAt</code>), plus the git observation's source,
+time source, provenance, privacy class, and content-free file-category counts. The hash is git's
+stable identifier and lets readers inspect the candidate in their local repository.</p>
 <h2 id="methods-and-confidence">Methods and confidence</h2>
 <p>The engine uses only evidence in the current contracts:</p>
 <table>
@@ -219,34 +221,53 @@ candidate in their local repository.</p>
 <td><code>manual-confirmation</code></td>
 <td>matched</td>
 <td>high</td>
-<td>A confirmed commit wins; other plausible candidates remain alternatives. The public command has no correction UI or ledger yet.</td>
+<td>A confirmed commit wins, even one the rules below exclude; other plausible candidates remain alternatives. The public command has no correction UI or ledger yet.</td>
 </tr>
 <tr>
 <td><code>project-time-overlap</code></td>
 <td>matched</td>
 <td>medium</td>
-<td>Every commit in the same repository whose time falls inside the session remains linked. Several commits are a valid many-to-many answer, not ambiguity by count alone.</td>
+<td>Every same-repository commit with an author or committer time inside the session remains linked, except a forge merge commit; only author time counts for a commit the forge rebased. A commit the forge landed never counts as an overlap. Several commits are a valid many-to-many answer, not ambiguity by count alone.</td>
 </tr>
 <tr>
 <td><code>project-time-following</code></td>
 <td>matched</td>
 <td>low</td>
-<td>When no commit overlaps the session, exactly one same-project commit occurs after it and no later than 48 hours after it.</td>
+<td>When no commit overlaps the session, exactly one same-repository commit follows it, measured from the earliest of its times within 48 hours after the session.</td>
+</tr>
+<tr>
+<td><code>project-time-forge-landing</code></td>
+<td>matched</td>
+<td>low</td>
+<td>Exactly one candidate is a commit the forge landed while the session ran or up to 48 hours after it. Its time is the merge, an upper bound on when the work happened.</td>
 </tr>
 <tr>
 <td><code>project-time-following</code></td>
 <td>ambiguous</td>
 <td>insufficient</td>
-<td>When no commit overlaps the session, several following commits fit the same bound; no available signal separates them.</td>
+<td>When no commit overlaps the session, several following or landed commits fit the same bound; no available signal separates them.</td>
 </tr>
 <tr>
 <td><code>none</code></td>
 <td>unmatched</td>
 <td>insufficient</td>
-<td>No candidate or no usable evidence. The reason says which.</td>
+<td>No candidate or no usable evidence. The reason says which; <code>later-forge-landing</code> means a commit the forge landed after the 48-hour bound may hold the session's work.</td>
 </tr>
 </tbody>
 </table>
+<p>Git records two times for a commit: when it was written and when it reached its branch. A forge
+rewrites them. A squash merge stamps both with the merge, a rebase merge keeps the written time,
+and a merge commit is stamped at the merge and carries no lines. session-commit/v2 judges a forge's
+rebase at the written time, treats a squash only as a low-confidence landing, never links a forge's
+merge commit, and judges every other commit at both times. An amend can thus link the commit to
+both the session that wrote it and the one that amended it. A merge made locally stays a candidate
+because it can carry a conflict resolution. Only GitHub.com's own committer identity,
+<code>noreply@github.com</code>, is recognised. Git applies that filter itself, so assaio reads no e-mail
+address. GitLab, Bitbucket, Gitea and GitHub Enterprise Server commit as the person who merged, so
+their merges are judged as local ones. A commit whose committer was set to that address by hand is
+misread as the forge's; a personal <code>…@users.noreply.github.com</code> address is not. Each document's
+<code>forge</code> block names its detection scope and counts landed and rebased commits, excluded merge
+commits, and sessions left unmatched before a landing after their following window (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0021-commits-a-forge-writes.md">ADR 0021</a>).</p>
 <p>The 48-hour following boundary is inclusive; a commit one second later is excluded. The local git
 collector sees only commits reachable from <code>HEAD</code>. Input order does not affect results: sessions and
 commits are sorted by stable identifiers and times before matching.</p>

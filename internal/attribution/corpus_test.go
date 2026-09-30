@@ -24,6 +24,13 @@ func TestCorpusCoversEveryShapeAttributionHasToSurvive(t *testing.T) {
 		"genuinely-ambiguous",
 		"manual-correction",
 		"replay-after-algorithm-change",
+		"squash-landed-after-the-session",
+		"squash-landed-in-another-session",
+		"rebase-merge",
+		"forge-merge-commit",
+		"amended-in-a-later-session",
+		"local-merge-carries-work",
+		"confirmed-forge-merge-survives",
 	}
 	var got []string
 	for _, s := range Corpus() {
@@ -137,14 +144,18 @@ func TestTheAmbiguousScenarioIsActuallyAmbiguous(t *testing.T) {
 }
 
 // traits are every signal an attribution engine could separate two candidates by, read off
-// the fixture itself: the project the observation belongs to, the categories it touched, and
-// whether it lands inside the session's window. Two candidates that match on all of them are
-// indistinguishable by anything the fixture carries -- which is what "ambiguous" has to mean
-// for the assertion to be about honesty rather than about a rule assaio happens to apply.
+// the fixture itself: the project the observation belongs to, the categories it touched, whether
+// it is a merge, whether the forge committed it, and whether either of its times lands inside the
+// session's window. Two candidates that match on all of them are indistinguishable by anything
+// the fixture carries -- which is what "ambiguous" has to mean for the assertion to be about
+// honesty rather than about a rule assaio happens to apply.
 type traits struct {
-	project      string
-	categories   event.FileCategories
-	withinWindow bool
+	project              string
+	categories           event.FileCategories
+	merge                bool
+	forge                bool
+	withinWindow         bool
+	authoredWithinWindow bool
 }
 
 func traitsOf(t *testing.T, f *Fixture, tag, sessionID string) traits {
@@ -159,11 +170,14 @@ func traitsOf(t *testing.T, f *Fixture, tag, sessionID string) traits {
 			t.Fatalf("observation for %q is not a commit", tag)
 		}
 		start, end := sessionWindow(t, f, sessionID)
-		at := f.Commits[i].OccurredAt
+		within := func(at time.Time) bool { return !at.Before(start) && !at.After(end) }
 		return traits{
-			project:      f.Commits[i].Subject.Project,
-			categories:   c.Files,
-			withinWindow: !at.Before(start) && !at.After(end),
+			project:              f.Commits[i].Subject.Project,
+			categories:           c.Files,
+			merge:                c.Parents > 1,
+			forge:                c.CommittedByForge,
+			withinWindow:         within(f.Commits[i].OccurredAt),
+			authoredWithinWindow: within(c.AuthoredAt),
 		}
 	}
 	t.Fatalf("no observation for %q", tag)
@@ -189,4 +203,56 @@ func sessionWindow(t *testing.T, f *Fixture, sessionID string) (start, end time.
 		t.Fatalf("no records for session %q", sessionID)
 	}
 	return start, end
+}
+
+// TestTheLandingFixturesAreWhatTheyClaim: each landing scenario is only a test of the forge rules
+// if the collector reads its commits the way the forge would have left them -- the flag, the
+// parents, and an author time apart from the commit time where the forge or an amend moved it.
+func TestTheLandingFixturesAreWhatTheyClaim(t *testing.T) {
+	type shape struct {
+		forge         bool
+		parents       int64
+		writtenBefore bool
+	}
+	for _, tt := range []struct {
+		scenario, tag string
+		want          shape
+	}{
+		{"squash-landed-after-the-session", "sq", shape{forge: true, parents: 1}},
+		{"squash-landed-in-another-session", "sq", shape{forge: true, parents: 1}},
+		{"rebase-merge", "rb", shape{forge: true, parents: 1, writtenBefore: true}},
+		{"forge-merge-commit", "mg", shape{forge: true, parents: 2}},
+		{"amended-in-a-later-session", "c1", shape{parents: 1, writtenBefore: true}},
+		{"local-merge-carries-work", "mg", shape{parents: 2}},
+		{"confirmed-forge-merge-survives", "mg", shape{forge: true, parents: 2}},
+	} {
+		t.Run(tt.scenario, func(t *testing.T) {
+			s, ok := Get(tt.scenario)
+			if !ok {
+				t.Fatalf("the %s scenario is missing", tt.scenario)
+			}
+			f := buildOrSkip(t, &s)
+			e := observed(t, &f, tt.tag)
+			c, _ := e.Payload.(event.Commit)
+			got := shape{forge: c.CommittedByForge, parents: c.Parents, writtenBefore: c.AuthoredAt.Before(e.OccurredAt)}
+			if got != tt.want {
+				t.Fatalf("%s reads as %+v, want %+v", tt.tag, got, tt.want)
+			}
+			if !tt.want.writtenBefore && !c.AuthoredAt.Equal(e.OccurredAt) {
+				t.Fatalf("%s authored %s, committed %s: want one moment", tt.tag, c.AuthoredAt, e.OccurredAt)
+			}
+		})
+	}
+}
+
+func observed(t *testing.T, f *Fixture, tag string) *event.Event {
+	t.Helper()
+	hash := f.Hash(tag)
+	for i := range f.Commits {
+		if f.Commits[i].ID == hash {
+			return &f.Commits[i]
+		}
+	}
+	t.Fatalf("no observation for %q", tag)
+	return nil
 }

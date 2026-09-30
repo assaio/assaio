@@ -30,7 +30,7 @@ func (s *Scenario) Build(dir string) (Fixture, error) {
 	}
 	f := Fixture{Root: dir, Hashes: make(map[string]string, len(s.Commits))}
 	for i := range s.Commits {
-		hash, err := commit(ctx, dir, &s.Commits[i])
+		hash, err := commit(ctx, dir, &s.Commits[i], f.Hashes)
 		if err != nil {
 			return Fixture{}, fmt.Errorf("commit %s: %w", s.Commits[i].Tag, err)
 		}
@@ -104,10 +104,13 @@ func initRepo(ctx context.Context, dir string) error {
 	return nil
 }
 
-// commit lands one spec on its branch and returns the hash git gave it. Author and commit
-// dates are both pinned so the observation's occurrence time is the scenario's, not the
+// commit lands one spec on its branch and returns the hash git gave it. Author and committer
+// identities and dates are all pinned, so the observation is the scenario's and not the
 // machine's.
-func commit(ctx context.Context, dir string, spec *commitSpec) (string, error) {
+func commit(ctx context.Context, dir string, spec *commitSpec, hashes map[string]string) (string, error) {
+	if spec.Lands != "" {
+		return land(ctx, dir, spec, hashes)
+	}
 	if err := checkout(ctx, dir, spec.Branch); err != nil {
 		return "", err
 	}
@@ -123,17 +126,10 @@ func commit(ctx context.Context, dir string, spec *commitSpec) (string, error) {
 	if err := git(ctx, dir, "add", "."); err != nil {
 		return "", err
 	}
-	stamp := epoch.Add(spec.At).Format(time.RFC3339)
-	author := spec.Author
-	if author == "" {
-		author = "Corpus <corpus@assaio.test>"
-	}
-	err := gitEnv(ctx, dir, []string{"GIT_AUTHOR_DATE=" + stamp, "GIT_COMMITTER_DATE=" + stamp},
-		"commit", "--author="+author, "-m", spec.Tag)
-	if err != nil {
+	if err := gitEnv(ctx, dir, identity(spec), "commit", "-m", spec.Tag); err != nil {
 		return "", err
 	}
-	return revParse(ctx, dir)
+	return revParse(ctx, dir, "HEAD")
 }
 
 // checkout moves to branch, creating it on first use. An empty branch means the main line.
@@ -150,10 +146,14 @@ func checkout(ctx context.Context, dir, branch string) error {
 	return git(ctx, dir, "checkout", "-b", branch)
 }
 
-func revParse(ctx context.Context, dir string) (string, error) {
-	//nolint:gosec // dir is a caller-provided temp directory and the arguments are literals
-	cmd := exec.CommandContext(ctx, "git", "-C", dir, "rev-parse", "HEAD")
-	cmd.Env = isolatedEnv(nil)
+func revParse(ctx context.Context, dir, ref string) (string, error) {
+	return gitOut(ctx, dir, nil, "rev-parse", ref)
+}
+
+func gitOut(ctx context.Context, dir string, env []string, args ...string) (string, error) {
+	//nolint:gosec // dir is a caller-provided temp directory and args come from the corpus itself
+	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...)
+	cmd.Env = isolatedEnv(env)
 	out, err := cmd.Output()
 	return strings.TrimSpace(string(out)), err
 }
