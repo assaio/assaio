@@ -121,7 +121,7 @@ Build the differentiating outcome path before expanding the UI or connector coun
 - Join resolved issues (GitHub Issues, Jira) only through an exec port for text-free
   observations and out-of-tree connectors (B225), and only once the PR join passes its
   conformance corpus. Issue digests and transition times still identify work, so the edge
-  stays local-only by default (B100).
+  stays local-only (ADR 0020).
 
 **Exit:** a local report can account for matched and unmatched sessions and changes; a
 known-ambiguous corpus stays ambiguous; re-import is idempotent; no prompt, code, diff or PR

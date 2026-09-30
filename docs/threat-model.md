@@ -80,6 +80,10 @@ rule ([`RELEASING.md`](../RELEASING.md)). `store.Open` applies them on open.
   They are the one thing in the store no re-import can rebuild.
 - `ingest_file` is the only table holding a full local path. It is never synced, exported,
   or rendered.
+- The `repository` table holds each repository root once as a name and a keyed hash of its
+  path. `repository_salt` holds the key beside it in the same file, so anyone holding the store
+  can test a guessed path. Neither is synced, exported or rendered. `clear --all` empties the
+  first and replaces the second.
 
 **Availability:** the store grows without an upper bound except for the step timeline, which
 `trace.horizon_days` prunes (`ingest.pruneTrace`, counted and reported). `doctor` states
@@ -107,6 +111,27 @@ or one checkout before and after a move, are two repositories, and history store
 v0.35.0 whose transcript is gone has no repository at all. Commit observations carry no
 author, so overlapping users cannot be separated. These limits are reported instead of
 repaired by inspecting content or identity.
+
+### Correlation — sessions joined to delivery data
+
+**What a join adds:** which change an AI session sat near. The delivery side is readable by
+anyone with access to the repository, authors included, so a join can identify people even
+though assaio fetches no identity.
+
+**The rule** ([ADR 0020](adr/0020-correlation-privacy.md)): commit observations and every
+session→delivery edge are `local-only`. They are computed and printed on your machine and never
+stored, synced, exported, rendered on a dashboard or a `share` artifact, or sent to a plugin.
+`evidence` has no `--db`.
+
+**A connector** runs only on an explicit per-invocation flag, through your own client, which
+holds the credentials. Its request names a repository and a window and nothing derived from the
+store — never the commits your AI sessions touched — and asks only for allowlisted fields.
+
+**Residual:** a pull-request number or commit hash printed locally identifies work to anyone who
+can read the repository; on a repository owned by a user, the repository path contains that
+user's login; and `sync` sends branch names and session ids, which join to a pull request's
+author or to a telemetry account outside assaio (`B227`). The team panel shows each member's
+session bar at any team size (`B228`).
 
 ### The team server — network
 
@@ -271,7 +296,8 @@ pseudonymization key at `pseudonym.key` (mode `0600`), which is what makes a `pr
 label unreproducible by anyone who does not hold it.
 
 Local commit observations and session→commit results also never leave the machine and are not
-stored; `evidence` prints them only to its local stdout.
+stored; `evidence` prints them only to its local stdout ([ADR 0020](adr/0020-correlation-privacy.md)).
+The `repository` table's keyed path hashes and `repository_salt` also never leave the machine.
 
 ### Where the network is, exactly
 
@@ -296,6 +322,14 @@ code reaches. The model price table is embedded at build time (`//go:embed litel
 retained.json`), so pricing is offline too. There is no telemetry, no analytics, and no
 crash reporting anywhere in the repository.
 
+That grep finds code that opens a socket itself, not programs assaio runs. The binary executes
+`git` (read-only subcommands on a local repository, for `evidence` and `survival`), the desktop's
+file opener for `share`, and the plugins you declare. In a partial clone, git would fetch a
+missing object from the remote with your credentials; every git call runs with
+`GIT_NO_LAZY_FETCH=1`, so that read fails instead (git 2.44 and later honor it; an older git may
+still fetch). No other in-tree program reaches a network; a connector that does adds its client
+to this list ([ADR 0020](adr/0020-correlation-privacy.md)).
+
 ### What crosses the machine boundary, and under whose control
 
 | Path | Trigger | Destination | Carries | Redaction |
@@ -314,11 +348,15 @@ Two rows deserve emphasis because they are easy to read the other way round:
   = true, ...)`), not when a record is stored. That is consistent with
   [`PRIVACY.md`](../PRIVACY.md) — "you run the server on your own infrastructure and control
   what reaches it" — and it is the thing to know before pointing `sync` at a host you do not
-  control.
-- **Member identity is pseudonymous by default in both directions.** `sync` derives a stable
-  `member-xxxx` from hostname and OS user unless `--member` opts in; `report` renders a
-  pseudonym in table, JSON and CSV alike, and `report --identify` is the single door to raw
-  names.
+  control. A branch name also joins to the pull request built from it, and so to its author, for anyone
+  who holds the server's data and can read the repository; a session id joins to an account
+  wherever the tool's own telemetry records both. A member pseudonym survives neither join
+  (`B227`).
+- **Member identity is pseudonymous by default in both directions, and the pseudonym is weak.**
+  `sync` derives a stable `member-xxxx` from hostname and OS user unless `--member` opts in;
+  `report` renders a pseudonym in table, JSON and CSV alike, and `report --identify` is the
+  single door to raw names. The label is a hash with no secret, so anyone holding the server's
+  data can confirm a guessed host and user name against it (`B227`).
 
 ### Deletion and retention
 

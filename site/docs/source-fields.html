@@ -464,8 +464,8 @@ rows below.</em></p>
 </tr>
 <tr>
 <td><code>session_meta.git.{branch,commit_hash,repository_url}</code></td>
-<td><strong>skipped — deliberate, pending a privacy decision</strong></td>
-<td>The commit a session started at. Same standing as Copilot's <code>data.context.baseCommit</code> below and blocked on the same decision (<code>B85</code>, <code>B100</code>), noted here because the first audit did not record that Codex carries it too.</td>
+<td><strong>skipped — deliberate</strong></td>
+<td>The commit a session started at. Reading it would store a session→commit edge, which <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0020-correlation-privacy.md">ADR 0020</a> keeps off the store until an edge may be stored with its own horizon (<code>B85</code>). Same standing as Copilot's <code>data.context.baseCommit</code> below, noted here because the first audit did not record that Codex carries it too.</td>
 </tr>
 <tr>
 <td><code>payload.{approval_policy,approvals_reviewer,sandbox_policy.writable_roots,phase}</code></td>
@@ -518,8 +518,8 @@ thinnest of the six corpora; treat its table as provisional.</em></p>
 </tr>
 <tr>
 <td><code>data.context.{branch,gitRoot,baseCommit,headCommit}</code></td>
-<td><strong>skipped — deliberate, pending a privacy decision</strong></td>
-<td>The only source that records the commit its session started and ended at. That is attribution evidence of a quality no heuristic reaches (<code>B85</code>), and also exactly what the correlation threat model (<code>B100</code>) exists to decide about. It is not extracted ahead of that decision.</td>
+<td><strong>skipped — deliberate</strong></td>
+<td>The only source that records the commit its session started and ended at: attribution evidence of a quality no heuristic reaches (<code>B85</code>). Reading it would store a session→commit edge, which <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0020-correlation-privacy.md">ADR 0020</a> keeps off the store until an edge may be stored with its own horizon.</td>
 </tr>
 <tr>
 <td><code>data.modelCacheState[].{cacheTtlSeconds,cacheExpiresAt}</code></td>

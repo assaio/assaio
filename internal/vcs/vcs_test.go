@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -187,5 +188,14 @@ func TestCollectHonoursTheWindow(t *testing.T) {
 func TestCollectRejectsSomethingThatIsNotARepository(t *testing.T) {
 	if _, err := RepoRoot(context.Background(), t.TempDir()); err == nil {
 		t.Fatal("want an error for a directory that is not a git repository")
+	}
+}
+
+// TestGitNeverFetches: in a partial clone, a read that needs a missing object would fetch it from
+// the remote; the environment every git call runs with refuses that instead.
+func TestGitNeverFetches(t *testing.T) {
+	cmd := gitCommand(context.Background(), t.TempDir(), "log")
+	if !slices.Contains(cmd.Env, "GIT_NO_LAZY_FETCH=1") {
+		t.Fatalf("git runs without GIT_NO_LAZY_FETCH=1: %v", cmd.Env)
 	}
 }
