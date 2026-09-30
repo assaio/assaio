@@ -16,6 +16,9 @@ func TestMatchPassesEveryConformanceScenario(t *testing.T) {
 		t.Run(scenario.Name, func(t *testing.T) {
 			fixture := buildOrSkip(t, &scenario)
 			results := Match(fixtureSessions(&fixture), fixture.Commits, fixture.Confirmed, epoch.Add(7*day))
+			if fixture.Changes != nil {
+				LinkChanges(results, fixture.Commits, fixture.Changes)
+			}
 			if violations := Check(&scenario, &fixture, linksFrom(results)); len(violations) != 0 {
 				t.Fatalf("engine broke the conformance corpus:\n%s", Report(violations))
 			}
@@ -130,7 +133,9 @@ func linksFrom(results []Result) Links {
 	links := Links{}
 	for i := range results {
 		if len(results[i].Candidates) > 0 {
-			links[results[i].Session.ID] = Link{Commits: candidateIDs(results[i].Candidates), Ambiguous: results[i].Ambiguous}
+			links[results[i].Session.ID] = Link{
+				Commits: candidateIDs(results[i].Candidates), Ambiguous: results[i].Ambiguous, Change: results[i].Change,
+			}
 		}
 	}
 	return links

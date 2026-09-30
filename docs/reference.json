@@ -1115,6 +1115,12 @@
           "usage": "output format: text|json"
         },
         {
+          "name": "github",
+          "type": "bool",
+          "default": "false",
+          "usage": "also read the repository's pull requests through your own gh (a network request to GitHub)"
+        },
+        {
           "name": "repo",
           "type": "string",
           "default": ".",

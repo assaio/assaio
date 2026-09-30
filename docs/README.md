@@ -141,3 +141,6 @@ all in the shipping PR.
 - [ADR 0021](adr/0021-commits-a-forge-writes.md) — a **commit a forge wrote** is judged by the time
   that means work: a squash is a low-confidence landing, a rebase merge keeps its author time, a
   forge merge commit is no candidate, and an amend reaches both sessions.
+- [ADR 0022](adr/0022-pull-requests-through-gh.md) — **`evidence --github`** reads pull requests
+  through the user's own `gh`: only listed commits a reflog records as made in this clone become
+  candidates, and linking them to a pull request changes no status.

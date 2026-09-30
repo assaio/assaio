@@ -51,6 +51,11 @@ func (s *Scenario) Build(dir string) (Fixture, error) {
 		return Fixture{}, fmt.Errorf("%d commit(s) unreadable: a fixture git cannot describe teaches nothing", skipped)
 	}
 	f.Commits = commits
+	if len(s.Changes) > 0 {
+		if err := s.buildChanges(ctx, dir, &f); err != nil {
+			return Fixture{}, err
+		}
+	}
 	f.Sessions = s.records(vcs.Project(dir))
 	f.Confirmed = make(map[string]string, len(s.Corrections))
 	for id, tag := range s.Corrections {
@@ -110,6 +115,9 @@ func initRepo(ctx context.Context, dir string) error {
 func commit(ctx context.Context, dir string, spec *commitSpec, hashes map[string]string) (string, error) {
 	if spec.Lands != "" {
 		return land(ctx, dir, spec, hashes)
+	}
+	if spec.Fetched {
+		return fetched(ctx, dir, spec)
 	}
 	if err := checkout(ctx, dir, spec.Branch); err != nil {
 		return "", err

@@ -4,7 +4,10 @@
 Accepted (2026-08-04). Amended (2026-09-30) by [ADR 0021](0021-commits-a-forge-writes.md): seven
 scenarios for squash, rebase and merge-commit landings, an amend and a local merge bring the corpus
 to seventeen; the honest stand-in answers from each scenario's expectations, and engines trusting a
-single commit time must fail.
+single commit time must fail. Amended (2026-09-30) by [ADR 0022](0022-pull-requests-through-gh.md): a fixture may hold the pull
+requests a forge reports and an expectation may name the one pull request every candidate belongs
+to; nine scenarios bring the corpus to twenty-six, and a reported ambiguity a scenario does not
+expect now fails it.
 
 ## Context
 `B85` will link a session to the change it produced. Every earlier decision in this project

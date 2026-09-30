@@ -18,7 +18,8 @@ SQLite) that reads the local session logs of Claude Code, Codex CLI, Gemini CLI,
 Copilot CLI, Cline, and Antigravity CLI (activity only — its format publishes no token counter,
 so every cost figure withholds for it) and turns them into reports (`report`, `effectiveness`,
 `reprice`), diagnostics (`analyze`, `check`, `doctor`, `status`), local session→commit
-evidence (`evidence`), and the self-contained Assay HTML dashboard. Out-of-tree
+evidence (`evidence`, which with `--github` reads pull requests through the user's own `gh`), and
+the self-contained Assay HTML dashboard. Out-of-tree
 exec plugins extend it in any language — parsers via `plugins:` (ADR 0003), metrics via
 `metrics:` (ADR 0004), rules gating `check` via `rules:` (ADR 0005). A team-server MVP
 (`serve` + `sync`) pools a team's usage on self-hosted infrastructure; the deeper org-analytics
@@ -105,6 +106,7 @@ internal/drift/          canaries judging each source against its own history, a
                          an absolute condition
 internal/event/          the canonical observation contract of the evidence graph (ADR 0007),
                          for the domains with no store row of their own (ADR 0016)
+internal/github/         reads a repository's pull requests through the user's own gh (ADR 0022)
 internal/humanize/       shared count/money formatters every surface renders through
 internal/i18n/           the translatable catalog: dashboard chrome, statusline, explain
 internal/ingest/         discovers session files, parses them, upserts into the store

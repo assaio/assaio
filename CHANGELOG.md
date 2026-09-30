@@ -51,6 +51,17 @@ Discussion.
 
 ### Added
 
+- **`evidence --github`** reads the repository's pull requests through your own `gh` (`B92`,
+  [ADR 0022](docs/adr/0022-pull-requests-through-gh.md)): numbers, states, merge commits and listed
+  commit hashes, asked for by repository and never by commit or session. A listed commit that a
+  `HEAD` reflog records as made in this clone becomes a candidate, so a session links to the branch
+  commit it wrote after a squash hid it; a commit only fetched or checked out never does. Each
+  candidate names the pull requests that list it or whose merge wrote it, and a result names one
+  pull request only when all its candidates share exactly one. Such documents say
+  `session-commit/v3`, and their coverage counts the added candidates, so it compares only with
+  another v3 document; a `changes` block counts every reason a candidate is in no commit list read.
+  Without the flag the JSON document is unchanged, and the text's last line now says pull requests
+  need `--github`.
 - [ADR 0020](docs/adr/0020-correlation-privacy.md) sets the privacy policy for joining sessions to
   delivery data (`B100`): every such join stays on the machine that ran it; a connector runs only
   on an explicit flag, through the user's own client, and asks for a repository and a window

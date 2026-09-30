@@ -193,7 +193,7 @@ func TestACandidateLineSaysWhatItsTimeMeans(t *testing.T) {
 		},
 	} {
 		var out strings.Builder
-		if err := renderCandidate(&out, "candidate", &tt.candidate); err != nil {
+		if err := renderCandidate(&out, "candidate", &tt.candidate, false); err != nil {
 			t.Fatal(err)
 		}
 		if !strings.Contains(out.String(), tt.want) {

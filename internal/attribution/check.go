@@ -52,8 +52,24 @@ func (s *Scenario) checkSession(f *Fixture, id string, want Expectation, got Lin
 				"session %q must link to exactly %v, got %v", id, want.Candidates, got.Commits,
 			))
 		}
+		if got.Ambiguous {
+			out = append(out, s.violation("session %q is not ambiguous and must not be reported so", id))
+		}
+	}
+	if wantChange := s.changeNumber(want.Change); got.Change != wantChange {
+		out = append(out, s.violation("session %q must be placed in pull request %d, got %d", id, wantChange, got.Change))
 	}
 	return out
+}
+
+// changeNumber is the number of the pull request tagged tag, 0 for none.
+func (s *Scenario) changeNumber(tag string) int64 {
+	for i := range s.Changes {
+		if s.Changes[i].Tag == tag && tag != "" {
+			return s.Changes[i].Number
+		}
+	}
+	return 0
 }
 
 // checkAmbiguous is the assertion the corpus exists for. Two things are required and they

@@ -9,7 +9,7 @@ import (
 
 // payloads is every concrete payload this build defines. The registry and this list must
 // agree: a type nothing can fill is a name pretending to be a capability.
-var payloads = []Payload{Commit{}}
+var payloads = []Payload{Commit{}, PullRequest{}, PullRequestCommit{}}
 
 func TestEveryRegisteredTypeHasAPayload(t *testing.T) {
 	have := map[string]bool{}
@@ -34,7 +34,7 @@ func TestEveryRegisteredTypeHasAPayload(t *testing.T) {
 // enter an envelope in the first place (ADR 0007).
 var stringFields = map[string]string{
 	"Event.Type":            "closed vocabulary",
-	"Event.ID":              "the source's own key for an artifact it already had",
+	"Event.ID":              "the source's own key for an artifact it already had, or two such keys joined",
 	"Event.TimeSource":      "closed vocabulary",
 	"Event.Grain":           "closed vocabulary",
 	"Event.Privacy":         "closed vocabulary",
@@ -45,6 +45,10 @@ var stringFields = map[string]string{
 	"Event.Subject.Project": "a repository basename, never a path",
 	"Event.Subject.Session": "the session id the tool assigned",
 	"Event.Subject.Member":  "a pseudonymous member id set by the server",
+
+	"PullRequest.State":        "closed vocabulary",
+	"PullRequest.MergeCommit":  "a commit hash, validated as hex",
+	"PullRequestCommit.Commit": "a commit hash, validated as hex",
 }
 
 func TestContractCarriesNoFreeText(t *testing.T) {

@@ -53,7 +53,7 @@ worth knowing on the writing side.
 
 **They cannot reach:** code execution — the parsers decode JSON and count, and nothing in a
 log is ever evaluated, expanded, or executed. Nor can they make the core exfiltrate content:
-local analysis has no network path, prompt text and model output are not extracted, and
+local analysis has no network path, and the requests `evidence --github` makes carry a fixed query, a repository name and a page cursor — nothing read from a log, prompt text and model output are not extracted, and
 recorded diff or file-body content is decoded only long enough to derive line and rework
 counts. Content and paths used in memory are discarded (`usage.Record.Cwd` is `json:"-"` and
 is not a column).
@@ -126,6 +126,9 @@ stored, synced, exported, rendered on a dashboard or a `share` artifact, or sent
 **A connector** runs only on an explicit per-invocation flag, through your own client, which
 holds the credentials. Its request names a repository and a window and nothing derived from the
 store — never the commits your AI sessions touched — and asks only for allowlisted fields.
+Today that is `evidence --github`, which runs `gh` ([ADR 0022](adr/0022-pull-requests-through-gh.md)). Its
+query runs as you and can appear in your organization's API audit log, which shows how often it
+runs.
 
 **Residual:** a pull-request number or commit hash printed locally identifies work to anyone who
 can read the repository; on a repository owned by a user, the repository path contains that
@@ -323,12 +326,12 @@ retained.json`), so pricing is offline too. There is no telemetry, no analytics,
 crash reporting anywhere in the repository.
 
 That grep finds code that opens a socket itself, not programs assaio runs. The binary executes
-`git` (read-only subcommands on a local repository, for `evidence` and `survival`), the desktop's
-file opener for `share`, and the plugins you declare. In a partial clone, git would fetch a
+`git` (read-only subcommands on a local repository, for `evidence` and `survival`), `gh` (for
+`evidence --github` only), the desktop's file opener for `share`, and the plugins you declare. In a partial clone, git would fetch a
 missing object from the remote with your credentials; every git call runs with
 `GIT_NO_LAZY_FETCH=1`, so that read fails instead (git 2.44 and later honor it; an older git may
-still fetch). No other in-tree program reaches a network; a connector that does adds its client
-to this list ([ADR 0020](adr/0020-correlation-privacy.md)).
+still fetch). `gh` is the one executed program that reaches a network: it sends the fixed pull-request
+query to GitHub as you ([ADR 0020](adr/0020-correlation-privacy.md)).
 
 ### What crosses the machine boundary, and under whose control
 
@@ -340,6 +343,7 @@ to this list ([ADR 0020](adr/0020-correlation-privacy.md)).
 | rule plugin | declared in config | a local subprocess you chose | verdicts only, `Bars` stripped | structural |
 | `share` | you run it | a file you then post | figures quoted from `analyze`, tools, models, counts | structural; no name can be rendered |
 | `dashboard` | you run it | a file you then share | verdicts, figures, a project drill-down | project names pseudonymized by default; `--no-anonymize` opts out |
+| `evidence --github` | you run it | GitHub (or your Enterprise host), through your own `gh`, as you | one fixed query: the repository's owner and name and a page cursor | nothing from the store is sent; the answer is printed locally and never stored |
 
 Two rows deserve emphasis because they are easy to read the other way round:
 

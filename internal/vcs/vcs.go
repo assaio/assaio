@@ -45,11 +45,19 @@ const revertPrefix = `Revert "`
 // rather than read from the clock so one reading time stamps a whole pass and the output is a
 // pure function of the repository.
 func Collect(ctx context.Context, root, project string, since, observedAt time.Time, build string) ([]event.Event, int, error) {
-	out, err := gitOutput(ctx, root, "log", "--since="+sinceArg(since), "--format="+logFormat, "--numstat")
+	return readCommits(ctx, root, project, since, observedAt, build, nil)
+}
+
+// readCommits reads the commits git walks from HEAD, or exactly the hashes listed when there are any
+// -- the same header, numstat and forge reads either way, so a listed commit is observed in the
+// shape a reachable one is.
+func readCommits(ctx context.Context, root, project string, since, observedAt time.Time, build string, hashes []string) ([]event.Event, int, error) {
+	out, err := gitOutputFrom(ctx, root, revisions(hashes),
+		scope(hashes, "log", "--since="+sinceArg(since), "--format="+logFormat, "--numstat")...)
 	if err != nil {
 		return nil, 0, err
 	}
-	forged, err := forgeCommits(ctx, root, since)
+	forged, err := forgeCommits(ctx, root, since, hashes)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -177,9 +185,10 @@ func countNumstat(c *event.Commit, line string) {
 // matches the committer itself and prints only hashes, so no committer name or e-mail reaches
 // this process. The match runs on the recorded identity: a .mailmap rewrites the committer line
 // before --committer sees it, and could hide the forge or pass a person off as it.
-func forgeCommits(ctx context.Context, root string, since time.Time) (map[string]bool, error) {
-	out, err := gitOutput(ctx, root, "-c", "log.mailmap=false", "log", "--since="+sinceArg(since), "--fixed-strings",
-		"--regexp-ignore-case", "--committer="+forgeCommitter, "--format=%H")
+func forgeCommits(ctx context.Context, root string, since time.Time, hashes []string) (map[string]bool, error) {
+	out, err := gitOutputFrom(ctx, root, revisions(hashes), scope(hashes, "-c", "log.mailmap=false", "log",
+		"--since="+sinceArg(since), "--fixed-strings", "--regexp-ignore-case", "--committer="+forgeCommitter,
+		"--format=%H")...)
 	if err != nil {
 		return nil, err
 	}

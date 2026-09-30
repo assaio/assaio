@@ -6,7 +6,9 @@ is a candidate only when its rows resolved to the repository the command stands 
 merely shares the basename; same-named sessions with no resolved repository are counted apart.
 Amended (2026-09-30) by [ADR 0021](0021-commits-a-forge-writes.md): session-commit/v2 judges a
 commit a forge wrote by the time that means work, and a squash is never more than a low-confidence
-landing.
+landing. Amended (2026-09-30) by [ADR 0022](0022-pull-requests-through-gh.md): with `--github` a document is
+a snapshot of the forge and of this clone's reflog; the determinism above holds for the offline
+form.
 
 ## Context
 The git collector already emits content-free commit observations (ADR 0009), and the

@@ -1,7 +1,9 @@
 # 20. Correlating sessions with delivery data stays on the machine that ran them
 
 ## Status
-Accepted (2026-09-30)
+Accepted (2026-09-30). Amended (2026-09-30) by [ADR 0022](0022-pull-requests-through-gh.md):
+"listed by number for local inspection" means the pull requests a result links to; the others are
+counted. A pull request's node id identifies it as its number does.
 
 ## Context
 Until the evidence graph, everything assaio held was about AI usage: counts, models, times, a

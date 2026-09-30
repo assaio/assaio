@@ -7,6 +7,9 @@ import (
 	"github.com/assaio/assaio/internal/event"
 )
 
+// reasonNoCandidate is an unmatched session's reason when nothing else explains it.
+const reasonNoCandidate = "no-commit-candidate"
+
 // DefaultMaxGap keeps the delayed-commit conformance case without pretending that
 // temporal proximity remains meaningful without a bound.
 const DefaultMaxGap = 48 * time.Hour
@@ -73,7 +76,7 @@ func matchSession(session *Session, commits []event.Event, confirmed map[string]
 		case landedLater(session, commits):
 			result.Reason = ReasonLaterLanding
 		default:
-			result.Reason = "no-commit-candidate"
+			result.Reason = reasonNoCandidate
 		}
 	}
 	return result
