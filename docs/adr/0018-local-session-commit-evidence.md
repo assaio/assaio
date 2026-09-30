@@ -4,6 +4,9 @@
 Accepted (2026-09-15). Amended (2026-09-29) by [ADR 0019](0019-repository-identity.md): a session
 is a candidate only when its rows resolved to the repository the command stands in, not when it
 merely shares the basename; same-named sessions with no resolved repository are counted apart.
+Amended (2026-09-30) by [ADR 0021](0021-commits-a-forge-writes.md): session-commit/v2 judges a
+commit a forge wrote by the time that means work, and a squash is never more than a low-confidence
+landing.
 
 ## Context
 The git collector already emits content-free commit observations (ADR 0009), and the

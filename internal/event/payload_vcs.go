@@ -1,6 +1,9 @@
 package event
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // Commit is what one commit changed, and none of what it changed. Counts and a category
 // split only: no path, no message, no diff, no branch name -- the same guarantee the AI
@@ -17,6 +20,16 @@ type Commit struct {
 	// Revert marks a commit the source itself labelled a revert. An undo that does not say
 	// so is invisible here, which is why this is an indicator rather than a count.
 	Revert bool `json:"revert,omitempty"`
+	// AuthoredAt is when the commit was first written; the envelope's OccurredAt is when it
+	// reached its branch. They differ after an amend, a rebase or a cherry-pick, which keep the
+	// author time, and on a commit a forge rewrote.
+	AuthoredAt time.Time `json:"authoredAt"`
+	// CommittedByForge marks a commit whose committer is a forge's own identity -- `GitHub
+	// <noreply@github.com>` is the one recognised: a squash, a rebase or a merge the forge made,
+	// or an edit in its web interface.
+	// Its OccurredAt is when the forge applied it. False means not recognised -- other forges
+	// commit as the person who merged -- never that the commit was made locally.
+	CommittedByForge bool `json:"committedByForge,omitempty"`
 }
 
 // FileCategories counts a commit's changed files per kind. Other is deliberately present:

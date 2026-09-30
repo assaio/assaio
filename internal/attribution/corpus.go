@@ -53,16 +53,15 @@ type Scenario struct {
 // Corpus is every scenario, in the order they are worth reading: the shapes a link can
 // take, then the noise an engine has to resist, then the cases where it must not answer.
 func Corpus() []Scenario {
-	out := make([]Scenario, len(scenarios))
-	copy(out, scenarios)
-	return out
+	out := make([]Scenario, 0, len(scenarios)+len(landingScenarios))
+	return append(append(out, scenarios...), landingScenarios...)
 }
 
 // Get returns the scenario registered under name.
 func Get(name string) (Scenario, bool) {
-	for i := range scenarios {
-		if scenarios[i].Name == name {
-			return scenarios[i], true
+	for _, s := range Corpus() {
+		if s.Name == name {
+			return s, true
 		}
 	}
 	return Scenario{}, false

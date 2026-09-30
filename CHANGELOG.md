@@ -33,6 +33,22 @@ Discussion.
 
 ## [Unreleased]
 
+### Breaking
+
+- **`evidence` judges a commit a forge wrote by the time that means work** (session-commit/v2,
+  [ADR 0021](docs/adr/0021-commits-a-forge-writes.md)). A squash merge is a low-confidence
+  `landed-by-forge` candidate, never a medium overlap; a rebase merge is judged at the time it was
+  written; a forge merge commit is no candidate; an amended commit reaches both the session that
+  wrote it and the one that amended it. On a repository a forge merges into, results move from
+  medium links toward ambiguous and low ones
+  ([correction](docs/corrections.md#evidence-judged-forge-merged-commits-by-the-merge-time)).
+  `evidence --format json` changes `algorithm`, `status`, `method` and `confidence` values, adds
+  the relation `landed-by-forge`, the method `project-time-forge-landing`, the reason
+  `later-forge-landing`, the candidate field `evidenceAt`, and a document `forge` block with
+  `detection`, `landedCommits`, `rebasedCommits`, `mergeCommits` and `unmatchedBeforeLaterLanding`. Detection
+  recognises GitHub.com's own committer only. Discard any saved `session-commit/v1` document
+  rather than comparing it.
+
 ### Added
 
 - [ADR 0020](docs/adr/0020-correlation-privacy.md) sets the privacy policy for joining sessions to

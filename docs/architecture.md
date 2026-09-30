@@ -223,7 +223,7 @@ Outputs leave the process only when asked:
 default local store and converts `Store.Sessions` rows to `attribution.Session`; member-bearing
 rows are refused. Separately, `vcs.Collect` reads commits reachable from the selected
 repository's `HEAD` into content-free `event.Event` values. `attribution.Match` orders both
-inputs, applies algorithm `session-commit/v1`, and returns matched, ambiguous or unmatched
+inputs, applies algorithm `session-commit/v2`, and returns matched, ambiguous or unmatched
 results. `attribution.RenderText` or JSON encoding is the final boundary.
 
 No step writes to the store. The observation id is the commit hash, so re-reading is stable;

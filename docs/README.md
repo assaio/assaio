@@ -138,3 +138,6 @@ all in the shipping PR.
   repository and a window; synced fields that join to an identity must leave only as keyed
   digests, which branch names and the member label do not yet (`B227`); no server view may show
   one member's changes.
+- [ADR 0021](adr/0021-commits-a-forge-writes.md) — a **commit a forge wrote** is judged by the time
+  that means work: a squash is a low-confidence landing, a rebase merge keeps its author time, a
+  forge merge commit is no candidate, and an amend reaches both sessions.

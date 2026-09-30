@@ -55,6 +55,9 @@ func matchSession(session *Session, commits []event.Event, confirmed map[string]
 	case len(following) == 1:
 		result.Status = statusMatched
 		result.Method = methodFollowing
+		if following[0].Relation == relationLanded {
+			result.Method = methodLanded
+		}
 		result.Confidence = confidenceLow
 		result.Candidates = following
 	case len(following) > 1:
@@ -64,9 +67,12 @@ func matchSession(session *Session, commits []event.Event, confirmed map[string]
 		result.Reason = "competing-following-commit-candidates"
 		result.Candidates = following
 	default:
-		if observedAt.Before(session.EndedAt.Add(DefaultMaxGap)) {
+		switch {
+		case observedAt.Before(session.EndedAt.Add(DefaultMaxGap)):
 			result.Reason = "no-candidate-window-still-open"
-		} else {
+		case landedLater(session, commits):
+			result.Reason = ReasonLaterLanding
+		default:
 			result.Reason = "no-commit-candidate"
 		}
 	}
@@ -86,7 +92,8 @@ func applyConfirmation(result *Result, commits []event.Event, plausible []Candid
 		if commits[i].ID != commitID {
 			continue
 		}
-		winner := candidateFrom(&commits[i], &result.Session)
+		relation, judged := relationConfirmed(&commits[i], &result.Session)
+		winner := candidateFrom(&commits[i], &result.Session, relation, judged)
 		result.Status = statusMatched
 		result.Method = methodConfirmed
 		result.Confidence = confidenceHigh
@@ -122,28 +129,29 @@ func commitObservations(events []event.Event) []event.Event {
 }
 
 func candidatesFor(session *Session, commits []event.Event) []Candidate {
-	end := session.EndedAt.Add(DefaultMaxGap)
 	out := make([]Candidate, 0)
 	for i := range commits {
 		commit := &commits[i]
-		if commit.Subject.Project != session.Project || commit.OccurredAt.Before(session.StartedAt) || commit.OccurredAt.After(end) {
+		if commit.Subject.Project != session.Project {
 			continue
 		}
-		out = append(out, candidateFrom(commit, session))
+		ev := evidenceOf(commit)
+		if ev.excluded {
+			continue
+		}
+		if relation, judged, ok := relate(ev, session); ok {
+			out = append(out, candidateFrom(commit, session, relation, judged))
+		}
 	}
 	return out
 }
 
-func candidateFrom(commit *event.Event, session *Session) Candidate {
+func candidateFrom(commit *event.Event, session *Session, relation string, judged time.Time) Candidate {
 	payload, _ := commitPayload(commit.Payload)
-	relation, gap := relationOverlap, int64(0)
-	if commit.OccurredAt.After(session.EndedAt) {
-		relation = relationFollowing
-		gap = int64(commit.OccurredAt.Sub(session.EndedAt).Seconds())
-	}
 	return Candidate{
-		CommitID: commit.ID, OccurredAt: commit.OccurredAt, Relation: relation, GapSeconds: gap,
-		Source: commit.Source, TimeSource: commit.TimeSource, Privacy: commit.Privacy,
+		CommitID: commit.ID, OccurredAt: commit.OccurredAt, EvidenceAt: judged, Relation: relation,
+		GapSeconds: int64(max(judged.Sub(session.EndedAt), 0).Seconds()),
+		Source:     commit.Source, TimeSource: commit.TimeSource, Privacy: commit.Privacy,
 		Provenance: commit.Provenance, FilesChanged: payload.FilesChanged, Files: payload.Files,
 	}
 }

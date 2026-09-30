@@ -31,6 +31,28 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+<a id="evidence-judged-forge-merged-commits-by-the-merge-time"></a>
+
+### `evidence` judged forge-merged commits by the merge time
+
+*Corrected in the next release.*
+
+Since v0.27.0, `evidence` judged each commit by the time it reached its branch. For a commit a
+forge merged, that is the merge time. A session running when a pull request was squash-merged or
+merged got a medium-confidence `project-time-overlap` link to the whole pull request as a candidate.
+On a rebase merge, every rewritten commit linked to the merge-time session instead of the session
+that wrote it. A merge commit, which carries no lines, was a medium candidate too. The session that
+did the work could get a low-confidence following link when the merge came within 48 hours.
+Work merged later left it unmatched with `no-commit-candidate`, as if nothing had reached the branch.
+The incorrect medium-confidence links are removed; ambiguous and low-confidence results increase,
+and resolved coverage falls. This is abstention, not new evidence. Nothing was stored, so there is
+nothing to restate; discard any saved `session-commit/v1` document. Measured on this repository,
+which squash-merges every pull request, over 30 days and 11 sessions: v1 showed 11 medium overlaps;
+v2 shows 3 medium links, on commits pushed straight to `main` and judged at the time they were
+written, and 8 ambiguous results among 6 to 16 GitHub-landed commits each. Resolved coverage went
+from 100% to 27%, and candidate coverage stayed at 100%. Rebase merges, merge commits and amends
+were reproduced only in the corpus.
+
 <a id="the-synced-member-label-can-be-confirmed-by-guessing"></a>
 
 ### The synced member label can be confirmed by guessing

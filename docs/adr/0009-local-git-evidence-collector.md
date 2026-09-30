@@ -3,6 +3,9 @@
 ## Status
 Accepted (2026-08-03). Extended by [ADR 0018](0018-local-session-commit-evidence.md), whose
 session→commit consumer still recomputes observations in one pass rather than storing them.
+Extended (2026-09-30) by [ADR 0021](0021-commits-a-forge-writes.md): the payload also carries the
+author time and whether the forge's own identity committed it, the latter read by git's filter so
+no committer identity reaches assaio.
 
 ## Context
 [ADR 0007](0007-canonical-event-contract.md) committed `vcs.commit.observed` as a name and
