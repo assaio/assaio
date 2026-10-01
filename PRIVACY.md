@@ -238,16 +238,18 @@ names never enter its result.
 ### `evidence --github`
 
 Only with `--github`, `evidence` runs your own GitHub CLI (`gh`) in the repository. `gh repo view`
-names the repository and its host; then one fixed GraphQL query asks for the pull requests updated
-since `--since`: each one's id, number, state, last-update and merge times, merge commit, and up to
-100 listed commit hashes with their total. It asks for no title, body, branch name, label, author,
-reviewer, comment or check. The request names the repository and a page cursor, never a commit, a
-session or anything from the store. `gh` holds your credentials; assaio reads, passes and stores no
-token. assaio then asks local git which listed commits a `HEAD` reflog of this clone records as made here
-— git matches the entries and returns hashes only — and reads those like any other commit. Pull requests, their commits and every link are
-printed locally and never stored, synced, exported or sent to a plugin. The repository's owner and
-name appear only in a note on standard error, never in the document. The query runs as you, so it
-can appear in your organization's API audit log.
+names the repository and its host; then one fixed GraphQL query asks for pull requests ordered by
+last update, newest first: each one's id, number, state, last-update and merge times, merge commit,
+and up to 100 listed commit hashes with their total; assaio pages through the results locally and
+stops once a pull request was last updated before `--since`. It asks for no title, body, branch
+name, label, author, reviewer, comment or check. The request names the repository and a page cursor,
+never a commit, a session or anything from the store. `gh` holds your credentials; assaio reads,
+passes and stores no token. assaio then asks local git which listed commits a `HEAD` reflog of this
+clone records as made here — git matches the entries and returns hashes only — and reads those like
+any other commit. Pull requests, their commits and every link are printed locally and never stored,
+synced, exported or sent to a plugin. The repository's owner and name appear only in a note on
+standard error, never in the document. The query runs as you, so it can appear in your
+organization's API audit log.
 
 ## What it never retains
 

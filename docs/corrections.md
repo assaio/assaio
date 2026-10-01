@@ -31,11 +31,13 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-01
+
 <a id="evidence-judged-forge-merged-commits-by-the-merge-time"></a>
 
 ### `evidence` judged forge-merged commits by the merge time
 
-*Corrected in the next release.*
+*Corrected in v0.36.0, released 2026-10-01.*
 
 Since v0.27.0, `evidence` judged each commit by the time it reached its branch. For a commit a
 forge merged, that is the merge time. A session running when a pull request was squash-merged or
@@ -57,7 +59,7 @@ were reproduced only in the corpus.
 
 ### The synced member label can be confirmed by guessing
 
-*Corrected in the next release.*
+*Corrected in v0.36.0, released 2026-10-01.*
 
 Since v0.1.0, PRIVACY.md and the threat model have called the label `sync` sends for a member
 pseudonymous, with nothing about how it is made. It is the first 40 bits, in hex, of a SHA-256

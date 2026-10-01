@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-01
+
 ### Breaking
 
 - **`evidence` judges a commit a forge wrote by the time that means work** (session-commit/v2,
@@ -54,10 +56,11 @@ Discussion.
 - **`evidence --github`** reads the repository's pull requests through your own `gh` (`B92`,
   [ADR 0022](docs/adr/0022-pull-requests-through-gh.md)): numbers, states, merge commits and listed
   commit hashes, asked for by repository and never by commit or session. A listed commit that a
-  `HEAD` reflog records as made in this clone becomes a candidate, so a session links to the branch
-  commit it wrote after a squash hid it; a commit only fetched or checked out never does. Each
-  candidate names the pull requests that list it or whose merge wrote it, and a result names one
-  pull request only when all its candidates share exactly one. Such documents say
+  `HEAD` reflog records as made in this clone becomes a candidate, including a branch commit found
+  through a pull request after a squash hid it; a commit only fetched or checked out never does.
+  Each candidate names the pull requests that list it or whose merge wrote it, and a result names
+  one pull request only when all its candidates share exactly one. Naming a pull request changes no
+  status, method or confidence, and its state is never a session's outcome. Such documents say
   `session-commit/v3`, and their coverage counts the added candidates, so it compares only with
   another v3 document; a `changes` block counts every reason a candidate is in no commit list read.
   Without the flag the JSON document is unchanged, and the text's last line now says pull requests
@@ -69,6 +72,12 @@ Discussion.
   changes or ranks anyone. The threat model and PRIVACY.md now name the ways a synced row can be
   re-identified. Tests fail if the `evidence` document gains a field whose name contains a person
   or rank word, or if a synced record gains a field.
+
+### Changed
+
+- Refreshed the vendored LiteLLM price table from the 2026-10-01 snapshot: 4,435 to 4,439 table
+  entries (4,434 to 4,438 model keys), with 4 added, none removed and 15 OpenRouter routes repriced.
+  `us.openai.gpt-6.1-sol` and `bedrock_mantle/openai.gpt-6.1-sol` now carry a price.
 
 ### Fixed
 
@@ -1912,7 +1921,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.35.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.36.0...HEAD
+[0.36.0]: https://github.com/assaio/assaio/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/assaio/assaio/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/assaio/assaio/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/assaio/assaio/compare/v0.32.0...v0.33.0

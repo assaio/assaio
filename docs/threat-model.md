@@ -123,12 +123,11 @@ session→delivery edge are `local-only`. They are computed and printed on your 
 stored, synced, exported, rendered on a dashboard or a `share` artifact, or sent to a plugin.
 `evidence` has no `--db`.
 
-**A connector** runs only on an explicit per-invocation flag, through your own client, which
-holds the credentials. Its request names a repository and a window and nothing derived from the
-store — never the commits your AI sessions touched — and asks only for allowlisted fields.
-Today that is `evidence --github`, which runs `gh` ([ADR 0022](adr/0022-pull-requests-through-gh.md)). Its
-query runs as you and can appear in your organization's API audit log, which shows how often it
-runs.
+**A connector** runs only on an explicit per-invocation flag, through your own client, which holds
+the credentials. Its request names a repository and a page cursor and nothing derived from the store
+— never the commits your AI sessions touched — and asks only for allowlisted fields. Today that is
+`evidence --github`, which runs `gh` ([ADR 0022](adr/0022-pull-requests-through-gh.md)). Its query
+runs as you and can appear in your organization's API audit log, which shows how often it runs.
 
 **Residual:** a pull-request number or commit hash printed locally identifies work to anyone who
 can read the repository; on a repository owned by a user, the repository path contains that
@@ -330,8 +329,9 @@ That grep finds code that opens a socket itself, not programs assaio runs. The b
 `evidence --github` only), the desktop's file opener for `share`, and the plugins you declare. In a partial clone, git would fetch a
 missing object from the remote with your credentials; every git call runs with
 `GIT_NO_LAZY_FETCH=1`, so that read fails instead (git 2.44 and later honor it; an older git may
-still fetch). `gh` is the one executed program that reaches a network: it sends the fixed pull-request
-query to GitHub as you ([ADR 0020](adr/0020-correlation-privacy.md)).
+still fetch). Of the programs assaio runs for its own commands, `gh` is the one meant to reach a
+network: it sends the fixed pull-request query to GitHub as you
+([ADR 0020](adr/0020-correlation-privacy.md), [ADR 0022](adr/0022-pull-requests-through-gh.md)).
 
 ### What crosses the machine boundary, and under whose control
 

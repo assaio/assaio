@@ -32,8 +32,8 @@ vendors for these questions:
 - Can the result be reproduced without uploading prompts, code or conversations?
 
 `assaio` answers the first three questions. The local `evidence` command finds content-free
-session→commit candidates and reports confidence, ambiguity, abstention and population coverage. PR,
-review, CI, merge and durable-outcome correlation are not shipped. See the [roadmap](ROADMAP.md) for
+session→commit candidates and reports confidence, ambiguity, abstention and population coverage.
+Review, CI, merge and durable-outcome correlation are not shipped. See the [roadmap](ROADMAP.md) for
 the research and product choices behind this focus.
 
 <p align="center">
@@ -210,8 +210,8 @@ vulnerability scanning and a published correction record.
 
 It remains pre-1.0 because:
 
-1. PR, review, CI and durable-outcome correlation beyond local session→commit candidates is not
-   shipped;
+1. review, CI, merge and durable-outcome correlation beyond local session→commit candidates and the
+   pull requests `evidence --github` names is not shipped;
 2. the contracts and calibration have not been tested across several external teams and release
    cycles.
 
