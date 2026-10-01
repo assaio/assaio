@@ -196,7 +196,7 @@ discovered across VS Code, VS Code Insiders, VSCodium, and Cursor.
   store. A name two repositories share is shown split (`api`, `api (2)`, and `api (?)` for rows
   that cannot be placed), and joins from a directory use only rows resolved to that repository
   (v0.35, [ADR 0019](docs/adr/0019-repository-identity.md)).
-- Joins between sessions and delivery data (commits today) stay on the machine that ran them:
-  never stored, synced, exported or shown on a dashboard, and no output names a person or ranks
-  anyone (v0.36, [ADR 0020](docs/adr/0020-correlation-privacy.md)).
+- Joins between sessions and delivery data (candidate commits and their pull requests today) stay on
+  the machine that ran them: never stored, synced, exported or shown on a dashboard, and no output
+  names a person or ranks anyone (v0.36, [ADR 0020](docs/adr/0020-correlation-privacy.md)).
 - Schema self-heal: an existing local database migrates itself forward.

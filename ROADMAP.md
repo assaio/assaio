@@ -110,8 +110,9 @@ Build the differentiating outcome path before expanding the UI or connector coun
   repository is resolved, or recorded as unresolved or ambiguous, before any join across
   repositories. An explicit team mapping of local repositories to shared names (B226) waits for
   the team server's re-push and retention rules.
-- Add content-free commit, pull-request, review and check-run observations, with GitHub as
-  the first end-to-end connector and an importable contract for other forges.
+- Content-free commit and pull-request observations have shipped, with pull requests read
+  through the user's own `gh` (v0.36.0, ADR 0022); add review and check-run observations through
+  the same read (`B229`) and an importable contract for other forges.
 - Extend the shipped local session→commit slice — already graded by the attribution corpus and
   already reporting coverage, competing candidates and abstention — to shipped changes.
 - Report coverage and competing candidates for every additional join.
@@ -230,7 +231,7 @@ The release decision should use these gates, not feature count:
 | --- | --- | --- |
 | Local usage and cost | pilot-ready, pre-1.0 | external captures confirm source shapes and first-run activation repeats |
 | Local output diagnostics | directional and useful | outcome language never leaks into output-only metrics |
-| Evidence graph | first local session→commit slice; no persisted graph or outcome joins | PR/review/CI/merge joins and unmatched populations pass their conformance corpora |
+| Evidence graph | local session→commit candidates and pull-request naming; no persisted graph or outcome joins | PR/review/CI/merge joins and unmatched populations pass their conformance corpora |
 | Recommendations | proposed-only | interventions can be accepted, measured and closed |
 | Public analytical export | aggregated `report` and `analyze` rows and `evidence` results; no versioned snapshot of the stored records | an out-of-tree consumer reproduces totals from a versioned snapshot and repository identity cannot merge silently |
 | Team server | MVP | milestone 4 security, recovery and scale gates pass |

@@ -599,6 +599,7 @@
   "us.openai.gpt-6-astra": {"input_cost_per_token":0.000011,"output_cost_per_token":0.000055,"cache_creation_input_token_cost":0.00001375,"cache_creation_input_token_cost_above_1hr":0.00001375,"cache_read_input_token_cost":0.0000011},
   "us.openai.gpt-6-luna": {"input_cost_per_token":1.1e-7,"output_cost_per_token":5.5e-7,"cache_creation_input_token_cost":1.375e-7,"cache_creation_input_token_cost_above_1hr":1.375e-7,"cache_read_input_token_cost":1.1e-8},
   "us.openai.gpt-6-sol": {"input_cost_per_token":0.0000022,"output_cost_per_token":0.000011,"cache_creation_input_token_cost":0.00000275,"cache_creation_input_token_cost_above_1hr":0.00000275,"cache_read_input_token_cost":2.2e-7},
+  "us.openai.gpt-6.1-sol": {"input_cost_per_token":0.0000022,"output_cost_per_token":0.000011,"cache_creation_input_token_cost":0.00000275,"cache_creation_input_token_cost_above_1hr":0.00000275,"cache_read_input_token_cost":1.1e-7},
   "us.twelvelabs.pegasus-1-2-v1:0": {"input_cost_per_token":0,"output_cost_per_token":0.0000075,"cache_creation_input_token_cost":0,"cache_creation_input_token_cost_above_1hr":0,"cache_read_input_token_cost":0},
   "us.writer.palmyra-x4-v1:0": {"input_cost_per_token":0.0000025,"output_cost_per_token":0.00001,"cache_creation_input_token_cost":0,"cache_creation_input_token_cost_above_1hr":0,"cache_read_input_token_cost":0},
   "us.writer.palmyra-x5-v1:0": {"input_cost_per_token":6e-7,"output_cost_per_token":0.000006,"cache_creation_input_token_cost":0,"cache_creation_input_token_cost_above_1hr":0,"cache_read_input_token_cost":0},
