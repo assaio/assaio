@@ -111,7 +111,7 @@ Build the differentiating outcome path before expanding the UI or connector coun
   repositories. An explicit team mapping of local repositories to shared names (B226) waits for
   the team server's re-push and retention rules.
 - Content-free commit and pull-request observations shipped in v0.36.0 through the user's own
-  `gh` (ADR 0022). The unreleased v0.37 target adds B229's bounded review states and current-head
+  `gh` (ADR 0022). v0.37.0 adds B229's bounded review states and current-head
   check-run/status-context observations, with total and listed counts (ADR 0023). B231 retains
   rounds, suites and historical runs, merge method, revert relations and derived rates; an
   importable contract for other forges remains open.

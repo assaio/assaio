@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-10-09
+
 ### Breaking
 
 - **Team sync v2** (`B227`) requires a private identity key and per-member tokens; v1 writes
@@ -1953,7 +1955,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.36.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.37.0...HEAD
+[0.37.0]: https://github.com/assaio/assaio/releases/tag/v0.37.0
 [0.36.0]: https://github.com/assaio/assaio/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/assaio/assaio/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/assaio/assaio/compare/v0.33.0...v0.34.0
