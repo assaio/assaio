@@ -11,7 +11,8 @@ import (
 
 // pullRequestQuery is the only question assaio asks the forge: for one repository, its pull
 // requests newest update first, each with the fields below and nothing else. It names no title,
-// body, branch, label, author, reviewer, comment or check; a test holds it to that list. The
+// body, branch, label, author, reviewer, comment, check name or check output; a test holds it to
+// that list. The
 // cursor is left out on the first page, where GraphQL reads it as null.
 const pullRequestQuery = `query($owner: String!, $name: String!, $cursor: String) {
   repository(owner: $owner, name: $name) {
@@ -21,6 +22,18 @@ const pullRequestQuery = `query($owner: String!, $name: String!, $cursor: String
         id number state updatedAt mergedAt
         mergeCommit { oid }
         commits(first: 100) { totalCount nodes { commit { oid } } }
+        reviews(last: 100) { totalCount nodes { id state submittedAt updatedAt } }
+        statusCheckRollup {
+          state
+          contexts(last: 100) {
+            totalCount
+            nodes {
+              __typename
+              ... on CheckRun { id status conclusion startedAt completedAt }
+              ... on StatusContext { id state createdAt updatedAt }
+            }
+          }
+        }
       }
     }
   }
@@ -44,6 +57,32 @@ type node struct {
 			} `json:"commit"`
 		} `json:"nodes"`
 	} `json:"commits"`
+	Reviews *struct {
+		TotalCount int64 `json:"totalCount"`
+		Nodes      []struct {
+			ID          string    `json:"id"`
+			State       string    `json:"state"`
+			SubmittedAt time.Time `json:"submittedAt"`
+			UpdatedAt   time.Time `json:"updatedAt"`
+		} `json:"nodes"`
+	} `json:"reviews"`
+	StatusCheckRollup *struct {
+		State    string `json:"state"`
+		Contexts struct {
+			TotalCount int64 `json:"totalCount"`
+			Nodes      []struct {
+				Type        string    `json:"__typename"`
+				ID          string    `json:"id"`
+				Status      string    `json:"status"`
+				Conclusion  string    `json:"conclusion"`
+				State       string    `json:"state"`
+				StartedAt   time.Time `json:"startedAt"`
+				CompletedAt time.Time `json:"completedAt"`
+				CreatedAt   time.Time `json:"createdAt"`
+				UpdatedAt   time.Time `json:"updatedAt"`
+			} `json:"nodes"`
+		} `json:"contexts"`
+	} `json:"statusCheckRollup"`
 }
 
 type page struct {

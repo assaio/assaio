@@ -19,14 +19,15 @@ func renderChanges(w io.Writer, c *Changes, since time.Time) error {
 		bound = "; stopped at the 20-page bound"
 	}
 	_, err := fmt.Fprintf(w,
-		"  pull requests (%s, read %s, back to %s%s): %d read · %d commit list(s) cut at 100 (newest cut) · "+
+		"  pull requests (%s, read %s, back to %s%s): %d read · %d named by a candidate or alternative · "+
+			"%d unmatched within this read · %d commit list(s) cut at 100 (newest cut) · "+
 			"%d session(s) in one pull request · %d across several\n"+
 			"  listed commits: %d made here, added as candidates · %d in no HEAD reflog here "+
 			"(fetched, only checked out, made in a removed worktree, or expired) · %d not local · "+
 			"%d unreadable · %d made before the window\n"+
 			"  Coverage above counts the %d listed commit(s) made here; compare it only with another %s document.\n",
 		c.Source, c.ObservedAt.Format(time.RFC3339), c.ReadBackTo.Format(time.RFC3339), bound, c.PullRequestsRead,
-		c.CommitListsCut, c.SessionsInOneChange, c.SessionsAcrossChanges,
+		c.PullRequestsNamed, c.PullRequestsUnmatched, c.CommitListsCut, c.SessionsInOneChange, c.SessionsAcrossChanges,
 		c.ListedMadeHere, c.ListedNotInReflog, c.ListedNotLocal, c.ListedUnreadable, c.ListedBeforeWindow,
 		c.ListedMadeHere, AlgorithmChanges)
 	return err
@@ -66,6 +67,10 @@ func renderLinked(w io.Writer, c *Changes) error {
 		if _, err := fmt.Fprintf(w, "    #%d %s%s (named by %s)\n", pr.Number, pr.State, merged, pr.NamedBy); err != nil {
 			return err
 		}
+		if _, err := fmt.Fprintf(w, "      reviews: %s; review states: %s\n      latest head checks: %s; contexts: %s; results: %s\n",
+			readCount(pr.Reviews), stateCounts(pr.Reviews), checkRollup(pr.HeadChecks), readCount(pr.HeadChecks), stateCounts(pr.HeadChecks)); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -73,10 +78,42 @@ func renderLinked(w io.Writer, c *Changes) error {
 func renderOutcomeScope(w io.Writer, withChanges bool) error {
 	if !withChanges {
 		_, err := fmt.Fprintln(w,
-			"  Pull requests are read only with --github; review, CI and downstream outcomes are not part of this command.")
+			"  Pull request, review and head-check observations are read only with --github; downstream outcomes are not part of this command.")
 		return err
 	}
-	_, err := fmt.Fprintln(w, `  A merged pull request says the change landed, not that this session's lines are in it.
-  Review, CI and downstream outcomes are not part of this command.`)
+	_, err := fmt.Fprintln(w, `  PR state, reviews and latest-head checks are observations of pull requests; they do not establish outcomes caused by a session.
+  A merged pull request says the change landed, not that this session's lines are in it.`)
 	return err
+}
+
+func readCount(s *ObservedStates) string {
+	if s == nil {
+		return "unavailable"
+	}
+	count := fmt.Sprintf("%d/%d read", s.Listed, s.Total)
+	if s.Listed < s.Total {
+		count += " (incomplete; latest 100 requested)"
+	}
+	return count
+}
+
+func stateCounts(s *ObservedStates) string {
+	if s == nil || s.Total > 0 && s.Listed == 0 {
+		return "unavailable"
+	}
+	if len(s.States) == 0 {
+		return "none"
+	}
+	parts := make([]string, 0, len(s.States))
+	for _, state := range s.States {
+		parts = append(parts, fmt.Sprintf("%s=%d", state.State, state.Count))
+	}
+	return strings.Join(parts, ", ")
+}
+
+func checkRollup(s *ObservedStates) string {
+	if s == nil {
+		return "unavailable"
+	}
+	return s.State
 }

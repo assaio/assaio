@@ -3,7 +3,7 @@ LDFLAGS := -X github.com/assaio/assaio/internal/version.Version=$(shell git desc
 FUZZTIME := 20s
 # The one golangci-lint pin; ci.yml reads it from this line. Two versions disagree about the
 # same tree, so lint and fmt refuse any other.
-GOLANGCI_LINT_VERSION := 2.13.2
+GOLANGCI_LINT_VERSION := 2.14.0
 GOLANGCI_LINT_PINNED = @v=$$(golangci-lint version --short 2>/dev/null); v=$${v\#v}; [ "$$v" = "$(GOLANGCI_LINT_VERSION)" ] || \
 	{ echo "golangci-lint $(GOLANGCI_LINT_VERSION) required (CI runs it), found $${v:-none}: https://golangci-lint.run/docs/welcome/install/"; exit 1; }
 

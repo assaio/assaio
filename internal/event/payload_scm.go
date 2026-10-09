@@ -30,6 +30,15 @@ type PullRequest struct {
 	// the read returned; Listed below Commits means the list was cut.
 	Commits int64 `json:"commits"`
 	Listed  int64 `json:"listed"`
+	// Reviews and Checks count the source connections; listed counts are separate so a bounded
+	// read never presents an incomplete connection as a complete one. A nil check rollup has
+	// no stated check population.
+	Reviews          int64  `json:"reviews"`
+	ReviewsListed    int64  `json:"reviewsListed"`
+	ReviewsAvailable bool   `json:"reviewsAvailable"`
+	Checks           int64  `json:"checks"`
+	ChecksListed     int64  `json:"checksListed"`
+	CheckState       string `json:"checkState,omitempty"`
 }
 
 // PullRequestCommit says that a pull request lists a commit. It is an observation of its own
@@ -53,11 +62,30 @@ func (p PullRequest) validate() error {
 	if !valid(changeStates, p.State) {
 		return fmt.Errorf("unknown pull request state %q (want %v)", p.State, changeStates)
 	}
-	if err := nonNegative(map[string]int64{"commits": p.Commits, "listed": p.Listed}); err != nil {
+	if err := nonNegative(map[string]int64{
+		"commits": p.Commits, "listed": p.Listed,
+		"reviews": p.Reviews, "reviewsListed": p.ReviewsListed,
+		"checks": p.Checks, "checksListed": p.ChecksListed,
+	}); err != nil {
 		return err
 	}
 	if p.Listed > p.Commits {
 		return fmt.Errorf("lists %d commit(s) of %d", p.Listed, p.Commits)
+	}
+	if p.ReviewsListed > p.Reviews {
+		return fmt.Errorf("lists %d review(s) of %d", p.ReviewsListed, p.Reviews)
+	}
+	if !p.ReviewsAvailable && (p.Reviews != 0 || p.ReviewsListed != 0) {
+		return errors.New("reviews have no available connection")
+	}
+	if p.ChecksListed > p.Checks {
+		return fmt.Errorf("lists %d check(s) of %d", p.ChecksListed, p.Checks)
+	}
+	if p.CheckState != "" && !valid(checkRollupStates, p.CheckState) {
+		return fmt.Errorf("unknown check rollup state %q", p.CheckState)
+	}
+	if p.CheckState == "" && (p.Checks != 0 || p.ChecksListed != 0) {
+		return errors.New("checks have no rollup state")
 	}
 	if p.State != ChangeMerged && (p.MergeCommit != "" || !p.MergedAt.IsZero()) {
 		return fmt.Errorf("a %s pull request carries a merge", p.State)

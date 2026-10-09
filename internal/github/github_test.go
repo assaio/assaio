@@ -142,6 +142,18 @@ func TestAPageBoundSaysHowFarBackTheReadGot(t *testing.T) {
 	}
 }
 
+func TestASecondWalkThatCannotCatchUpFailsInsteadOfLookingComplete(t *testing.T) {
+	pages := []string{pageOf(false, pr("PR_original", 1, observedAt.Add(-time.Hour)))}
+	for n := range maxPages {
+		pages = append(pages, pageOf(true, pr(fmt.Sprintf("PR_moved_%d", n), n+2, observedAt.Add(time.Duration(n+1)*time.Minute))))
+	}
+	f := &forge{view: view, pages: pages}
+	_, err := ReadPullRequests(context.Background(), f.run, "/repo", "api", since, observedAt, "test")
+	if err == nil || !strings.Contains(err.Error(), "reread bound") {
+		t.Fatalf("second walk beyond %d pages: %v", maxPages, err)
+	}
+}
+
 // TestGhsOwnReasonSurvivesABodyThatIsNotAnAnswer: a rate-limit or gateway page is not a GraphQL
 // answer, and "no such repository" would misname what failed.
 func TestGhsOwnReasonSurvivesABodyThatIsNotAnAnswer(t *testing.T) {
@@ -157,6 +169,19 @@ func TestGhsOwnReasonSurvivesABodyThatIsNotAnAnswer(t *testing.T) {
 	}
 }
 
+func TestMalformedSuccessfulPageReportsTheParseError(t *testing.T) {
+	run := func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		if args[0] == "repo" {
+			return []byte(view), nil
+		}
+		return []byte(`not JSON`), nil
+	}
+	_, err := ReadPullRequests(context.Background(), run, "/repo", "api", since, observedAt, "test")
+	if err == nil || !strings.Contains(err.Error(), "unreadable response") {
+		t.Fatalf("err = %v, want the parse failure", err)
+	}
+}
+
 func TestAFailedPageFailsTheRead(t *testing.T) {
 	f := &forge{view: view, fail: 2, pages: []string{pageOf(true, pr("PR_1", 1, observedAt.Add(-time.Hour)))}}
 	_, err := ReadPullRequests(context.Background(), f.run, "/repo", "api", since, observedAt, "test")
@@ -169,6 +194,42 @@ func TestAPullRequestWithoutAUsableIDFailsTheRead(t *testing.T) {
 	f := &forge{view: view, pages: []string{pageOf(false, pr("PR 1\nnot an id", 1, observedAt.Add(-time.Hour))), pageOf(false)}}
 	if _, err := ReadPullRequests(context.Background(), f.run, "/repo", "api", since, observedAt, "test"); err == nil {
 		t.Fatal("a pull request with a free-text id was read")
+	}
+}
+
+func TestDeliveryReadKeepsCoverageAndRejectsUnknownContexts(t *testing.T) {
+	base := pr("PR_12", 12, observedAt.Add(-time.Hour), oid)
+	base["reviews"] = map[string]any{"totalCount": 103, "nodes": []map[string]any{
+		{"id": "PRR_1", "state": "CHANGES_REQUESTED", "submittedAt": observedAt.Add(-3 * time.Hour), "updatedAt": observedAt.Add(-2 * time.Hour)},
+		{"id": "PRR_2", "state": "APPROVED", "submittedAt": observedAt.Add(-time.Hour), "updatedAt": observedAt.Add(-time.Hour)},
+	}}
+	base["statusCheckRollup"] = map[string]any{"state": "FAILURE", "contexts": map[string]any{
+		"totalCount": 105, "nodes": []map[string]any{
+			{"__typename": "CheckRun", "id": "CR_1", "status": "COMPLETED", "conclusion": "FAILURE", "completedAt": observedAt.Add(-time.Minute)},
+			{"__typename": "StatusContext", "id": "SC_1", "state": "SUCCESS", "createdAt": observedAt.Add(-2 * time.Minute)},
+		},
+	}}
+	f := &forge{view: view, pages: []string{pageOf(false, base), pageOf(false, base)}}
+	got, err := ReadPullRequests(context.Background(), f.run, "/repo", "api", since, observedAt, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := got.Requests[0].Payload.(event.PullRequest)
+	if !p.ReviewsAvailable || p.Reviews != 103 || p.ReviewsListed != 2 || p.CheckState != "failure" || p.Checks != 105 || p.ChecksListed != 2 {
+		t.Fatalf("delivery coverage = %+v", p)
+	}
+	if len(got.Reviews) != 2 || got.Reviews[0].Payload.(event.Review).State != "changes_requested" ||
+		len(got.Checks) != 2 || got.Checks[0].Payload.(event.Check).Conclusion != "failure" ||
+		got.Checks[1].Payload.(event.Check).Kind != "status" {
+		t.Fatalf("review/check observations = %+v / %+v", got.Reviews, got.Checks)
+	}
+	if !got.Checks[1].OccurredAt.Equal(observedAt.Add(-2*time.Minute)) || got.Checks[1].TimeSource != event.TimeStated {
+		t.Fatalf("status context should fall back to its stated creation time: %+v", got.Checks[1])
+	}
+	base["statusCheckRollup"].(map[string]any)["contexts"].(map[string]any)["nodes"].([]map[string]any)[0]["__typename"] = "Unexpected"
+	f = &forge{view: view, pages: []string{pageOf(false, base), pageOf(false, base)}}
+	if _, err := ReadPullRequests(context.Background(), f.run, "/repo", "api", since, observedAt, "test"); err == nil || !strings.Contains(err.Error(), "unknown head-check type") {
+		t.Fatalf("unknown head-check type: %v", err)
 	}
 }
 

@@ -24,32 +24,41 @@ type TeamStat struct {
 	Frac     float64
 }
 
-// Team is the dashboard's per-member adoption breakdown: present only when the queried
-// usage carries a non-empty Member, i.e. it was aggregated by a team server from synced
-// agents -- never for a purely local store (see buildTeam).
+// TeamBand counts members in a broad session-frequency range without exposing rows.
+type TeamBand struct {
+	Sessions string
+	Members  int
+}
+
+const minTeamCohort = 5
+
+// Team is the dashboard's adoption breakdown: present only when the queried usage
+// carries a non-empty Member from synced agents. Stats stays empty below five members;
+// Bands then shows a coarse distribution without identifying rows.
 //
 // LinesAdded and CostDisplay are the whole team's, not any member's. What a team needs from
 // this panel is whether AI use has spread and what it costs together; neither question
 // requires knowing which member wrote what.
 type Team struct {
 	Stats       []TeamStat
+	Bands       []TeamBand
+	MemberCount int
+	Suppressed  bool
 	LinesAdded  int64
 	CostDisplay string
 }
 
-// buildTeam returns nil when usage carries no member data at all, so a purely local
-// store's Data.Team stays absent rather than an empty section. The bar scales against the
-// list's own busiest member, so it reads as engagement frequency -- an adoption-spread
-// signal -- and never as cost or lines added, which would make it a productivity
-// scoreboard.
+// buildTeam returns nil when usage carries no member data at all. At five or more
+// members, each bar scales against the busiest member's session count. Below five,
+// Stats stays empty; the distribution has only broad session-count bands.
 //
 // It takes no anonymize flag, and that absence is the contract rather than an omission:
 // member labels are pseudonymous on every render. `--no-anonymize` reveals project names
 // (see i18n's AnonymizedCaveat); extending it to people is what would turn this panel
 // into a roster of real names beside proportional bars, which is the per-named-individual
-// ranking the Refusals rule out. An operator who genuinely needs raw names has
-// `report --identify`: an unordered export that says on its own face that it names
-// individuals (internal/report/member.go), not a rendered league table.
+// ranking the Refusals rule out. An operator who needs the stored member identifiers has
+// `report --identify`: an unordered export that discloses whether values may be legacy names
+// or v2 digests (internal/report/member.go), not a rendered league table.
 func buildTeam(usageRows []store.UsageRow, sessionRows []store.SessionRow, prices pricing.Table) *Team {
 	if !hasMemberData(usageRows) {
 		return nil
@@ -68,15 +77,22 @@ func buildTeam(usageRows []store.UsageRow, sessionRows []store.SessionRow, price
 		}
 	}
 
+	memberCount := len(members)
+	if _, hasLocal := members[""]; hasLocal {
+		memberCount--
+	}
+	suppressed := memberCount < minTeamCohort
 	stats := make([]TeamStat, 0, len(members))
 	var teamLines, teamCost float64
 	teamPriced, teamUnpriced := false, false
 	for m := range members {
-		stats = append(stats, TeamStat{
-			Member:   memberLabel(m),
-			Sessions: sessions[m],
-			Frac:     fraction(sessions[m], maxSessions),
-		})
+		if !suppressed {
+			stats = append(stats, TeamStat{
+				Member:   memberLabel(m),
+				Sessions: sessions[m],
+				Frac:     fraction(sessions[m], maxSessions),
+			})
+		}
 		teamLines += float64(lines[m])
 		teamCost += cost[m]
 		teamPriced = teamPriced || hasCost[m]
@@ -85,9 +101,39 @@ func buildTeam(usageRows []store.UsageRow, sessionRows []store.SessionRow, price
 	sortMembersByLabel(stats)
 	return &Team{
 		Stats:       stats,
+		Bands:       sessionBands(sessions, members),
+		MemberCount: memberCount,
+		Suppressed:  suppressed,
 		LinesAdded:  int64(teamLines),
 		CostDisplay: costDisplay(teamCost, teamPriced, teamUnpriced),
 	}
+}
+
+// sessionBands groups only synced members; the local group is not a team member.
+func sessionBands(sessions map[string]int, members map[string]struct{}) []TeamBand {
+	bands := []TeamBand{
+		{Sessions: "0"},
+		{Sessions: "1–2"},
+		{Sessions: "3–5"},
+		{Sessions: "6+"},
+	}
+	for member := range members {
+		if member == "" {
+			continue
+		}
+		count := sessions[member]
+		switch {
+		case count == 0:
+			bands[0].Members++
+		case count <= 2:
+			bands[1].Members++
+		case count <= 5:
+			bands[2].Members++
+		default:
+			bands[3].Members++
+		}
+	}
+	return bands
 }
 
 // hasMemberData reports whether any row carries a non-empty Member -- the signal that

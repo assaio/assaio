@@ -35,11 +35,11 @@ CI Actions are pinned by commit SHA — every one of them, held there by a test 
 two workflows did not. Dependabot keeps Go modules and Actions current, and `govulncheck`
 runs on every PR.
 
-The supported build toolchain is **Go 1.27.1 or newer**, pinned in `go.mod` as the toolchain
-floor and in the CI and release workflows. Older toolchains expose standard-library advisories
-this code reaches; `make vuln` is the check and it fails on them. 1.27.1 is also the first
-release in which `go test -fuzz` stops cleanly at `-fuzztime` instead of reporting the expired
-deadline as a failure (go.dev/issue/75804), which is what the nightly fuzz run depends on.
+The supported build toolchain is **Go 1.27.2 or newer**, pinned in `go.mod` and the CI and release
+workflows. GitHub CI's `govulncheck` found 11 reachable standard-library vulnerabilities with Go
+1.27.1; Go 1.27.2 fixes all 11, and `make vuln` checks for reachable advisories. The new floor
+also preserves the `-fuzztime` deadline fix introduced in Go 1.27.1
+([go.dev/issue/75804](https://go.dev/issue/75804)), which the nightly fuzz run depends on.
 
 Tagged releases carry GitHub build provenance attestations for their artifacts; verify with
 `gh attestation verify <artifact> -o assaio`.

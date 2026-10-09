@@ -42,31 +42,35 @@ confidence, provenance, candidates, alternatives and abstention reason; the docu
 algorithm version. A match uses repository identity and bounded time proximity. It does not
 establish that a session caused a commit. The command stores nothing, has no team-store mode and
 never ranks people. With `--github` it also reads the repository's pull requests through the
-user's own `gh` and names the pull requests each candidate commit belongs to; a pull request's
-state is never a session's outcome.
+user's own `gh` and names the pull requests each candidate commit belongs to. It adds local,
+one-command observations of PR state, at most the last 100 reviews per PR, and at most the last
+100 contexts from the latest head's check rollup; offline evidence is unchanged. Named PR review
+and check states remain PR outcomes, never AI session outcomes.
 
 The local `survival` command reports how much code changed by a repository's commits in the
-window remains in `HEAD`. It does not assign those lines to AI sessions. Review, CI and merge
-correlation, attributable survival, bug impact, and quality and maintainability outcomes remain
-on the roadmap; `evidence --github` names only the pull requests a candidate commit belongs to.
+window remains in `HEAD`. It does not assign those lines to AI sessions. Review rounds, CI repair
+cycles, merge-method and revert links, causal AI outcomes, quality rates, and cost per merged
+change are not derived. Attributable survival, bug impact, and quality and maintainability
+outcomes remain on the roadmap.
 
-assaio prints no ranking of named individuals in any format. `--by member` is refused with a
-reason in table, JSON and CSV output. The dashboard shows member engagement, while output and
-spend stay at team level. Exports use stable member pseudonyms. `report --identify` is the
-stated exception: it names individuals and says so in its output. Operators control that file,
-but assaio builds no leaderboard. A works council, co-determination agreement or local data
-protection regime may require approval of a measurement tool. Do not claim compliance with a
-named regime; that is a legal question this project does not answer.
+assaio builds no member leaderboard. `--by member` is refused with a reason in table, JSON and
+CSV output. Sync v2 sends the team server a stable member digest made with a client-held key,
+along with project, subpath, session ID and usage data. The digest may be linked with other data.
+Below five distinct synced members in the selected window, the dashboard hides per-member rows
+and shows aggregate 0, 1–2, 3–5 and 6+ session bands. Output and cost remain team totals.
+`report --identify` deliberately exports the member identifiers stored in the team database:
+sync v2 stores keyed digests, while a legacy store may hold raw names. This export is not a
+leaderboard. Operators control that file. A works council, co-determination agreement or local
+data protection regime may require approval of a measurement tool. Do not claim compliance with
+a named regime; that is a legal question this project does not answer.
 
 assaio also refuses an "estimated time saved" headline because logs lack the counterfactual,
 per-person analytics outside a governed team-mode opt-in, and cohort comparisons without a
 minimum cohort size and explicit consent.
 
-`assaio-agent reprice` tests which model mix and plan the observed window supports. It prices
-stored turns against another entry in the same price table. This is arithmetic over observed
-events, not a counterfactual about another model doing the work. It states what stays fixed and
-the share it cannot price. There is no bundled plan catalog; the reader supplies a candidate
-plan price.
+`assaio-agent reprice` applies alternative model prices to observed token quantities and compares
+the projected monthly estimate with plan prices you supply. It states the unpriced share. It cannot
+predict what another model would produce or how much of a plan you would consume.
 
 `assaio-agent recommend` suggests experiments supported by the window, each with evidence,
 risk, rollback, review window and a follow-up figure. It abstains when the window is too thin.

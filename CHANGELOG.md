@@ -33,6 +33,38 @@ Discussion.
 
 ## [Unreleased]
 
+### Breaking
+
+- **Team sync v2** (`B227`) requires a private identity key and per-member tokens; v1 writes
+  return 426. To upgrade, stop and back up the server, map every old label to its digest, then
+  run `serve migrate-sync` before restarting ([guide](docs/extending/team-server.md)).
+
+### Added
+
+- **`evidence --github` shows bounded review and latest-head check observations** for named pull
+  requests, with coverage counts (`B229`). These are PR observations, not outcomes attributed to
+  AI sessions; offline evidence is unchanged.
+
+### Changed
+
+- Updated LiteLLM prices from the 2026-10-09 snapshot: 4,439 to 4,507 entries (78 added, 10
+  removed), with 65 existing entries changing token prices. `retained.json` gained 16 keys and
+  removed none; 56 keys now use retained prices alone. Estimates may move.
+
+### Fixed
+
+- **The team dashboard hides individual session rows below five synced members** and shows an
+  aggregate session distribution instead (`B228`). Team-wide output and cost stay visible.
+
+### Security
+
+- Updated `golang.org/x/text` from v0.39.0 to v0.41.0 for
+  [GO-2026-6629](https://pkg.go.dev/vuln/GO-2026-6629). `govulncheck` on Go 1.27.1 found no
+  affected calls in assaio.
+- Updated the build toolchain to Go 1.27.2, which fixes 11 standard-library vulnerabilities
+  `govulncheck` found reachable on Go 1.27.1. Updated pinned golangci-lint from 2.13.2 to
+  2.14.0 so type checking supports Go 1.27.2.
+
 ## [0.36.0] - 2026-10-01
 
 ### Breaking

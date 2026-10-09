@@ -10,7 +10,8 @@ import (
 	"time"
 )
 
-func TestSyncMemberWithColonRejected(t *testing.T) {
+func TestSyncInvalidIdentityKeyRejectedBeforeSending(t *testing.T) {
+	t.Setenv("ASSAIO_SYNC_IDENTITY_KEY", "not-a-key")
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	seedDashboardStore(t)
@@ -23,13 +24,13 @@ func TestSyncMemberWithColonRejected(t *testing.T) {
 	var out bytes.Buffer
 	root.SetOut(&out)
 	root.SetErr(&out)
-	root.SetArgs([]string{"sync", "--server", ts.URL, "--token", "sekret", "--member", "team:alice"})
+	root.SetArgs([]string{"sync", "--server", ts.URL, "--token", "sekret"})
 	err := root.Execute()
 	if err == nil {
-		t.Fatal("expected error when --member contains ':'")
+		t.Fatal("expected error for invalid identity key")
 	}
 	if captured.auth != "" {
-		t.Fatalf("server received a request for an invalid member, want sync to reject it locally before sending anything: auth=%q", captured.auth)
+		t.Fatalf("server received a request for an invalid identity key: auth=%q", captured.auth)
 	}
 }
 
@@ -84,12 +85,42 @@ func TestSyncCapsOversizedErrorBody(t *testing.T) {
 	}
 }
 
+func TestSyncRefusesRedirectToV1(t *testing.T) {
+	var v1Requests int
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/usage" {
+			v1Requests++
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"inserted":1,"received":1}`))
+			return
+		}
+		http.Redirect(w, r, "/v1/usage", http.StatusTemporaryRedirect)
+	}))
+	defer ts.Close()
+	_, err := pushUsage(context.Background(), ts.URL, "token", "member-v2-11111111111111111111111111111111", nil)
+	if err == nil || !strings.Contains(err.Error(), "redirected") || v1Requests != 0 {
+		t.Fatalf("redirect err=%v v1Requests=%d, want refusal without fallback", err, v1Requests)
+	}
+}
+
+func TestSyncRequiresV2ResponseMarker(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"inserted":0,"received":0}`))
+	}))
+	defer ts.Close()
+	_, err := pushUsage(context.Background(), ts.URL, "token", "member-v2-11111111111111111111111111111111", nil)
+	if err == nil || !strings.Contains(err.Error(), "does not confirm sync protocol v2") {
+		t.Fatalf("response error=%v, want protocol refusal", err)
+	}
+}
+
 // TestSyncAbortsPromptlyWhenContextCanceled proves the signal.NotifyContext wiring in
 // runSync: canceling the command context (standing in for Ctrl-C/SIGTERM, exactly as
 // TestServeListensAndShutsDownGracefully does for `serve`) while a push is in flight
 // must abort it promptly instead of leaving `sync` hanging until the server responds or
 // syncHTTPTimeout elapses.
 func TestSyncAbortsPromptlyWhenContextCanceled(t *testing.T) {
+	setSyncIdentityKey(t)
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	seedDashboardStore(t)

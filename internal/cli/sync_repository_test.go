@@ -16,6 +16,7 @@ import (
 // nothing about the repository behind it, so sync says when one name stands for two local
 // repositories -- and the push itself carries no key.
 func TestSyncWarnsAboutSharedNamesAndSendsNoRepository(t *testing.T) {
+	setSyncIdentityKey(t)
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	at := time.Now().UTC().Add(-time.Hour)
@@ -32,7 +33,7 @@ func TestSyncWarnsAboutSharedNamesAndSendsNoRepository(t *testing.T) {
 	var body []byte
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ = io.ReadAll(r.Body)
-		_, _ = w.Write([]byte(`{"inserted":3,"received":3}`))
+		_, _ = w.Write([]byte(`{"protocol":2,"inserted":3,"received":3}`))
 	}))
 	defer ts.Close()
 

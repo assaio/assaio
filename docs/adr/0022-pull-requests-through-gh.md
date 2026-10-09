@@ -65,8 +65,9 @@ were read and how far back, how many listed commits R1 added as candidates, the 
 absence (lists cut at 100 — the newest commits are the ones cut —, listed commits no reflog records
 as made here, not local, unreadable, made before the window), the sessions R3 placed in one pull
 request and those whose candidates span several, and the pull requests a candidate or alternative
-names, by number, with state, merge time and which of the two names it. Pull requests no result
-names are neither listed nor counted apart. A candidate line names its pull requests and how it is
+names, by number, with state, merge time and which of the two names it. ADR 0023 supersedes this
+counting rule: its document counts pull requests read, named and unmatched within the read, while
+listing only named pull requests. A candidate line names its pull requests and how it is
 linked, never their state; state sits in the pull-request block, labelled as the forge reported it
 when read and as the pull request's outcome, not a session's. Each link carries its own provenance
 — stated by the forge — apart from the time relation assaio derived.
@@ -100,7 +101,9 @@ Rejected alternatives:
   the command fails when none of the pull requests read touches this clone's history.
 - The query runs as the user and can appear in an organization's API audit log.
 - GitHub Enterprise Server is reached through `gh`'s host for the repository, untested; other
-  forges are not reached. Reviews, checks, merge method and revert relations are `B229`.
+  forges are not reached. ADR 0023 supersedes the reviews-and-checks deferral: B229 adds bounded
+  review states and current-head check contexts, with total and listed counts; B231 retains
+  rounds, suites and historical runs, merge method, revert relations and derived rates.
 - `internal/github` is a connector, not a log parser: the `internal/parser` contract does not apply
   to it, and its response parser still has a native fuzz target.
 - The conformance corpus (ADR 0010) gains pull requests in its fixtures and one change-level

@@ -67,6 +67,14 @@ func fakeGh(t *testing.T, now time.Time, merge string, listed ...string) {
 			"id": "PR_kwDOtest7", "number": 7, "state": "MERGED", "updatedAt": now.Add(-4 * time.Minute),
 			"mergedAt": now.Add(-5 * time.Minute), "mergeCommit": map[string]any{"oid": merge},
 			"commits": map[string]any{"totalCount": len(listed), "nodes": commits},
+			"reviews": map[string]any{"totalCount": 1, "nodes": []map[string]any{{
+				"id": "PRR_7", "state": "CHANGES_REQUESTED", "submittedAt": now.Add(-10 * time.Minute),
+			}}},
+			"statusCheckRollup": map[string]any{"state": "FAILURE", "contexts": map[string]any{
+				"totalCount": 1, "nodes": []map[string]any{{
+					"__typename": "CheckRun", "id": "CR_7", "status": "COMPLETED", "conclusion": "FAILURE", "completedAt": now.Add(-6 * time.Minute),
+				}},
+			}},
 		}},
 	}}}})
 	if err != nil {
@@ -113,6 +121,11 @@ func TestEvidenceWithGitHubLinksTheBranchCommitASquashHid(t *testing.T) {
 	}
 	if doc.Algorithm != attribution.AlgorithmChanges || doc.Changes == nil || doc.Changes.PullRequestsRead != 1 {
 		t.Fatalf("document = %s with changes %+v", doc.Algorithm, doc.Changes)
+	}
+	if len(doc.Changes.Linked) != 1 || doc.Changes.Linked[0].Reviews == nil || doc.Changes.Linked[0].Reviews.Total != 1 ||
+		doc.Changes.Linked[0].HeadChecks == nil || doc.Changes.Linked[0].HeadChecks.State != "failure" ||
+		doc.Changes.Linked[0].HeadChecks.States[0].State != "run:failure" {
+		t.Fatalf("pull request review and head checks were not shown with the named change: %+v", doc.Changes.Linked)
 	}
 	byID := map[string]attribution.Result{}
 	for _, r := range doc.Results {

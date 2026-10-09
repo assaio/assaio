@@ -129,7 +129,8 @@ func TestTheChangesBlockCountsEveryAbsence(t *testing.T) {
 	got := ChangesOf(prs, results, "gh")
 	want := Changes{
 		Source: "gh", ObservedAt: prs.ObservedAt, ReadBackTo: prs.ReadBackTo, StateLayer: layer.Outcome,
-		PullRequestsRead: 3, CommitListsCut: 1, ListedMadeHere: 4, ListedNotInReflog: 1, ListedNotLocal: 2,
+		PullRequestsRead: 3, PullRequestsNamed: 2, PullRequestsUnmatched: 1,
+		CommitListsCut: 1, ListedMadeHere: 4, ListedNotInReflog: 1, ListedNotLocal: 2,
 		ListedUnreadable: 1, ListedBeforeWindow: 1, SessionsAcrossChanges: 1,
 	}
 	gotLinked := got.Linked
@@ -141,6 +142,40 @@ func TestTheChangesBlockCountsEveryAbsence(t *testing.T) {
 	want3 := LinkedPullRequest{Number: 3, State: event.ChangeClosed, NamedBy: namedByCandidate}
 	if !reflect.DeepEqual(gotLinked, []LinkedPullRequest{want1, want3}) {
 		t.Fatalf("linked = %+v, want #1 merged and #3 closed, by number, and #2 not listed", gotLinked)
+	}
+}
+
+func TestLinkedPullRequestReportsDeliveryCoverageWithoutAssigningItToASession(t *testing.T) {
+	pr := pullRequest(9, event.ChangeMerged, epoch.Add(2*hour), hashOf("f"), 1, 1)
+	p := pr.Payload.(event.PullRequest)
+	p.ReviewsAvailable, p.Reviews, p.ReviewsListed = true, 101, 1
+	p.CheckState, p.Checks, p.ChecksListed = "failure", 102, 1
+	pr.Payload = p
+	prs := &PullRequests{
+		Requests:   []event.Event{pr},
+		Reviews:    []event.Event{{Payload: event.Review{Number: 9, State: "changes_requested"}}},
+		Checks:     []event.Event{{Payload: event.Check{Number: 9, Kind: "run", State: "completed", Conclusion: "failure"}}},
+		ObservedAt: epoch.Add(10 * day),
+	}
+	results := []Result{{Candidates: []Candidate{{Changes: []ChangeLink{{Number: 9}}}}, Change: 9}}
+	changes := ChangesOf(prs, results, "gh")
+	if changes.PullRequestsNamed != 1 || changes.PullRequestsUnmatched != 0 || len(changes.Linked) != 1 {
+		t.Fatalf("changes = %+v", changes)
+	}
+	linked := changes.Linked[0]
+	if linked.Reviews == nil || linked.Reviews.Total != 101 || linked.Reviews.Listed != 1 ||
+		linked.Reviews.States[0].State != "changes_requested" || linked.HeadChecks == nil ||
+		linked.HeadChecks.Total != 102 || linked.HeadChecks.Listed != 1 || linked.HeadChecks.State != "failure" {
+		t.Fatalf("linked delivery = %+v", linked)
+	}
+	var out strings.Builder
+	if err := renderLinked(&out, changes); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"reviews: 1/101 read (incomplete", "changes_requested=1", "contexts: 1/102 read (incomplete", "run:failure=1"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("linked output lacks %q: %s", want, out.String())
+		}
 	}
 }
 
@@ -187,7 +222,7 @@ func TestTheOfflineFooterSaysPullRequestsNeedTheFlag(t *testing.T) {
 	if err := RenderText(&out, &Document{Algorithm: Algorithm}); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "Pull requests are read only with --github") || strings.Contains(out.String(), "pull requests (") {
+	if !strings.Contains(out.String(), "Pull request, review and head-check observations are read only with --github") || strings.Contains(out.String(), "pull requests (") {
 		t.Fatalf("offline output:\n%s", out.String())
 	}
 }

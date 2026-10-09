@@ -68,8 +68,10 @@ can hash guessed host and user names and confirm which member is whom, without a
 repository; a reader deciding whether to sync to a server they do not run was told less than
 that. The documents now say how the label is made and name two other joins that re-identify a
 synced row: its branch name to a pull request's author, and its session id to a telemetry
-account. Nothing in the payload changed. `B227` replaces the label with a keyed digest, which
-will give every member a new label on the server. Read from the code; no attack was run.
+account. Nothing in the v0.36 payload changed at the time of this correction. The later sync v2
+change (`B227`, unreleased) removes `GitBranch` and cleartext `Member` from the wire payload and
+rekeys existing server rows; `SessionID`, timestamps and other allowed fields still permit
+external joins. Read from the code; no attack was run.
 
 ## [0.35.0] - 2026-09-30
 
@@ -429,6 +431,9 @@ without answering who is ahead. `--no-anonymize` now reveals project names only,
 sanctioned raw-name path is `report --identify`: an unordered export that says on its own face
 that it names individuals.
 
+With the later, unreleased sync v2, `report --identify` still bypasses report pseudonymization,
+but a migrated row's stored member value is a keyed digest. Legacy rows may still hold names.
+
 Worth keeping: the claim was correct and the code was wrong, so the caption and the three
 published sentences were left exactly as written. The temptation in this shape of defect is to
 soften the sentence until it matches the behaviour, which converts a broken promise into a
@@ -481,6 +486,10 @@ Closes `B182`.
 Every format now carries a stable `member-xxxx` label instead, and the export says which
 identity it holds. Scripts that joined on a raw name need `--identify`, which names
 individuals deliberately. A purely local store is unaffected: it has no member to label.
+
+With the later, unreleased sync v2, `--identify` still exports the stored member value without
+report pseudonymization. Migrated rows hold keyed digests rather than the old names; legacy rows
+may still hold names.
 
 <a id="vendor-stats-comparison-claim"></a>
 

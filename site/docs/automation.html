@@ -178,9 +178,9 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
 <div class="layout with-toc"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">assaio documentation</a></li></ul><p class="sidehead">Understand the figures</p><ul><li><a href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li></ul><p class="sidehead">Run it for a team</p><ul><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a class="on" href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li></ul><p class="sidehead">Extend assaio</p><ul><li><a href="https://assaio.dev/docs/extending">Extending assaio</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li></ul><p class="sidehead">Use an example</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><nav class="toc" aria-label="On this page"><p class="sidehead">On this page</p><ul><li><a href="#the-pieces">The pieces</a></li><li><a href="#option-a--scheduled-refresh--push-recommended">Option A — scheduled refresh + push (recommended)</a></li><li><a href="#option-b--a-git-post-commit-hook">Option B — a git post-commit hook</a></li><li><a href="#option-c--claude-code-session-hooks-for-statusline">Option C — Claude Code session hooks (for statusline)</a></li><li><a href="#a-weekly-digest-delivered-by-you">A weekly digest, delivered by you</a></li><li><a href="#suggested-labels-once-instead-of-per-session">Suggested labels, once instead of per session</a></li><li><a href="#survival-on-a-schedule">Survival on a schedule</a></li><li><a href="#the-company-server">The company server</a></li><li><a href="#what-is-and-isnt-automated-to-the-server-today">What is and isn&#39;t automated to the server today</a></li></ul></nav><main class="doc"><h1 id="automating-assaio--hooks-scheduled-sync-and-survival">Automating assaio — hooks, scheduled sync, and survival</h1>
 <p>Keep an organization's AI usage data fresh without a daemon: refresh the local store, push it to a
 self-hosted team server, and schedule the directional <code>survival</code> outcome check. All steps are
-opt-in. Of these steps, only <code>sync</code> uses the network, and it pseudonymizes by default. Managed
-cloud is on the roadmap; today you run the company server with <code>serve</code> (see the
-<a href="https://github.com/assaio/assaio/blob/main/README.md">team server</a>).</p>
+opt-in. Of these steps, only <code>sync</code> uses the network, and sync v2 uses a locally keyed member
+digest. Managed cloud is on the roadmap; today you run the company server with <code>serve</code> (see the
+<a href="https://assaio.dev/docs/team-server">team server</a>).</p>
 <h2 id="the-pieces">The pieces</h2>
 <ul>
 <li><strong><code>backfill</code></strong> — imports local session logs into the store. Deterministic dedupe keys make repeats
@@ -188,8 +188,11 @@ idempotent. Since v0.4, it skips unchanged inputs, cutting a repeat run from abo
 fraction of a second. Run it often without double-counting.</li>
 <li><strong><code>statusline</code></strong> — shows one line in a status bar. It only reads the store, so it reflects your
 last <code>backfill</code> and always shows the data's age.</li>
-<li><strong><code>sync</code></strong> — pushes local usage to a team server in one bearer-token HTTPS call. It is
-<strong>pseudonymized by default</strong>; <code>--member</code> explicitly opts in to a real name. <code>sync</code>, <code>serve</code> (the
+<li><strong><code>sync</code></strong> — pushes local usage to a team server with a per-member bearer token. It needs
+<code>ASSAIO_SYNC_IDENTITY_KEY</code>, a private 32-byte key encoded as 64 hex digits; back up the key and
+keep it outside the repository and server configuration. <code>--member</code> or <code>sync.member</code> is stable
+local input to the member digest, never a cleartext name sent to the server. Multiple devices
+for one member need the same key and input. <code>sync</code>, <code>serve</code> (the
 team server it pushes to) and <code>evidence --github</code>, which runs your own <code>gh</code>, are assaio's only
 network paths. Nothing else leaves the machine, apart from what a configured exec plugin does as
 your own program.</li>
@@ -200,36 +203,63 @@ hand-resolved conflict counts as neither added nor surviving. In a merge-heavy r
 large merge line and read the rate as covering ordinary commits only.</li>
 </ul>
 <h2 id="option-a--scheduled-refresh--push-recommended">Option A — scheduled refresh + push (recommended)</h2>
-<p>A timer refreshes the store and pushes it to the company server. It runs even without a commit and
-blocks nothing, unlike a git hook.</p>
-<p>Create the timer's wrapper script at <code>~/.local/bin/assaio-refresh</code>:</p>
+<p>A timer refreshes the store and pushes it to the company server every 30 minutes. Create a shell
+environment file outside the repository at <code>~/.config/assaio/sync.env</code>. Replace the placeholders
+locally with your token, 64-digit hex identity key, and stable member input. Keep the same key and
+member input across runs and devices for that member, and back up the key securely.</p>
+<pre><code class="language-sh">umask 077
+mkdir -p &quot;$HOME/.config/assaio&quot;
+cat &gt; &quot;$HOME/.config/assaio/sync.env&quot; &lt;&lt;'EOF'
+ASSAIO_SYNC_TOKEN='replace-with-member-bearer-token'
+ASSAIO_SYNC_IDENTITY_KEY='replace-with-64-hex-digit-private-key'
+ASSAIO_SYNC_MEMBER='replace-with-stable-member-input'
+EOF
+chmod 600 &quot;$HOME/.config/assaio/sync.env&quot;
+</code></pre>
+<p>Create <code>~/.local/bin/assaio-refresh</code>:</p>
 <pre><code class="language-sh">#!/bin/sh
 set -eu
+
+. &quot;$HOME/.config/assaio/sync.env&quot;
+export ASSAIO_SYNC_IDENTITY_KEY
+
 assaio-agent backfill &gt;/dev/null
-assaio-agent sync --server &quot;https://assaio.example.com&quot; --token &quot;$ASSAIO_SYNC_TOKEN&quot;
+assaio-agent sync \
+  --server &quot;https://assaio.example.com&quot; \
+  --member &quot;$ASSAIO_SYNC_MEMBER&quot; \
+  --token &quot;$ASSAIO_SYNC_TOKEN&quot;
 </code></pre>
-<p>Keep the token out of the script. Read it from the environment (<code>ASSAIO_SYNC_TOKEN</code>) or a secret
-manager.</p>
-<p><strong>launchd (macOS)</strong> — <code>~/Library/LaunchAgents/com.assaio.refresh.plist</code>, every 30 minutes:</p>
+<p>Make the wrapper executable with <code>chmod 700 &quot;$HOME/.local/bin/assaio-refresh&quot;</code>.</p>
+<p><strong>launchd (macOS)</strong> — save this as <code>~/Library/LaunchAgents/com.assaio.refresh.plist</code>, replacing
+<code>/Users/you</code> with your home directory, then run
+<code>launchctl load ~/Library/LaunchAgents/com.assaio.refresh.plist</code>:</p>
 <pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
 &lt;plist version=&quot;1.0&quot;&gt;&lt;dict&gt;
   &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;com.assaio.refresh&lt;/string&gt;
-  &lt;key&gt;ProgramArguments&lt;/key&gt;&lt;array&gt;&lt;string&gt;/Users/you/.local/bin/assaio-refresh&lt;/string&gt;&lt;/array&gt;
+  &lt;key&gt;ProgramArguments&lt;/key&gt;
+  &lt;array&gt;&lt;string&gt;/Users/you/.local/bin/assaio-refresh&lt;/string&gt;&lt;/array&gt;
   &lt;key&gt;StartInterval&lt;/key&gt;&lt;integer&gt;1800&lt;/integer&gt;
-  &lt;key&gt;EnvironmentVariables&lt;/key&gt;&lt;dict&gt;&lt;key&gt;ASSAIO_SYNC_TOKEN&lt;/key&gt;&lt;string&gt;…&lt;/string&gt;&lt;/dict&gt;
 &lt;/dict&gt;&lt;/plist&gt;
 </code></pre>
-<p><code>launchctl load ~/Library/LaunchAgents/com.assaio.refresh.plist</code>.</p>
-<p><strong>cron (Linux)</strong> — every 30 minutes:</p>
-<pre><code class="language-cron">*/30 * * * * ASSAIO_SYNC_TOKEN=… /home/you/.local/bin/assaio-refresh &gt;/dev/null 2&gt;&amp;1
+<p><strong>cron (Linux)</strong> — replace <code>/home/you</code> with your home directory:</p>
+<pre><code class="language-cron">*/30 * * * * /home/you/.local/bin/assaio-refresh &gt;/dev/null 2&gt;&amp;1
 </code></pre>
 <h2 id="option-b--a-git-post-commit-hook">Option B — a git post-commit hook</h2>
-<p>To refresh after each commit, run it <strong>in the background</strong> so backfill does not delay the commit.
-Make <code>.git/hooks/post-commit</code> executable:</p>
+<p>To refresh after each commit, have the hook load the protected <code>~/.config/assaio/sync.env</code> file
+and run the refresh in the background so it does not delay the commit. Make
+<code>.git/hooks/post-commit</code> executable:</p>
 <pre><code class="language-sh">#!/bin/sh
-# Refresh assaio in the background; never block the commit.
-( assaio-agent backfill &gt;/dev/null 2&gt;&amp;1 \
-  &amp;&amp; assaio-agent sync --server &quot;https://assaio.example.com&quot; --token &quot;$ASSAIO_SYNC_TOKEN&quot; ) &amp;
+(
+  set -eu
+  . &quot;$HOME/.config/assaio/sync.env&quot;
+  export ASSAIO_SYNC_IDENTITY_KEY
+
+  assaio-agent backfill &gt;/dev/null
+  assaio-agent sync \
+    --server &quot;https://assaio.example.com&quot; \
+    --member &quot;$ASSAIO_SYNC_MEMBER&quot; \
+    --token &quot;$ASSAIO_SYNC_TOKEN&quot;
+) &gt;/dev/null 2&gt;&amp;1 &amp;
 </code></pre>
 <p>To install it in every repo you clone, set a git hooks template once with
 <code>git config --global init.templateDir ~/.git-template</code>, then put the hook in
@@ -338,12 +368,22 @@ generated / other) and how many git labeled as reverts. These numbers come from 
 observations (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0009-local-git-evidence-collector.md">ADR 0009</a>) and feed the planned evidence
 graph. Categories use a naming heuristic. No path, branch name, or commit message leaves the repo.</p>
 <h2 id="the-company-server">The company server</h2>
-<p>Run one <code>serve</code> instance on trusted infrastructure and point every agent's <code>sync</code> at it:</p>
-<pre><code class="language-sh">assaio-agent serve --addr :8787 --token &quot;$ASSAIO_SERVER_TOKEN&quot;   # behind a TLS reverse proxy
+<p>Give each member a private <code>ASSAIO_SYNC_IDENTITY_KEY</code> (32 bytes, encoded as 64 hex digits). Keep
+it on the client, outside the repository and server config. Using the same stable member input
+on every device, print the digest on a client:</p>
+<pre><code class="language-sh">assaio-agent sync --print-member-digest --member &quot;&lt;stable-member-input&gt;&quot;
 </code></pre>
-<p>The server collects pushed usage and serves an aggregated, always-anonymized team dashboard at <code>/</code>.
-This MVP has no built-in TLS; put it behind a reverse proxy on a trusted network. See the server
-package doc and <code>ROADMAP.md</code> for planned per-member auth, retention, and resumable sync.</p>
+<p>In a protected server config, map each printed digest to that member's distinct bearer token:</p>
+<pre><code class="language-yaml">server:
+  members:
+    &quot;&lt;printed-member-digest&gt;&quot;: &quot;&lt;distinct-member-bearer-token&gt;&quot;
+</code></pre>
+<p>Give each client its matching token as <code>ASSAIO_SYNC_TOKEN</code>, then push through a TLS reverse proxy:</p>
+<pre><code class="language-sh">assaio-agent sync --server &quot;https://assaio.example.com&quot; --member &quot;&lt;stable-member-input&gt;&quot; --token &quot;$ASSAIO_SYNC_TOKEN&quot;
+</code></pre>
+<p>Run <code>serve</code> behind that proxy. A shared <code>server.token</code> grants dashboard read access only; it
+cannot accept sync writes. See the <a href="https://assaio.dev/docs/team-server">team-server guide</a> for server setup
+and migration.</p>
 <h2 id="what-is-and-isnt-automated-to-the-server-today">What is and isn't automated to the server today</h2>
 <ul>
 <li><strong>Usage</strong> (tokens, cost, activity) syncs to the server and appears in the aggregated team
@@ -352,7 +392,6 @@ dashboard as the live picture.</li>
 roadmap's outcomes milestone adds server-side survival by correlating team-wide synced usage with
 git and issue trackers; managed cloud comes after that.</li>
 </ul>
-<pre><code></code></pre>
 <nav class="pager" aria-label="Previous and next"><a class="prev" href="https://assaio.dev/docs/team-server"><span class="dir">Previous</span> The team server</a><a class="next" href="https://assaio.dev/docs/extending"><span class="dir">Next</span> Extending assaio</a></nav></main>
 </div>
 <footer>

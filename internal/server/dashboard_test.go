@@ -36,9 +36,8 @@ func TestBuildDashboardAnonymizedByDefault(t *testing.T) {
 	}
 }
 
-// TestBuildDashboardIncludesTeamSectionWithMembers is the SERVER-B proof that the served
-// dashboard picks up the Team section automatically once the central store carries member
-// data, and pseudonymizes those labels under this builder's hardcoded anonymize=true.
+// TestBuildDashboardIncludesTeamSectionWithMembers keeps the section and team totals
+// visible while suppressing per-member rows below the minimum cohort.
 func TestBuildDashboardIncludesTeamSectionWithMembers(t *testing.T) {
 	st, err := store.Open(filepath.Join(t.TempDir(), "t.db"))
 	if err != nil {
@@ -65,12 +64,10 @@ func TestBuildDashboardIncludesTeamSectionWithMembers(t *testing.T) {
 		t.Fatal(err)
 	}
 	if data.Team == nil {
-		t.Fatal("BuildDashboard Data.Team = nil, want a per-member breakdown when the central store has member data")
+		t.Fatal("BuildDashboard Data.Team = nil, want a team section when the central store has member data")
 	}
-	for _, s := range data.Team.Stats {
-		if s.Member == "alice" || s.Member == "bob" {
-			t.Fatalf("BuildDashboard must pseudonymize member labels by default: %+v", data.Team.Stats)
-		}
+	if !data.Team.Suppressed || data.Team.MemberCount != 2 || len(data.Team.Stats) != 0 {
+		t.Fatalf("BuildDashboard Team = %+v, want no per-member rows for a two-member cohort", data.Team)
 	}
 }
 

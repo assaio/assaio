@@ -1383,7 +1383,7 @@
           "name": "identify",
           "type": "bool",
           "default": "false",
-          "usage": "export raw member names instead of pseudonyms (team stores only; names individuals)"
+          "usage": "show stored member values without report pseudonymization (legacy names or sync v2 digests)"
         },
         {
           "name": "since",
@@ -1457,7 +1457,26 @@
           "name": "token",
           "type": "string",
           "default": "",
-          "usage": "shared bearer token clients must present (required; also ASSAIO_SERVER_TOKEN)"
+          "usage": "shared dashboard-read token (or ASSAIO_SERVER_TOKEN); ignored with server.members; cannot write sync v2"
+        }
+      ]
+    },
+    {
+      "path": "serve migrate-sync",
+      "short": "Rekey an offline team store for sync protocol v2",
+      "hidden": false,
+      "flags": [
+        {
+          "name": "db",
+          "type": "string",
+          "default": "",
+          "usage": "existing team server database path"
+        },
+        {
+          "name": "map",
+          "type": "string",
+          "default": "",
+          "usage": "local JSON manifest with members [{from,to}]"
         }
       ]
     },
@@ -1601,7 +1620,13 @@
           "name": "member",
           "type": "string",
           "default": "",
-          "usage": "self-identify with this name instead of an auto-derived pseudonym (opt-in)"
+          "usage": "stable local member input for the keyed digest; never sent as-is"
+        },
+        {
+          "name": "print-member-digest",
+          "type": "bool",
+          "default": "false",
+          "usage": "print the v2 member digest locally for server setup or migration"
         },
         {
           "name": "server",
@@ -1619,7 +1644,7 @@
           "name": "token",
           "type": "string",
           "default": "",
-          "usage": "shared bearer token (required; also ASSAIO_SYNC_TOKEN)"
+          "usage": "per-member bearer token (required; also ASSAIO_SYNC_TOKEN)"
         }
       ]
     },

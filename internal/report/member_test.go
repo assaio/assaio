@@ -83,10 +83,10 @@ func TestMemberDisclosure(t *testing.T) {
 		t.Fatalf("a store with no member disclosed %q", got)
 	}
 	team := Build(memberRows(), table())
-	if got := MemberDisclosure(team, MemberPseudonymous); !strings.Contains(got, "pseudonymous") {
+	if got := MemberDisclosure(team, MemberPseudonymous); !strings.Contains(got, "pseudonymized") {
 		t.Fatalf("pseudonymous disclosure = %q", got)
 	}
-	if got := MemberDisclosure(team, MemberIdentified); !strings.Contains(got, "raw") {
+	if got := MemberDisclosure(team, MemberIdentified); !strings.Contains(got, "stored values") {
 		t.Fatalf("identified disclosure = %q", got)
 	}
 }

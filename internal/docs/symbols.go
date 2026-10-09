@@ -37,7 +37,7 @@ func CheckRecommendedHelpers(repoRoot, corpus string) []Problem {
 		body, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(file))) //nolint:gosec // a path this table names, under the repository root
 		if err != nil {
 			problems = append(problems, Problem{File: file, Text: fmt.Sprintf(
-				"is named as the home of `%s`, and the repository has no such file", name,
+				"is named as the home of %#q, and the repository has no such file", name,
 			)})
 			continue
 		}
