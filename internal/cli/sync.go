@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -21,29 +22,37 @@ import (
 	"github.com/assaio/assaio/internal/usage"
 )
 
-// memberHexLen is the sync-member pseudonym's hex length ("member-a1b2c3d4e5"): 40 bits,
-// matching internal/pseudonym.For. A shorter label collided at team scale by the
-// birthday bound, silently merging two members' usage under one id on the shared store.
-const memberHexLen = 10
-
 func newSyncCmd() *cobra.Command {
 	var serverURL, token, member, since string
+	var printMemberDigest bool
 	c := &cobra.Command{
 		Use:   "sync",
 		Short: "Push local usage records to a team server",
 		Long: `Export local usage records and push them to a team server started with
-'assaio-agent serve'. By default the sender is identified by a pseudonym derived from
-this machine's hostname and OS user, not a real name -- pass --member to opt in to
-self-identifying.`,
+'assaio-agent serve'. Set ASSAIO_SYNC_IDENTITY_KEY to a private 32-byte hex key;
+the member label is keyed locally and the branch never leaves this machine.
+--member selects the stable local input to that digest, never a name sent as-is.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if printMemberDigest {
+				if err := resolveSyncFlags(cmd, &serverURL, &token, &member); err != nil {
+					return err
+				}
+				digest, err := syncMemberDigest(member)
+				if err != nil {
+					return err
+				}
+				cmd.Println(digest)
+				return nil
+			}
 			return runSync(cmd, &serverURL, &token, &member, &since)
 		},
 	}
 	c.Flags().StringVar(&serverURL, "server", "", "team server base URL, e.g. http://localhost:8787 (required; also ASSAIO_SYNC_SERVER)")
-	c.Flags().StringVar(&token, "token", "", "shared bearer token (required; also ASSAIO_SYNC_TOKEN)")
-	c.Flags().StringVar(&member, "member", "", "self-identify with this name instead of an auto-derived pseudonym (opt-in)")
+	c.Flags().StringVar(&token, "token", "", "per-member bearer token (required; also ASSAIO_SYNC_TOKEN)")
+	c.Flags().StringVar(&member, "member", "", "stable local member input for the keyed digest; never sent as-is")
 	c.Flags().StringVar(&since, "since", "30d", "how far back to export local records, e.g. 30d")
+	c.Flags().BoolVar(&printMemberDigest, "print-member-digest", false, "print the v2 member digest locally for server setup or migration")
 	return c
 }
 
@@ -57,9 +66,9 @@ func runSync(cmd *cobra.Command, serverURL, token, member, since *string) error 
 	if *token == "" {
 		return errors.New("--token is required")
 	}
-	memberID := resolveMember(*member)
-	if err := server.ValidateMember(memberID); err != nil {
-		return fmt.Errorf("--member: %w", err)
+	memberID, err := syncMemberDigest(*member)
+	if err != nil {
+		return err
 	}
 	if isCleartextRemote(*serverURL) {
 		cmd.PrintErrln("warning: --server is plaintext http:// to a non-localhost host -- the token and usage data are sent in cleartext.")
@@ -165,18 +174,27 @@ func resolveSyncFlags(cmd *cobra.Command, serverURL, token, member *string) erro
 	return nil
 }
 
-// resolveMember returns explicit if the caller opted in to self-identifying, else a
-// stable pseudonym derived from this machine's hostname and OS user -- pseudonymized is
-// assaio's default privacy mode (AGENTS.md), so an unconfigured sync stays anonymous.
-func resolveMember(explicit string) string {
-	if explicit != "" {
-		return explicit
+// syncMemberDigest binds the local member input to a client-held key. The server
+// sees only the digest; losing or rotating the key requires an explicit rekey.
+func syncMemberDigest(explicit string) (string, error) {
+	key, err := hex.DecodeString(os.Getenv("ASSAIO_SYNC_IDENTITY_KEY"))
+	if err != nil || len(key) != 32 {
+		return "", errors.New("ASSAIO_SYNC_IDENTITY_KEY must be a private 32-byte hex key; keep it for future syncs and backups")
 	}
-	host, _ := os.Hostname()
-	who := ""
-	if u, err := user.Current(); err == nil {
-		who = u.Username
+	identity := explicit
+	if identity == "" {
+		host, _ := os.Hostname()
+		who := ""
+		if u, err := user.Current(); err == nil {
+			who = u.Username
+		}
+		identity = host + ":" + who
 	}
-	sum := sha256.Sum256([]byte(host + ":" + who))
-	return "member-" + hex.EncodeToString(sum[:])[:memberHexLen]
+	mac := hmac.New(sha256.New, key)
+	_, _ = mac.Write([]byte("assaio-sync-member-v2\x00" + identity))
+	digest := "member-v2-" + hex.EncodeToString(mac.Sum(nil)[:16])
+	if err := server.ValidateSyncMemberDigest(digest); err != nil {
+		return "", fmt.Errorf("member digest: %w", err)
+	}
+	return digest, nil
 }

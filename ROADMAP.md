@@ -110,9 +110,11 @@ Build the differentiating outcome path before expanding the UI or connector coun
   repository is resolved, or recorded as unresolved or ambiguous, before any join across
   repositories. An explicit team mapping of local repositories to shared names (B226) waits for
   the team server's re-push and retention rules.
-- Content-free commit and pull-request observations have shipped, with pull requests read
-  through the user's own `gh` (v0.36.0, ADR 0022); add review and check-run observations through
-  the same read (`B229`) and an importable contract for other forges.
+- Content-free commit and pull-request observations shipped in v0.36.0 through the user's own
+  `gh` (ADR 0022). The unreleased v0.37 target adds B229's bounded review states and current-head
+  check-run/status-context observations, with total and listed counts (ADR 0023). B231 retains
+  rounds, suites and historical runs, merge method, revert relations and derived rates; an
+  importable contract for other forges remains open.
 - Extend the shipped local session→commit slice — already graded by the attribution corpus and
   already reporting coverage, competing candidates and abstention — to shipped changes.
 - Report coverage and competing candidates for every additional join.

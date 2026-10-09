@@ -17,6 +17,8 @@ import (
 var allowed = []string{
 	"query", "String", "repository", "pullRequests", "pageInfo", "hasNextPage", "endCursor", "nodes",
 	"id", "number", "state", "updatedAt", "mergedAt", "mergeCommit", "oid", "commits", "totalCount", "commit",
+	"reviews", "last", "submittedAt", "statusCheckRollup", "contexts", "__typename", "on", "CheckRun", "StatusContext",
+	"status", "conclusion", "startedAt", "completedAt", "createdAt",
 }
 
 func TestTheQueryAsksForAllowlistedFieldsOnly(t *testing.T) {
@@ -43,10 +45,16 @@ func TestARealPageBecomesValidObservations(t *testing.T) {
 		t.Fatalf("page = %d nodes, next %v, cursor %q; want a full first page", len(p.Nodes), p.HasNextPage, p.EndCursor)
 	}
 	observedAt := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
-	var merged, listings int
+	var merged, listings, headChecks int
 	for i := range p.Nodes {
 		request, listed := observations(&p.Nodes[i], event.Source{Name: sourceName}, "assaio", observedAt)
 		all := append([]event.Event{request}, listed...)
+		reviews, checks, err := deliveryObservations(&p.Nodes[i], event.Source{Name: sourceName}, "assaio", observedAt)
+		if err != nil {
+			t.Fatalf("pull request #%d delivery: %v", p.Nodes[i].Number, err)
+		}
+		all = append(all, reviews...)
+		all = append(all, checks...)
 		for j := range all {
 			if err := all[j].Validate(); err != nil {
 				t.Fatalf("pull request #%d: %v", p.Nodes[i].Number, err)
@@ -56,9 +64,10 @@ func TestARealPageBecomesValidObservations(t *testing.T) {
 			merged++
 		}
 		listings += len(listed)
+		headChecks += len(checks)
 	}
-	if merged == 0 || listings < len(p.Nodes) {
-		t.Fatalf("%d merged, %d listed commits: the capture should hold merged pull requests and their commits", merged, listings)
+	if merged == 0 || listings < len(p.Nodes) || headChecks < len(p.Nodes) {
+		t.Fatalf("%d merged, %d listed commits, %d head checks: the capture should hold merged PRs, commits and checks", merged, listings, headChecks)
 	}
 }
 
@@ -94,6 +103,12 @@ func FuzzParse(f *testing.F) {
 				continue
 			}
 			all := append([]event.Event{request}, listed...)
+			reviews, checks, err := deliveryObservations(&p.Nodes[i], event.Source{Name: sourceName}, "p", time.Unix(1, 0))
+			if err != nil {
+				continue
+			}
+			all = append(all, reviews...)
+			all = append(all, checks...)
 			for j := range all {
 				if all[j].Validate() == nil && strings.ContainsAny(all[j].ID, " \n\t/") {
 					t.Fatalf("an id with free text passed: %q", all[j].ID)

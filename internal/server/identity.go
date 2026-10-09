@@ -4,11 +4,22 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
+	"regexp"
 )
 
 // ErrUnknownToken is returned when a presented token matches no configured member and no
 // shared secret.
 var ErrUnknownToken = errors.New("unauthorized")
+
+var syncMemberDigestPattern = regexp.MustCompile(`^member-v2-[0-9a-f]{32}$`)
+
+// ValidateSyncMemberDigest accepts only the keyed member label used by sync v2.
+func ValidateSyncMemberDigest(member string) error {
+	if !syncMemberDigestPattern.MatchString(member) {
+		return errors.New("member digest must be member-v2- followed by 32 lowercase hex digits")
+	}
+	return nil
+}
 
 // Identity is how a request's member is decided. The two modes are a real security difference
 // and they are named rather than inferred, so a deployment's own `doctor` can say which one it
@@ -16,10 +27,8 @@ var ErrUnknownToken = errors.New("unauthorized")
 type Identity int
 
 const (
-	// ClientAsserted is the shared-token mode: one secret for everyone, and the member name
-	// comes from the request body. Any token holder can push as any member. It is the original
-	// MVP behaviour, kept so an existing deployment keeps working, and it is what the operator
-	// diagnostics call out.
+	// ClientAsserted identifies a legacy shared-token configuration. It may still
+	// read the dashboard; sync v2 refuses writes because no token owns one member.
 	ClientAsserted Identity = iota
 	// ServerDerived is per-member tokens: the member is whoever holds the secret, decided here
 	// and never read from the body. A member cannot then write another member's rows, which is
@@ -31,11 +40,11 @@ func (i Identity) String() string {
 	if i == ServerDerived {
 		return "server-derived (per-member tokens)"
 	}
-	return "client-asserted (one shared token)"
+	return "shared token (sync v2 requires per-member tokens)"
 }
 
-// Members maps a member name to that member's own bearer secret. Empty means the shared-token
-// mode.
+// Members maps a keyed member digest to that member's bearer secret for v2 writes.
+// Empty means the legacy shared-token mode, which may read but not sync.
 type Members map[string]string
 
 // Mode reports how this server decides who a request is.
@@ -85,16 +94,8 @@ func (s *Server) authenticated(presented string) bool {
 	return false
 }
 
-// memberFor resolves the member a presented token identifies. In shared-token mode it returns
-// the name the client asserted, because that is all the deployment can know; the caller has
-// already validated it.
-func (s *Server) memberFor(presented, asserted string) (string, error) {
-	if s.members.Mode() == ClientAsserted {
-		if !constantTimeEqual(presented, s.token) {
-			return "", ErrUnknownToken
-		}
-		return asserted, nil
-	}
+// memberFor resolves the keyed digest assigned to a per-member token.
+func (s *Server) memberFor(presented string) (string, error) {
 	for name, token := range s.members {
 		if constantTimeEqual(presented, token) {
 			return name, nil

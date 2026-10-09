@@ -70,13 +70,19 @@ func TestSyncPreservesTheWindow(t *testing.T) {
 	local := calibration.FromRows(rowsOf(t, storeWith(t, recs)))
 
 	central := storeWith(t, nil)
-	srv := server.New(central, "tok", nil)
-	body, err := json.Marshal(map[string]any{"member": "m1", "records": recs})
+	const member = "member-v2-0123456789abcdef0123456789abcdef"
+	const token = "calibration-member-token"
+	srv := server.New(central, "", nil).WithMembers(server.Members{member: token})
+	wire := make([]server.SyncRecordV2, len(recs))
+	for i := range recs {
+		wire[i] = server.NewSyncRecordV2(&recs[i])
+	}
+	body, err := json.Marshal(map[string]any{"protocol": 2, "memberDigest": member, "records": wire})
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/v1/usage", bytes.NewReader(body))
-	req.Header.Set("Authorization", "Bearer tok")
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/v2/usage", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {

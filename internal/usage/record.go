@@ -30,8 +30,8 @@ type Record struct {
 	// added to a token total and never priced on its own -- doing either double-counts.
 	ReasoningTokens int64
 	DedupeKey       string
-	// Member is a pseudonymized author/agent id, set by the server from a sync push;
-	// "" for purely-local usage. Never set by a parser.
+	// Member is a server-assigned sync identifier (a keyed digest in v2), or "" for
+	// purely-local usage. Never set by a parser.
 	Member string
 	// Cwd is the session's full working-directory path, exactly as the tool's log
 	// reports it. TRANSIENT: ingest reads it only to resolve Project/Subpath

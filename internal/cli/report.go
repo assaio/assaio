@@ -26,7 +26,7 @@ func newReportCmd() *cobra.Command {
 	c.Flags().StringVar(&format, "format", "table", "output format: table|json|csv")
 	c.Flags().StringVar(&by, "by", "day", "group by: day|project|tool|model|entrypoint|task|outcome|difficulty")
 	c.Flags().Bool("compare", false, "show period-over-period top movers vs the previous equal window (renders a movers table, not --format)")
-	c.Flags().Bool("identify", false, "export raw member names instead of pseudonyms (team stores only; names individuals)")
+	c.Flags().Bool("identify", false, "show stored member values without report pseudonymization (legacy names or sync v2 digests)")
 	addDBFlag(c)
 	return c
 }

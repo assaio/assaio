@@ -27,11 +27,10 @@ func TestServeAddrDefaultsToLoopback(t *testing.T) {
 
 // TestServeHelpDisclosesTheIdentityBoundary proves the boundary is surfaced where an operator
 // actually looks -- `serve --help` -- and not only in the package doc. The dashboard is
-// authenticated as of v0.24; what remains weaker than it looks is a shared token, under which
-// any holder can push as anybody.
+// authenticated as of v0.24; sync v2 requires member tokens.
 func TestServeHelpDisclosesTheIdentityBoundary(t *testing.T) {
 	long := strings.ToLower(newServeCmd().Long)
-	for _, want := range []string{"no tls", "requires the bearer token", "push usage under any member name"} {
+	for _, want := range []string{"no tls", "requires the bearer token", "cannot sync usage"} {
 		if !strings.Contains(long, want) {
 			t.Fatalf("serve --help does not mention %q: %q", want, long)
 		}
@@ -78,7 +77,7 @@ func TestServeListensAndShutsDownGracefully(t *testing.T) {
 	if !strings.Contains(out.String(), "listening on") {
 		t.Fatalf("stdout = %q, want a listening confirmation", out.String())
 	}
-	if !strings.Contains(strings.ToLower(out.String()), "client-asserted") {
+	if !strings.Contains(strings.ToLower(out.String()), "shared token") {
 		t.Fatalf("stdout = %q, want the startup note to name the identity mode it is running in", out.String())
 	}
 }

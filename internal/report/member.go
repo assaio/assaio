@@ -14,8 +14,8 @@ const (
 	// MemberPseudonymous replaces every member with this install's stable pseudonym. It is
 	// the zero value on purpose: the export that nobody thought about is the safe one.
 	MemberPseudonymous MemberIdentity = iota
-	// MemberIdentified keeps the raw synced name. Only an operator who has said so on the
-	// command line gets this, and the surface they get it on says which one they chose.
+	// MemberIdentified keeps the stored member value: a legacy name or a sync v2 digest.
+	// Only an operator who asked for it gets this; the export labels the choice.
 	MemberIdentified
 )
 
@@ -27,10 +27,9 @@ func MemberDisclosure(rows []Row, id MemberIdentity) string {
 		return ""
 	}
 	if id == MemberIdentified {
-		return "Member names are raw, as --identify asked: this export names individuals. " +
-			"assaio still ranks nobody -- what happens to the file now is on the operator."
+		return "Member shows stored values: legacy names may remain; migrated sync v2 values are keyed digests."
 	}
-	return "Member names are pseudonymous, stable on this machine only. Pass --identify to export raw names."
+	return "Member values are additionally pseudonymized for this report; use --identify to show stored values, which may be legacy names or sync v2 digests."
 }
 
 // hasMember reports whether any row names a member, i.e. whether these rows came from a

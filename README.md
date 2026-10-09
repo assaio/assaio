@@ -74,7 +74,7 @@ Or download an archive from [GitHub Releases](https://github.com/assaio/assaio/r
 include checksums, an SPDX SBOM and build-provenance attestations. See [RELEASING.md](RELEASING.md)
 to verify them.
 
-## Try assaio in 60 seconds
+## First run
 
 Preview `assaio` without reading your logs:
 
@@ -103,7 +103,8 @@ $ assaio-agent doctor --strict
 
 - `dashboard` creates a self-contained offline HTML report.
 - `evidence` compares local sessions with local commit observations without storing an edge;
-  `--github` adds the repository's pull requests, read through your own `gh`.
+  `--github` reads repository pull requests through your own `gh` and shows limited review and
+  latest-head check states for named pull requests.
 - `digest` reports what changed since the previous run and whether the comparison is sound.
 - `doctor` reports source coverage, format drift, store health and unpriced usage.
 
@@ -137,7 +138,11 @@ to see what your data supports. [FEATURES.md](FEATURES.md) lists shipped feature
 `evidence` observes attribution; it is not an outcome metric. It joins a repository's commits
 only with sessions whose rows resolved to that repository, uses bounded time proximity, labels
 results `matched`, `ambiguous` or `unmatched`, and shows competing commits. A match does not
-show that the session caused the commit. With `--github` it also reads the repository's pull requests through your own `gh` and names the pull requests a session's candidate commits belong to; a pull request's state is the pull request's, not the session's. See [how to read the result](docs/evidence.md).
+show that the session caused the commit. With `--github` it reads the repository's pull requests
+through your own `gh` and shows limited PR, review and latest-head check states for named PRs.
+These states describe PR outcomes rather than AI session outcomes. New content-free observations
+stay local and in memory for one command; offline evidence stays unchanged. See
+[how to read the result](docs/evidence.md).
 
 ## Supported AI coding tools
 
@@ -173,7 +178,8 @@ On its normal offline analysis path, `assaio`:
   and stores none of them;
 - stores token counts, model names, timestamps, pseudonymous identity and content-free activity
   counts in local SQLite;
-- pseudonymizes project and member names by default at export boundaries;
+- pseudonymizes project and member names by default in dashboard and share output; team sync
+  transmits `Project`, `Subpath` and session ID to the server;
 - refuses per-person leaderboards for output, spend and productivity.
 
 Line activity comes from counts and diff markers; code on those lines is not stored. See
@@ -181,7 +187,11 @@ Line activity comes from counts and diff markers; code on those lines is not sto
 
 ## Team mode
 
-`serve` and `sync` can pool pseudonymous usage on infrastructure you operate. Team mode is a tested MVP, not a production-ready service.
+`serve` and `sync` can pool usage on infrastructure you operate. Sync v2 sends a keyed member
+digest and usage records to the team server; project, subpath and session ID also reach it. Each
+writer needs a distinct bearer token. Existing central stores require an offline migration and
+backup; see the [team-server guide](docs/extending/team-server.md). Team mode is a tested MVP, not
+a production-ready service.
 
 It has authentication, request bounds and an aggregated dashboard. It still needs RBAC, token
 rotation, resumable sync, retention controls, a backup/restore drill and a measured operating
@@ -210,8 +220,8 @@ vulnerability scanning and a published correction record.
 
 It remains pre-1.0 because:
 
-1. review, CI, merge and durable-outcome correlation beyond local session→commit candidates and the
-   pull requests `evidence --github` names is not shipped;
+1. GitHub evidence includes limited review and latest-head check states for named PRs, without
+   deriving review rounds, CI repair cycles or causal AI outcomes;
 2. the contracts and calibration have not been tested across several external teams and release
    cycles.
 

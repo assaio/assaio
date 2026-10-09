@@ -76,7 +76,9 @@ button{font:inherit;}
 }
 .sheet{
   width:100%;
+  min-width:0;
   max-width:1080px;
+  overflow-x:clip;
   background:var(--surface);
   border:1px solid var(--hairline);
   border-radius:var(--radius);
@@ -583,10 +585,19 @@ table.subpath tbody tr:hover td{background:var(--bg);}
   <section class="team">
     <div class="panel-label">
       <span><strong>{{(locale).TeamPanelLabel}}</strong></span>
-      <span>{{len .Stats}} {{(locale).MembersSuffix}}</span>
+      <span>{{.MemberCount}} {{(locale).MembersSuffix}}</span>
     </div>
     <p class="section-sub">{{(locale).TeamCaption}}</p>
     <p class="section-sub tnum">{{(locale).TeamTotalPrefix}} <strong>{{.LinesAdded}} {{(locale).AILinesLabel}}</strong> · <strong>{{.CostDisplay}}</strong></p>
+    {{if .Suppressed}}
+    <p class="section-sub">{{(locale).TeamSuppressedCaption}}</p>
+    <p class="section-sub">{{(locale).TeamBandsLabel}}</p>
+    <ul class="teamlist">
+      {{range .Bands}}
+      <li><span class="teamlist__name">{{.Sessions}} {{(locale).SessionsLabel}}</span><span class="teamlist__stats tnum">{{.Members}} {{(locale).MembersSuffix}}</span></li>
+      {{end}}
+    </ul>
+    {{else}}
     <ul class="teamlist">
       {{range .Stats}}
       <li>
@@ -598,6 +609,7 @@ table.subpath tbody tr:hover td{background:var(--bg);}
       </li>
       {{end}}
     </ul>
+    {{end}}
   </section>
   {{end}}
 

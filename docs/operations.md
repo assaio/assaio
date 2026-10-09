@@ -57,7 +57,7 @@ tools beyond Go.
 | Entry point | Does | Writes | Guard | Paid | Needs |
 |---|---|---|---|---|---|
 | `assaio-agent serve` | the team server MVP on loopback, no TLS | ⚠ `assaio-server.db`; listens on `--addr` | `--token` ≥16 bytes or `server.members` required | no | `ASSAIO_SERVER_TOKEN` |
-| `assaio-agent sync` | pushes local records to a server | ⚠ HTTP POST to `--server` | warns on cleartext off-loopback; 401 stops | no | `ASSAIO_SYNC_TOKEN`, `ASSAIO_SYNC_SERVER` |
+| `assaio-agent sync` | pushes local records to a server | ⚠ HTTP POST to `--server` | warns on cleartext off-loopback; 401 stops | no | `ASSAIO_SYNC_TOKEN`, `ASSAIO_SYNC_SERVER`, `ASSAIO_SYNC_IDENTITY_KEY` |
 
 ## Release and publish (asks first)
 

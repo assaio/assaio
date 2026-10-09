@@ -2,9 +2,9 @@
 
 Keep an organization's AI usage data fresh without a daemon: refresh the local store, push it to a
 self-hosted team server, and schedule the directional `survival` outcome check. All steps are
-opt-in. Of these steps, only `sync` uses the network, and it pseudonymizes by default. Managed
-cloud is on the roadmap; today you run the company server with `serve` (see the
-[team server](../README.md)).
+opt-in. Of these steps, only `sync` uses the network, and sync v2 uses a locally keyed member
+digest. Managed cloud is on the roadmap; today you run the company server with `serve` (see the
+[team server](extending/team-server.md)).
 
 ## The pieces
 
@@ -13,8 +13,11 @@ cloud is on the roadmap; today you run the company server with `serve` (see the
   fraction of a second. Run it often without double-counting.
 - **`statusline`** — shows one line in a status bar. It only reads the store, so it reflects your
   last `backfill` and always shows the data's age.
-- **`sync`** — pushes local usage to a team server in one bearer-token HTTPS call. It is
-  **pseudonymized by default**; `--member` explicitly opts in to a real name. `sync`, `serve` (the
+- **`sync`** — pushes local usage to a team server with a per-member bearer token. It needs
+  `ASSAIO_SYNC_IDENTITY_KEY`, a private 32-byte key encoded as 64 hex digits; back up the key and
+  keep it outside the repository and server configuration. `--member` or `sync.member` is stable
+  local input to the member digest, never a cleartext name sent to the server. Multiple devices
+  for one member need the same key and input. `sync`, `serve` (the
   team server it pushes to) and `evidence --github`, which runs your own `gh`, are assaio's only
   network paths. Nothing else leaves the machine, apart from what a configured exec plugin does as
   your own program.
@@ -26,51 +29,79 @@ cloud is on the roadmap; today you run the company server with `serve` (see the
 
 ## Option A — scheduled refresh + push (recommended)
 
-A timer refreshes the store and pushes it to the company server. It runs even without a commit and
-blocks nothing, unlike a git hook.
+A timer refreshes the store and pushes it to the company server every 30 minutes. Create a shell
+environment file outside the repository at `~/.config/assaio/sync.env`. Replace the placeholders
+locally with your token, 64-digit hex identity key, and stable member input. Keep the same key and
+member input across runs and devices for that member, and back up the key securely.
 
-Create the timer's wrapper script at `~/.local/bin/assaio-refresh`:
+```sh
+umask 077
+mkdir -p "$HOME/.config/assaio"
+cat > "$HOME/.config/assaio/sync.env" <<'EOF'
+ASSAIO_SYNC_TOKEN='replace-with-member-bearer-token'
+ASSAIO_SYNC_IDENTITY_KEY='replace-with-64-hex-digit-private-key'
+ASSAIO_SYNC_MEMBER='replace-with-stable-member-input'
+EOF
+chmod 600 "$HOME/.config/assaio/sync.env"
+```
+
+Create `~/.local/bin/assaio-refresh`:
 
 ```sh
 #!/bin/sh
 set -eu
+
+. "$HOME/.config/assaio/sync.env"
+export ASSAIO_SYNC_IDENTITY_KEY
+
 assaio-agent backfill >/dev/null
-assaio-agent sync --server "https://assaio.example.com" --token "$ASSAIO_SYNC_TOKEN"
+assaio-agent sync \
+  --server "https://assaio.example.com" \
+  --member "$ASSAIO_SYNC_MEMBER" \
+  --token "$ASSAIO_SYNC_TOKEN"
 ```
 
-Keep the token out of the script. Read it from the environment (`ASSAIO_SYNC_TOKEN`) or a secret
-manager.
+Make the wrapper executable with `chmod 700 "$HOME/.local/bin/assaio-refresh"`.
 
-**launchd (macOS)** — `~/Library/LaunchAgents/com.assaio.refresh.plist`, every 30 minutes:
+**launchd (macOS)** — save this as `~/Library/LaunchAgents/com.assaio.refresh.plist`, replacing
+`/Users/you` with your home directory, then run
+`launchctl load ~/Library/LaunchAgents/com.assaio.refresh.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0"><dict>
   <key>Label</key><string>com.assaio.refresh</string>
-  <key>ProgramArguments</key><array><string>/Users/you/.local/bin/assaio-refresh</string></array>
+  <key>ProgramArguments</key>
+  <array><string>/Users/you/.local/bin/assaio-refresh</string></array>
   <key>StartInterval</key><integer>1800</integer>
-  <key>EnvironmentVariables</key><dict><key>ASSAIO_SYNC_TOKEN</key><string>…</string></dict>
 </dict></plist>
 ```
 
-`launchctl load ~/Library/LaunchAgents/com.assaio.refresh.plist`.
-
-**cron (Linux)** — every 30 minutes:
+**cron (Linux)** — replace `/home/you` with your home directory:
 
 ```cron
-*/30 * * * * ASSAIO_SYNC_TOKEN=… /home/you/.local/bin/assaio-refresh >/dev/null 2>&1
+*/30 * * * * /home/you/.local/bin/assaio-refresh >/dev/null 2>&1
 ```
 
 ## Option B — a git post-commit hook
 
-To refresh after each commit, run it **in the background** so backfill does not delay the commit.
-Make `.git/hooks/post-commit` executable:
+To refresh after each commit, have the hook load the protected `~/.config/assaio/sync.env` file
+and run the refresh in the background so it does not delay the commit. Make
+`.git/hooks/post-commit` executable:
 
 ```sh
 #!/bin/sh
-# Refresh assaio in the background; never block the commit.
-( assaio-agent backfill >/dev/null 2>&1 \
-  && assaio-agent sync --server "https://assaio.example.com" --token "$ASSAIO_SYNC_TOKEN" ) &
+(
+  set -eu
+  . "$HOME/.config/assaio/sync.env"
+  export ASSAIO_SYNC_IDENTITY_KEY
+
+  assaio-agent backfill >/dev/null
+  assaio-agent sync \
+    --server "https://assaio.example.com" \
+    --member "$ASSAIO_SYNC_MEMBER" \
+    --token "$ASSAIO_SYNC_TOKEN"
+) >/dev/null 2>&1 &
 ```
 
 To install it in every repo you clone, set a git hooks template once with
@@ -200,15 +231,31 @@ graph. Categories use a naming heuristic. No path, branch name, or commit messag
 
 ## The company server
 
-Run one `serve` instance on trusted infrastructure and point every agent's `sync` at it:
+Give each member a private `ASSAIO_SYNC_IDENTITY_KEY` (32 bytes, encoded as 64 hex digits). Keep
+it on the client, outside the repository and server config. Using the same stable member input
+on every device, print the digest on a client:
 
 ```sh
-assaio-agent serve --addr :8787 --token "$ASSAIO_SERVER_TOKEN"   # behind a TLS reverse proxy
+assaio-agent sync --print-member-digest --member "<stable-member-input>"
 ```
 
-The server collects pushed usage and serves an aggregated, always-anonymized team dashboard at `/`.
-This MVP has no built-in TLS; put it behind a reverse proxy on a trusted network. See the server
-package doc and `ROADMAP.md` for planned per-member auth, retention, and resumable sync.
+In a protected server config, map each printed digest to that member's distinct bearer token:
+
+```yaml
+server:
+  members:
+    "<printed-member-digest>": "<distinct-member-bearer-token>"
+```
+
+Give each client its matching token as `ASSAIO_SYNC_TOKEN`, then push through a TLS reverse proxy:
+
+```sh
+assaio-agent sync --server "https://assaio.example.com" --member "<stable-member-input>" --token "$ASSAIO_SYNC_TOKEN"
+```
+
+Run `serve` behind that proxy. A shared `server.token` grants dashboard read access only; it
+cannot accept sync writes. See the [team-server guide](extending/team-server.md) for server setup
+and migration.
 
 ## What is and isn't automated to the server today
 
@@ -217,4 +264,3 @@ package doc and `ROADMAP.md` for planned per-member auth, retention, and resumab
 - **Survival** runs locally and prints its result; it is **not** pushed to the server yet. The
   roadmap's outcomes milestone adds server-side survival by correlating team-wide synced usage with
   git and issue trackers; managed cloud comes after that.
-```

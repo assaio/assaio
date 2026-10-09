@@ -8,8 +8,9 @@ abstract: >-
   GitHub Copilot CLI, Cline, and agy CLI. agy is Google's Antigravity CLI, which
   publishes no token counter, so it contributes sessions and activity and is
   excluded from every cost figure. Directional local survival and pull-request
-  naming for candidate commits are available; review/CI, merge, bug-impact, and
-  quality correlation remain roadmap scope.
+  naming for candidate commits, and bounded review and current-head CI observations
+  for named pull requests are available; these observations do not attribute outcomes
+  to AI sessions.
 authors:
   - name: The assaio Authors
 license: Apache-2.0
