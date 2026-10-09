@@ -16,27 +16,33 @@ import (
 
 func newEvidenceCmd() *cobra.Command {
 	var since, repo, format string
+	var withGitHub bool
 	c := &cobra.Command{
 		Use:   "evidence",
 		Short: "Local session-to-commit candidates with explicit ambiguity and coverage",
 		Long: `Compare content-free local session observations with commits reachable from a local
 repository. The result is an observation from project and time proximity, never proof that an
 AI session caused a commit. Competing candidates stay ambiguous and missing evidence stays
-unmatched. Nothing is stored or sent, and this command has no team-store mode.`,
+unmatched. Nothing is stored, and this command has no team-store mode. Nothing is sent unless
+--github is given: then your own gh asks GitHub for this repository's pull requests updated in
+the window, naming the repository and never a commit or a session.`,
 		Example: `  assaio-agent evidence --repo . --since 30d
-  assaio-agent evidence --repo ../service --format json`,
+  assaio-agent evidence --repo ../service --format json
+  assaio-agent evidence --repo . --github`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runEvidence(cmd, since, repo, format)
+			return runEvidence(cmd, since, repo, format, withGitHub)
 		},
 	}
 	c.Flags().StringVar(&since, "since", "30d", "time window, e.g. 7d")
 	c.Flags().StringVar(&repo, "repo", ".", "path to the local git repository")
 	c.Flags().StringVar(&format, "format", "text", "output format: text|json")
+	c.Flags().BoolVar(&withGitHub, "github", false,
+		"also read the repository's pull requests through your own gh (a network request to GitHub)")
 	return c
 }
 
-func runEvidence(cmd *cobra.Command, since, repo, format string) error {
+func runEvidence(cmd *cobra.Command, since, repo, format string, withGitHub bool) error {
 	if format != "text" && format != "json" {
 		return fmt.Errorf("unknown format %q (want text|json)", format)
 	}
@@ -76,13 +82,26 @@ func runEvidence(cmd *cobra.Command, since, repo, format string) error {
 	if err != nil {
 		return err
 	}
+	var prs *attribution.PullRequests
+	if withGitHub {
+		var listedSkipped int
+		if prs, commits, listedSkipped, err = readPullRequests(cmd, root, here.Name, start, now, commits); err != nil {
+			return err
+		}
+		skipped += listedSkipped
+	}
 	results := attribution.Match(pop.sessions, commits, nil, now)
 	doc := attribution.Document{
 		Algorithm: attribution.Algorithm, Project: here.Name, Since: start, ObservedAt: now,
 		MaxGapSeconds: int64(attribution.DefaultMaxGap.Seconds()), WindowSessions: len(rows),
 		OtherProjects: pop.other, ProjectUnknown: pop.unknown, IdentityUnresolved: pop.unresolved,
-		SkippedCommits: skipped, Summary: attribution.Summarize(results), Results: results,
+		SkippedCommits: skipped,
 	}
+	if prs != nil {
+		attribution.LinkChanges(results, commits, prs)
+		doc.Algorithm, doc.Changes = attribution.AlgorithmChanges, attribution.ChangesOf(prs, results, "gh")
+	}
+	doc.Forge, doc.Summary, doc.Results = attribution.ForgeOf(commits, results), attribution.Summarize(results), results
 	if format == "text" {
 		return attribution.RenderText(cmd.OutOrStdout(), &doc)
 	}

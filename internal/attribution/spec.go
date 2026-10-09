@@ -18,6 +18,36 @@ type commitSpec struct {
 	// Author is the git identity that made it, for the scenarios where two people are
 	// working in the same window.
 	Author string
+	// Authored is the author time when it differs from At, the committer time: an amend, a
+	// rebase or a cherry-pick keeps the time the commit was first written.
+	Authored *time.Duration
+	// Forge commits as the forge's own identity, the way GitHub.com writes the commits it makes.
+	Forge bool
+	// Lands brings work onto the main line the way a forge merges a pull request: "squash" writes
+	// one commit with the tree of branch From, "merge" a two-parent commit joining it, "rebase"
+	// replays the commit tagged From. Empty is an ordinary commit.
+	Lands string
+	From  string
+	// Onto is the branch a landing writes to, when not the main line: GitHub's "Update branch"
+	// merges the main line onto a pull request's branch.
+	Onto string
+	// Fetched makes the commit elsewhere and fetches it: it is written onto a remote-tracking ref
+	// with plumbing, so no commit of it is ever made here -- a teammate's pushed branch.
+	Fetched bool
+	// CheckedOut then checks the fetched commit out, the way a reviewer looks at a pull request.
+	CheckedOut bool
+}
+
+// changeSpec is one pull request the scenario's forge reports: the commits it lists and the commit
+// its merge wrote, by tag. A listed tag no commit carries is a hash this clone never had. Updated
+// is when the forge last changed it, relative to the scenario's start; a merged one defaults to its
+// merge.
+type changeSpec struct {
+	Tag     string
+	Number  int64
+	Lists   []string
+	Merge   string
+	Updated time.Duration
 }
 
 // sessionSpec is one AI session that ran against the repository: who ran it, when it
@@ -44,6 +74,12 @@ type Fixture struct {
 	// Confirmed maps a session id to the commit hash a human confirmed for it, resolved
 	// from the scenario's Corrections.
 	Confirmed map[string]string
+	// Changes is what the scenario's forge reports, nil when it has no pull request. Listed are the
+	// listed commits this clone made, appended to Commits; Fetched the listed commits present here
+	// but never made or checked out, which no honest engine sees as candidates.
+	Changes *PullRequests
+	Listed  []string
+	Fetched []event.Event
 }
 
 // Hash is the commit git created for tag, or "" when the scenario has no such commit.

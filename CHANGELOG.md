@@ -33,6 +33,66 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-01
+
+### Breaking
+
+- **`evidence` judges a commit a forge wrote by the time that means work** (session-commit/v2,
+  [ADR 0021](docs/adr/0021-commits-a-forge-writes.md)). A squash merge is a low-confidence
+  `landed-by-forge` candidate, never a medium overlap; a rebase merge is judged at the time it was
+  written; a forge merge commit is no candidate; an amended commit reaches both the session that
+  wrote it and the one that amended it. On a repository a forge merges into, results move from
+  medium links toward ambiguous and low ones
+  ([correction](docs/corrections.md#evidence-judged-forge-merged-commits-by-the-merge-time)).
+  `evidence --format json` changes `algorithm`, `status`, `method` and `confidence` values, adds
+  the relation `landed-by-forge`, the method `project-time-forge-landing`, the reason
+  `later-forge-landing`, the candidate field `evidenceAt`, and a document `forge` block with
+  `detection`, `landedCommits`, `rebasedCommits`, `mergeCommits` and `unmatchedBeforeLaterLanding`. Detection
+  recognises GitHub.com's own committer only. Discard any saved `session-commit/v1` document
+  rather than comparing it.
+
+### Added
+
+- **`evidence --github`** reads the repository's pull requests through your own `gh` (`B92`,
+  [ADR 0022](docs/adr/0022-pull-requests-through-gh.md)): numbers, states, merge commits and listed
+  commit hashes, asked for by repository and never by commit or session. A listed commit that a
+  `HEAD` reflog records as made in this clone becomes a candidate, including a branch commit found
+  through a pull request after a squash hid it; a commit only fetched or checked out never does.
+  Each candidate names the pull requests that list it or whose merge wrote it, and a result names
+  one pull request only when all its candidates share exactly one. Naming a pull request changes no
+  status, method or confidence, and its state is never a session's outcome. Such documents say
+  `session-commit/v3`, and their coverage counts the added candidates, so it compares only with
+  another v3 document; a `changes` block counts every reason a candidate is in no commit list read.
+  Without the flag the JSON document is unchanged, and the text's last line now says pull requests
+  need `--github`.
+- [ADR 0020](docs/adr/0020-correlation-privacy.md) sets the privacy policy for joining sessions to
+  delivery data (`B100`): every such join stays on the machine that ran it; a connector runs only
+  on an explicit flag, through the user's own client, and asks for a repository and a window
+  rather than the commits AI sessions touched; no server view of such data shows one member's
+  changes or ranks anyone. The threat model and PRIVACY.md now name the ways a synced row can be
+  re-identified. Tests fail if the `evidence` document gains a field whose name contains a person
+  or rank word, or if a synced record gains a field.
+
+### Changed
+
+- Refreshed the vendored LiteLLM price table from the 2026-10-01 snapshot: 4,435 to 4,439 table
+  entries (4,434 to 4,438 model keys), with 4 added, none removed and 15 OpenRouter routes repriced.
+  `us.openai.gpt-6.1-sol` and `bedrock_mantle/openai.gpt-6.1-sol` now carry a price.
+
+### Fixed
+
+- PRIVACY.md called the synced member label pseudonymous without saying it can be confirmed by
+  guessing a hostname and user name
+  ([correction](docs/corrections.md#the-synced-member-label-can-be-confirmed-by-guessing)).
+
+### Security
+
+- `evidence` and `survival` no longer let git fetch a missing object from the remote in a partial
+  clone: every git call runs with `GIT_NO_LAZY_FETCH=1`, so the read fails instead (git 2.44 and
+  later).
+
+## [0.35.0] - 2026-09-30
+
 ### Breaking
 
 - **A project name that two local repositories share is now split, and joins from a directory
@@ -69,6 +129,10 @@ Discussion.
   and makes the next `backfill` re-read Claude Code, Codex CLI and Copilot CLI transcripts. It costs
   about 13 bytes per usage row whose repository resolved: 2.9 MB on a 221,168-row store, 2.3 MB of
   it an index. `clear --all` also empties the repository table and draws a new salt.
+- Refreshed the vendored LiteLLM price table from a later 2026-09-29 snapshot: 4,431 to 4,435 table
+  entries (4,430 to 4,434 model keys), with 4 added, none removed and 21 repriced. `openai.gpt-6.1-sol`,
+  `global.openai.gpt-6.1-sol` and `openrouter/anthropic/claude-sonnet-5.5:batch` now carry a price;
+  `moonshotai.kimi-k3` costs 10% more, as LiteLLM now lists it.
 
 ### Fixed
 
@@ -1857,7 +1921,9 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.34.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.36.0...HEAD
+[0.36.0]: https://github.com/assaio/assaio/compare/v0.35.0...v0.36.0
+[0.35.0]: https://github.com/assaio/assaio/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/assaio/assaio/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/assaio/assaio/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/assaio/assaio/compare/v0.31.0...v0.32.0

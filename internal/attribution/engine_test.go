@@ -2,7 +2,6 @@ package attribution
 
 import (
 	"slices"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -72,11 +71,10 @@ func TestAnEngineThatKeepsAmbiguityPassesEveryScenario(t *testing.T) {
 	}
 }
 
-// honestEngine exists to prove the corpus is satisfiable, not to attribute anything: a
-// corpus no answer can pass tells an implementer nothing. It reads its candidates from the
-// fixture, but takes the ambiguity flag from the scenario rather than deciding it -- deciding
-// it is the engine's job (B85), and a stand-in that guessed would be asserting its own
-// heuristic here instead of the property the scenario states.
+// honestEngine answers what each scenario states, confirmations first. It shows only that the
+// expectations are consistent with the fixtures Check reads them against; that a real engine can
+// satisfy them is TestMatchPassesEveryConformanceScenario's job, and the teeth are the engines
+// below, which must fail.
 func honestEngine(s *Scenario, f *Fixture) Links {
 	out := Links{}
 	for i := range s.Sessions {
@@ -85,30 +83,76 @@ func honestEngine(s *Scenario, f *Fixture) Links {
 			out[id] = Link{Commits: []string{hash}}
 			continue
 		}
-		reachable := commitsAfter(f, epoch.Add(s.Sessions[i].Start))
-		if len(reachable) == 0 {
-			continue
+		if want := s.Expect[id]; len(want.Candidates) > 0 {
+			out[id] = Link{Commits: f.hashesFor(want.Candidates), Ambiguous: want.Ambiguous, Change: s.changeNumber(want.Change)}
 		}
-		out[id] = Link{Commits: reachable, Ambiguous: s.Expect[id].Ambiguous}
 	}
 	return out
 }
 
-// commitsAfter is every observed commit at or after start, oldest first -- the whole set an
-// engine may consider before it starts ruling candidates out.
-func commitsAfter(f *Fixture, start time.Time) []string {
-	var out []event.Event
-	for i := range f.Commits {
-		if !f.Commits[i].OccurredAt.Before(start) {
-			out = append(out, f.Commits[i])
+// oneClockEngine is proximity matching that trusts a single time per commit: a commit whose
+// clock falls inside a session links to it, and failing that, the commits in the following
+// window do -- ambiguous when there is more than one. With the committer clock it judges a commit by
+// when it reached its branch; with the author clock, by when it was first written.
+func oneClockEngine(f *Fixture, sessions []sessionSpec, clock func(*event.Event) time.Time) Links {
+	out := Links{}
+	for i := range sessions {
+		start, end := epoch.Add(sessions[i].Start), epoch.Add(sessions[i].End)
+		var inside, following []string
+		for j := range f.Commits {
+			t := clock(&f.Commits[j])
+			switch {
+			case t.Before(start) || t.After(end.Add(DefaultMaxGap)):
+			case !t.After(end):
+				inside = append(inside, f.Commits[j].ID)
+			default:
+				following = append(following, f.Commits[j].ID)
+			}
+		}
+		switch {
+		case len(inside) > 0:
+			out[sessions[i].ID] = Link{Commits: inside}
+		case len(following) > 0:
+			out[sessions[i].ID] = Link{Commits: following, Ambiguous: len(following) > 1}
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].OccurredAt.Before(out[j].OccurredAt) })
-	hashes := make([]string, 0, len(out))
-	for i := range out {
-		hashes = append(hashes, out[i].ID)
+	return out
+}
+
+func committerClock(e *event.Event) time.Time { return e.OccurredAt }
+
+func authorClock(e *event.Event) time.Time {
+	if c, ok := e.Payload.(event.Commit); ok && !c.AuthoredAt.IsZero() {
+		return c.AuthoredAt
 	}
-	return hashes
+	return e.OccurredAt
+}
+
+// Either clock alone is wrong somewhere: the committer time is the merge on a forge rebase and
+// a forge merge, the author time forgets the session that amended a commit. If a single-clock
+// engine ever passes these scenarios, they have stopped defending anything.
+func TestASingleClockFailsTheLandingScenarios(t *testing.T) {
+	for _, tt := range []struct {
+		scenario string
+		clock    func(*event.Event) time.Time
+	}{
+		{"rebase-merge", committerClock},
+		{"forge-merge-commit", committerClock},
+		{"amended-in-a-later-session", committerClock},
+		{"amended-in-a-later-session", authorClock},
+		{"forge-merge-commit", authorClock},
+	} {
+		t.Run(tt.scenario, func(t *testing.T) {
+			s, ok := Get(tt.scenario)
+			if !ok {
+				t.Fatalf("scenario %q is missing", tt.scenario)
+			}
+			f := buildOrSkip(t, &s)
+			if len(Check(&s, &f, oneClockEngine(&f, s.Sessions, tt.clock))) == 0 {
+				t.Fatal("a single-clock engine passed a scenario written to defeat it")
+			}
+		})
+	}
 }
 
 // A confirmed link is not a candidate that scored well: it must win, and it must still win

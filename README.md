@@ -32,8 +32,8 @@ vendors for these questions:
 - Can the result be reproduced without uploading prompts, code or conversations?
 
 `assaio` answers the first three questions. The local `evidence` command finds content-free
-session→commit candidates and reports confidence, ambiguity, abstention and population coverage. PR,
-review, CI, merge and durable-outcome correlation are not shipped. See the [roadmap](ROADMAP.md) for
+session→commit candidates and reports confidence, ambiguity, abstention and population coverage.
+Review, CI, merge and durable-outcome correlation are not shipped. See the [roadmap](ROADMAP.md) for
 the research and product choices behind this focus.
 
 <p align="center">
@@ -102,7 +102,8 @@ $ assaio-agent doctor --strict
 ```
 
 - `dashboard` creates a self-contained offline HTML report.
-- `evidence` compares local sessions with local commit observations without storing an edge.
+- `evidence` compares local sessions with local commit observations without storing an edge;
+  `--github` adds the repository's pull requests, read through your own `gh`.
 - `digest` reports what changed since the previous run and whether the comparison is sound.
 - `doctor` reports source coverage, format drift, store health and unpriced usage.
 
@@ -136,7 +137,7 @@ to see what your data supports. [FEATURES.md](FEATURES.md) lists shipped feature
 `evidence` observes attribution; it is not an outcome metric. It joins a repository's commits
 only with sessions whose rows resolved to that repository, uses bounded time proximity, labels
 results `matched`, `ambiguous` or `unmatched`, and shows competing commits. A match does not
-show that the session caused the commit. See [how to read the result](docs/evidence.md).
+show that the session caused the commit. With `--github` it also reads the repository's pull requests through your own `gh` and names the pull requests a session's candidate commits belong to; a pull request's state is the pull request's, not the session's. See [how to read the result](docs/evidence.md).
 
 ## Supported AI coding tools
 
@@ -165,7 +166,8 @@ shows any unexplained remainder.
 
 On its normal offline analysis path, `assaio`:
 
-- makes no network request and has no telemetry;
+- makes no network request and has no telemetry; `evidence --github` asks GitHub for pull
+  requests through your own `gh` only when you run it;
 - does not extract or store prompt text, response text or repository file contents;
 - reads commit hashes, times and content-free change counts only when `evidence` or `survival` runs,
   and stores none of them;
@@ -208,8 +210,8 @@ vulnerability scanning and a published correction record.
 
 It remains pre-1.0 because:
 
-1. PR, review, CI and durable-outcome correlation beyond local session→commit candidates is not
-   shipped;
+1. review, CI, merge and durable-outcome correlation beyond local session→commit candidates and the
+   pull requests `evidence --github` names is not shipped;
 2. the contracts and calibration have not been tested across several external teams and release
    cycles.
 

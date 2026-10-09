@@ -34,17 +34,21 @@ metrics give a figure without a grade. For the generated list of signals, source
 commands and settings, use <https://assaio.dev/docs/reference> or `assaio-agent docs export`
 for JSON. Do not infer counts or capabilities from this file.
 
-The local `evidence` command compares sessions sharing a stored project basename with
-content-free local git commits. It reports population coverage and `matched`, `ambiguous` or
-`unmatched` results. Results include method, confidence, provenance, candidates, alternatives
-and abstention reason; the document stamps the algorithm version. A match uses project and
-bounded time proximity. It does not establish that a session caused a commit. The command
-stores nothing, has no team-store mode and never ranks people.
+The local `evidence` command compares content-free local git commits with the sessions whose
+stored rows resolved to that repository; a session that only shares the repository's name is never
+a candidate, and same-named sessions with no resolved repository are counted apart. It reports
+population coverage and `matched`, `ambiguous` or `unmatched` results. Results include method,
+confidence, provenance, candidates, alternatives and abstention reason; the document stamps the
+algorithm version. A match uses repository identity and bounded time proximity. It does not
+establish that a session caused a commit. The command stores nothing, has no team-store mode and
+never ranks people. With `--github` it also reads the repository's pull requests through the
+user's own `gh` and names the pull requests each candidate commit belongs to; a pull request's
+state is never a session's outcome.
 
 The local `survival` command reports how much code changed by a repository's commits in the
-window remains in `HEAD`. It does not assign those lines to AI sessions. Session-to-PR,
-review, CI and merge correlation, attributable survival, bug impact, and quality and
-maintainability outcomes remain on the roadmap.
+window remains in `HEAD`. It does not assign those lines to AI sessions. Review, CI and merge
+correlation, attributable survival, bug impact, and quality and maintainability outcomes remain
+on the roadmap; `evidence --github` names only the pull requests a candidate commit belongs to.
 
 assaio prints no ranking of named individuals in any format. `--by member` is refused with a
 reason in table, JSON and CSV output. The dashboard shows member engagement, while output and
@@ -77,11 +81,13 @@ and models are named as vendor facts. Sharing makes no network request.
 
 Prompts and model responses are not extracted. Repository diff content and created or deleted
 file bodies are read briefly for line and rework counts, then discarded; none is stored. There
-is no telemetry. `evidence` uses local git and the local store only. Its result omits commit
-messages, paths, branches, diffs and code; it stores neither observations nor edges. assaio
-uses the network only for the self-hosted team server (`serve`/`sync`), which connects only to
-operator-run infrastructure. Configured exec plugins are the operator's own programs; their
-network use depends on their code.
+is no telemetry. `evidence` uses local git and the local store only, unless run with
+`--github`: then the user's own `gh` asks GitHub for the repository's pull requests. Its result
+omits commit messages, paths, branches, diffs and code; it stores neither observations nor edges.
+assaio uses the network only for the self-hosted team server (`serve`/`sync`), which connects
+only to operator-run infrastructure, and for `evidence --github`, which reaches GitHub through the
+user's own `gh`. Configured exec plugins are the operator's own programs; their network use
+depends on their code.
 
 ## Docs
 

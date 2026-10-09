@@ -309,6 +309,18 @@ does not ship.
   shows under two names on the server. It sends no key, id or path, changes PRIVACY.md and
   docs/threat-model.md in the same commit, and waits for the team server's re-push and retention
   rules (milestone 4).
+- [ ] **B227 · synced identifiers leave only as keyed digests** — S/M · team — `sync` sends
+  each row's branch name, which joins to a pull request and its author for anyone with the
+  server's data and read access to the repository, and a member label that is an unkeyed hash of
+  hostname and OS user name, which anyone with the server's data can confirm by guessing
+  ([ADR 0020](docs/adr/0020-correlation-privacy.md)). Send both as digests keyed per team that
+  the server can group by but not reverse, or drop the branch, and say which team figures lose
+  what. Every member's label changes once. Changes the sync payload, so it is announced under
+  **Breaking** with PRIVACY.md and the threat model in the same commit.
+- [ ] **B228 · a minimum cohort on the team panel** — S · team — the team dashboard shows each
+  member's session bar at any team size, so a team of two can read who ran how many sessions.
+  Below five members, show the distribution without per-member rows, and say why; the same
+  guard `B09` and [ADR 0020](docs/adr/0020-correlation-privacy.md) require of any server view.
 - [ ] **B102 · AnalyzerContext: retire the store types from the analyzer surface** — L · both
   — the half of `B90` deliberately not shipped with the catalog. Validators already do not
   query SQLite; what leaks is *types*, since `analyze.Input` carries `[]store.UsageRow`,
@@ -342,16 +354,21 @@ does not ship.
   deliberately not shipped: a configured repository list (rather than one `--repo` at a time),
   a keyed pseudonymous commit digest for the syncable case, and durable storage. Each waits
   for the consumer that decides its shape — v0.27's first `B85` slice deliberately collects and
-  links in one pass, while replay across passes still needs a durable shape; `B100` decides what
+  links in one pass, while replay across passes still needs a durable shape; ADR 0020 decides what
   identity may leave the machine — and each costs a
   migration, a size bound and a cleanup path, so none is worth guessing at. Path-level storage
   stays out entirely until something needs it: `B91` never records a path, so there is no
   opt-in to design yet. See [ADR 0009](docs/adr/0009-local-git-evidence-collector.md).
-- [ ] **B92 · GitHub connector v1** — L · both — read-only, least-privilege metadata only:
-  PR lifecycle, commits in a PR, review states and requested-changes rounds, check suites and
-  runs, merge time and method, detectable revert relations. GitHub Cloud first, with the
-  interface shaped so Enterprise Server and GitLab can follow without contaminating the core
-  model. Credentials never reach reports or plugins.
+- [ ] **B229 · review and check observations from the GitHub connector** — M · both — review
+  states and requested-changes rounds, check suites and runs, merge method and detectable revert
+  relations, through the same `gh` read as `evidence --github`. Each needs its reserved type
+  (`scm.review`, `ci.check`, ADR 0007) and names no reviewer or check; ADR 0020 applies, and no rate
+  is derived before `B94` sets comparable populations.
+- [ ] **B230 · attribution by this clone's configured git identity** — M · both — git can match
+  the configured author identity and return only hashes, which would tell a teammate's commits from
+  the user's where time alone cannot. It is the first use of identity in attribution, so it needs its
+  own ADR, a stated miss for commits made under another address, and a corpus scenario where it must
+  not resolve two people's commits (ADR 0022 rejected it for `evidence --github`).
 - [ ] **B225 · an exec port for issue-tracker observations** — L · both — resolved issues are
   the one delivery edge with no item here. It follows the ADR 0003 posture: an ADR and a
   feasibility spike first (can GitHub and Jira return issue→PR links without reading issue
@@ -360,7 +377,7 @@ does not ship.
   connector. It carries no title, body, label text or assignee, is validated at the boundary
   and is namespaced like `plugin:`. Joins go only through PR or branch edges (after `B85` and
   `B92`), with coverage and abstention; never by time. Digests and transition times still
-  identify work, so the edge is local-only by default and `B100` extends to it. GitHub Issues
+  identify work, so the edge is local-only and ADR 0020 applies to it. GitHub Issues
   and Jira ship as out-of-tree reference connectors.
 - [ ] **B85 · attribution engine + edges (session → commit / PR)** — L · both — versioned,
   confidence-bearing candidate and confirmed edges carrying their method (explicit marker,
@@ -376,13 +393,15 @@ does not ship.
   writing it surfaced a requirement that was not obvious: "identity compatibility" is not an
   available method today, because a commit observation carries no author at all. The
   `overlapping-users` scenario therefore *requires* ambiguity, and separating those sessions
-  means changing what an observation carries — a privacy decision belonging with `B100`,
+  means changing what an observation carries — a privacy decision under ADR 0020,
   not a better ranking. See [ADR 0010](docs/adr/0010-attribution-conformance-corpus.md).
   **v0.27 ships the local session→commit portion, not this whole item**: algorithm
   `session-commit/v1` emits confidence-bearing matched, ambiguous and unmatched results from
   project plus bounded time evidence, keeps alternatives, honours the corpus's confirmed links,
-  and stores nothing. Explicit markers, branch, identity and file-category compatibility,
-  persisted corrections, PR edges and durable replay remain open.
+  and stores nothing.
+  `evidence --github` (`session-commit/v3`, ADR 0022) names the pull requests a candidate
+  commit belongs to. Explicit markers, branch, identity and file-category compatibility,
+  persisted corrections, stored edges and durable replay remain open.
 - [ ] **B94 · `outcomes` funnel + `evidence explain`** — M · both — the first visible path:
   sessions → sessions with edits → linked commits → linked PRs → passing CI → merged →
   surviving, sliced by tool, model, project, task annotation and confidence band, always
@@ -391,7 +410,8 @@ does not ship.
   **v0.27 ships only the first visible row of this path**: `evidence` shows session→commit
   population coverage, candidates, alternatives, method, provenance, confidence and abstention
   reason in text or JSON. There is no edit-stage funnel, slicing, edge identifier or separate
-  `evidence explain`, and no PR/review/CI/merge/survival outcome join yet.
+  `evidence explain`, and no review, CI, merge or survival join yet; `evidence --github` names the pull requests
+  a candidate commit belongs to and their state, and derives no rate from them.
 - [ ] **B153 · what a change costs after it is written** — M/L · both — "AI lines" counts
   what was produced, never what it took to land. Once a session links to a pull request, the
   downstream burden becomes countable as named signals rather than adjectives: review rounds
@@ -410,17 +430,6 @@ does not ship.
   never stored. Needs a PRIVACY.md note. The first quality-adjacent signal without a server,
   and deliberately a floor rather than a verdict: research finds agent-written tests lean on
   mocks more than human ones, so "tests were touched" is not "the change was verified".
-- [ ] **B100 · privacy threat model for correlation** — S/M · both — correlation creates
-  risks the local-only store did not have: commit and PR metadata reveal work patterns,
-  branch and label names can leak client or project identity, timing correlation slides toward
-  employee monitoring, and combined datasets can re-identify a pseudonym. Ships with the
-  connector, not after it: local-only defaults, field-level sync policy, retention, minimum
-  cohort for any server view, and a test asserting no ranking surface exists.
-  **v0.27 settles only the local slice**: commit observations and derived answers are
-  `local-only`, not persisted or synced; the command exposes no `--db`, rejects member-bearing
-  rows, and its result type has no person or ranking field. The connector's field-level sync,
-  retention, cohort and re-identification policy remain open.
-
 ## Then — "The agent skill, over the evidence"
 
 Roadmap milestone 2A. The skill ships after the delivery joins, so inside an agent it shows

@@ -131,3 +131,32 @@ func TestCheckRejectsAnUnknownCommit(t *testing.T) {
 		t.Fatal("Check accepted a commit hash that is not in the fixture")
 	}
 }
+
+// An ambiguity the fixture does not hold is a claim of doubt the evidence does not support: it
+// would let an engine hide a many-to-many answer behind a flag.
+func TestCheckRejectsAmbiguityTheScenarioDoesNotExpect(t *testing.T) {
+	s := Scenario{
+		Name: "two-commits-both-in-the-session", Defends: "a session that made two commits links to both",
+		Expect: map[string]Expectation{"s1": {Candidates: []string{"c1", "c2"}}},
+	}
+	f := fixtureOf("c1", "c2")
+	got := Links{"s1": {Commits: []string{f.Hashes["c1"], f.Hashes["c2"]}, Ambiguous: true}}
+	if violations := Check(&s, &f, got); len(violations) == 0 {
+		t.Fatal("Check accepted an ambiguity the scenario does not expect")
+	}
+}
+
+// A pull request the scenario does not name, or none where it names one, is a violation of its own.
+func TestCheckJudgesThePullRequestNamed(t *testing.T) {
+	s := Scenario{
+		Name: "one-pull-request", Defends: "the session's commits are all in #1",
+		Changes: []changeSpec{{Tag: "P1", Number: 1}},
+		Expect:  map[string]Expectation{"s1": {Candidates: []string{"c1"}, Change: "P1"}},
+	}
+	f := fixtureOf("c1")
+	for _, change := range []int64{0, 2} {
+		if violations := Check(&s, &f, Links{"s1": {Commits: []string{f.Hashes["c1"]}, Change: change}}); len(violations) == 0 {
+			t.Errorf("Check accepted pull request %d where the scenario names #1", change)
+		}
+	}
+}

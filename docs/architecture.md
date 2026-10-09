@@ -12,9 +12,10 @@ marked in place rather than described afterwards: they are steps in this path, n
 one.
 
 The whole reporting path is local. Network access exists only in the explicitly invoked team
-server (`serve`) and `sync` paths. Configured exec plugins are separate programs; their network
-use is their own. What crosses a machine boundary, and under whose control, is covered in
-[`threat-model.md`](threat-model.md) and [`PRIVACY.md`](../PRIVACY.md).
+server (`serve`) and `sync` paths, and in `evidence --github`, which runs the user's own `gh`.
+Configured exec plugins are separate programs; their network use is their own. What crosses a
+machine boundary, and under whose control, is covered in [`threat-model.md`](threat-model.md)
+and [`PRIVACY.md`](../PRIVACY.md).
 
 ## 1. Discovery — `internal/paths`, `internal/ingest`
 
@@ -223,13 +224,17 @@ Outputs leave the process only when asked:
 default local store and converts `Store.Sessions` rows to `attribution.Session`; member-bearing
 rows are refused. Separately, `vcs.Collect` reads commits reachable from the selected
 repository's `HEAD` into content-free `event.Event` values. `attribution.Match` orders both
-inputs, applies algorithm `session-commit/v1`, and returns matched, ambiguous or unmatched
-results. `attribution.RenderText` or JSON encoding is the final boundary.
+inputs, applies algorithm `session-commit/v2`, and returns matched, ambiguous or unmatched
+results. `attribution.RenderText` or JSON encoding is the final boundary. With `--github`,
+`github.ReadPullRequests` runs `gh` for the repository's pull requests, `vcs.CollectListed`
+reads the listed commits that a `HEAD` reflog records as made in this clone, and
+`attribution.LinkChanges` applies `session-commit/v3` to the results `Match` computed over both
+sets of commits.
 
 No step writes to the store. The observation id is the commit hash, so re-reading is stable;
 the derived result is deterministic over the same session and commit sets. This slice does not
 enter `analyze.Input`, the signal catalog, the metric-plugin wire, `sync`, the dashboard or the
-team server. PR/review/CI/merge observations and durable edges remain separate future hand-offs.
+team server. Review, CI and merge observations and durable edges remain separate future hand-offs.
 
 ## Where an exec plugin attaches
 

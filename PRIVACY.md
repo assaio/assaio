@@ -214,9 +214,12 @@ pull your account data.
 
 `assaio-agent evidence --repo <path>` and `assaio-agent survival --repo <path>` read a local
 git repository only when invoked. The collector returns one content-free observation per
-commit reachable from `HEAD`: commit hash and time, parent count, added/removed line counts,
-changed-file count, a test/source/docs/config/generated/other category split, and whether git
-itself gave the commit a generated revert subject.
+commit reachable from `HEAD`: commit hash, the time it was written (git's author time) and the
+time it reached its branch, parent count, added/removed line counts, changed-file count, a
+test/source/docs/config/generated/other category split, whether git itself gave the commit a
+generated revert subject, and whether GitHub.com's own identity committed it. For that last fact,
+git matches the committer itself and returns only commit hashes, so assaio reads no author or
+committer name or e-mail.
 
 Git paths are read in memory only to choose a category. The commit subject is read only to
 recognize that revert prefix. Neither is returned, stored or printed, and branch names, diffs
@@ -224,12 +227,29 @@ and file bodies are not part of the observation at all. Commit observations and 
 session→commit results are recomputed in memory and never written to SQLite.
 
 `evidence` combines those observations with the local store's session id, tool, project
-basename and first/last timestamps. Its text and JSON output include the project basename,
-session id and commit hash for local inspection, plus method, confidence, provenance,
-ambiguity, alternatives and coverage. It has no `--db`, refuses member-bearing team rows and
+name, the repository the session's rows resolved to (read as a local number and never printed)
+and first/last timestamps. Its text and JSON output include the project name — empty when no
+stored usage resolved to the repository — the session id and the commit hash for local
+inspection, plus method, confidence, provenance, ambiguity, alternatives and coverage. It has no `--db`, refuses member-bearing team rows and
 has no member, person, score or rank field. It is not a shareable artifact and is not intended
 for evaluating people. Prompt text, model responses, code, diffs, commit messages and branch
 names never enter its result.
+
+### `evidence --github`
+
+Only with `--github`, `evidence` runs your own GitHub CLI (`gh`) in the repository. `gh repo view`
+names the repository and its host; then one fixed GraphQL query asks for pull requests ordered by
+last update, newest first: each one's id, number, state, last-update and merge times, merge commit,
+and up to 100 listed commit hashes with their total; assaio pages through the results locally and
+stops once a pull request was last updated before `--since`. It asks for no title, body, branch
+name, label, author, reviewer, comment or check. The request names the repository and a page cursor,
+never a commit, a session or anything from the store. `gh` holds your credentials; assaio reads,
+passes and stores no token. assaio then asks local git which listed commits a `HEAD` reflog of this
+clone records as made here — git matches the entries and returns hashes only — and reads those like
+any other commit. Pull requests, their commits and every link are printed locally and never stored,
+synced, exported or sent to a plugin. The repository's owner and name appear only in a note on
+standard error, never in the document. The query runs as you, so it can appear in your
+organization's API audit log.
 
 ## What it never retains
 
@@ -304,15 +324,17 @@ requirements.
 ## Network
 
 The core analysis commands — `backfill`, `report`, `effectiveness`, `analyze`, `status`,
-`dashboard`, `share`, `reconcile`, `evidence`, `survival` — make **no network calls**. The model price table is embedded into the binary
+`dashboard`, `share`, `reconcile`, `evidence` without `--github`, `survival` — make **no network calls**. The model price table is embedded into the binary
 at build time, so every report works fully offline; nothing is fetched, uploaded, or
 phoned home.
 
-Two **optional commands are the exception**, and only when you invoke them.
+Three **optional commands are the exception**, and only when you invoke them.
 `assaio-agent sync` uploads your usage records to a team server, and `assaio-agent serve` runs
 that server; both talk only to infrastructure **you** stand up and point them at (see below).
-If you never run those two, `assaio` itself never touches the network, and exec plugins
-(described at the top of this file) are your own programs.
+`evidence --github` is the only one that reaches a third party: your own `gh` asks
+GitHub for the repository's pull requests ([what it asks](#evidence---github)). If you never run
+those three, `assaio` itself never touches the network, and exec plugins (described at the top of
+this file) are your own programs.
 
 `assaio-agent share` is not an exception to this — it makes no request, and neither does the
 page it writes. After writing the file it can ask your desktop to open it (`open`, `xdg-open`,
@@ -374,9 +396,20 @@ believing the name in its body.
 Each synced member is **pseudonymized by default** (a stable `member-xxxx` label); team
 views are aggregated by default. A per-member, real-name view is never silent — it is a
 deliberate, governed opt-in an admin enables, not what the default configuration produces,
-and never a performance-evaluation leaderboard. `sync` sends a project's name, never the key
-or number that identifies its repository on your machine. When two of your repositories share
-a name, `sync` says so before pushing, because the server counts them as one project.
+and never a performance-evaluation leaderboard. The label is a SHA-256 of the machine's
+hostname and OS user name with no secret, so anyone holding the server's data can confirm a
+guessed host and user name against it; `B227` replaces it with a keyed digest. `sync` sends a
+project's name, never the key or number that identifies its repository on your machine. When
+two of your repositories share a name, `sync` says so before pushing, because the server counts
+them as one project.
+
+Two joins outside assaio can re-identify a synced row. Each record includes its branch name, and
+anyone who holds the server's data and can read the repository can join a branch and a time to
+the pull request built from it, and to its author. Each record also carries the coding tool's own
+session id, so where your organization collects that tool's telemetry recording the session id
+beside an account (Claude Code's OpenTelemetry export does), the two join. A member pseudonym
+does not protect against either reader. `sync` never sends pull-request numbers, commit hashes or
+session→commit results ([ADR 0020](docs/adr/0020-correlation-privacy.md)).
 
 The pseudonym holds on the way **out** as well as on the way in. Reading a central store with
 `report` labels members in every format — table, JSON and CSV alike — and a metric plugin, which

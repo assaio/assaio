@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -20,8 +22,14 @@ const maxLineBytes = 1 << 20
 // gitOutput runs `git -C root <args>` and returns stdout, wrapping any failure with the
 // trimmed stderr so a caller sees why git rejected the command.
 func gitOutput(ctx context.Context, root string, args ...string) ([]byte, error) {
-	//nolint:gosec // root is the user's own repo path and args are assaio-controlled literals
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
+	return gitOutputFrom(ctx, root, nil, args...)
+}
+
+// gitOutputFrom is gitOutput with stdin, for the reads that take their revisions on it (--stdin)
+// rather than on a command line a long list would overflow.
+func gitOutputFrom(ctx context.Context, root string, stdin io.Reader, args ...string) ([]byte, error) {
+	cmd := gitCommand(ctx, root, args...)
+	cmd.Stdin = stdin
 	var out, errBuf bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &errBuf
@@ -29,6 +37,17 @@ func gitOutput(ctx context.Context, root string, args ...string) ([]byte, error)
 		return nil, fmt.Errorf("git %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(errBuf.String()))
 	}
 	return out.Bytes(), nil
+}
+
+// gitCommand builds a read of root that stays on this machine. In a partial clone git fetches a
+// missing object from the remote with the user's credentials; GIT_NO_LAZY_FETCH makes that read
+// fail instead, so evidence and survival never reach the network (ADR 0020). Git releases
+// before 2.44 ignore the variable.
+func gitCommand(ctx context.Context, root string, args ...string) *exec.Cmd {
+	//nolint:gosec // root is the user's own repo path and args are assaio-controlled literals
+	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
+	cmd.Env = append(os.Environ(), "GIT_NO_LAZY_FETCH=1")
+	return cmd
 }
 
 // RepoRoot resolves repoPath to its git working-tree root, erroring when it is not a repo.

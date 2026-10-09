@@ -31,11 +31,53 @@ the maintainer's own corpus, the corpus is named beside it.
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-01
+
+<a id="evidence-judged-forge-merged-commits-by-the-merge-time"></a>
+
+### `evidence` judged forge-merged commits by the merge time
+
+*Corrected in v0.36.0, released 2026-10-01.*
+
+Since v0.27.0, `evidence` judged each commit by the time it reached its branch. For a commit a
+forge merged, that is the merge time. A session running when a pull request was squash-merged or
+merged got a medium-confidence `project-time-overlap` link to the whole pull request as a candidate.
+On a rebase merge, every rewritten commit linked to the merge-time session instead of the session
+that wrote it. A merge commit, which carries no lines, was a medium candidate too. The session that
+did the work could get a low-confidence following link when the merge came within 48 hours.
+Work merged later left it unmatched with `no-commit-candidate`, as if nothing had reached the branch.
+The incorrect medium-confidence links are removed; ambiguous and low-confidence results increase,
+and resolved coverage falls. This is abstention, not new evidence. Nothing was stored, so there is
+nothing to restate; discard any saved `session-commit/v1` document. Measured on this repository,
+which squash-merges every pull request, over 30 days and 11 sessions: v1 showed 11 medium overlaps;
+v2 shows 3 medium links, on commits pushed straight to `main` and judged at the time they were
+written, and 8 ambiguous results among 6 to 16 GitHub-landed commits each. Resolved coverage went
+from 100% to 27%, and candidate coverage stayed at 100%. Rebase merges, merge commits and amends
+were reproduced only in the corpus.
+
+<a id="the-synced-member-label-can-be-confirmed-by-guessing"></a>
+
+### The synced member label can be confirmed by guessing
+
+*Corrected in v0.36.0, released 2026-10-01.*
+
+Since v0.1.0, PRIVACY.md and the threat model have called the label `sync` sends for a member
+pseudonymous, with nothing about how it is made. It is the first 40 bits, in hex, of a SHA-256
+of the machine's hostname and OS user name, with no secret. Anyone holding the team server's data
+can hash guessed host and user names and confirm which member is whom, without access to any
+repository; a reader deciding whether to sync to a server they do not run was told less than
+that. The documents now say how the label is made and name two other joins that re-identify a
+synced row: its branch name to a pull request's author, and its session id to a telemetry
+account. Nothing in the payload changed. `B227` replaces the label with a keyed digest, which
+will give every member a new label on the server. Read from the code; no attack was run.
+
+## [0.35.0] - 2026-09-30
+
 <a id="two-repositories-with-one-name-shared-every-figure"></a>
 
 ### Two repositories with one name shared every figure
 
-*Corrected in v0.35.0, released 2026-09-29.*
+*Corrected in v0.35.0, released 2026-09-30.*
 
 Since v0.1.0, assaio stored a session's project as the basename of its repository root and nothing
 else. Two unrelated repositories with one directory name, such as two checkouts named `api`,

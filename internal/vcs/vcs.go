@@ -22,10 +22,14 @@ const sourceName = "git"
 // The record shape asked of git: a NUL starts a commit header, unit separators divide its
 // fields, and the numstat lines that follow belong to it until the next NUL.
 const (
-	logFormat = "%x00%H%x1f%ct%x1f%P%x1f%s"
+	logFormat = "%x00%H%x1f%ct%x1f%at%x1f%P%x1f%s"
 	recordSep = "\x00"
 	fieldSep  = "\x1f"
 )
+
+// forgeCommitter is the committer GitHub.com records on a commit it writes itself. The angle
+// bracket keeps a user's own <id>+<login>@users.noreply.github.com address from matching.
+const forgeCommitter = "<noreply@github.com>"
 
 // revertPrefix is what git itself writes when it generates a revert. An undo phrased any
 // other way is invisible to this, which is why the payload calls the field an indicator.
@@ -41,11 +45,23 @@ const revertPrefix = `Revert "`
 // rather than read from the clock so one reading time stamps a whole pass and the output is a
 // pure function of the repository.
 func Collect(ctx context.Context, root, project string, since, observedAt time.Time, build string) ([]event.Event, int, error) {
-	out, err := gitOutput(ctx, root, "log", "--since="+sinceArg(since), "--format="+logFormat, "--numstat")
+	return readCommits(ctx, root, project, since, observedAt, build, nil)
+}
+
+// readCommits reads the commits git walks from HEAD, or exactly the hashes listed when there are any
+// -- the same header, numstat and forge reads either way, so a listed commit is observed in the
+// shape a reachable one is.
+func readCommits(ctx context.Context, root, project string, since, observedAt time.Time, build string, hashes []string) ([]event.Event, int, error) {
+	out, err := gitOutputFrom(ctx, root, revisions(hashes),
+		scope(hashes, "log", "--since="+sinceArg(since), "--format="+logFormat, "--numstat")...)
 	if err != nil {
 		return nil, 0, err
 	}
-	var st commitStream
+	forged, err := forgeCommits(ctx, root, since, hashes)
+	if err != nil {
+		return nil, 0, err
+	}
+	st := commitStream{forged: forged}
 	sc := newScanner(out)
 	for sc.Scan() {
 		line := sc.Text()
@@ -74,11 +90,13 @@ type commitStream struct {
 	skipped int
 	pending *event.Event
 	commit  event.Commit
+	forged  map[string]bool
 }
 
 func (s *commitStream) start(e *event.Event, c *event.Commit) {
 	s.close()
 	s.pending, s.commit = e, *c
+	s.commit.CommittedByForge = s.forged[e.ID]
 }
 
 // skip abandons a header this build could not read, closing whatever preceded it.
@@ -111,11 +129,15 @@ func (s *commitStream) close() {
 // subject is read here to answer one question -- was this a revert -- and is never carried
 // onto the payload or returned.
 func headerObservation(header, project string, observedAt time.Time, build string) (event.Event, event.Commit, bool) {
-	fields := strings.SplitN(header, fieldSep, 4)
-	if len(fields) != 4 || fields[0] == "" {
+	fields := strings.SplitN(header, fieldSep, 5)
+	if len(fields) != 5 || fields[0] == "" {
 		return event.Event{}, event.Commit{}, false
 	}
 	seconds, err := strconv.ParseInt(fields[1], 10, 64)
+	if err != nil {
+		return event.Event{}, event.Commit{}, false
+	}
+	authored, err := strconv.ParseInt(fields[2], 10, 64)
 	if err != nil {
 		return event.Event{}, event.Commit{}, false
 	}
@@ -128,15 +150,15 @@ func headerObservation(header, project string, observedAt time.Time, build strin
 		ObservedAt:  observedAt,
 		TimeSource:  event.TimeStated,
 		Grain:       event.GrainCommit,
-		// Repository evidence stays on the machine until the correlation threat model (B100)
-		// decides what a team may share; local-only is the answer that needs no decision.
+		// Repository evidence and every edge built on it stay on the machine (ADR 0020).
 		Privacy:    event.LocalOnly,
 		Provenance: event.Parsed,
 		Subject:    event.Subject{Project: project},
 	}
 	commit := event.Commit{
-		Parents: int64(len(strings.Fields(fields[2]))),
-		Revert:  strings.HasPrefix(fields[3], revertPrefix),
+		Parents:    int64(len(strings.Fields(fields[3]))),
+		Revert:     strings.HasPrefix(fields[4], revertPrefix),
+		AuthoredAt: time.Unix(authored, 0).UTC(),
 	}
 	return observation, commit, true
 }
@@ -157,4 +179,22 @@ func countNumstat(c *event.Commit, line string) {
 	if removed, err := strconv.ParseInt(fields[1], 10, 64); err == nil {
 		c.LinesRemoved += removed
 	}
+}
+
+// forgeCommits returns the hashes in the window whose committer is the forge's own identity. git
+// matches the committer itself and prints only hashes, so no committer name or e-mail reaches
+// this process. The match runs on the recorded identity: a .mailmap rewrites the committer line
+// before --committer sees it, and could hide the forge or pass a person off as it.
+func forgeCommits(ctx context.Context, root string, since time.Time, hashes []string) (map[string]bool, error) {
+	out, err := gitOutputFrom(ctx, root, revisions(hashes), scope(hashes, "-c", "log.mailmap=false", "log",
+		"--since="+sinceArg(since), "--fixed-strings", "--regexp-ignore-case", "--committer="+forgeCommitter,
+		"--format=%H")...)
+	if err != nil {
+		return nil, err
+	}
+	forged := map[string]bool{}
+	for _, hash := range strings.Fields(string(out)) {
+		forged[hash] = true
+	}
+	return forged, nil
 }

@@ -175,15 +175,16 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
     <a class="menu" href="#docs-nav">Menu</a>
   </nav>
 </header>
-<div class="layout with-toc"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">assaio documentation</a></li></ul><p class="sidehead">Understand the figures</p><ul><li><a class="on" href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li></ul><p class="sidehead">Run it for a team</p><ul><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li></ul><p class="sidehead">Extend assaio</p><ul><li><a href="https://assaio.dev/docs/extending">Extending assaio</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li></ul><p class="sidehead">Use an example</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><nav class="toc" aria-label="On this page"><p class="sidehead">On this page</p><ul><li><a href="#what-one-result-means">What one result means</a></li><li><a href="#methods-and-confidence">Methods and confidence</a></li><li><a href="#privacy-and-limits">Privacy and limits</a></li></ul></nav><main class="doc"><h1 id="local-session-to-commit-evidence">Local session-to-commit evidence</h1>
+<div class="layout with-toc"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">assaio documentation</a></li></ul><p class="sidehead">Understand the figures</p><ul><li><a class="on" href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li></ul><p class="sidehead">Run it for a team</p><ul><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li></ul><p class="sidehead">Extend assaio</p><ul><li><a href="https://assaio.dev/docs/extending">Extending assaio</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li></ul><p class="sidehead">Use an example</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><nav class="toc" aria-label="On this page"><p class="sidehead">On this page</p><ul><li><a href="#what-one-result-means">What one result means</a></li><li><a href="#methods-and-confidence">Methods and confidence</a></li><li><a href="#with---github">With --github</a></li><li><a href="#privacy-and-limits">Privacy and limits</a></li></ul></nav><main class="doc"><h1 id="local-session-to-commit-evidence">Local session-to-commit evidence</h1>
 <p><code>assaio-agent evidence</code> is the first small Evidence Graph interface. It compares local-store
-sessions with commits reachable from <code>HEAD</code> in one local repository:</p>
+sessions with commits reachable from <code>HEAD</code> in one local repository. With <code>--github</code>, it also
+considers listed pull request commits made in this clone:</p>
 <pre><code class="language-console">$ assaio-agent evidence --repo . --since 30d
 $ assaio-agent evidence --repo ../service --format json
 </code></pre>
-<p>It makes no network requests, accepts no <code>--db</code> override, rejects stores with team member rows, and
-writes nothing. Repeating it reads the same inputs and yields the same attribution answer. It
-persists neither commit observations nor derived edges.</p>
+<p>Without <code>--github</code> it makes no network requests. It accepts no <code>--db</code> override, rejects stores with
+team member rows, and writes nothing. Repeating it offline reads the same inputs and yields the
+same attribution answer. It persists neither commit observations nor derived edges.</p>
 <h2 id="what-one-result-means">What one result means</h2>
 <p>Each project-scoped session has exactly one outcome:</p>
 <ul>
@@ -198,11 +199,13 @@ usable time window.</li>
 sessions from other stored projects, sessions with unavailable projects, and sessions under this
 repository's name whose repository never resolved (<code>identityUnresolvedSessions</code>) separately,
 excluding all three from that denominator.</p>
-<p>The document identifies algorithm <code>session-commit/v1</code>. Each result includes method, confidence,
+<p>On forge-merged history, coverage measures what commit timing can link, not what shipped: a session
+whose work reached <code>main</code> in a squash can stay ambiguous or unmatched.</p>
+<p>The document identifies algorithm <code>session-commit/v2</code>, or <code>session-commit/v3</code> when built with <code>--github</code>. Each result includes method, confidence,
 provenance, ambiguity, reason, candidates, and alternatives. Each candidate includes its commit hash
-and time, plus the git observation's source, time source, provenance, privacy class, and
-content-free file-category counts. The hash is git's stable identifier and lets readers inspect the
-candidate in their local repository.</p>
+and time, the time used to judge its relation (<code>evidenceAt</code>), plus the git observation's source,
+time source, provenance, privacy class, and content-free file-category counts. The hash is git's
+stable identifier and lets readers inspect the candidate in their local repository.</p>
 <h2 id="methods-and-confidence">Methods and confidence</h2>
 <p>The engine uses only evidence in the current contracts:</p>
 <table>
@@ -219,37 +222,93 @@ candidate in their local repository.</p>
 <td><code>manual-confirmation</code></td>
 <td>matched</td>
 <td>high</td>
-<td>A confirmed commit wins; other plausible candidates remain alternatives. The public command has no correction UI or ledger yet.</td>
+<td>A confirmed commit wins, even one the rules below exclude; other plausible candidates remain alternatives. The public command has no correction UI or ledger yet.</td>
 </tr>
 <tr>
 <td><code>project-time-overlap</code></td>
 <td>matched</td>
 <td>medium</td>
-<td>Every commit in the same repository whose time falls inside the session remains linked. Several commits are a valid many-to-many answer, not ambiguity by count alone.</td>
+<td>Every same-repository commit with an author or committer time inside the session remains linked, except a forge merge commit; only author time counts for a commit the forge rebased. A commit the forge landed never counts as an overlap. Several commits are a valid many-to-many answer, not ambiguity by count alone.</td>
 </tr>
 <tr>
 <td><code>project-time-following</code></td>
 <td>matched</td>
 <td>low</td>
-<td>When no commit overlaps the session, exactly one same-project commit occurs after it and no later than 48 hours after it.</td>
+<td>When no commit overlaps the session, exactly one same-repository commit follows it, measured from the earliest of its times within 48 hours after the session.</td>
+</tr>
+<tr>
+<td><code>project-time-forge-landing</code></td>
+<td>matched</td>
+<td>low</td>
+<td>Exactly one candidate is a commit the forge landed while the session ran or up to 48 hours after it. Its time is the merge, an upper bound on when the work happened.</td>
 </tr>
 <tr>
 <td><code>project-time-following</code></td>
 <td>ambiguous</td>
 <td>insufficient</td>
-<td>When no commit overlaps the session, several following commits fit the same bound; no available signal separates them.</td>
+<td>When no commit overlaps the session, several following or landed commits fit the same bound; no available signal separates them.</td>
 </tr>
 <tr>
 <td><code>none</code></td>
 <td>unmatched</td>
 <td>insufficient</td>
-<td>No candidate or no usable evidence. The reason says which.</td>
+<td>No candidate or no usable evidence. The reason says which; <code>later-forge-landing</code> means a commit the forge landed after the 48-hour bound may hold the session's work.</td>
 </tr>
 </tbody>
 </table>
-<p>The 48-hour following boundary is inclusive; a commit one second later is excluded. The local git
-collector sees only commits reachable from <code>HEAD</code>. Input order does not affect results: sessions and
+<p>Git records two times for a commit: when it was written and when it reached its branch. A forge
+rewrites them. A squash merge stamps both with the merge, a rebase merge keeps the written time,
+and a merge commit is stamped at the merge and carries no lines. session-commit/v2 judges a forge's
+rebase at the written time, treats a squash only as a low-confidence landing, never links a forge's
+merge commit, and judges every other commit at both times. An amend can thus link the commit to
+both the session that wrote it and the one that amended it. A merge made locally stays a candidate
+because it can carry a conflict resolution. Only GitHub.com's own committer identity,
+<code>noreply@github.com</code>, is recognised. Git applies that filter itself, so assaio reads no e-mail
+address. GitLab, Bitbucket, Gitea and GitHub Enterprise Server commit as the person who merged, so
+their merges are judged as local ones. A commit whose committer was set to that address by hand is
+misread as the forge's; a personal <code>…@users.noreply.github.com</code> address is not. Each document's
+<code>forge</code> block names its detection scope and counts landed and rebased commits, excluded merge
+commits, and sessions left unmatched before a landing after their following window (<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0021-commits-a-forge-writes.md">ADR 0021</a>).</p>
+<p>The 48-hour following boundary is inclusive; a commit one second later is excluded. The local git collector sees only commits reachable from <code>HEAD</code> and, with <code>--github</code>, listed commits made in this clone. Input order does not affect results: sessions and
 commits are sorted by stable identifiers and times before matching.</p>
+<h2 id="with---github">With <code>--github</code></h2>
+<pre><code class="language-console">$ assaio-agent evidence --repo . --github
+</code></pre>
+<p>The flag reads the repository's pull requests through your own <code>gh</code> (what it asks is in
+<a href="https://github.com/assaio/assaio/blob/main/PRIVACY.md">PRIVACY.md</a>) and builds the document with <code>session-commit/v3</code>
+(<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0022-pull-requests-through-gh.md">ADR 0022</a>). A commit a pull request lists becomes a
+candidate only when a <code>HEAD</code> reflog of this clone records creating it here: a commit, amend, rebase
+pick, cherry-pick, revert, applied patch or merge git made. Checking out a pull request for review
+or pulling it does not count. A fetched teammate branch may be local, but its commits are not
+candidates without such a reflog entry. A worktree that has since been removed takes its reflog
+with it: commits made only there count as not made here, and sessions that ran in it usually have
+no resolved repository either. Two of your own sessions running at once in sibling worktrees are
+as indistinguishable as two people's sessions.</p>
+<p>R1 adds candidates, so v3 coverage is comparable only with v3 coverage, never v2 coverage. On the
+maintainer's repository, resolved coverage over the same sessions was 27% offline and 91% with
+<code>--github</code>, because the sessions' own branch commits became candidates. Each candidate and
+alternative names the pull requests that list it (<code>listed</code>) or whose merge wrote it (<code>merged-as</code>,
+including every commit a rebase merge replayed). A result names one pull request (<code>change</code>) only
+when the pull-request sets of all its candidates share exactly one. A commit listed by two stacked
+pull requests does not name either one. Status, confidence and both coverage figures still follow
+the candidate commits: a pull request link adds no evidence about which commit holds a session's
+work.</p>
+<p>The <code>changes</code> block says when the pull requests were read and how far back. It counts candidates
+added from listed commits, commit lists cut at 100 (the newest are cut), listed commits in no
+reflog, not local, unreadable or made before the window, and sessions in one pull request or across
+several. An unmatched session gets <code>listed-commit-not-readable-here</code> when a pull request updated
+after it started lists a commit this clone cannot read. The block lists by number only pull
+requests named by a candidate or alternative, with each one's state and whether a candidate or
+alternative names it. It does not count unnamed pull requests. The state is what the forge
+reported when read: the pull request's state, never a session's.</p>
+<p>The document is a snapshot. Pull-request states move, force-pushes change commit lists, and git
+expires reflog entries that no ref reaches after 30 days by default, so an older session's
+candidates can disappear on a later run. The command fails, rather than printing a document, when <code>gh</code> fails, when the forge reports an
+error, when a partial clone would need git 2.44 or later to read without fetching, or when none of
+the pull requests read touches this clone's history (<code>gh repo set-default</code> names the right
+repository). A fork's own pull requests
+are read; ones opened against its parent are not. GitHub Enterprise Server is reached through
+<code>gh</code>'s host for the repository and is untested.</p>
 <h2 id="privacy-and-limits">Privacy and limits</h2>
 <p>The command reads each stored session's id, tool, project name, the repository its rows resolved
 to, and first and last timestamps.
@@ -266,8 +325,8 @@ rather than another repository's name. Commit observations lack authors, so iden
 distinguish overlapping users; the conformance corpus requires that case to stay ambiguous. Output
 has no member, person, score, or rank field and is not intended for performance evaluation.</p>
 <p>A <code>matched</code> label is an attribution observation. It does not prove an AI session caused a commit or
-show AI impact. v0.27 has no PR, review, CI, merge, attributable-survival, or other outcome
-correlation. Those need new observations, connector privacy policy, and conformance cases.</p>
+show AI impact. Pull requests are read only with <code>--github</code>. Review, CI, attributable survival and other outcome
+correlation are not part of this command.</p>
 <nav class="pager" aria-label="Previous and next"><a class="prev" href="https://assaio.dev/docs"><span class="dir">Previous</span> assaio documentation</a><a class="next" href="https://assaio.dev/docs/reconcile"><span class="dir">Next</span> Reconciling against the vendor&#39;s own numbers</a></nav></main>
 </div>
 <footer>
