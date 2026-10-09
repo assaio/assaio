@@ -47,6 +47,8 @@ type Dashboard struct {
 	TeamPanelLabel        string // Team section's panel-label title, present only on a central store
 	MembersSuffix         string // panel label: "<n> <MembersSuffix>"
 	TeamCaption           string // Team section's one-line honesty caption
+	TeamSuppressedCaption string // Team section's explanation for a narrow cohort
+	TeamBandsLabel        string // Team section's aggregate session-band label
 	TeamTotalPrefix       string // Team section: prefix for the whole-team lines and cost
 }
 
@@ -86,6 +88,8 @@ var enDashboard = Dashboard{
 	AnonymizedCaveat:      "Project names pseudonymized for sharing -- run with --no-anonymize for real names.",
 	TeamPanelLabel:        "Team",
 	MembersSuffix:         "members",
-	TeamCaption:           "Team adoption -- how widely AI use has spread, by sessions. Members are pseudonymous and listed alphabetically, never ranked; --no-anonymize reveals project names, never people's. Lines and cost are the team's, never a member's: this panel is not a scoreboard.",
+	TeamCaption:           "Team adoption shows AI use by sessions. With fewer than five distinct synced members in the selected window, it shows session bands instead of member rows. Otherwise, it lists pseudonymous members alphabetically, never ranked. --no-anonymize reveals project names, never people. Lines and cost are for the whole team, never a member. This panel is not a scoreboard.",
+	TeamSuppressedCaption: "Fewer than five distinct synced members in this window: member rows are hidden. This session distribution is aggregate.",
+	TeamBandsLabel:        "Members by session band",
 	TeamTotalPrefix:       "Together:",
 }

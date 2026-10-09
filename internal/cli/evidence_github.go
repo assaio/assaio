@@ -65,7 +65,8 @@ func readPullRequests(cmd *cobra.Command, root, project string, since, now time.
 		return nil, nil, 0, err
 	}
 	return &attribution.PullRequests{
-		Requests: got.Requests, Listings: got.Listings, Lines: lines, MadeHere: len(read.Events),
+		Requests: got.Requests, Listings: got.Listings, Reviews: got.Reviews, Checks: got.Checks,
+		Lines: lines, MadeHere: len(read.Events),
 		NotInReflog: read.NotInReflog, NotLocal: read.NotLocal, Unreadable: read.Unreadable, BeforeWindow: read.BeforeWindow,
 		ObservedAt: now, ReadBackTo: got.BackTo,
 	}, commits, read.Skipped, nil

@@ -131,9 +131,11 @@ runs as you and can appear in your organization's API audit log, which shows how
 
 **Residual:** a pull-request number or commit hash printed locally identifies work to anyone who
 can read the repository; on a repository owned by a user, the repository path contains that
-user's login; and `sync` sends branch names and session ids, which join to a pull request's
-author or to a telemetry account outside assaio (`B227`). The team panel shows each member's
-session bar at any team size (`B228`).
+user's login. Sync v2 no longer sends a branch name or cleartext member label. It still sends
+`Project`, `Subpath`, `SessionID` and timestamps, which can join to work or a telemetry account
+outside assaio. For fewer than five distinct synced members, the team panel hides per-member
+session rows and shows an aggregate distribution (`B228`); an authorized server operator still
+holds the underlying records.
 
 ### The team server — network
 
@@ -151,34 +153,47 @@ in cleartext.
 | Check | Enforced by |
 |---|---|
 | Every route but `/healthz` requires a bearer token, the dashboard included | `Server.Handler`, `authorizedReader` |
-| The secret is verified **before a byte of the body is read** | `handleUsage` |
+| The secret is verified **before a byte of the body is read** | `handleUsageV2` |
 | Constant-time comparison; an empty configured secret never matches | `constantTimeEqual` |
 | A secret is at least 16 characters; two members may not share one | `Members.Validate`, `MinTokenBytes` |
+| Sync v2 requires a per-member token bound to a `member-v2-` digest and a protocol-2 store; shared-token mode refuses writes | `handleUsageV2`, `ValidateSyncMemberDigest`, `SyncProtocolVersion` |
+| The wire record excludes `Member` and `GitBranch`, and unknown fields fail the whole push | `SyncRecordV2`, `handleUsageV2` |
+| The client refuses redirects and old-server responses instead of falling back to v1; the new server returns 426 on v1 writes | `syncHTTPClient`, `pushUsage`, `handleUsageV1Upgrade` |
 | Request body capped at 128 MiB | `maxUsageBodyBytes`, `http.MaxBytesReader` |
 | Per-secret fixed-window rate limit (120/min default) | `rateLimiter.allow` |
 | Header, read, write and idle timeouts on every connection | `readHeaderTimeout`, `readTimeout`, `writeTimeout`, `idleTimeout` |
 | Every record range- and magnitude-checked, same bounds as the plugin boundary | `validateRecord` → `usage.CheckTimestamp`, `usage.CheckCounts` |
 | Tool must be a known source or a well-formed `plugin:<name>` | `knownTools`, `pluginToolPattern` |
-| A push failing validation is rejected **whole**, never partially inserted | `handleUsage` |
-| Every dedupe key prefixed `<member>:`, so a row has one possible writer | `handleUsage` → `InsertSynced` |
+| A push failing validation is rejected **whole**, never partially inserted | `handleUsageV2` |
+| Every dedupe key prefixed `<member>:`, so a row has one possible writer | `handleUsageV2` → `InsertSynced` |
+| Offline migration validates a complete map and dedupe prefixes, then rekeys and verifies in one transaction | `MigrateSyncIdentity` |
 | Method and path quoted before logging, so a crafted path cannot forge log lines | `logRequests` |
-| Error responses describe the client's own data, never internal detail | `handleUsage` |
+| Error responses describe the client's own data, never internal detail | `handleUsageV2` |
 
 **An attacker holding a valid token can:** read the whole team dashboard. There are no
 roles — any configured secret grants a read, which the code says out loud rather than
 inventing a role model the product does not have. In **shared-token** mode
-(`Identity.ClientAsserted`, one secret for everyone) they can also push as *any* member,
-because the member name comes from the request body. Configuring per-member tokens
-(`server.members`) switches to `ServerDerived`, where the member is whoever holds the secret
-and cannot be asserted; `doctor` names which mode a deployment is in.
+(`Identity.ClientAsserted`, one secret for everyone), they cannot push v2 usage: the server
+returns 409. Configuring `server.members` with keyed digests switches to `ServerDerived`, where
+the member is bound to the presented token and cannot be asserted by the request body. A holder
+of one member's token can push as that member. `serve` names the active mode at startup.
 
-**They cannot reach:** another member's rows in `ServerDerived` mode (the dedupe prefix gives
-each row exactly one writer); prompts, code, or file paths, because none of those ever leave
-a machine; or a metric plugin — the server never executes one ([ADR 0004](adr/0004-exec-metric-plugin-protocol.md)).
+**They cannot write** another member's rows in `ServerDerived` mode (the dedupe prefix gives
+each row exactly one writer). They cannot read prompts, code or full local paths through the
+server, because none of those leave a machine. They cannot make the server execute a metric
+plugin ([ADR 0004](adr/0004-exec-metric-plugin-protocol.md)).
 
 **An attacker on the wire, without TLS, can:** read the token and the usage data, and replay
 a push. This is the MVP boundary, stated in `internal/server`'s package doc, in
 [`PRIVACY.md`](../PRIVACY.md), and by `sync` itself.
+
+**Residual:** the client derives a digest with HMAC-SHA256 from a private, client-held identity
+key and a stable local input. A lost or rotated key changes that digest without an automatic
+rekey procedure. Historical collisions in the old 40-bit labels cannot be separated. The
+offline migration command does not prove `serve` has stopped; old backups, SQLite free pages
+and WAL files may retain old labels and branches. The operator must not run an older server
+binary against the migrated store. The v2 payload still carries project names, subpaths,
+session IDs and timestamps, so access to server data can still enable external joins.
 
 ### Exec plugins — running someone else's code
 
@@ -337,8 +352,8 @@ network: it sends the fixed pull-request query to GitHub as you
 
 | Path | Trigger | Destination | Carries | Redaction |
 |---|---|---|---|---|
-| `sync` | you run it | a server **you** operate | raw `usage.Record` rows from `Store.Export`: tool, session id, timestamp, model, token counts, dedupe key, **project**, **subpath**, **branch**, entrypoint, granularity, activity counts, **skill**, **agent** | member is a pseudonym unless `--member` is passed; the other names travel as they are stored |
-| `serve` | you run it | whoever holds a token | the aggregated Assay dashboard | member and project pseudonymized (`anonymize = true`, not overridable over HTTP); raw names only via `report --identify` against the same store, which says so in its own output |
+| `sync` | you run it | a server **you** operate | Sync v2's allowlisted records: tool, session id, timestamp, model, token counts, dedupe key, **project**, **subpath**, entrypoint, granularity, activity counts, **skill**, **agent**, plus a client-keyed member digest | `GitBranch` and cleartext `Member` are absent; project, subpath and other allowed names travel as stored |
+| `serve` | you run it | whoever holds a token | the aggregated Assay dashboard | member and project pseudonymized (`anonymize = true`, not overridable over HTTP); `report --identify` against the store exposes its stored member value, a legacy name or v2 digest |
 | metric plugin | declared in config | a local subprocess you chose | stored aggregates: projects, models, member pseudonyms, token/line counts — only the sections, columns and rows the plugin declares, and only those your `needs:` veto allows | none beyond member pseudonyms — this is a local program you trusted by declaring it |
 | rule plugin | declared in config | a local subprocess you chose | verdicts only, `Bars` stripped | structural |
 | `share` | you run it | a file you then post | figures quoted from `analyze`, tools, models, counts | structural; no name can be rendered |
@@ -347,20 +362,19 @@ network: it sends the fixed pull-request query to GitHub as you
 
 Two rows deserve emphasis because they are easy to read the other way round:
 
-- **`sync` sends real project, subpath, branch, skill and sub-agent names.** Pseudonymization
+- **`sync` sends real project, subpath, skill and sub-agent names.** Pseudonymization
   on the team server is applied when a figure is *rendered* (`dashboard.Build(..., anonymize
   = true, ...)`), not when a record is stored. That is consistent with
   [`PRIVACY.md`](../PRIVACY.md) — "you run the server on your own infrastructure and control
   what reaches it" — and it is the thing to know before pointing `sync` at a host you do not
-  control. A branch name also joins to the pull request built from it, and so to its author, for anyone
-  who holds the server's data and can read the repository; a session id joins to an account
-  wherever the tool's own telemetry records both. A member pseudonym survives neither join
-  (`B227`).
-- **Member identity is pseudonymous by default in both directions, and the pseudonym is weak.**
-  `sync` derives a stable `member-xxxx` from hostname and OS user unless `--member` opts in;
-  `report` renders a pseudonym in table, JSON and CSV alike, and `report --identify` is the
-  single door to raw names. The label is a hash with no secret, so anyone holding the server's
-  data can confirm a guessed host and user name against it (`B227`).
+  control. A session id can join to an account wherever the tool's own telemetry records both.
+  Project, subpath and timing may also join to a repository's delivery records. The keyed
+  member digest does not prevent those joins.
+- **Member identity has two pseudonymization boundaries.** `sync` sends a client-keyed
+  `member-v2-` digest, using `--member` only as local input; `report` applies another stable
+  pseudonym in table, JSON and CSV. `report --identify` bypasses the report layer and exposes
+  the stored member value. That is a digest for migrated v2 rows, but a legacy store may still
+  hold a name. Neither layer makes session ids or project names anonymous.
 
 ### Deletion and retention
 

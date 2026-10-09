@@ -85,15 +85,14 @@ type Privacy struct {
 type Server struct {
 	// Addr is the listen address, e.g. ":8787". Override with ASSAIO_SERVER_ADDR.
 	Addr string `koanf:"addr"`
-	// Token is the shared bearer secret clients must present. Override with
+	// Token is the shared bearer secret for dashboard reads. Override with
 	// ASSAIO_SERVER_TOKEN rather than committing a real token to a config file.
-	// It is the weaker of the two identity modes: any holder can push as any member. Prefer
-	// Members below, which decides who a request is from the secret rather than from its body.
+	// Shared-token mode cannot accept sync v2 writes; use Members for that.
 	Token string `koanf:"token"`
-	// Members maps a member name to that member's own bearer secret. Setting it puts the
-	// server in server-derived identity mode, where a member cannot write another member's
-	// rows. A secret belongs in an environment variable or a file mode 0600, not in a config
-	// committed to a repository.
+	// Members maps a keyed member-v2 digest to that member's bearer secret. Setting it puts
+	// the server in server-derived identity mode, where a member cannot write another
+	// member's rows. A secret belongs in an environment variable or a file mode 0600,
+	// not in a config committed to a repository.
 	Members map[string]string `koanf:"members"`
 	// RateLimitPerMinute bounds how many requests one secret may make per minute. 0 uses the
 	// built-in default; a negative value disables the limit, which is a deliberate choice a
@@ -105,12 +104,11 @@ type Server struct {
 type Sync struct {
 	// Server is the team server's base URL, e.g. "http://localhost:8787".
 	Server string `koanf:"server"`
-	// Token is the shared bearer secret to present to Server. Override with
+	// Token is the per-member bearer secret to present to Server. Override with
 	// ASSAIO_SYNC_TOKEN.
 	Token string `koanf:"token"`
-	// Member self-identifies this machine to the server. Empty (the default) makes
-	// sync derive a stable pseudonym from hostname+OS-user instead -- pseudonymized is
-	// assaio's default privacy mode; setting Member is a deliberate opt-in.
+	// Member is the stable local input to the client-keyed v2 digest; it is never sent
+	// to the server. Empty uses hostname and OS user as the local input.
 	Member string `koanf:"member"`
 }
 

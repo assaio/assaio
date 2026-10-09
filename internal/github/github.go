@@ -1,6 +1,7 @@
 // Package github reads a repository's pull requests through the user's own gh and turns them into
 // canonical observations (ADR 0007, ADR 0022): which pull requests exist, their state and merge
-// commit, and which commits each lists. It asks one fixed question naming a repository and a
+// commit, which commits each lists, and bounded review and latest-head-check observations.
+// It asks one fixed question naming a repository and a
 // window, never a commit or a session, and fails rather than return part of an answer.
 package github
 
@@ -85,15 +86,20 @@ func read(ctx context.Context, run Runner, root string, repo Repository, since t
 		return w, nil
 	}
 	cursor = ""
+	complete := false
 	for range maxPages {
 		p, err := fetch(ctx, run, root, repo, cursor)
 		if err != nil {
 			return walk{}, err
 		}
 		if w.keep(p.Nodes, func(nd *node) bool { return !nd.UpdatedAt.After(newest) }) || !p.HasNextPage {
+			complete = true
 			break
 		}
 		cursor = p.EndCursor
+	}
+	if !complete {
+		return walk{}, fmt.Errorf("pull requests of %s moved past the %d-page reread bound; retry the read", repo, maxPages)
 	}
 	return w, nil
 }
@@ -119,11 +125,14 @@ func fetch(ctx context.Context, run Runner, root string, repo Repository, cursor
 	}
 	out, runErr := run(ctx, root, args...)
 	p, err := parsePage(out)
-	var forge *forgeError
-	switch {
-	case err == nil && runErr == nil:
+	if runErr == nil {
+		if err != nil {
+			return page{}, fmt.Errorf("reading pull requests of %s: %w", repo, err)
+		}
 		return p, nil
-	case errors.As(err, &forge), runErr == nil:
+	}
+	var forge *forgeError
+	if errors.As(err, &forge) {
 		return page{}, fmt.Errorf("reading pull requests of %s: %w", repo, err)
 	}
 	return page{}, fmt.Errorf("reading pull requests of %s: %w", repo, runErr)

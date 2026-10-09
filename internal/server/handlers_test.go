@@ -16,7 +16,7 @@ import (
 	"github.com/assaio/assaio/internal/usage"
 )
 
-const testToken = "testtok"
+const testToken = "test-token-long-enough"
 
 func newTestServer(t *testing.T) (*Server, *store.Store) {
 	t.Helper()
@@ -28,17 +28,27 @@ func newTestServer(t *testing.T) (*Server, *store.Store) {
 	return New(st, testToken, BuildDashboard), st
 }
 
+func newV2TestServer(t *testing.T) (*Server, *store.Store) {
+	t.Helper()
+	s, st := newTestServer(t)
+	return s.WithMembers(Members{testDigest: testToken, bobDigest: bobToken}), st
+}
+
 func pushBody(t *testing.T, member string, recs []usage.Record) []byte {
 	t.Helper()
-	body, err := json.Marshal(usagePush{Member: member, Records: recs})
-	if err != nil {
-		t.Fatal(err)
+	digest := testDigest
+	if member == "bob" {
+		digest = bobDigest
 	}
-	return body
+	wires := make([]SyncRecordV2, len(recs))
+	for i := range recs {
+		wires[i] = NewSyncRecordV2(&recs[i])
+	}
+	return v2Body(t, digest, wires...)
 }
 
 func doUsagePush(s *Server, token string, body []byte) *httptest.ResponseRecorder {
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/v1/usage", bytes.NewReader(body))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/v2/usage", bytes.NewReader(body))
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -48,7 +58,7 @@ func doUsagePush(s *Server, token string, body []byte) *httptest.ResponseRecorde
 }
 
 func TestHandleUsageValidTokenInsertsAndDedupes(t *testing.T) {
-	s, st := newTestServer(t)
+	s, st := newV2TestServer(t)
 	rec := usage.Record{
 		Tool: "claude-code", SessionID: "s1", Timestamp: time.Now(), Model: "m",
 		InputTokens: 1, DedupeKey: "a1", Granularity: "turn",
@@ -59,7 +69,7 @@ func TestHandleUsageValidTokenInsertsAndDedupes(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", rr.Code, rr.Body.String())
 	}
-	var result usagePushResult
+	var result usagePushResultV2
 	if err := json.Unmarshal(rr.Body.Bytes(), &result); err != nil {
 		t.Fatal(err)
 	}
@@ -71,14 +81,14 @@ func TestHandleUsageValidTokenInsertsAndDedupes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(recs) != 1 || recs[0].Member != "alice" || recs[0].DedupeKey != "alice:a1" {
-		t.Fatalf("stored records = %+v, want one record member=alice dedupe_key=alice:a1", recs)
+	if len(recs) != 1 || recs[0].Member != testDigest || recs[0].DedupeKey != testDigest+":a1" {
+		t.Fatalf("stored records = %+v, want one record under the v2 digest", recs)
 	}
 
 	// Re-push the identical payload: the member-prefixed dedupe key must dedupe it,
 	// not double-insert.
 	rr2 := doUsagePush(s, testToken, body)
-	var result2 usagePushResult
+	var result2 usagePushResultV2
 	if err := json.Unmarshal(rr2.Body.Bytes(), &result2); err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +98,7 @@ func TestHandleUsageValidTokenInsertsAndDedupes(t *testing.T) {
 }
 
 func TestHandleUsageMissingTokenReturns401(t *testing.T) {
-	s, _ := newTestServer(t)
+	s, _ := newV2TestServer(t)
 	body := pushBody(t, "alice", []usage.Record{
 		{Tool: "codex", SessionID: "s1", Timestamp: time.Now(), Model: "m", DedupeKey: "a1"},
 	})
@@ -99,7 +109,7 @@ func TestHandleUsageMissingTokenReturns401(t *testing.T) {
 }
 
 func TestHandleUsageWrongTokenReturns401(t *testing.T) {
-	s, _ := newTestServer(t)
+	s, _ := newV2TestServer(t)
 	body := pushBody(t, "alice", []usage.Record{
 		{Tool: "codex", SessionID: "s1", Timestamp: time.Now(), Model: "m", DedupeKey: "a1"},
 	})
@@ -110,22 +120,22 @@ func TestHandleUsageWrongTokenReturns401(t *testing.T) {
 }
 
 func TestHandleUsageMalformedBodyReturns400(t *testing.T) {
-	s, _ := newTestServer(t)
+	s, _ := newV2TestServer(t)
 	rr := doUsagePush(s, testToken, []byte("{not json"))
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", rr.Code)
 	}
-	if got := strings.TrimSpace(rr.Body.String()); got != "malformed request body" {
+	if got := strings.TrimSpace(rr.Body.String()); got != "malformed v2 request body" {
 		t.Fatalf("body = %q, want the generic message with no decode-error detail leaked", got)
 	}
 }
 
 func TestHandleUsageTwoMembersSameDedupeKeyBothPersist(t *testing.T) {
-	s, st := newTestServer(t)
+	s, st := newV2TestServer(t)
 	rec := usage.Record{Tool: "codex", SessionID: "s1", Timestamp: time.Now(), Model: "m", DedupeKey: "shared", Granularity: "turn"}
 
 	rrA := doUsagePush(s, testToken, pushBody(t, "alice", []usage.Record{rec}))
-	rrB := doUsagePush(s, testToken, pushBody(t, "bob", []usage.Record{rec}))
+	rrB := doUsagePush(s, bobToken, pushBody(t, "bob", []usage.Record{rec}))
 	if rrA.Code != http.StatusOK || rrB.Code != http.StatusOK {
 		t.Fatalf("status A=%d B=%d, want both 200", rrA.Code, rrB.Code)
 	}
@@ -141,8 +151,8 @@ func TestHandleUsageTwoMembersSameDedupeKeyBothPersist(t *testing.T) {
 	for _, r := range recs {
 		members[r.Member] = true
 	}
-	if !members["alice"] || !members["bob"] {
-		t.Fatalf("members present = %+v, want alice and bob both present", members)
+	if !members[testDigest] || !members[bobDigest] {
+		t.Fatalf("members present = %+v, want two distinct digests", members)
 	}
 }
 
@@ -175,11 +185,11 @@ func TestDashboardHandlerReturnsHTML(t *testing.T) {
 // store, GET / must render the Team section (see also TestBuildDashboardIncludesTeam
 // SectionWithMembers, the same assertion one layer down against BuildDashboard directly).
 func TestDashboardHandlerIncludesTeamSectionWithMembers(t *testing.T) {
-	s, _ := newTestServer(t)
+	s, _ := newV2TestServer(t)
 	rrA := doUsagePush(s, testToken, pushBody(t, "alice", []usage.Record{
 		{Tool: "claude-code", SessionID: "s1", Timestamp: time.Now(), Model: "m", InputTokens: 1, DedupeKey: "a1", Granularity: "turn"},
 	}))
-	rrB := doUsagePush(s, testToken, pushBody(t, "bob", []usage.Record{
+	rrB := doUsagePush(s, bobToken, pushBody(t, "bob", []usage.Record{
 		{Tool: "claude-code", SessionID: "s2", Timestamp: time.Now(), Model: "m", InputTokens: 1, DedupeKey: "b1", Granularity: "turn"},
 	}))
 	if rrA.Code != http.StatusOK || rrB.Code != http.StatusOK {
@@ -227,11 +237,9 @@ func doDashboardGet(s *Server, token string) *httptest.ResponseRecorder {
 	return rec
 }
 
-// TestHandleUsageInsertFailureReturnsGenericError forces Insert to fail (by closing the
-// underlying DB) without depending on any particular driver error string, and proves the
-// client sees a generic message while the detail goes to the server log instead.
-func TestHandleUsageInsertFailureReturnsGenericError(t *testing.T) {
-	s, st := newTestServer(t)
+// The protocol read must not leak a database error to an authenticated client.
+func TestHandleUsageProtocolReadFailureReturnsGenericError(t *testing.T) {
+	s, st := newV2TestServer(t)
 	if err := st.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +249,7 @@ func TestHandleUsageInsertFailureReturnsGenericError(t *testing.T) {
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500", rr.Code)
 	}
-	if got := strings.TrimSpace(rr.Body.String()); got != "failed to store usage" {
+	if got := strings.TrimSpace(rr.Body.String()); got != "failed to read sync protocol" {
 		t.Fatalf("body = %q, want the generic message with no DB detail leaked", got)
 	}
 }
@@ -267,8 +275,8 @@ func TestDashboardHandlerBuildFailureReturnsGenericError(t *testing.T) {
 // unauthenticated caller must not be able to make the server allocate a batch first.
 func TestUsagePushRejectsBeforeReadingTheBody(t *testing.T) {
 	s, _ := newTestServer(t)
-	body := &countingReader{r: bytes.NewReader(pushBody(t, "alice", nil))}
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/v1/usage", body)
+	body := &countingReader{r: bytes.NewReader(v2Body(t, testDigest))}
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/v2/usage", body)
 	req.Header.Set("Authorization", "Bearer wrong-token-long-enough")
 	rec := httptest.NewRecorder()
 	s.Handler().ServeHTTP(rec, req)

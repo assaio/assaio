@@ -309,18 +309,6 @@ does not ship.
   shows under two names on the server. It sends no key, id or path, changes PRIVACY.md and
   docs/threat-model.md in the same commit, and waits for the team server's re-push and retention
   rules (milestone 4).
-- [ ] **B227 · synced identifiers leave only as keyed digests** — S/M · team — `sync` sends
-  each row's branch name, which joins to a pull request and its author for anyone with the
-  server's data and read access to the repository, and a member label that is an unkeyed hash of
-  hostname and OS user name, which anyone with the server's data can confirm by guessing
-  ([ADR 0020](docs/adr/0020-correlation-privacy.md)). Send both as digests keyed per team that
-  the server can group by but not reverse, or drop the branch, and say which team figures lose
-  what. Every member's label changes once. Changes the sync payload, so it is announced under
-  **Breaking** with PRIVACY.md and the threat model in the same commit.
-- [ ] **B228 · a minimum cohort on the team panel** — S · team — the team dashboard shows each
-  member's session bar at any team size, so a team of two can read who ran how many sessions.
-  Below five members, show the distribution without per-member rows, and say why; the same
-  guard `B09` and [ADR 0020](docs/adr/0020-correlation-privacy.md) require of any server view.
 - [ ] **B102 · AnalyzerContext: retire the store types from the analyzer surface** — L · both
   — the half of `B90` deliberately not shipped with the catalog. Validators already do not
   query SQLite; what leaks is *types*, since `analyze.Input` carries `[]store.UsageRow`,
@@ -359,11 +347,11 @@ does not ship.
   migration, a size bound and a cleanup path, so none is worth guessing at. Path-level storage
   stays out entirely until something needs it: `B91` never records a path, so there is no
   opt-in to design yet. See [ADR 0009](docs/adr/0009-local-git-evidence-collector.md).
-- [ ] **B229 · review and check observations from the GitHub connector** — M · both — review
-  states and requested-changes rounds, check suites and runs, merge method and detectable revert
-  relations, through the same `gh` read as `evidence --github`. Each needs its reserved type
-  (`scm.review`, `ci.check`, ADR 0007) and names no reviewer or check; ADR 0020 applies, and no rate
-  is derived before `B94` sets comparable populations.
+- [ ] **B231 · extend GitHub PR evidence** — M · both — the bounded B229 slice observes review
+  states and the current head's check-run/status-context states, with total and listed counts;
+  it does not derive a session outcome. Add requested-changes rounds, check suites and
+  historical run sequences, merge method, and detectable revert relations. Require a
+  comparable PR population before deriving rates.
 - [ ] **B230 · attribution by this clone's configured git identity** — M · both — git can match
   the configured author identity and return only hashes, which would tell a teammate's commits from
   the user's where time alone cannot. It is the first use of identity in attribution, so it needs its
@@ -781,15 +769,14 @@ that item (`B60`) rather than becoming a new one.
   and an **`is_compaction` flag**, with `sessions.working_dir` giving the project. The
   provenance column is the notable part — it is the only surveyed source that states where its
   own cost figure came from, which is exactly what assaio's honesty rules ask every fact to
-  carry. Its `is_compaction` also feeds `B164`. Note `B154`'s Goose entry is stale: Goose left
-  session JSONL at v1.10.0 and the legacy files linger unmanaged, so discovery must not read
+  carry. Its `is_compaction` also feeds `B164`. Goose left session JSONL at v1.10.0 and the
+  legacy files linger unmanaged, so discovery must not read
   both eras as separate sessions.
-- [ ] **B167 · Aider is an approximate source, not an exact one** — S · solo — correction to
-  `B14`, whose premise is wrong: there is no default `~/.aider/analytics.jsonl`, exact values
-  need the opt-in `--analytics-log`, and the default chat history **rounds anything ≥10k tokens
-  to whole thousands**. Aider can therefore only ever be an approximate-confidence source, and
-  its depth row has to say so before a parser exists rather than after. Last upstream push
-  2026-05-22.
+- [ ] **B167 · Aider default-history measurement caveat** — M · both — default chat history
+  rounds token counts of at least 10k to whole thousands, so a connector reading it can report
+  only approximate counts. B14's opt-in analytics log is the source for exact token counts;
+  its `.aider.chat.history.md` description must not imply that default history contains no
+  token information.
 
 ## Pool — CLI & DX
 
@@ -901,20 +888,10 @@ a tool used by one organization is usually better served by an out-of-tree
 - [ ] **B57 · community plugin registry page** — S — a docs page listing community
   exec plugins (parsers and metrics) once a few exist, seeded with the weekend-usage
   example.
-- [ ] **B60 · Roo Code + Kilo Code (Cline family)** — S/M — both are Cline forks with the
-  same task-directory storage under their own VS Code `globalStorage` publisher ids: Roo is
-  `rooveterinaryinc.roo-cline` (format confirmed identical to Cline's `api_req_started`
-  shape, plus an ignored `apiProtocol` field); Kilo is `kilocode.kilo-code` (inferred from
-  lineage, token shape not yet source-verified). Parameterize the existing Cline parser over
-  publisher roots **and a per-fork tool name** — so Roo/Kilo attribute distinctly, not as
-  `cline` — instead of writing new parsers. Still needs a verified sample per fork.
-  **Half of this item is out of date, checked 2026-08-12 against pinned upstream source.** Kilo
-  Code v7 is no longer a Cline fork: it rebased onto OpenCode and moved to
-  `~/.local/share/kilo/kilo.db` with a byte-identical OpenCode schema, so Kilo belongs beside
-  OpenCode as *one parser for two tools*, not here. Both eras coexist on disk and v7 ships an
-  importer, which is a **double-count hazard** whichever parser claims it. Roo is still a Cline
-  fork and is the cheap half — five `globalStorage` roots plus a `customStoragePath` override —
-  and Roo-Code is archived (last push 2026-05-15), so it is a frozen, low-risk target.
+- [ ] **B60 · Roo Code Cline-family storage** — M · both — verify a sample of Roo Code's
+  `rooveterinaryinc.roo-cline` task-directory storage. Its `api_req_started` shape follows
+  Cline, with `apiProtocol` ignored. Kilo's pre-v7 Cline-family storage needs its own sample;
+  Kilo v7 uses the OpenCode-family schema tracked in B165.
 - [ ] **B61 · Qwen Code (Gemini family)** — M — a Gemini CLI fork, but **not** the same
   on-disk shape: chats live at `~/.qwen/projects/<hash>/chats/<id>.jsonl` (not
   `tmp/*/chats`), and tokens are in a raw-API `usageMetadata` object, not Gemini's
@@ -930,18 +907,12 @@ a tool used by one organization is usually better served by an out-of-tree
   prompt_tokens,completion_tokens,total_tokens,cost}`, `time` in epoch seconds, no session
   id or cache split); `.aider.chat.history.md` is markdown-only. No structured per-edit field
   — Aider auto-commits, so lines +/- come from git, not the logs.
-- [ ] **B154 · unverified connector candidates — one intake, not five entries** — M · both —
-  five tools whose local storage nobody here has read: **Factory droid** (session-granularity
-  logs), **Kiro**, **Continue** (`~/.continue` dev-data event logs reportedly carry token
-  counts), **Goose** (local session JSONL reportedly carries usage) and **Amp / Crush** (local
-  thread/session storage, token presence unverified for both). Each held its own line for
-  months and each said the same sentence — *verify a real sample first* — which is a wish list
-  wearing a backlog's clothes, and it made the connector pool the longest in this file while
-  none of it was actionable. They collapse into one intake: a candidate leaves this line and
-  earns its own id **when somebody opens a connector issue with a redacted sample showing token
-  counts exist**, and not before. Supersedes `B54`, `B56` and `B62`–`B64`, whose ids are
-  retired rather than reused. The candidates above keep their entries because a verified
-  on-disk format is a different kind of fact from a rumour about one.
+- [ ] **B154 · unverified local-storage candidates** — M · both — Factory droid, Kiro,
+  Continue, Amp and Crush remain under the existing intake rule: a candidate earns its own
+  connector item when someone provides a redacted local capture with evidence of token
+  counts. Goose is no longer an unverified candidate: its SQLite usage ledger is tracked in
+  B166. The retired B54, B56
+  and B62–B64 ids are not reused.
 
 ## Pool — code health (from earlier reviews)
 

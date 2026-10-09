@@ -2,12 +2,12 @@ module github.com/assaio/assaio
 
 go 1.25.0
 
-// The language version stays at 1.25 so `go install` works on it. The toolchain floor is
-// 1.27.1: below it, `go test -fuzz` reports `context deadline exceeded` as a failure when
-// -fuzztime expires (go.dev/issue/75804), which makes a clean nightly fuzz run indistinguishable
-// from a finding. `make vuln` holds the floor against standard-library advisories, and CI
-// builds releases on it.
-toolchain go1.27.1
+// The language version stays at 1.25 so `go install` works on it. Go 1.27.2 is the
+// toolchain floor: it fixes 11 reachable standard-library vulnerabilities found by
+// `govulncheck` on 1.27.1, while preserving that release's `-fuzztime` deadline fix
+// (go.dev/issue/75804). `make vuln` checks for reachable advisories; CI builds releases
+// on the pinned toolchain.
+toolchain go1.27.2
 
 require (
 	github.com/jedib0t/go-pretty/v6 v6.8.3
@@ -20,7 +20,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/yuin/goldmark v1.8.6
-	golang.org/x/text v0.39.0
+	golang.org/x/text v0.41.0
 	modernc.org/sqlite v1.59.0
 )
 

@@ -19,10 +19,10 @@ Designing the GitHub connector (`B92`) showed why a policy has to come first:
 
 - A pull-request number or a commit hash is one lookup from its author on a forge the reader can
   open. "No person is fetched" does not mean "no person is identifiable".
-- `sync` already sends each row's branch name to the team server. Anyone holding the server's
+- At the time of this decision, `sync` sent each row's branch name to the team server. Anyone holding the server's
   data and read access to the repository can join a branch and a time to the pull request built
   from that branch, and to its author — re-identifying a member pseudonym without assaio ever
-  shipping an edge. The pseudonym itself is an unkeyed hash of hostname and OS user name, which
+  shipping an edge. The pseudonym was an unkeyed hash of hostname and OS user name, which
   anyone holding the server's data can confirm by guessing, and a synced session id joins to an
   account wherever the coding tool's own telemetry records both.
 - A query to a forge is itself a disclosure: asking which pull requests contain *these* commits
@@ -55,10 +55,11 @@ class allows, and a new field needs PRIVACY.md and the threat model changed in t
 a test pins the set of fields a synced record carries, so none is added unnoticed. A field that
 joins to an identity-bearing record outside assaio — a branch name, a commit hash, a
 pull-request number, an issue key — and a member label must leave only as a digest keyed so the
-server cannot reverse it, or not at all. Today `sync` breaks this rule twice: it sends branch
-names as they are, and its member label is an unkeyed hash. `B227` brings both under the rule;
-until it ships, PRIVACY.md and the threat model name those re-identification paths, and the
-session-id join as well.
+server cannot reverse it, or not at all. At the time of this decision, `sync` sent branch
+names as they were and an unkeyed member hash. The later sync v2 change (`B227`) omits
+`GitBranch` and cleartext `Member` from a closed wire record and sends a client-keyed digest.
+`Project`, `Subpath`, `SessionID` and timestamps still leave the client, so PRIVACY.md and the
+threat model continue to name those external join paths.
 
 **Retention.** Nothing correlated is stored today, so there is nothing to retain. The change that
 first stores a correlation observation or an edge (`B103`) ships its horizon, its `clear` scope
@@ -67,7 +68,9 @@ and its size bound in the same commit, the way `trace.horizon_days` bounds the s
 **Server views.** No server view of correlation data exists. One that is added must aggregate over
 at least five members, show no member's own changes, sessions or edges at any cohort size, and
 rank nobody. The team panel that ships today has no such guard — it shows each member's session
-bar at any team size — and `B228` adds it.
+bar at any team size. The later `B228` change hides per-member session rows below five distinct
+synced members and shows an aggregate distribution; the underlying server rows remain available
+to an authorized operator.
 
 **No ranking surface.** No correlation output carries a person's name, login, e-mail, role or a
 rank, score or percentile; a structural test walks the `evidence` document's serialized field

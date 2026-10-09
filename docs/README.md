@@ -135,12 +135,15 @@ all in the shipping PR.
   the machine.
 - [ADR 0020](adr/0020-correlation-privacy.md) — **correlating sessions with delivery data** stays
   on the machine that ran it: connectors run only when asked, as the user, and ask for a
-  repository and a window; synced fields that join to an identity must leave only as keyed
-  digests, which branch names and the member label do not yet (`B227`); no server view may show
-  one member's changes.
+  repository and a window. Sync v2 omits branch names and sends a keyed member digest (`B227`);
+  small team cohorts hide per-member session rows (`B228`). Other allowed sync fields can still
+  support external joins, and no server view may show one member's correlated changes.
 - [ADR 0021](adr/0021-commits-a-forge-writes.md) — a **commit a forge wrote** is judged by the time
   that means work: a squash is a low-confidence landing, a rebase merge keeps its author time, a
   forge merge commit is no candidate, and an amend reaches both sessions.
 - [ADR 0022](adr/0022-pull-requests-through-gh.md) — **`evidence --github`** reads pull requests
   through the user's own `gh`: only listed commits a reflog records as made in this clone become
   candidates, and linking them to a pull request changes no status.
+- [ADR 0023](adr/0023-github-review-and-head-check-observations.md) — **bounded review and
+  current-head check observations** from the same explicit `gh` read include total and listed
+  counts, and remain facts about pull requests rather than session outcomes.

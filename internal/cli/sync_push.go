@@ -28,30 +28,27 @@ const maxSyncErrorBodyBytes = 64 << 10
 
 // syncHTTPClient is the client pushUsage uses -- never http.DefaultClient, which has no
 // timeout and would let an unresponsive server hang `sync` indefinitely.
-var syncHTTPClient = &http.Client{Timeout: syncHTTPTimeout}
-
-// syncPushRequest is POST /v1/usage's request body (see internal/server's usagePush).
-type syncPushRequest struct {
-	Member  string         `json:"member"`
-	Records []usage.Record `json:"records"`
+var syncHTTPClient = &http.Client{
+	Timeout:       syncHTTPTimeout,
+	CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse },
 }
 
-// syncPushResponse is POST /v1/usage's response body (see internal/server's
-// usagePushResult).
+// syncPushResponse is POST /v2/usage's response body.
 type syncPushResponse struct {
+	Protocol int `json:"protocol"`
 	Inserted int `json:"inserted"`
 	Received int `json:"received"`
 }
 
-// pushUsage POSTs recs to serverURL's /v1/usage endpoint as member, authenticating with
-// token.
+// pushUsage never falls back to v1: the old server would key the same rows under a
+// different member prefix, duplicating a team's usage.
 func pushUsage(ctx context.Context, serverURL, token, member string, recs []usage.Record) (syncPushResponse, error) {
-	body, err := json.Marshal(syncPushRequest{Member: member, Records: recs})
+	body, err := json.Marshal(newSyncPushRequestV2(member, recs))
 	if err != nil {
 		return syncPushResponse{}, err
 	}
 
-	url := strings.TrimSuffix(serverURL, "/") + "/v1/usage"
+	url := strings.TrimSuffix(serverURL, "/") + "/v2/usage"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return syncPushResponse{}, err
@@ -68,14 +65,23 @@ func pushUsage(ctx context.Context, serverURL, token, member string, recs []usag
 	if resp.StatusCode == http.StatusUnauthorized {
 		return syncPushResponse{}, fmt.Errorf("server rejected the token (401) at %s", serverURL)
 	}
+	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusMethodNotAllowed || resp.StatusCode == http.StatusUpgradeRequired {
+		return syncPushResponse{}, fmt.Errorf("server at %s does not accept sync protocol v2; upgrade the server and migrate its identity before retrying", serverURL)
+	}
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		return syncPushResponse{}, fmt.Errorf("server redirected sync protocol v2 (%d); refusing to send records to another endpoint", resp.StatusCode)
+	}
 	if resp.StatusCode != http.StatusOK {
 		data, _ := io.ReadAll(io.LimitReader(resp.Body, maxSyncErrorBodyBytes))
 		return syncPushResponse{}, fmt.Errorf("server returned %d: %s", resp.StatusCode, string(data))
 	}
 
 	var result syncPushResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxSyncErrorBodyBytes)).Decode(&result); err != nil {
 		return syncPushResponse{}, fmt.Errorf("decode server response: %w", err)
+	}
+	if result.Protocol != 2 || result.Received != len(recs) || result.Inserted < 0 || result.Inserted > result.Received {
+		return syncPushResponse{}, fmt.Errorf("server response does not confirm sync protocol v2 and %d received records", len(recs))
 	}
 	return result, nil
 }

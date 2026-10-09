@@ -299,8 +299,16 @@ reflog, not local, unreadable or made before the window, and sessions in one pul
 several. An unmatched session gets <code>listed-commit-not-readable-here</code> when a pull request updated
 after it started lists a commit this clone cannot read. The block lists by number only pull
 requests named by a candidate or alternative, with each one's state and whether a candidate or
-alternative names it. It does not count unnamed pull requests. The state is what the forge
+alternative names it. It counts all PRs read, those named by a candidate or alternative, and those
+without such a name; an unnamed PR is not evidence of no AI work. The state is what the forge
 reported when read: the pull request's state, never a session's.</p>
+<p>GitHub evidence reads at most the last 100 reviews per PR and at most the last 100 contexts in
+the latest head's check rollup. Connection totals and listed counts flag incomplete review or
+check coverage; these limits do not cover every review or historical check. A null rollup means
+unavailable, not zero checks. Only named PRs receive state, review and check detail. Those states
+describe the PR, so they cannot establish what an AI session caused. No review rounds, CI repair
+cycles or rate is derived from them. <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0023-github-review-and-head-check-observations.md">ADR 0023</a>
+records the observation and coverage rules.</p>
 <p>The document is a snapshot. Pull-request states move, force-pushes change commit lists, and git
 expires reflog entries that no ref reaches after 30 days by default, so an older session's
 candidates can disappear on a later run. The command fails, rather than printing a document, when <code>gh</code> fails, when the forge reports an
@@ -325,8 +333,8 @@ rather than another repository's name. Commit observations lack authors, so iden
 distinguish overlapping users; the conformance corpus requires that case to stay ambiguous. Output
 has no member, person, score, or rank field and is not intended for performance evaluation.</p>
 <p>A <code>matched</code> label is an attribution observation. It does not prove an AI session caused a commit or
-show AI impact. Pull requests are read only with <code>--github</code>. Review, CI, attributable survival and other outcome
-correlation are not part of this command.</p>
+show AI impact. Pull request, review and latest-head-check observations are read only with
+<code>--github</code>. Attributable survival and other outcome correlation are not part of this command.</p>
 <nav class="pager" aria-label="Previous and next"><a class="prev" href="https://assaio.dev/docs"><span class="dir">Previous</span> assaio documentation</a><a class="next" href="https://assaio.dev/docs/reconcile"><span class="dir">Next</span> Reconciling against the vendor&#39;s own numbers</a></nav></main>
 </div>
 <footer>

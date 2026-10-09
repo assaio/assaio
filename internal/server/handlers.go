@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,21 +12,26 @@ import (
 	"github.com/assaio/assaio/internal/usage"
 )
 
-// maxUsageBodyBytes caps one POST /v1/usage request body. A first-time full-history
+// maxUsageBodyBytes caps one POST /v2/usage request body. A first-time full-history
 // sync from one active member's local store can legitimately run tens of MiB (measured:
 // ~120k records serialize to ~60 MiB); 128 MiB leaves headroom for that while still
 // bounding worst-case abuse. Auth is checked before this cap is even reached -- see
-// handleUsage -- so this is a resource bound, not a security boundary by itself.
+// handleUsageV2 -- so this is a resource bound, not a security boundary by itself.
 const maxUsageBodyBytes = 128 << 20
 
 // Handler returns the Server's routes: usage ingestion, the served dashboard, and a
 // liveness probe. Every request is logged minimally to stderr.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/usage", s.handleUsage)
+	mux.HandleFunc("POST /v1/usage", s.handleUsageV1Upgrade)
+	mux.HandleFunc("POST /v2/usage", s.handleUsageV2)
 	mux.HandleFunc("GET /{$}", s.handleDashboard)
 	mux.HandleFunc("GET "+healthzPath, s.handleHealthz)
 	return s.limit(logRequests(mux))
+}
+
+func (s *Server) handleUsageV1Upgrade(w http.ResponseWriter, _ *http.Request) {
+	http.Error(w, "sync v1 is closed; upgrade the client, configure per-member tokens, and migrate the server store to v2", http.StatusUpgradeRequired)
 }
 
 // logRequests is the Server's minimal access log: method and path, to stderr. This MVP
@@ -49,80 +55,80 @@ func (s *Server) handleHealthz(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("ok"))
 }
 
-// usagePush is POST /v1/usage's request body: one member's batch of local records.
-type usagePush struct {
-	Member  string         `json:"member"`
-	Records []usage.Record `json:"records"`
+type usagePushV2 struct {
+	Protocol     int            `json:"protocol"`
+	MemberDigest string         `json:"memberDigest"`
+	Records      []SyncRecordV2 `json:"records"`
 }
 
-// usagePushResult is POST /v1/usage's response body.
-type usagePushResult struct {
+type usagePushResultV2 struct {
+	Protocol int `json:"protocol"`
 	Inserted int `json:"inserted"`
 	Received int `json:"received"`
 }
 
-// handleUsage authenticates, decodes a usagePush, validates the member label and every
-// record, tags each record with its member, and inserts them. A record's DedupeKey is
-// prefixed with "<member>:" before insert so two members' records can never collide
-// under the store's unique(tool, dedupe_key) constraint -- see AGENTS.md's
-// member-dimension note. A push that fails validation is rejected whole (nothing is
-// inserted, not even its otherwise-valid records) rather than silently dropping the bad
-// rows, so a buggy or malicious client can never partially poison the shared dashboard.
-// Error responses describe the violated rule in the client's own submitted data, never
-// an internal (DB/schema) detail -- see logging below for that.
-//
-// The member prefix is also what makes InsertSynced safe: it gives every row exactly one
-// possible writer, so restating one on a re-push is that member correcting their own figure
-// and can never overwrite somebody else's.
-func (s *Server) handleUsage(w http.ResponseWriter, r *http.Request) {
-	// The secret is verified before a byte of the body is read. Authenticating after the
-	// decode would let an unauthenticated caller make the server allocate a whole batch first,
-	// which is the denial-of-service maxUsageBodyBytes exists to bound.
+func (s *Server) handleUsageV2(w http.ResponseWriter, r *http.Request) {
 	presented, ok := bearer(r)
 	if !ok || !s.authenticated(presented) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-
-	r.Body = http.MaxBytesReader(w, r.Body, maxUsageBodyBytes)
-	var push usagePush
-	if err := json.NewDecoder(r.Body).Decode(&push); err != nil {
-		log.Printf("decode usage push: %v", err)
-		http.Error(w, "malformed request body", http.StatusBadRequest)
+	if s.members.Mode() != ServerDerived {
+		http.Error(w, "sync v2 requires one token per member", http.StatusConflict)
 		return
 	}
-
-	if err := ValidateMember(push.Member); err != nil {
-		http.Error(w, "invalid member: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Whose rows these are is decided from the secret, not from the body, wherever the
-	// deployment configured per-member tokens. The dedupe-key prefix below has always assumed
-	// exactly one possible writer per row; until now nothing enforced it.
-	member, err := s.memberFor(presented, push.Member)
+	member, err := s.memberFor(presented)
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+	if err := ValidateSyncMemberDigest(member); err != nil {
+		http.Error(w, "configure server.members with keyed v2 digests", http.StatusConflict)
+		return
+	}
+	version, err := s.store.SyncProtocolVersion(r.Context())
+	if err != nil {
+		log.Printf("read sync protocol: %v", err)
+		http.Error(w, "failed to read sync protocol", http.StatusInternalServerError)
+		return
+	}
+	if version != 2 {
+		http.Error(w, "server store needs offline sync identity migration before v2 writes", http.StatusConflict)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxUsageBodyBytes)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	var push usagePushV2
+	if err := decoder.Decode(&push); err != nil {
+		http.Error(w, "malformed v2 request body", http.StatusBadRequest)
+		return
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		http.Error(w, "malformed v2 request body", http.StatusBadRequest)
+		return
+	}
+	if push.Protocol != 2 || push.MemberDigest != member {
+		http.Error(w, "sync protocol or member digest does not match token", http.StatusForbidden)
+		return
+	}
+	recs := make([]usage.Record, len(push.Records))
 	for i := range push.Records {
-		if err := validateRecord(&push.Records[i]); err != nil {
+		recs[i] = push.Records[i].usageRecord()
+		if err := validateRecord(&recs[i]); err != nil {
 			http.Error(w, fmt.Sprintf("invalid record %d: %v", i, err), http.StatusBadRequest)
 			return
 		}
+		recs[i].Member = member
+		recs[i].DedupeKey = member + ":" + recs[i].DedupeKey
 	}
-
-	for i := range push.Records {
-		push.Records[i].Member = member
-		push.Records[i].DedupeKey = member + ":" + push.Records[i].DedupeKey
-	}
-	inserted, err := s.store.InsertSynced(r.Context(), push.Records)
+	inserted, err := s.store.InsertSynced(r.Context(), recs)
 	if err != nil {
-		log.Printf("insert usage: %v", err)
+		log.Printf("insert v2 usage: %v", err)
 		http.Error(w, "failed to store usage", http.StatusInternalServerError)
 		return
 	}
-
-	writeJSON(w, usagePushResult{Inserted: inserted, Received: len(push.Records)})
+	writeJSON(w, usagePushResultV2{Protocol: 2, Inserted: inserted, Received: len(recs)})
 }
 
 // handleDashboard serves the aggregated Assay dashboard built fresh from the central store on

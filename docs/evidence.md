@@ -101,8 +101,17 @@ reflog, not local, unreadable or made before the window, and sessions in one pul
 several. An unmatched session gets `listed-commit-not-readable-here` when a pull request updated
 after it started lists a commit this clone cannot read. The block lists by number only pull
 requests named by a candidate or alternative, with each one's state and whether a candidate or
-alternative names it. It does not count unnamed pull requests. The state is what the forge
+alternative names it. It counts all PRs read, those named by a candidate or alternative, and those
+without such a name; an unnamed PR is not evidence of no AI work. The state is what the forge
 reported when read: the pull request's state, never a session's.
+
+GitHub evidence reads at most the last 100 reviews per PR and at most the last 100 contexts in
+the latest head's check rollup. Connection totals and listed counts flag incomplete review or
+check coverage; these limits do not cover every review or historical check. A null rollup means
+unavailable, not zero checks. Only named PRs receive state, review and check detail. Those states
+describe the PR, so they cannot establish what an AI session caused. No review rounds, CI repair
+cycles or rate is derived from them. [ADR 0023](adr/0023-github-review-and-head-check-observations.md)
+records the observation and coverage rules.
 
 The document is a snapshot. Pull-request states move, force-pushes change commit lists, and git
 expires reflog entries that no ref reaches after 30 days by default, so an older session's
@@ -132,5 +141,5 @@ distinguish overlapping users; the conformance corpus requires that case to stay
 has no member, person, score, or rank field and is not intended for performance evaluation.
 
 A `matched` label is an attribution observation. It does not prove an AI session caused a commit or
-show AI impact. Pull requests are read only with `--github`. Review, CI, attributable survival and other outcome
-correlation are not part of this command.
+show AI impact. Pull request, review and latest-head-check observations are read only with
+`--github`. Attributable survival and other outcome correlation are not part of this command.

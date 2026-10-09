@@ -18,31 +18,32 @@ const (
 func memberServer(t *testing.T) *Server {
 	t.Helper()
 	s, _ := newTestServer(t)
-	members := Members{"alice": aliceToken, "bob": bobToken}
+	members := Members{testDigest: aliceToken, bobDigest: bobToken}
 	if err := members.Validate(); err != nil {
 		t.Fatal(err)
 	}
 	return s.WithMembers(members)
 }
 
-// TestServerDerivedIdentityIgnoresTheAssertedMember is the spoofing fix: the dedupe-key prefix
-// has always assumed each row has exactly one possible writer, and until now nothing enforced
-// it -- any token holder could push as anybody.
-func TestServerDerivedIdentityIgnoresTheAssertedMember(t *testing.T) {
+// A token may write only the digest assigned to it by server.members.
+func TestServerDerivedIdentityRejectsAnotherDigest(t *testing.T) {
 	s := memberServer(t)
-	rec := doUsagePush(s, bobToken, pushBody(t, "alice", []usage.Record{
+	body := pushBody(t, "alice", []usage.Record{
 		{Tool: "claude-code", SessionID: "s1", Timestamp: time.Now(), Model: "m", InputTokens: 1, DedupeKey: "k1", Granularity: "turn"},
-	}))
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200: bob's token is valid", rec.Code)
+	})
+	if rec := doUsagePush(s, bobToken, body); rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403 for another member's digest", rec.Code)
+	}
+	if rec := doUsagePush(s, aliceToken, body); rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 for the assigned digest", rec.Code)
 	}
 
 	rows, err := s.store.Usage(context.Background(), time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 1 || rows[0].Member != "bob" {
-		t.Fatalf("stored member = %+v, want bob -- the token holder, not the name in the body", rows)
+	if len(rows) != 1 || rows[0].Member != testDigest {
+		t.Fatalf("stored member = %+v, want the token's digest", rows)
 	}
 }
 
@@ -54,9 +55,7 @@ func TestServerDerivedIdentityRejectsAnUnknownToken(t *testing.T) {
 	}
 }
 
-// TestSharedTokenModeStillWorksAndSaysSo keeps the existing deployment running while making the
-// weaker guarantee legible rather than implicit.
-func TestSharedTokenModeStillWorksAndSaysSo(t *testing.T) {
+func TestSharedTokenModeRefusesV2(t *testing.T) {
 	s, _ := newTestServer(t)
 	if s.Identity() != ClientAsserted {
 		t.Fatalf("Identity = %v, want client-asserted without configured members", s.Identity())
@@ -67,8 +66,8 @@ func TestSharedTokenModeStillWorksAndSaysSo(t *testing.T) {
 	rec := doUsagePush(s, testToken, pushBody(t, "alice", []usage.Record{
 		{Tool: "claude-code", SessionID: "s1", Timestamp: time.Now(), Model: "m", InputTokens: 1, DedupeKey: "k1", Granularity: "turn"},
 	}))
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want the shared-token path to keep working", rec.Code)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409: shared-token mode cannot prove one writer", rec.Code)
 	}
 }
 

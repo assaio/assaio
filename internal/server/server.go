@@ -6,8 +6,8 @@
 //
 // SECURITY (MVP boundary, read before deploying): there is no TLS, so run this behind a reverse
 // proxy on a trusted network rather than exposing it directly. Every route but the /healthz
-// probe requires a bearer token, the dashboard included. Member identity is server-derived when per-member tokens are
-// configured and client-asserted otherwise. See Server's doc comment for the exact boundary.
+// probe requires a bearer token, the dashboard included. Sync v2 requires one token
+// per keyed member digest; a shared token can read the dashboard only.
 package server
 
 import (
@@ -44,10 +44,8 @@ const idleTimeout = 120 * time.Second
 //
 // SECURITY (MVP boundary): there is no TLS -- run this behind a reverse proxy that terminates
 // it, on a network you trust. Every route but the /healthz probe is authenticated as of v0.24,
-// and identity has two modes:
-// with per-member tokens (WithMembers) the member is derived from the presented secret and
-// cannot be asserted by the client; with a single shared token, any holder can still push as
-// any member, which is what the operator diagnostics say out loud.
+// and sync v2 requires per-member tokens (WithMembers). The member is the keyed digest
+// assigned to the presented secret; a legacy shared token can read but cannot push.
 type Server struct {
 	store          *store.Store
 	token          string
@@ -56,8 +54,8 @@ type Server struct {
 	buildDashboard DashboardBuilder
 }
 
-// New builds a Server in shared-token mode: one secret for everyone, and the member name is
-// whatever the client asserts. New does not validate the token -- refusing to start without one
+// New builds a Server in legacy shared-token mode. It can serve the dashboard but
+// sync v2 requires WithMembers. New does not validate the token -- refusing to start without one
 // is the caller's job (see internal/cli/serve.go), so this package stays reusable without baking
 // in a CLI-shaped policy.
 func New(st *store.Store, token string, build DashboardBuilder) *Server {

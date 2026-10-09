@@ -12,8 +12,8 @@ import (
 	"github.com/assaio/assaio/internal/store"
 )
 
-// fixtureInputWithMembers extends fixtureInput with two members' usage and sessions --
-// alice more active (2 sessions) than bob (1 session) -- for exercising the Team section.
+// fixtureInputWithMembers extends fixtureInput with five members' usage and sessions.
+// Alice has two sessions; each other member has one.
 func fixtureInputWithMembers() analyze.Input {
 	in := fixtureInput()
 	in.Usage = append(
@@ -26,6 +26,9 @@ func fixtureInputWithMembers() analyze.Input {
 			Day: "2026-07-12", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web", Member: "bob",
 			In: 200, Out: 100, LinesAdded: 5,
 		},
+		store.UsageRow{Day: "2026-07-12", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web", Member: "cara", In: 1},
+		store.UsageRow{Day: "2026-07-12", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web", Member: "dan", In: 1},
+		store.UsageRow{Day: "2026-07-12", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web", Member: "eve", In: 1},
 	)
 	in.Sessions = append(
 		in.Sessions,
@@ -41,6 +44,9 @@ func fixtureInputWithMembers() analyze.Input {
 			SessionID: "s5", Project: "web", Tool: "claude-code", Model: "claude-sonnet-4-5", Member: "bob",
 			FirstTs: fixtureNow, LastTs: fixtureNow,
 		},
+		store.SessionRow{SessionID: "s6", Project: "web", Tool: "claude-code", Model: "claude-sonnet-4-5", Member: "cara", FirstTs: fixtureNow, LastTs: fixtureNow},
+		store.SessionRow{SessionID: "s7", Project: "web", Tool: "claude-code", Model: "claude-sonnet-4-5", Member: "dan", FirstTs: fixtureNow, LastTs: fixtureNow},
+		store.SessionRow{SessionID: "s8", Project: "web", Tool: "claude-code", Model: "claude-sonnet-4-5", Member: "eve", FirstTs: fixtureNow, LastTs: fixtureNow},
 	)
 	return analyze.BuildInput(in.Usage, in.Sessions, in.Prices, in.Now, in.Recent, in.Delegation)
 }
@@ -75,14 +81,26 @@ func twoMemberInput() analyze.Input {
 	return analyze.BuildInput(usage, sessions, fixturePrices(), fixtureNow, 7*24*time.Hour, analyze.Delegation{})
 }
 
+func fiveMemberInput() analyze.Input {
+	in := twoMemberInput()
+	for i, member := range []string{"cara", "dan", "eve"} {
+		in.Usage = append(in.Usage, store.UsageRow{Day: "2026-07-12", Tool: "claude-code", Model: "claude-sonnet-4-5", Project: "web", Member: member, In: 1})
+		in.Sessions = append(in.Sessions, store.SessionRow{
+			SessionID: "extra-" + member, Project: "web", Tool: "claude-code", Model: "claude-sonnet-4-5", Member: member,
+			FirstTs: fixtureNow.Add(time.Duration(i) * time.Second), LastTs: fixtureNow.Add(time.Duration(i) * time.Second),
+		})
+	}
+	return analyze.BuildInput(in.Usage, in.Sessions, in.Prices, in.Now, in.Recent, in.Delegation)
+}
+
 // TestBuildTeamBarScalesBySessionsNotCostOrLines locks in what the bar means: engagement
 // frequency, never a cost or lines-added scoreboard. A bar drawn from output would run bob's
 // to full width and leave alice's a sliver; drawn from sessions it is alice's that fills and
 // bob's that reaches half.
 func TestBuildTeamBarScalesBySessionsNotCostOrLines(t *testing.T) {
-	d := Build(twoMemberInput(), "last 30 days", false, nil, nil)
-	if d.Team == nil || len(d.Team.Stats) != 2 {
-		t.Fatalf("Team = %+v, want 2 member stats", d.Team)
+	d := Build(fiveMemberInput(), "last 30 days", false, nil, nil)
+	if d.Team == nil || len(d.Team.Stats) != 5 {
+		t.Fatalf("Team = %+v, want 5 member stats", d.Team)
 	}
 	byLabel := map[string]TeamStat{}
 	for _, s := range d.Team.Stats {
@@ -97,6 +115,29 @@ func TestBuildTeamBarScalesBySessionsNotCostOrLines(t *testing.T) {
 	}
 	if d.Team.LinesAdded != 5040 {
 		t.Fatalf("Team.LinesAdded = %d, want 5040 -- the team's total, not any member's", d.Team.LinesAdded)
+	}
+}
+
+func TestBuildTeamSuppressesNarrowCohort(t *testing.T) {
+	d := Build(twoMemberInput(), "last 30 days", false, nil, nil)
+	if d.Team == nil || !d.Team.Suppressed || d.Team.MemberCount != 2 || len(d.Team.Stats) != 0 {
+		t.Fatalf("Team = %+v, want two members with no per-member rows", d.Team)
+	}
+	if len(d.Team.Bands) != 4 || d.Team.Bands[1].Members != 2 {
+		t.Fatalf("Team.Bands = %+v, want two members in the 1–2 session band", d.Team.Bands)
+	}
+	if d.Team.LinesAdded != 5040 {
+		t.Fatalf("Team.LinesAdded = %d, want aggregate 5040", d.Team.LinesAdded)
+	}
+}
+
+func TestBuildTeamCohortExcludesLocalRows(t *testing.T) {
+	in := twoMemberInput()
+	in.Usage = append(in.Usage, store.UsageRow{Member: "", LinesAdded: 1})
+	in.Sessions = append(in.Sessions, store.SessionRow{Member: "", SessionID: "local"})
+	d := Build(in, "last 30 days", true, nil, nil)
+	if d.Team == nil || !d.Team.Suppressed || d.Team.MemberCount != 2 || len(d.Team.Stats) != 0 {
+		t.Fatalf("Team = %+v, local rows must not lift the minimum cohort", d.Team)
 	}
 }
 
@@ -204,7 +245,7 @@ func TestRenderHTMLTeamSectionPresentWithMemberData(t *testing.T) {
 		if !strings.Contains(html, `class="team"`) {
 			t.Fatalf("anonymize=%v: dashboard HTML must include the Team section when usage carries member data: %s", anonymize, html)
 		}
-		if !strings.Contains(html, "this panel is not a scoreboard") {
+		if !strings.Contains(html, "not a scoreboard") {
 			t.Fatalf("anonymize=%v: Team section must carry its honesty caption: %s", anonymize, html)
 		}
 		if !strings.Contains(html, "member-") {
@@ -217,6 +258,22 @@ func TestRenderHTMLTeamSectionPresentWithMemberData(t *testing.T) {
 				t.Fatalf("anonymize=%v: rendered dashboard names a real member (%s): %s", anonymize, name, html)
 			}
 		}
+	}
+}
+
+func TestRenderHTMLSuppressesMemberRowsBelowFive(t *testing.T) {
+	var buf bytes.Buffer
+	if err := RenderHTML(&buf, Build(twoMemberInput(), "last 30 days", false, nil, nil)); err != nil {
+		t.Fatal(err)
+	}
+	html := buf.String()
+	for _, want := range []string{"2 members", "member rows are hidden", "Members by session band", "1–2 sessions", "2 members"} {
+		if !strings.Contains(html, want) {
+			t.Errorf("suppressed team panel lacks %q", want)
+		}
+	}
+	if strings.Contains(html, "member-") || strings.Contains(html, ">alice<") || strings.Contains(html, ">bob<") {
+		t.Fatal("a narrow cohort rendered a member row")
 	}
 }
 

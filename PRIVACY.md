@@ -239,17 +239,19 @@ names never enter its result.
 
 Only with `--github`, `evidence` runs your own GitHub CLI (`gh`) in the repository. `gh repo view`
 names the repository and its host; then one fixed GraphQL query asks for pull requests ordered by
-last update, newest first: each one's id, number, state, last-update and merge times, merge commit,
-and up to 100 listed commit hashes with their total; assaio pages through the results locally and
-stops once a pull request was last updated before `--since`. It asks for no title, body, branch
-name, label, author, reviewer, comment or check. The request names the repository and a page cursor,
-never a commit, a session or anything from the store. `gh` holds your credentials; assaio reads,
-passes and stores no token. assaio then asks local git which listed commits a `HEAD` reflog of this
-clone records as made here — git matches the entries and returns hashes only — and reads those like
-any other commit. Pull requests, their commits and every link are printed locally and never stored,
-synced, exported or sent to a plugin. The repository's owner and name appear only in a note on
-standard error, never in the document. The query runs as you, so it can appear in your
-organization's API audit log.
+last update, newest first. It reads each PR's id, number, state, update and merge times, merge
+commit, and first 100 listed commit hashes with their total. Per PR, it reads at most the last 100
+reviews' opaque ids, states and submitted or updated times, plus the latest head's check rollup
+and at most the last 100 check-run or commit-status contexts' opaque ids, closed states or
+conclusions and times. It reads no reviewer, author, title, comment, check or workflow name,
+branch or output. The request names the repository and a page cursor, never a commit, session or
+anything from the store. `gh` holds your credentials; assaio reads, passes and stores no token.
+assaio then asks local git which listed commits a `HEAD` reflog of this clone records as made here.
+Connector observations and links stay in memory for one command: they are never persisted to the
+store, synced or sent to a plugin. A caller can save the explicit `evidence` output. The
+repository's owner and name appear only in a note on standard error, never in that output. The
+query runs as you, so it can appear
+in your organization's API audit log.
 
 ## What it never retains
 
@@ -351,7 +353,7 @@ Because that file is meant to be shared, it **pseudonymizes project names by def
 (a stable `project-xxxx` label); pass `--no-anonymize` to keep real names. The interactive
 CLI tables always show real *project* names — the setting governs only the shareable export.
 Member names are stricter and not governed by it: `report` renders a pseudonym in every format,
-and `--identify` is the only door to raw ones (see below).
+and `--identify` exposes the stored member value: a legacy name or a keyed v2 digest (see below).
 
 `assaio-agent share` is the artifact built *for* publication, and its redaction is
 **structural rather than a flag** — there is no `--no-anonymize` equivalent, because no field
@@ -383,38 +385,44 @@ travels only if you post it.
 
 ## The optional team server
 
-v0.1 ships an early, self-hostable **team server** so a team can pool its usage in one
-place: `assaio-agent serve` runs a central collector and `assaio-agent sync` pushes each
-member's records to it, with a per-member team dashboard. It is the **networked exception**
-named above — the offline guarantee is about the local analysis, not this. You run
-the server on **your own infrastructure** and control what reaches it. It is an honest MVP:
-no TLS of its own (put a reverse proxy in front), meant for a trusted network — not yet
-production-hardened. Every route requires a bearer token, the dashboard included, and
-configuring one secret per member makes the server decide who a request is rather than
-believing the name in its body.
+The optional, self-hosted **team server** pools usage on infrastructure you control:
+`assaio-agent serve` runs the collector and `assaio-agent sync` pushes records to it. This is
+the networked exception to local analysis. The server has no TLS or user roles; use a TLS
+reverse proxy and a trusted network. Every route except `/healthz` requires a bearer token,
+including the dashboard. A shared `server.token` can read the dashboard but cannot write sync
+v2 usage. Writes require a separate per-member token configured under that member's digest in
+`server.members`.
 
-Each synced member is **pseudonymized by default** (a stable `member-xxxx` label); team
-views are aggregated by default. A per-member, real-name view is never silent — it is a
-deliberate, governed opt-in an admin enables, not what the default configuration produces,
-and never a performance-evaluation leaderboard. The label is a SHA-256 of the machine's
-hostname and OS user name with no secret, so anyone holding the server's data can confirm a
-guessed host and user name against it; `B227` replaces it with a keyed digest. `sync` sends a
-project's name, never the key or number that identifies its repository on your machine. When
-two of your repositories share a name, `sync` says so before pushing, because the server counts
-them as one project.
+Sync v2 sends POST `/v2/usage` with protocol 2, a stable `member-v2-` digest and allowlisted
+usage fields. Its wire format excludes `GitBranch` and cleartext `Member`; the server refuses
+unknown fields. The client derives the digest with HMAC-SHA256 from local `--member` or
+`sync.member` input and a private `ASSAIO_SYNC_IDENTITY_KEY` (32 bytes encoded as 64 hex
+digits). Neither the input nor the key is sent to the server. Keep and back up the key on
+clients; devices representing one member need the same key and stable input. A lost or rotated
+key changes the digest, with no automatic rekey procedure.
 
-Two joins outside assaio can re-identify a synced row. Each record includes its branch name, and
-anyone who holds the server's data and can read the repository can join a branch and a time to
-the pull request built from it, and to its author. Each record also carries the coding tool's own
-session id, so where your organization collects that tool's telemetry recording the session id
-beside an account (Claude Code's OpenTelemetry export does), the two join. A member pseudonym
-does not protect against either reader. `sync` never sends pull-request numbers, commit hashes or
-session→commit results ([ADR 0020](docs/adr/0020-correlation-privacy.md)).
+`sync` still sends `Project`, `Subpath`, the coding tool's `SessionID`, timestamps and other
+allowed usage fields. It never sends the local repository key, pull-request numbers, commit
+hashes or session→commit results ([ADR 0020](docs/adr/0020-correlation-privacy.md)). A server
+reader with repository or telemetry data may join those fields to a person or piece of work.
+The digest is a pseudonym, not an anonymity guarantee. When two local repositories share a
+project name, `sync` warns before pushing because the server pools usage by that name. The
+served dashboard anonymizes member labels; below five distinct synced members it also hides
+per-member session rows and shows an aggregate session distribution. The underlying records
+remain available to a server operator.
 
-The pseudonym holds on the way **out** as well as on the way in. Reading a central store with
-`report` labels members in every format — table, JSON and CSV alike — and a metric plugin, which
-is an out-of-tree subprocess, receives labels rather than names. Raw identity has exactly one
-door: `report --identify`, which names individuals and says so in its own output. Nothing else
-in this repository turns a synced name back into a printed one. The **deeper** stage — correlating with
-your git remotes and issue tracker for survival / bug / quality signals — is still ahead;
-see [ROADMAP.md](ROADMAP.md).
+An existing central database with synced member rows requires an offline migration before v2
+writes. Stop `serve`, back up the database, prepare a complete one-to-one map from old stored
+member labels to locally printed v2 digests outside the repository, then run
+`assaio-agent serve migrate-sync --db /path/server.db --map /private/path/mapping.json`.
+The map is not sent or stored in the database; its local file remains until you remove it.
+The migration clears branch values from synced usage and archive rows, but old backups,
+SQLite free pages and WAL files may retain old values. Historical collisions in old 40-bit
+member labels cannot be separated. Do not run an older server binary against a migrated
+database.
+
+Reading a central store with `report` pseudonymizes member labels in table, JSON and CSV;
+`report --identify` exposes the stored label, which is a keyed digest for v2 rows, not the
+original local member input. A metric plugin receives pseudonyms rather than local names.
+The deeper stage — correlating with git remotes and issue trackers for survival, bug and
+quality signals — is still ahead; see [ROADMAP.md](ROADMAP.md).

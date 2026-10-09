@@ -64,7 +64,7 @@ func findRepoRoot(dir string) string {
 // and whether one was found there at all.
 func repoRootAt(dir string) (root string, ok bool) {
 	gitPath := filepath.Join(dir, ".git")
-	info, err := os.Stat(gitPath)
+	info, err := os.Stat(gitPath) //nolint:gosec // Resolve intentionally probes .git in each local cwd ancestor.
 	if err != nil {
 		return "", false
 	}

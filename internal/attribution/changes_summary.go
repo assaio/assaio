@@ -10,17 +10,19 @@ import (
 
 // Changes is what pull-request data added to a document: when it was read, what bounded the read,
 // how many candidates it added, every count behind an absence, and the pull requests a result
-// names. A pull request no result names is not listed and not counted apart: the document is about
-// sessions, not a team's pull requests.
+// names. A pull request no result names is counted as unmatched in the read population; its state,
+// reviews and checks are not listed because the document starts from sessions.
 type Changes struct {
 	Source     string    `json:"source"`
 	ObservedAt time.Time `json:"observedAt"`
 	ReadBackTo time.Time `json:"readBackTo"`
 	// StateLayer is the measurement layer of the states in Linked: an outcome of each pull request,
 	// never of a session linked to it.
-	StateLayer       layer.Layer `json:"stateLayer"`
-	PullRequestsRead int         `json:"pullRequestsRead"`
-	CommitListsCut   int         `json:"commitListsCut"`
+	StateLayer            layer.Layer `json:"stateLayer"`
+	PullRequestsRead      int         `json:"pullRequestsRead"`
+	PullRequestsNamed     int         `json:"pullRequestsNamed"`
+	PullRequestsUnmatched int         `json:"pullRequestsUnmatched"`
+	CommitListsCut        int         `json:"commitListsCut"`
 	// ListedMadeHere are the listed commits made here that session-commit/v2 does not see: they enlarge
 	// the candidate set, so coverage is comparable only with another session-commit/v3 document.
 	ListedMadeHere     int `json:"listedMadeHere"`
@@ -38,10 +40,28 @@ type Changes struct {
 // LinkedPullRequest is a pull request's state as the forge reported it at Changes.ObservedAt, and
 // whether a candidate names it or only an alternative does.
 type LinkedPullRequest struct {
-	Number   int64     `json:"number"`
-	State    string    `json:"state"`
-	MergedAt time.Time `json:"mergedAt,omitzero"`
-	NamedBy  string    `json:"namedBy"`
+	Number     int64           `json:"number"`
+	State      string          `json:"state"`
+	MergedAt   time.Time       `json:"mergedAt,omitzero"`
+	NamedBy    string          `json:"namedBy"`
+	Reviews    *ObservedStates `json:"reviews"`
+	HeadChecks *ObservedStates `json:"headChecks"`
+}
+
+// ObservedStates reports a bounded forge connection. Total and Listed show how much of that
+// connection the read reached; State is the head check rollup, absent for reviews.
+type ObservedStates struct {
+	Layer  layer.Layer  `json:"layer"`
+	Total  int64        `json:"total"`
+	Listed int64        `json:"listed"`
+	State  string       `json:"state,omitempty"`
+	States []StateCount `json:"states"`
+}
+
+// StateCount is the number of observations in one closed forge state.
+type StateCount struct {
+	State string `json:"state"`
+	Count int    `json:"count"`
 }
 
 const (
@@ -58,6 +78,7 @@ func ChangesOf(prs *PullRequests, results []Result, source string) *Changes {
 		Linked: []LinkedPullRequest{},
 	}
 	named := namedBy(results)
+	delivery := deliveryByPR(prs)
 	for i := range prs.Requests {
 		pr, ok := prs.Requests[i].Payload.(event.PullRequest)
 		if !ok {
@@ -67,9 +88,15 @@ func ChangesOf(prs *PullRequests, results []Result, source string) *Changes {
 			c.CommitListsCut++
 		}
 		if by, ok := named[pr.Number]; ok {
-			c.Linked = append(c.Linked, LinkedPullRequest{Number: pr.Number, State: pr.State, MergedAt: pr.MergedAt, NamedBy: by})
+			c.PullRequestsNamed++
+			linked := LinkedPullRequest{Number: pr.Number, State: pr.State, MergedAt: pr.MergedAt, NamedBy: by}
+			if states := delivery[pr.Number]; states != nil {
+				linked.Reviews, linked.HeadChecks = states.reviews, states.checks
+			}
+			c.Linked = append(c.Linked, linked)
 		}
 	}
+	c.PullRequestsUnmatched = c.PullRequestsRead - c.PullRequestsNamed
 	slices.SortFunc(c.Linked, func(a, b LinkedPullRequest) int { return int(a.Number - b.Number) })
 	for i := range results {
 		switch {

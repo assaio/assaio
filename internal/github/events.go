@@ -18,6 +18,8 @@ type Read struct {
 	Repository Repository
 	Requests   []event.Event
 	Listings   []event.Event
+	Reviews    []event.Event
+	Checks     []event.Event
 	BackTo     time.Time
 }
 
@@ -46,7 +48,13 @@ func ReadPullRequests(ctx context.Context, run Runner, root, project string, sin
 			return Read{}, fmt.Errorf("pull request #%d from %s has no usable id", nd.Number, repo)
 		}
 		request, listings := observations(&nd, src, project, observedAt)
+		reviews, checks, err := deliveryObservations(&nd, src, project, observedAt)
+		if err != nil {
+			return Read{}, fmt.Errorf("pull request #%d from %s: %w", nd.Number, repo, err)
+		}
 		all := append([]event.Event{request}, listings...)
+		all = append(all, reviews...)
+		all = append(all, checks...)
 		for i := range all {
 			if err := all[i].Validate(); err != nil {
 				return Read{}, fmt.Errorf("pull request #%d from %s: %w", nd.Number, repo, err)
@@ -54,6 +62,8 @@ func ReadPullRequests(ctx context.Context, run Runner, root, project string, sin
 		}
 		got.Requests = append(got.Requests, request)
 		got.Listings = append(got.Listings, listings...)
+		got.Reviews = append(got.Reviews, reviews...)
+		got.Checks = append(got.Checks, checks...)
 	}
 	return got, nil
 }
@@ -62,6 +72,15 @@ func observations(nd *node, src event.Source, project string, observedAt time.Ti
 	pr := event.PullRequest{
 		Number: nd.Number, State: strings.ToLower(nd.State), MergedAt: nd.MergedAt.UTC(),
 		Commits: nd.Commits.TotalCount, Listed: int64(len(nd.Commits.Nodes)),
+	}
+	if nd.Reviews != nil {
+		pr.ReviewsAvailable = true
+		pr.Reviews, pr.ReviewsListed = nd.Reviews.TotalCount, int64(len(nd.Reviews.Nodes))
+	}
+	if nd.StatusCheckRollup != nil {
+		pr.CheckState = strings.ToLower(nd.StatusCheckRollup.State)
+		pr.Checks = nd.StatusCheckRollup.Contexts.TotalCount
+		pr.ChecksListed = int64(len(nd.StatusCheckRollup.Contexts.Nodes))
 	}
 	if nd.MergeCommit != nil {
 		pr.MergeCommit = nd.MergeCommit.OID

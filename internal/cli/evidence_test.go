@@ -32,7 +32,7 @@ func TestEvidenceRendersMatchedAmbiguousAndUnmatched(t *testing.T) {
 		"confidence=medium", "confidence=insufficient",
 		"competing-following-commit-candidates", "no-candidate-window-still-open",
 		"source=git", "provenance=parsed", "privacy=local-only",
-		"do not prove that an AI session caused a commit", "Pull requests are read only with --github",
+		"do not prove that an AI session caused a commit", "Pull request, review and head-check observations are read only with --github",
 	} {
 		if !strings.Contains(textOutput, want) {
 			t.Fatalf("text output missing %q:\n%s", want, textOutput)

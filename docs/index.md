@@ -3,6 +3,19 @@
 These guides are grouped by what you want to do. Each page is rendered from the repository's
 Markdown or generated from the binary; a build check fails if a published page disagrees with it.
 
+**First run**
+
+1. Install with `brew install assaio/tap/assaio-agent`
+   ([other install options](https://github.com/assaio/assaio#install-assaio-agent)).
+2. Run `assaio-agent demo` to explore the bundled sample data.
+3. Run `assaio-agent init`. When supported logs or a configured parser plugin are available, it
+   lists detected sources and runnable plugins, asks for confirmation, then imports and writes an
+   offline report. A plugin is your own program and may use the network.
+4. Open the report, or run `assaio-agent dashboard --since 30d --output assay.html` to create
+   another.
+5. Later, run `assaio-agent digest --weekly --dry-run`. Check source coverage with
+   `assaio-agent signals coverage` and unpriced models with `assaio-agent doctor`.
+
 ## Understand the figures
 
 Learn how assaio links sessions to commits, compares vendor numbers, handles log changes, and

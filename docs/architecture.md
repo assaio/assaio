@@ -264,11 +264,11 @@ Everything a plugin emits is validated at the boundary before it is stored or re
 
 The team server does not fork the path; it re-enters it.
 
-`assaio-agent sync` reaches step 10, then POSTs the exported records to `/v1/usage`. The
-server (`internal/server`) authenticates the bearer token **before reading a byte of the
-body**, re-enters at step 4 through `validateRecord` — rejecting a bad push whole rather
-than partially poisoning a shared store — tags each record with its member, prefixes the
-dedupe key, and re-enters at step 5 through `InsertSynced`.
+`assaio-agent sync` reaches step 10, then POSTs sync v2 to `/v2/usage` with protocol 2, a
+client-keyed member digest, and allowlisted records without `Member` or `GitBranch`. The server
+(`internal/server`) authenticates the per-member bearer token and checks that it owns the digest
+before reading records. It then validates every record, assigns the digest as `Member`, prefixes
+each dedupe key, and re-enters at step 5 through `InsertSynced`. Shared-token mode cannot write.
 
 `assaio-agent serve` re-runs steps 7 through 9 over that central store:
 `server.handleDashboard` builds the same `dashboard.Data` with `anonymize = true` and no

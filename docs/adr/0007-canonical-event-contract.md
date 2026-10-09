@@ -44,7 +44,8 @@ is not an event. What a collector emits is unchanged.*
   contract.
 - **Every event type is a past-tense observation**, `<domain>.<thing>.observed`. The
   committed vocabulary is `ai.session.observed`, `ai.usage.observed`, `ai.edit.observed`,
-  `vcs.commit.observed`, `scm.pull_request.observed`, `scm.review.observed`,
+  `vcs.commit.observed`, `scm.pull_request.observed`, `scm.pull_request.commit.observed`,
+  `scm.review.observed`,
   `ci.check.observed`, and `delivery.merge|revert|survival.observed`. `B89` sketched the
   first as a bare `ai.session`; it is renamed here, because a versioned contract is cheap to
   correct now and expensive later. An *observation* is all any of these ever are — a claim
@@ -57,11 +58,12 @@ is not an event. What a collector emits is unchanged.*
   second one had no caller for eighteen releases. The `vcs.*`, `scm.*`, `ci.*` and
   `delivery.*` names stand.
 - **This document commits the vocabulary; the code registers what it can actually produce.**
-  `internal/event` today knows `vcs.commit.observed` alone (ADR 0016 removed the two `ai.*`
-  types this sentence originally named). Each remaining type lands with the collector that
-  produces it — one registry line and one payload struct — rather than shipping now as an
-  empty shape nobody fills. Declaring a name is a commitment; declaring a struct with no
-  producer is speculative abstraction.
+  `internal/event` first registered `vcs.commit.observed` after ADR 0016 removed the `ai.*`
+  types. ADR 0022 added `scm.pull_request.observed` and `scm.pull_request.commit.observed`;
+  ADR 0023 added `scm.review.observed` and `ci.check.observed` for its bounded review and
+  current-head check observations. Each remaining type lands with the collector that produces
+  it — one registry line and one payload struct. Declaring a name is a commitment; declaring a
+  struct with no producer is speculative abstraction.
 - **The envelope, v1**: `spec_version`; `type`; `id`; `source` as `{name, version, build}` —
   who produced it, the source's own format or API version, and the assaio build that read it;
   `occurred_at` and `observed_at`; `time_source`; `grain`; `privacy`; `provenance`; and a

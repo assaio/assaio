@@ -9,7 +9,7 @@ import (
 
 // payloads is every concrete payload this build defines. The registry and this list must
 // agree: a type nothing can fill is a name pretending to be a capability.
-var payloads = []Payload{Commit{}, PullRequest{}, PullRequestCommit{}}
+var payloads = []Payload{Commit{}, PullRequest{}, PullRequestCommit{}, Review{}, Check{}}
 
 func TestEveryRegisteredTypeHasAPayload(t *testing.T) {
 	have := map[string]bool{}
@@ -48,7 +48,12 @@ var stringFields = map[string]string{
 
 	"PullRequest.State":        "closed vocabulary",
 	"PullRequest.MergeCommit":  "a commit hash, validated as hex",
+	"PullRequest.CheckState":   "closed vocabulary",
 	"PullRequestCommit.Commit": "a commit hash, validated as hex",
+	"Review.State":             "closed vocabulary",
+	"Check.Kind":               "closed vocabulary",
+	"Check.State":              "closed vocabulary",
+	"Check.Conclusion":         "closed vocabulary",
 }
 
 func TestContractCarriesNoFreeText(t *testing.T) {

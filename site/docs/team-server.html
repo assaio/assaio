@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>The team server — assaio</title>
-<meta name="description" content="assaio-agent serve runs a self-hosted team server. Teammates use assaio-agent sync to push local usage over HTTP. At GET /, the server returns an aggregated Assay dashboard, pseudonymized by default,…">
+<meta name="description" content="assaio-agent serve runs a self-hosted team server. Teammates use assaio-agent sync to push local usage. At GET /, the server returns an aggregated Assay dashboard, pseudonymized by default, for the…">
 <link rel="canonical" href="https://assaio.dev/docs/team-server">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://assaio.dev/docs/team-server">
 <meta property="og:title" content="The team server — assaio">
-<meta property="og:description" content="assaio-agent serve runs a self-hosted team server. Teammates use assaio-agent sync to push local usage over HTTP. At GET /, the server returns an aggregated Assay dashboard, pseudonymized by default,…">
+<meta property="og:description" content="assaio-agent serve runs a self-hosted team server. Teammates use assaio-agent sync to push local usage. At GET /, the server returns an aggregated Assay dashboard, pseudonymized by default, for the…">
 <meta property="og:image" content="https://assaio.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -178,24 +178,77 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
 <div class="layout"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">assaio documentation</a></li></ul><p class="sidehead">Understand the figures</p><ul><li><a href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li></ul><p class="sidehead">Run it for a team</p><ul><li><a class="on" href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li></ul><p class="sidehead">Extend assaio</p><ul><li><a href="https://assaio.dev/docs/extending">Extending assaio</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li></ul><p class="sidehead">Use an example</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><main class="doc"><h1 id="the-team-server">The team server</h1>
 <p><em>Part of <a href="https://assaio.dev/docs/extending">Extending assaio</a>.</em></p>
 <p><code>assaio-agent serve</code> runs a self-hosted team server. Teammates use <code>assaio-agent sync</code> to push local
-usage over HTTP. At <code>GET /</code>, the server returns an aggregated Assay dashboard, pseudonymized by
-default, for the whole team (<code>internal/server</code>). This is an MVP with no TLS. Run <code>serve</code> behind a
-reverse proxy on a trusted network; do not expose it to the open internet.</p>
+usage. At <code>GET /</code>, the server returns an aggregated Assay dashboard, pseudonymized by default,
+for the whole team (<code>internal/server</code>). This is an MVP with no TLS or user roles. Put it behind a
+TLS reverse proxy on a trusted network.</p>
 <p><strong>Every route except <code>/healthz</code> requires the bearer token, including the dashboard</strong> (since v0.24;
 it was previously open despite showing the whole team's usage). <code>/healthz</code> reads nothing and stays
 open for orchestrators. It is exempt from rate limits so unrelated traffic cannot fail liveness
 checks.</p>
-<p>Identity has two modes; <code>serve</code> prints the active mode at startup:</p>
+<p><code>serve</code> prints its identity mode at startup:</p>
 <ul>
-<li><strong>Server-derived</strong> — set <code>server.members</code> to one secret per member. The secret holder determines
-the member; the request body's name is ignored. Prefer this mode. The dedupe-key prefix separating
-members' rows assumes one possible writer per row, and this mode enforces that.</li>
-<li><strong>Client-asserted</strong> — use one shared <code>server.token</code>. Any holder can push usage under any member
-name. <code>serve</code> reports this at startup.</li>
+<li><strong>Server-derived</strong> — set <code>server.members</code> to one bearer token per keyed member digest. The token
+determines the member; the request's digest must match it. This mode accepts sync v2 writes.</li>
+<li><strong>Shared token</strong> — one <code>server.token</code> permits dashboard reads but cannot accept sync v2 writes;
+a push receives 409. The old <code>/v1/usage</code> write route returns 426.</li>
 </ul>
 <p>Requests are rate limited per secret (<code>server.rate_limit_per_minute</code>, default 120). A negative value
 disables the limit for deployments that bound traffic elsewhere. Keying by secret instead of address
 keeps one member's runaway loop from locking out colleagues.</p>
+<p>Configure the server with each client's locally printed digest and a separate token:</p>
+<pre><code class="language-yaml">server:
+  addr: 127.0.0.1:8787
+  members:
+    member-v2-0123456789abcdef0123456789abcdef: &quot;replace-with-member-bearer-token&quot;
+</code></pre>
+<p>On the matching client, set a stable local input; keep real secrets outside this file:</p>
+<pre><code class="language-yaml">sync:
+  server: &quot;https://assaio.example.com&quot;
+  member: alice
+</code></pre>
+<p>Provision <code>ASSAIO_SYNC_TOKEN</code> with the matching bearer token and <code>ASSAIO_SYNC_IDENTITY_KEY</code> with a
+private 32-byte key encoded as 64 hex digits. Keep the identity key on clients, outside server
+config, mapping files, repositories and requests. Back it up and preserve it across runs. Devices
+representing one member need the same key and stable local <code>--member</code> or <code>sync.member</code> input.
+That input is never sent as a cleartext member name. Print the digest without a network request:</p>
+<pre><code class="language-sh">assaio-agent sync --print-member-digest --member alice
+</code></pre>
+<p>For an existing central database with synced member rows, upgrade in this order:</p>
+<ol>
+<li>
+<p>Stop <code>serve</code> and back up the central database. The migration command cannot prove that the
+server process is stopped.</p>
+</li>
+<li>
+<p>Print each member's v2 digest using that client's retained identity key and stable input.
+Prepare a complete one-to-one map from every old stored member label to its new digest in a
+local file outside the repository. For example:</p>
+<pre><code class="language-json">{&quot;members&quot;:[{&quot;from&quot;:&quot;alice&quot;,&quot;to&quot;:&quot;member-v2-0123456789abcdef0123456789abcdef&quot;}]}
+</code></pre>
+</li>
+<li>
+<p>While <code>serve</code> is stopped, run:</p>
+<pre><code class="language-sh">assaio-agent serve migrate-sync --db /path/server.db --map /private/path/mapping.json
+</code></pre>
+<p>The command checks that the map covers every stored member, that targets are distinct, and
+that existing dedupe keys have the expected prefix. One transaction rekeys usage rows, the
+legacy archive, session labels and steps, changes dedupe-key prefixes, clears branch values
+on synced usage and archive rows, verifies the result, and marks the store protocol 2. An
+error rolls back the transaction.</p>
+</li>
+<li>
+<p>Configure <code>server.members</code> with the resulting digests, start the new server, and run v2
+clients with their matching tokens and identity keys. Do not run an older server binary
+against the migrated database.</p>
+</li>
+</ol>
+<p>Fresh stores use protocol 2. Existing stores with synced member rows reject v2 writes until
+migrated. The map is not sent or stored in the database; its local file remains until you remove
+it. Old backups, SQLite free pages and WAL files may retain old values. A lost or rotated identity
+key changes the digest and has no automatic rekey procedure. Historical collisions in the old
+40-bit labels cannot be separated. Sync v2 excludes <code>GitBranch</code> and cleartext <code>Member</code> from the
+wire payload, but still sends <code>Project</code>, <code>Subpath</code>, <code>SessionID</code>, timestamps and other allowed
+usage fields, which can support external joins.</p>
 <p>Run <code>assaio-agent doctor --db &lt;central store&gt;</code> against the server database to see its size,
 reclaimable space, measured growth, and projected year.</p>
 <p>The same extension mechanism applies to the server. <code>server.BuildDashboard</code>
@@ -210,22 +263,10 @@ view would create a denial-of-service risk without a server budget. They run on 
 <code>analyze</code>, <code>dashboard</code>, <code>metrics verify</code>, and <code>check</code> for rules (see <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0004-exec-metric-plugin-protocol.md">ADR
 0004</a> and <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0005-exec-rule-plugin-protocol.md">ADR
 0005</a>). Served dashboards always anonymize:
-<code>BuildDashboard</code> hardcodes <code>anonymize = true</code>. Real names are available only locally, through an
-explicit <code>--no-anonymize</code> run against a store copy
-(<code>assaio-agent dashboard --db &lt;path-to-central-db&gt; --no-anonymize</code>), never through the served
-dashboard.</p>
-<pre><code class="language-yaml"># on the server
-server:
-  addr: 127.0.0.1:8787    # loopback by default; widen deliberately
-  token: &quot;&quot;    # required; override with ASSAIO_SERVER_TOKEN, do not commit a real one
-
-# on each teammate's machine
-sync:
-  server: &quot;http://assaio.internal:8787&quot;
-  token: &quot;&quot;    # override with ASSAIO_SYNC_TOKEN
-  member: &quot;&quot;   # opt-in self-identification; default: an auto pseudonym from hostname+OS-user
-</code></pre>
-<hr>
+<code>BuildDashboard</code> hardcodes <code>anonymize = true</code>. To show project names, run
+<code>assaio-agent dashboard --db &lt;path-to-central-db&gt; --no-anonymize</code> locally against a store copy.
+<code>report --identify</code> reveals the stored member identifier, which may be a legacy name or a v2
+digest.</p>
 <nav class="pager" aria-label="Previous and next"><a class="prev" href="https://assaio.dev/docs/source-fields"><span class="dir">Previous</span> What each source&#39;s log carries, and what assaio reads</a><a class="next" href="https://assaio.dev/docs/automation"><span class="dir">Next</span> Automating assaio — hooks, scheduled sync, and survival</a></nav></main>
 </div>
 <footer>
