@@ -2,19 +2,23 @@ cff-version: 1.2.0
 message: If you use this software, please cite it as below.
 title: assaio
 abstract: >-
-  Open-source, offline-first CLI for measuring how an organization uses AI
-  coding tools: token and cost accounting, and AI-output-versus-cost
-  effectiveness per project, across Claude Code, Codex CLI, Gemini CLI,
-  GitHub Copilot CLI, Cline, and agy CLI. agy is Google's Antigravity CLI, which
-  publishes no token counter, so it contributes sessions and activity and is
-  excluded from every cost figure. Directional local survival and pull-request
-  naming for candidate commits, and bounded review and current-head CI observations
-  for named pull requests are available; these observations do not attribute outcomes
-  to AI sessions.
+  Open-source, offline-first Go CLI for platform and engineering teams to observe
+  AI adoption and usage breadth, compare API-equivalent cost estimates and inspect
+  local delivery evidence. It reads logs across Claude Code, Codex CLI, Gemini CLI,
+  GitHub Copilot CLI, Cline, and agy CLI. agy is Google's Antigravity CLI.
+  Antigravity contributes activity only and is excluded from token and cost figures. Adoption describes
+  observed sessions, active days and tool/project breadth, not employee-wide
+  percentages. Costs are estimates from public prices, not invoices or reconstructed
+  subscription use. Local session-to-commit candidates and optional bounded PR,
+  review, latest-head check and separate historical suite/run observations include
+  coverage and withheld conclusions. Directional survival checks recent commit
+  changes remaining in HEAD without assigning lines to AI sessions. Delivery
+  evidence stays local and ephemeral, separate from the optional self-hosted usage
+  MVP, and does not establish causal productivity, ROI or AI session outcomes.
 authors:
   - name: The assaio Authors
 license: Apache-2.0
-version: 0.37.0
+version: 0.38.0
 repository-code: https://github.com/assaio/assaio
 url: https://github.com/assaio/assaio
-date-released: 2026-10-09
+date-released: 2026-10-10
