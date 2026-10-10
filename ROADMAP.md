@@ -115,9 +115,12 @@ Build the differentiating outcome path before expanding the UI or connector coun
   check-run/status-context observations, with total and listed counts (ADR 0023). v0.38.0 adds
   B231's independent bounded suite/run history, eligible reviewed-revision counts, a request-change
   snapshot share with a full named merged PR denominator, and multi-parent merge identification
-  (ADR 0024). B232 retains authoritative review transitions/round boundaries, comparable workflow
-  lifetimes including force-pushed-away commits, authoritative squash-versus-rebase methods and
-  trustworthy content-free revert relations with a corpus. Comparable PR pipeline CI rates remain
+  (ADR 0024). The next bounded increment adds raw source-stated review dismissals with actual
+  event times, nullable review joins and distinct timeline/filter/slice coverage (ADR 0025),
+  preserving current snapshots and matching. B232 remains open for authoritative review
+  transitions/round boundaries, complete comparable workflow lifetimes including lost and
+  force-pushed-away commits, authoritative one-parent applied merge methods and explicit
+  content-free revert relations, each with source coverage, defined populations and real corpora. Comparable PR pipeline CI rates remain
   withheld. These observations stay local, outside sync and dashboards; an importable contract
   for other forges remains open.
 - Extend the shipped local session→commit slice — already graded by the attribution corpus and

@@ -20,6 +20,8 @@ var allowed = []string{
 	"reviews", "last", "submittedAt", "statusCheckRollup", "contexts", "__typename", "on", "CheckRun", "StatusContext",
 	"status", "conclusion", "startedAt", "completedAt", "createdAt",
 	"parents", "history", "checkSuites", "checkRuns",
+	"reviewDismissals", "timelineItems", "filteredCount", "pageCount", "hasPreviousPage",
+	"ReviewDismissedEvent", "previousReviewState", "review",
 }
 
 func TestTheQueryAsksForAllowlistedFieldsOnly(t *testing.T) {
@@ -116,6 +118,11 @@ func FuzzParse(f *testing.F) {
 		f.Add(body)
 	}
 	f.Add([]byte(`{"errors":[{"message":"x"}]}`))
+	seed := pr("PR_1", 1, observedAt, oid)
+	seed["reviewDismissals"] = dismissalSourceConnection(5, 1, false, dismissalSource("RDE_1"))
+	f.Add([]byte(pageOf(false, seed)))
+	seed["reviewDismissals"] = dismissalSourceConnection(5, 0, false)
+	f.Add([]byte(pageOf(false, seed)))
 	f.Fuzz(func(t *testing.T, b []byte) {
 		p, err := parsePage(b)
 		if err != nil {
@@ -133,6 +140,11 @@ func FuzzParse(f *testing.F) {
 			}
 			all = append(all, reviews...)
 			all = append(all, checks...)
+			_, dismissals, err := dismissalObservations(&p.Nodes[i], event.Source{Name: sourceName}, "p", time.Unix(1, 0))
+			if err != nil {
+				t.Fatalf("parsed dismissal timeline does not validate: %v", err)
+			}
+			all = append(all, dismissals...)
 			suites, historical, err := historyObservations(&p.Nodes[i], event.Source{Name: sourceName}, "p", time.Unix(1, 0))
 			if err != nil {
 				continue

@@ -24,6 +24,7 @@ type PullRequests struct {
 	Requests         []event.Event
 	Listings         []event.Event
 	Reviews          []event.Event
+	ReviewDismissals []event.Event
 	Checks           []event.Event
 	Suites           []event.Event
 	HistoricalChecks []event.Event

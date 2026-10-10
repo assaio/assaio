@@ -108,8 +108,8 @@ reported when read: the pull request's state, never a session's.
 ### Two independent bounded reads
 
 The base repository walk reads 50 PRs per page, at most 20 pages, plus a top re-read of at most
-20 pages. It includes at most the last 100 reviews per PR and last 100 contexts in the latest
-head's check rollup. A separate fixed historical walk reads 5 PRs per page, at most 20 pages,
+20 pages. It includes at most the last 100 reviews, last 100 selected review-dismissal events
+per PR and last 100 contexts in the latest head's check rollup. A separate fixed historical walk reads 5 PRs per page, at most 20 pages,
 plus its own top re-read of at most 20 pages. It covers the first 100 currently listed commits,
 last 10 check suites per commit and last 5 check runs per suite with check type ALL. Each API
 call is limited to 60 seconds and 8 MiB; a source error fails the document, rather than producing
@@ -135,6 +135,29 @@ place an event when a source timestamp is absent; it cannot supply an actual rev
 time or prove a historical run sequence. Read time is a snapshot time, not a review or CI event
 time. [ADR 0023](adr/0023-github-review-and-head-check-observations.md) and
 [ADR 0024](adr/0024-bounded-github-history.md) record these rules.
+
+### Raw review dismissals
+
+The base read selects `timelineItems(last: 100, itemTypes: [REVIEW_DISMISSED_EVENT])` with only
+`__typename`, `id`, `createdAt`, `previousReviewState` and nullable
+`review { id submittedAt commit { oid } }`. It emits `scm.review.dismissed` as a raw source-local
+PR outcome observation, with the same invocation `observedAt`. Actual event `createdAt` supplies
+`dismissedAt` and occurrence time; it is required and has no fallback. A null review leaves review
+id, reviewed commit hash and submission time absent.
+
+Coverage keeps `totalCount` (all timeline events), `filteredCount` (selected dismissals),
+`pageCount` (source-reported returned slice), `listed` (actual retained nodes) and
+`hasPreviousPage` (source-stated selected truncation) separate. Missing coverage stays
+null/unavailable; independently validated raw events can still appear. Usable selected-empty
+coverage establishes no selected dismissal at read time, even when other timeline events exist.
+A truncated last-100 slice does not establish complete dismissal history.
+
+These events neither restore current review states nor define rounds, change matching or feed a
+new rate or count-derived metric. Current review snapshot calculations remain unchanged.
+No author, actor, reviewer, dismissal message, title, body, content or person field is read.
+The observations remain local and ephemeral, outside the store, sync, dashboards, share and
+plugins. See [ADR 0025](adr/0025-bounded-review-dismissals.md) and
+[the dated source study](github-source-feasibility.md) for real captures and remaining corpus gaps.
 
 ### Reviewed revisions and snapshot shares
 

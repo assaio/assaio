@@ -66,3 +66,18 @@ Comparable PR workflow lifetimes need force-pushed-away commits and more source 
 Authoritative squash-versus-rebase methods and trustworthy content-free revert relations need
 source support and conformance cases. These remain B232 work; no subject or topology heuristic
 establishes PR reversion, and no PR observation establishes an AI session outcome.
+
+## Decision continuation (2026-10-10)
+[ADR 0025](0025-bounded-review-dismissals.md) extends the base read with the last 100
+selected review-dismissal events and nullable `TimelinePopulation` coverage: `totalCount`,
+`filteredCount`, `pageCount`, `listed` and `hasPreviousPage`. It also permits the allowlisted
+`ReviewDismissal` payload's optional review id, hash and submission time. This narrowly extends
+the nullable-field list above; the historical decision remains intact.
+
+Dismissals require actual source event times without fallback, share the invocation observation
+time and remain raw local PR outcome observations. They do not restore review snapshots, alter
+matching or derive rounds or rates. The independent historical read and current snapshot
+calculations remain unchanged. B232 stays open for complete review transitions and round
+boundaries, comparable workflow lifetimes including lost/force-pushed commits, authoritative
+one-parent applied merge methods and explicit content-free revert relations, with real source
+and population conformance evidence. See [the source study](../github-source-feasibility.md).

@@ -41,7 +41,21 @@ one-command observations through two independent fixed repository walks. The bas
 Each can re-read up to 20 pages from the top. Both use PR update times for their windows and
 share one invocation ObservedAt; each reports independent PR counts and read-back coverage.
 Repository totals cover the entire repository.
-The base read includes at most the last 100 reviews and last 100 latest-head contexts per PR.
+The base read includes at most the last 100 reviews, last 100 selected raw review-dismissal
+events and last 100 latest-head contexts per PR. Dismissals select only the type discriminator,
+event id, actual createdAt, previousReviewState and nullable review { id submittedAt commit { oid } }.
+They emit scm.review.dismissed with the invocation observedAt and required actual dismissal time,
+without fallback. A null review leaves its id, hash and submission time absent. Coverage separates
+totalCount (all timeline events), filteredCount (selected dismissals), pageCount (source-returned
+slice count), listed (actual retained nodes) and hasPreviousPage (source-stated selected truncation).
+Missing coverage stays null/unavailable; independently validated raw events may still appear.
+These raw local PR outcome observations do not restore current review states or derive rounds,
+rates or new count-derived metrics. Current snapshot calculations and offline session-commit/v2
+and GitHub session-commit/v3 matching remain unchanged. No author, actor, reviewer, dismissal
+message, title, body, content or person field is selected. The dated
+[source study](https://assaio.dev/docs/github-source-feasibility) records finite approved-dismissal
+positives and selected-empty samples; it does not establish universe-wide absence. Real
+changes_requested dismissals, null review joins and over-100-dismissal populations remain gaps.
 The historical read covers the first 100 currently listed commits, last 10 suites per commit
 and last 5 runs per suite with check type ALL. Only PRs named by candidates or alternatives get
 details. Historical data joins only when PR node id and number, commit totals and returned first-100

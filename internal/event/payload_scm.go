@@ -35,12 +35,13 @@ type PullRequest struct {
 	// Reviews and Checks count the source connections; listed counts are separate so a bounded
 	// read never presents an incomplete connection as a complete one. A nil check rollup has
 	// no stated check population.
-	Reviews          int64  `json:"reviews"`
-	ReviewsListed    int64  `json:"reviewsListed"`
-	ReviewsAvailable bool   `json:"reviewsAvailable"`
-	Checks           int64  `json:"checks"`
-	ChecksListed     int64  `json:"checksListed"`
-	CheckState       string `json:"checkState,omitempty"`
+	Reviews          int64               `json:"reviews"`
+	ReviewsListed    int64               `json:"reviewsListed"`
+	ReviewsAvailable bool                `json:"reviewsAvailable"`
+	Checks           int64               `json:"checks"`
+	ChecksListed     int64               `json:"checksListed"`
+	CheckState       string              `json:"checkState,omitempty"`
+	ReviewDismissals *TimelinePopulation `json:"reviewDismissals"`
 }
 
 // PullRequestCommit says that a pull request lists a commit. It is an observation of its own
@@ -101,6 +102,9 @@ func (p PullRequest) validate() error {
 	}
 	if p.HistoryState != "" && !valid([]string{"read", "outside-history-read", "commit-list-changed", "unavailable"}, p.HistoryState) {
 		return errors.New("unknown history read state")
+	}
+	if p.ReviewDismissals != nil {
+		return p.ReviewDismissals.validate()
 	}
 	return nil
 }

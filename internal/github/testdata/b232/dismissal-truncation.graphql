@@ -1,0 +1,15 @@
+query {
+  repository(owner: "github", name: "docs") {
+    pullRequest(number: 46200) {
+      id number
+      zero: timelineItems(last: 0, itemTypes: [REVIEW_DISMISSED_EVENT]) {
+        totalCount filteredCount pageCount pageInfo { hasPreviousPage }
+        nodes { ... on ReviewDismissedEvent { id createdAt previousReviewState review { id submittedAt commit { oid } } } }
+      }
+      one: timelineItems(last: 1, itemTypes: [REVIEW_DISMISSED_EVENT]) {
+        totalCount filteredCount pageCount pageInfo { hasPreviousPage }
+        nodes { ... on ReviewDismissedEvent { id createdAt previousReviewState review { id submittedAt commit { oid } } } }
+      }
+    }
+  }
+}

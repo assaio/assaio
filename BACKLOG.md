@@ -348,11 +348,17 @@ does not ship.
   stays out entirely until something needs it: `B91` never records a path, so there is no
   opt-in to design yet. See [ADR 0009](docs/adr/0009-local-git-evidence-collector.md).
 - [ ] **B232 · establish remaining PR outcome sources and corpus** — M · both — B231's
-  bounded observation slice ships in v0.38, without causal session outcomes. Establish
-  authoritative review-state transitions and round boundaries; comparable PR workflow-run
-  lifetimes including force-pushed-away commits; authoritative squash-versus-rebase methods;
-  and trustworthy content-free revert relations with a conformance corpus. Require explicit
-  source coverage and comparable populations before deriving further rates.
+  bounded observation slice shipped in v0.38. The additive raw dismissal slice records actual
+  source-stated PR events, nullable review joins and separate timeline/filter/slice coverage
+  ([ADR 0025](docs/adr/0025-bounded-review-dismissals.md)); it derives no rounds or new rates.
+  Remaining gates: authoritative review transitions and round boundaries with real
+  changes_requested-dismissal, null-review and over-100-dismissal cases; a complete workflow
+  source covering lost/force-pushed commits, attempts and PR associations with comparable
+  populations; an authoritative read-side applied method with distinguishable real one-parent
+  squash/rebase cases; and an explicit content-free read-side original/revert relation.
+  Each track needs explicit coverage and real positive, negative and unknown conformance cases
+  before further derived rates. Synthetic cases cannot close real-corpus gaps. No causal session
+  outcomes. See [the finite source study](docs/github-source-feasibility.md).
 - [ ] **B230 · attribution by this clone's configured git identity** — M · both — git can match
   the configured author identity and return only hashes, which would tell a teammate's commits from
   the user's where time alone cannot. It is the first use of identity in attribution, so it needs its

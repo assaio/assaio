@@ -26,6 +26,8 @@ Where everything lives, in one place.
 - [`evidence.md`](evidence.md) — local session→commit candidates and optional bounded PR,
   review and CI observations: methods, confidence, ambiguity, coverage, population eligibility,
   privacy boundaries and withheld conclusions.
+- [`github-source-feasibility.md`](github-source-feasibility.md) — shipped raw dismissal fields,
+  count meanings, finite real captures and the remaining four-track source/population gates.
 - [`automation.md`](automation.md) — running assaio from cron, launchd, CI, or a status line.
 - [`reconcile.md`](reconcile.md) — checking the `$` estimate against a vendor's own
   billing or usage export, offline: how columns bind, how to read the unexplained delta,
@@ -151,3 +153,6 @@ all in the shipping PR.
 - [ADR 0024](adr/0024-bounded-github-history.md) — **independent bounded GitHub history** keeps
   suite/run coverage, nullable populations and justified snapshot counts explicit, while
   withholding exact rounds, comparable pipeline CI rates and unsupported merge/revert claims.
+- [ADR 0025](adr/0025-bounded-review-dismissals.md) — **raw bounded review dismissals**
+  preserve actual source times, nullable review joins and separate timeline/slice counts without
+  rewriting current review snapshots or deriving rounds.

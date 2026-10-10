@@ -143,6 +143,7 @@ func TestTheChangesBlockCountsEveryAbsence(t *testing.T) {
 	want3 := LinkedPullRequest{Number: 3, State: event.ChangeClosed, NamedBy: namedByCandidate}
 	for i := range gotLinked {
 		gotLinked[i].ReviewObservations, gotLinked[i].RequestedChangesRevisions, gotLinked[i].ReviewRounds = nil, nil, nil
+		gotLinked[i].ReviewDismissals = nil
 		gotLinked[i].MergeMethod, gotLinked[i].HistoricalChecks = nil, nil
 	}
 	if !reflect.DeepEqual(gotLinked, []LinkedPullRequest{want1, want3}) {

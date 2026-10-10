@@ -51,6 +51,7 @@ type LinkedPullRequest struct {
 	Reviews                   *ObservedStates     `json:"reviews"`
 	HeadChecks                *ObservedStates     `json:"headChecks"`
 	ReviewObservations        []ReviewObservation `json:"reviewObservations"`
+	ReviewDismissals          *PRReviewDismissals `json:"reviewDismissals"`
 	RequestedChangesRevisions *DerivedCount       `json:"requestedChangesRevisions"`
 	ReviewRounds              *DerivedCount       `json:"reviewRounds"`
 	MergeMethod               *ObservedMethod     `json:"mergeMethod"`
@@ -110,6 +111,7 @@ func ChangesOf(prs *PullRequests, results []Result, source string) *Changes {
 	named := namedBy(results)
 	delivery := deliveryByPR(prs)
 	reviews := reviewsByPR(prs)
+	dismissals := reviewDismissalsByPR(prs)
 	history := historyByPR(prs)
 	for i := range prs.Requests {
 		pr, ok := prs.Requests[i].Payload.(event.PullRequest)
@@ -129,6 +131,7 @@ func ChangesOf(prs *PullRequests, results []Result, source string) *Changes {
 				linked.ReviewObservations = reviews[pr.Number]
 			}
 			linked.RequestedChangesRevisions = requestedChangesRevisions(&pr, linked.ReviewObservations)
+			linked.ReviewDismissals = dismissals[pr.Number]
 			linked.ReviewRounds = withheldCount("review-states-do-not-define-round-boundaries")
 			linked.MergeMethod = mergeMethod(&pr, prs.Requests[i].Source)
 			linked.HistoricalChecks = history[pr.Number]

@@ -19,6 +19,7 @@ type Read struct {
 	Requests         []event.Event
 	Listings         []event.Event
 	Reviews          []event.Event
+	ReviewDismissals []event.Event
 	Checks           []event.Event
 	Suites           []event.Event
 	HistoricalChecks []event.Event
@@ -63,6 +64,13 @@ func ReadPullRequests(ctx context.Context, run Runner, root, project string, sin
 			return Read{}, fmt.Errorf("pull request #%d from %s has no usable id", nd.Number, repo)
 		}
 		request, listings := observations(&nd, src, project, observedAt)
+		population, dismissals, err := dismissalObservations(&nd, src, project, observedAt)
+		if err != nil {
+			return Read{}, fmt.Errorf("pull request #%d from %s: %w", nd.Number, repo, err)
+		}
+		payload := request.Payload.(event.PullRequest)
+		payload.ReviewDismissals = population
+		request.Payload = payload
 		reviews, checks, err := deliveryObservations(&nd, src, project, observedAt)
 		if err != nil {
 			return Read{}, fmt.Errorf("pull request #%d from %s: %w", nd.Number, repo, err)
@@ -73,6 +81,7 @@ func ReadPullRequests(ctx context.Context, run Runner, root, project string, sin
 		}
 		all := append([]event.Event{request}, listings...)
 		all = append(all, reviews...)
+		all = append(all, dismissals...)
 		all = append(all, checks...)
 		all = append(all, suites...)
 		all = append(all, historicalChecks...)
@@ -84,6 +93,7 @@ func ReadPullRequests(ctx context.Context, run Runner, root, project string, sin
 		got.Requests = append(got.Requests, request)
 		got.Listings = append(got.Listings, listings...)
 		got.Reviews = append(got.Reviews, reviews...)
+		got.ReviewDismissals = append(got.ReviewDismissals, dismissals...)
 		got.Checks = append(got.Checks, checks...)
 		got.Suites = append(got.Suites, suites...)
 		got.HistoricalChecks = append(got.HistoricalChecks, historicalChecks...)

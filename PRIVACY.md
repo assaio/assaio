@@ -252,6 +252,20 @@ Actual submission times are retained separately from an observation's occurrence
 It also reads the latest head's check rollup and at most the last 100 check-run or commit-status
 contexts' opaque ids, closed states or conclusions and times, with total and listed counts.
 
+In the same base query, each PR adds the last 100 `REVIEW_DISMISSED_EVENT` timeline items.
+The exact event allowlist is `__typename`, `id`, `createdAt`, `previousReviewState` and nullable
+`review { id submittedAt commit { oid } }`. Coverage reads `totalCount` (all timeline events),
+`filteredCount` (selected dismissals), `pageCount` (source-reported slice count) and
+`pageInfo.hasPreviousPage` (selected truncation); `listed` counts actual retained nodes locally.
+Missing coverage stays null/unavailable, while independently validated raw events can still appear.
+Actual dismissal `createdAt` is required with no fallback. Events share the invocation
+`ObservedAt`; a null review leaves its id, reviewed hash and submission time absent.
+No author, actor, reviewer, `dismissalMessage`, title, body, content or person field is selected.
+Raw `scm.review.dismissed` observations describe PR outcomes, leave current review snapshots and
+matching unchanged, and add no rate or count-derived metric. They remain in memory for one local
+command, outside SQLite, sync, dashboards, share and plugins
+([ADR 0025](docs/adr/0025-bounded-review-dismissals.md)).
+
 The separate historical read covers the first 100 currently listed commits, the last 10 check
 suites per commit and the last 5 check runs per suite with check type ALL. It reads content-free
 identifiers, commit hashes, closed status/conclusion fields, source timestamps and connection

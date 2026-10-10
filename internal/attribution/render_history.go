@@ -28,6 +28,9 @@ func renderDeliveryCoverage(w io.Writer, c *Changes, since time.Time) error {
 }
 
 func renderPRHistory(w io.Writer, pr *LinkedPullRequest) error {
+	if err := renderReviewDismissals(w, pr.ReviewDismissals); err != nil {
+		return err
+	}
 	if pr.RequestedChangesRevisions != nil {
 		if _, err := fmt.Fprintf(w, renderReviewedRevisions, derivedCount(pr.RequestedChangesRevisions),
 			readCount(pr.Reviews), deliveryReason(pr.RequestedChangesRevisions.Reason)); err != nil {

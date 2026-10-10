@@ -1,0 +1,6 @@
+query {
+  pr: __type(name: "PullRequest") { fields { name } }
+  timelineKinds: __type(name: "PullRequestTimelineItemsItemType") { enumValues { name } }
+  merged: __type(name: "MergedEvent") { fields { name } }
+  revertEvent: __type(name: "RevertedEvent") { name }
+}

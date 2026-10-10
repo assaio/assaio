@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/assaio/assaio/internal/event"
 )
 
 // pullRequestQuery asks the forge for one repository's pull
@@ -23,6 +25,17 @@ const pullRequestQuery = `query($owner: String!, $name: String!, $cursor: String
         mergeCommit { oid parents(first: 2) { totalCount } }
         commits(first: 100) { totalCount nodes { commit { oid } } }
         reviews(last: 100) { totalCount nodes { id state submittedAt updatedAt commit { oid } } }
+        reviewDismissals: timelineItems(last: 100, itemTypes: [REVIEW_DISMISSED_EVENT]) {
+          totalCount filteredCount pageCount
+          pageInfo { hasPreviousPage }
+          nodes {
+            __typename
+            ... on ReviewDismissedEvent {
+              id createdAt previousReviewState
+              review { id submittedAt commit { oid } }
+            }
+          }
+        }
         statusCheckRollup {
           state
           contexts(last: 100) {
@@ -89,8 +102,9 @@ type node struct {
 			} `json:"nodes"`
 		} `json:"contexts"`
 	} `json:"statusCheckRollup"`
-	History      *historyConnection `json:"history"`
-	HistoryState string             `json:"-"`
+	History          *historyConnection   `json:"history"`
+	HistoryState     string               `json:"-"`
+	ReviewDismissals *dismissalConnection `json:"reviewDismissals"`
 }
 
 type page struct {
@@ -144,6 +158,12 @@ func parsePage(body []byte) (page, error) {
 	}
 	if prs.TotalCount != nil && (*prs.TotalCount < 0 || int64(len(prs.Nodes)) > *prs.TotalCount) {
 		return page{}, errors.New("the forge returned an invalid repository pull-request population")
+	}
+	for i := range prs.Nodes {
+		nd := &prs.Nodes[i]
+		if _, _, err := dismissalObservations(nd, event.Source{Name: sourceName}, "", nd.UpdatedAt); err != nil {
+			return page{}, fmt.Errorf("pull request #%d dismissal timeline: %w", nd.Number, err)
+		}
 	}
 	return page{Nodes: prs.Nodes, HasNextPage: *prs.PageInfo.HasNextPage, EndCursor: prs.PageInfo.EndCursor, TotalCount: prs.TotalCount}, nil
 }

@@ -25,6 +25,7 @@ breadth as adoption. Costs are API-equivalent estimates, not invoices or subscri
 Local delivery observations describe candidates and PRs, without causal session outcomes.
 
 - [Local session-to-commit and delivery evidence](evidence.md)
+- [GitHub source feasibility and bounded review dismissals](github-source-feasibility.md)
 - [Reconciling against the vendor's own numbers](reconcile.md)
 - [Format resilience — detecting and reacting to vendor log-format drift](format-resilience.md)
 - [What each source's log carries, and what assaio reads](extending/source-fields.md)
