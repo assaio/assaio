@@ -64,7 +64,7 @@ Homebrew:
 brew install assaio/tap/assaio-agent
 ```
 
-With Go 1.25 or newer:
+With Go 1.26 or newer:
 
 ```sh
 go install github.com/assaio/assaio/cmd/assaio-agent@latest

@@ -1,8 +1,8 @@
 module github.com/assaio/assaio
 
-go 1.25.0
+go 1.26.0
 
-// The language version stays at 1.25 so `go install` works on it. Go 1.27.2 is the
+// Dependencies require Go 1.26. Go 1.27.2 is the
 // toolchain floor: it fixes 11 reachable standard-library vulnerabilities found by
 // `govulncheck` on 1.27.1, while preserving that release's `-fuzztime` deadline fix
 // (go.dev/issue/75804). `make vuln` checks for reachable advisories; CI builds releases
@@ -16,12 +16,12 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/providers/rawbytes v1.0.1
 	github.com/knadh/koanf/providers/structs v1.0.1
-	github.com/knadh/koanf/v2 v2.3.6
+	github.com/knadh/koanf/v2 v2.3.7
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/yuin/goldmark v1.8.6
-	golang.org/x/text v0.41.0
-	modernc.org/sqlite v1.59.0
+	golang.org/x/text v0.42.0
+	modernc.org/sqlite v1.60.1
 )
 
 require (
@@ -40,8 +40,8 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	modernc.org/libc v1.75.7 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	modernc.org/libc v1.77.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )

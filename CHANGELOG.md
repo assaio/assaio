@@ -33,6 +33,14 @@ Discussion.
 
 ## [Unreleased]
 
+### Breaking
+
+- Raise the minimum Go version from 1.25 to 1.26.
+
+### Changed
+
+- Update koanf/v2 v2.3.6 → v2.3.7, x/text v0.41.0 → v0.42.0 and SQLite v1.59.0 → v1.60.1, with indirect x/sys and libc updates.
+
 ## [0.37.0] - 2026-10-09
 
 ### Breaking
