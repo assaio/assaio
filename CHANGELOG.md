@@ -42,6 +42,10 @@ Discussion.
 - Update koanf/v2 v2.3.6 → v2.3.7, x/text v0.41.0 → v0.42.0 and SQLite v1.59.0 → v1.60.1, with indirect x/sys and libc updates.
 - Update full SHA pins for CodeQL actions v4.38.1 → v4.38.2 and Syft download action v0.24.2 → v0.24.3.
 
+### Security
+
+- Upgrade Wrangler 4.144.0 → 4.149.0 and transitive sharp 0.35.4 → 0.35.5 to address [GHSA-wq5f-xc86-pv6w](https://github.com/advisories/GHSA-wq5f-xc86-pv6w) in the site-deployment development tooling.
+
 ## [0.37.0] - 2026-10-09
 
 ### Breaking
