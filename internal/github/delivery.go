@@ -11,21 +11,27 @@ import (
 
 func deliveryObservations(nd *node, src event.Source, project string, observedAt time.Time) ([]event.Event, []event.Event, error) {
 	var reviews, checks []event.Event
-	if nd.Reviews != nil {
+	if reviewsAvailable(nd) {
+		seen := map[string]bool{}
 		for _, r := range nd.Reviews.Nodes {
-			if !nodeID(r.ID) {
-				return nil, nil, errors.New("review has no usable id")
+			if !nodeID(r.ID) || seen[r.ID] {
+				return nil, nil, errors.New("review has no usable unique id")
 			}
+			seen[r.ID] = true
 			at := r.SubmittedAt
 			if at.IsZero() {
 				at = r.UpdatedAt
 			}
 			e := envelope(event.TypeReview, r.ID, at, event.TimeStated, event.GrainReview, src, project, observedAt)
-			e.Payload = event.Review{Number: nd.Number, State: strings.ToLower(r.State)}
+			review := event.Review{Number: nd.Number, State: strings.ToLower(r.State), SubmittedAt: r.SubmittedAt}
+			if r.Commit != nil {
+				review.Commit = r.Commit.OID
+			}
+			e.Payload = review
 			reviews = append(reviews, e)
 		}
 	}
-	if nd.StatusCheckRollup != nil {
+	if headChecksAvailable(nd) {
 		for i := range nd.StatusCheckRollup.Contexts.Nodes {
 			c := &nd.StatusCheckRollup.Contexts.Nodes[i]
 			if !nodeID(c.ID) {
@@ -36,6 +42,7 @@ func deliveryObservations(nd *node, src event.Source, project string, observedAt
 			switch c.Type {
 			case "CheckRun":
 				check.Kind, check.State, check.Conclusion = "run", strings.ToLower(c.Status), strings.ToLower(c.Conclusion)
+				check.StartedAt, check.CompletedAt = c.StartedAt, c.CompletedAt
 				at = c.CompletedAt
 				if at.IsZero() {
 					at = c.StartedAt
@@ -60,4 +67,13 @@ func deliveryObservations(nd *node, src event.Source, project string, observedAt
 		}
 	}
 	return reviews, checks, nil
+}
+
+func reviewsAvailable(nd *node) bool {
+	return nd.Reviews != nil && nd.Reviews.TotalCount != nil && nd.Reviews.Nodes != nil
+}
+
+func headChecksAvailable(nd *node) bool {
+	return nd.StatusCheckRollup != nil && nd.StatusCheckRollup.Contexts != nil &&
+		nd.StatusCheckRollup.Contexts.TotalCount != nil && nd.StatusCheckRollup.Contexts.Nodes != nil
 }

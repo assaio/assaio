@@ -11,19 +11,23 @@ Roadmap: `ROADMAP.md` · Architecture decisions: `docs/adr/` · Documentation ma
 
 ## What this is
 
-`assaio` measures how an organization uses AI coding tools and whether it is worth it:
-cost/tokens, how much AI-written code reaches production, quality/bug impact, DevEx.
+`assaio` helps platform and engineering teams observe AI adoption and usage breadth, compare
+API-equivalent estimated costs and inspect local delivery evidence. Adoption means observed
+sessions, active days and tool/project breadth, not an employee-wide percentage. It does not
+establish causal productivity, ROI, time saved or individual performance.
 This repository ships one binary, `assaio-agent`: an offline-first CLI (Go, embedded
 SQLite) that reads the local session logs of Claude Code, Codex CLI, Gemini CLI, GitHub
 Copilot CLI, Cline, and Antigravity CLI (activity only — its format publishes no token counter,
-so every cost figure withholds for it) and turns them into reports (`report`, `effectiveness`,
+so token and cost figures exclude it) and turns them into reports (`report`, `effectiveness`,
 `reprice`), diagnostics (`analyze`, `check`, `doctor`, `status`), local session→commit
-evidence (`evidence`, which with `--github` reads pull requests through the user's own `gh`), and
-the self-contained Assay HTML dashboard. Out-of-tree
-exec plugins extend it in any language — parsers via `plugins:` (ADR 0003), metrics via
-`metrics:` (ADR 0004), rules gating `check` via `rules:` (ADR 0005). A team-server MVP
-(`serve` + `sync`) pools a team's usage on self-hosted infrastructure; the deeper org-analytics
-server (git/issue-tracker correlation for survival/bug/quality) is future roadmap — see `ROADMAP.md`.
+evidence (`evidence`, whose explicit `--github` reads bounded PR, review, latest-head check and
+separate historical suite/run observations through the user's own `gh`), and the self-contained
+Assay HTML dashboard. Delivery observations describe PRs, not AI session outcomes, and stay
+local and ephemeral, outside sync and dashboards. Out-of-tree exec plugins extend it in any
+language — parsers via `plugins:` (ADR 0003), metrics via `metrics:` (ADR 0004), rules gating
+`check` via `rules:` (ADR 0005). A team-server MVP (`serve` + `sync`) pools usage on self-hosted
+infrastructure; deeper org-wide survival/bug/quality analytics remain future roadmap — see
+`ROADMAP.md`.
 
 ## Hard rules (long form: `CONTRIBUTING.md`)
 
@@ -106,7 +110,7 @@ internal/drift/          canaries judging each source against its own history, a
                          an absolute condition
 internal/event/          the canonical observation contract of the evidence graph (ADR 0007),
                          for the domains with no store row of their own (ADR 0016)
-internal/github/         reads a repository's pull requests through the user's own gh (ADR 0022)
+internal/github/         reads bounded repository PR/review/head-check and independent suite/run history through the user's own gh (ADR 0022–0024)
 internal/humanize/       shared count/money formatters every surface renders through
 internal/i18n/           the translatable catalog: dashboard chrome, statusline, explain
 internal/ingest/         discovers session files, parses them, upserts into the store

@@ -231,10 +231,23 @@ reads the listed commits that a `HEAD` reflog records as made in this clone, and
 `attribution.LinkChanges` applies `session-commit/v3` to the results `Match` computed over both
 sets of commits.
 
+With `--github`, two fixed repository walks share one invocation `ObservedAt` and retain
+independent PR counts and read-back windows: the base PR/review/latest-head read and a smaller
+historical suite/run read on currently listed commits. History joins only by PR node id and number, matching commit totals and identical returned
+first-100 commit SHA sets with no duplicate SHAs in either prefix. Both lists may be truncated;
+their coverage gaps remain explicit. Review, suite and check observations retain content-free source fields and provenance;
+actual source timestamps remain distinct from occurrence-time fallbacks. Layer total/listed
+counts and strictly typed nullable population fields distinguish unavailable from known empty.
+Eligible review snapshots can support reviewed-revision counts and a full-population snapshot
+share; exact rounds and comparable PR pipeline CI rates remain withheld. Merge-parent topology
+can identify a multi-parent merge, but one parent cannot distinguish squash from rebase.
+Attribution candidate selection and `session-commit/v3` remain unchanged.
+
 No step writes to the store. The observation id is the commit hash, so re-reading is stable;
 the derived result is deterministic over the same session and commit sets. This slice does not
 enter `analyze.Input`, the signal catalog, the metric-plugin wire, `sync`, the dashboard or the
-team server. Review, CI and merge observations and durable edges remain separate future hand-offs.
+team server. GitHub observations are ephemeral snapshots, not a persisted graph or causal
+session outcomes. Durable edges and unsupported outcome joins remain future hand-offs.
 
 ## Where an exec plugin attaches
 

@@ -1,0 +1,61 @@
+{
+  "format": 1,
+  "captures": [
+    {
+      "file": "assaio-base.json",
+      "repository": "assaio/assaio",
+      "transport": "gh api graphql",
+      "query": "production-base.graphql",
+      "sha256": "44a198b3cef66e48d19516c23584cff2a1db2a184dfcb4207b5da59ebb593d9a",
+      "bytes": 184970,
+      "capturedFileModifiedAt": "2026-10-09T22:05:38.005214+00:00",
+      "repositoryPullRequests": 104,
+      "listedPullRequests": 50
+    },
+    {
+      "file": "assaio-history.json",
+      "repository": "assaio/assaio",
+      "transport": "gh api graphql",
+      "query": "production-history.graphql",
+      "sha256": "864dd1484314df975e399492effe29b4a9477533fc40bbfe43c3141bbf300257",
+      "bytes": 27469,
+      "capturedFileModifiedAt": "2026-10-09T22:05:35.423432+00:00",
+      "repositoryPullRequests": 104,
+      "listedPullRequests": 5
+    },
+    {
+      "file": "cli-base.json",
+      "repository": "cli/cli",
+      "transport": "gh api graphql",
+      "query": "production-base.graphql",
+      "sha256": "29132e1f013d759612bc9d5bec0acf02c605f4d820d40758070ba3f2f5ae208c",
+      "bytes": 233629,
+      "capturedFileModifiedAt": "2026-10-09T22:19:33.919421+00:00",
+      "repositoryPullRequests": 4703,
+      "listedPullRequests": 50
+    }
+  ],
+  "queries": [
+    {
+      "file": "production-base.graphql",
+      "sha256": "20ec2aac2adf8038f440bf2ca85cdaafd7a00b75bfd0615a4d1d1abbc145b222"
+    },
+    {
+      "file": "production-history.graphql",
+      "sha256": "0417b330acd7d800a1c2fd52337acf085849e904c218ad7b3930776ad998de70"
+    }
+  ],
+  "failedResponse": {
+    "file": "resource-limit.json",
+    "sha256": "233f667daa11914e4abe4e913be5a56cc15cc23d84bd69e1f7473dd646a32e69",
+    "sourceSha256": "61b30d408583991fd69f3dec694e154cb652471e663328ad9c8482c9021ab5db",
+    "normalization": "CRLF-to-LF",
+    "transport": "gh api graphql",
+    "repository": "assaio/assaio",
+    "pullRequestsPerPage": 50,
+    "nestedCheckHistory": true,
+    "httpStatus": 502
+  },
+  "contentFieldsRequested": [],
+  "personFieldsRequested": []
+}

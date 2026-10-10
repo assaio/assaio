@@ -15,12 +15,17 @@ const sourceName = "gh"
 // Read is one read of a repository's pull requests: the repository gh resolved, an observation
 // per pull request and per listed commit, and the update time the read reached.
 type Read struct {
-	Repository Repository
-	Requests   []event.Event
-	Listings   []event.Event
-	Reviews    []event.Event
-	Checks     []event.Event
-	BackTo     time.Time
+	Repository       Repository
+	Requests         []event.Event
+	Listings         []event.Event
+	Reviews          []event.Event
+	Checks           []event.Event
+	Suites           []event.Event
+	HistoricalChecks []event.Event
+	RepositoryTotal  *int64
+	HistoryRead      int
+	HistoryBackTo    time.Time
+	BackTo           time.Time
 }
 
 // ReadPullRequests reads the pull requests of the repository gh resolves for root that were
@@ -35,7 +40,14 @@ func ReadPullRequests(ctx context.Context, run Runner, root, project string, sin
 	if err != nil {
 		return Read{}, err
 	}
-	got := Read{Repository: repo, BackTo: w.backTo}
+	got := Read{Repository: repo, BackTo: w.backTo, RepositoryTotal: w.repositoryTotal, HistoryBackTo: since}
+	if len(w.nodes) > 0 {
+		history, err := attachHistory(ctx, run, root, repo, since, &w)
+		if err != nil {
+			return Read{}, err
+		}
+		got.HistoryRead, got.HistoryBackTo = len(history.nodes), history.backTo
+	}
 	ids := make([]string, 0, len(w.nodes))
 	for id := range w.nodes {
 		ids = append(ids, id)
@@ -44,6 +56,9 @@ func ReadPullRequests(ctx context.Context, run Runner, root, project string, sin
 	src := event.Source{Name: sourceName, Build: build}
 	for _, id := range ids {
 		nd := w.nodes[id]
+		if nd.Commits.TotalCount == nil || nd.Commits.Nodes == nil {
+			return Read{}, fmt.Errorf("pull request #%d has an unavailable commit population", nd.Number)
+		}
 		if !nodeID(nd.ID) {
 			return Read{}, fmt.Errorf("pull request #%d from %s has no usable id", nd.Number, repo)
 		}
@@ -52,9 +67,15 @@ func ReadPullRequests(ctx context.Context, run Runner, root, project string, sin
 		if err != nil {
 			return Read{}, fmt.Errorf("pull request #%d from %s: %w", nd.Number, repo, err)
 		}
+		suites, historicalChecks, err := historyObservations(&nd, src, project, observedAt)
+		if err != nil {
+			return Read{}, fmt.Errorf("pull request #%d from %s: %w", nd.Number, repo, err)
+		}
 		all := append([]event.Event{request}, listings...)
 		all = append(all, reviews...)
 		all = append(all, checks...)
+		all = append(all, suites...)
+		all = append(all, historicalChecks...)
 		for i := range all {
 			if err := all[i].Validate(); err != nil {
 				return Read{}, fmt.Errorf("pull request #%d from %s: %w", nd.Number, repo, err)
@@ -64,6 +85,8 @@ func ReadPullRequests(ctx context.Context, run Runner, root, project string, sin
 		got.Listings = append(got.Listings, listings...)
 		got.Reviews = append(got.Reviews, reviews...)
 		got.Checks = append(got.Checks, checks...)
+		got.Suites = append(got.Suites, suites...)
+		got.HistoricalChecks = append(got.HistoricalChecks, historicalChecks...)
 	}
 	return got, nil
 }
@@ -71,19 +94,26 @@ func ReadPullRequests(ctx context.Context, run Runner, root, project string, sin
 func observations(nd *node, src event.Source, project string, observedAt time.Time) (event.Event, []event.Event) {
 	pr := event.PullRequest{
 		Number: nd.Number, State: strings.ToLower(nd.State), MergedAt: nd.MergedAt.UTC(),
-		Commits: nd.Commits.TotalCount, Listed: int64(len(nd.Commits.Nodes)),
+		Listed:       int64(len(nd.Commits.Nodes)),
+		HistoryState: nd.HistoryState,
 	}
-	if nd.Reviews != nil {
+	if nd.Commits.TotalCount != nil {
+		pr.Commits = *nd.Commits.TotalCount
+	}
+	if reviewsAvailable(nd) {
 		pr.ReviewsAvailable = true
-		pr.Reviews, pr.ReviewsListed = nd.Reviews.TotalCount, int64(len(nd.Reviews.Nodes))
+		pr.Reviews, pr.ReviewsListed = *nd.Reviews.TotalCount, int64(len(nd.Reviews.Nodes))
 	}
-	if nd.StatusCheckRollup != nil {
+	if headChecksAvailable(nd) {
 		pr.CheckState = strings.ToLower(nd.StatusCheckRollup.State)
-		pr.Checks = nd.StatusCheckRollup.Contexts.TotalCount
+		pr.Checks = *nd.StatusCheckRollup.Contexts.TotalCount
 		pr.ChecksListed = int64(len(nd.StatusCheckRollup.Contexts.Nodes))
 	}
 	if nd.MergeCommit != nil {
 		pr.MergeCommit = nd.MergeCommit.OID
+		if nd.MergeCommit.Parents != nil {
+			pr.MergeParents = nd.MergeCommit.Parents.TotalCount
+		}
 	}
 	request := envelope(event.TypePullRequest, nd.ID, nd.UpdatedAt.UTC(), event.TimeStated, event.GrainChange, src, project, observedAt)
 	request.Payload = pr
@@ -91,7 +121,7 @@ func observations(nd *node, src event.Source, project string, observedAt time.Ti
 	for _, c := range nd.Commits.Nodes {
 		l := envelope(event.TypePullRequestCommit, nd.ID+":"+c.Commit.OID, observedAt, event.TimeIngestTime,
 			event.GrainCommit, src, project, observedAt)
-		l.Payload = event.PullRequestCommit{Number: nd.Number, Commit: c.Commit.OID}
+		l.Payload = event.PullRequestCommit{Number: nd.Number, Commit: c.Commit.OID, Suites: suitesOf(nd, c.Commit.OID)}
 		listings = append(listings, l)
 	}
 	return request, listings

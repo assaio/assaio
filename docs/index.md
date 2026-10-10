@@ -1,7 +1,9 @@
 # assaio documentation
 
-These guides are grouped by what you want to do. Each page is rendered from the repository's
-Markdown or generated from the binary; a build check fails if a published page disagrees with it.
+Start with observed AI adoption and usage breadth, compare estimated coding-tool costs, then
+inspect local delivery evidence. These guides separate local reports from the optional
+self-hosted aggregate usage MVP. Each page is rendered from the repository's Markdown or
+generated from the binary; a build check fails if a published page disagrees with it.
 
 **First run**
 
@@ -18,10 +20,11 @@ Markdown or generated from the binary; a build check fails if a published page d
 
 ## Understand the figures
 
-Learn how assaio links sessions to commits, compares vendor numbers, handles log changes, and
-reads each source.
+Read source coverage before interpreting observed sessions, active days and tool/project
+breadth as adoption. Costs are API-equivalent estimates, not invoices or subscription use.
+Local delivery observations describe candidates and PRs, without causal session outcomes.
 
-- [Local session-to-commit evidence](evidence.md)
+- [Local session-to-commit and delivery evidence](evidence.md)
 - [Reconciling against the vendor's own numbers](reconcile.md)
 - [Format resilience — detecting and reacting to vendor log-format drift](format-resilience.md)
 - [What each source's log carries, and what assaio reads](extending/source-fields.md)

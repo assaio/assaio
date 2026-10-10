@@ -1,0 +1,29 @@
+query($owner: String!, $name: String!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(first: 5, after: $cursor, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      totalCount
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id number updatedAt
+        history: commits(first: 100) {
+          totalCount
+          nodes {
+            commit {
+              oid
+              checkSuites(last: 10) {
+                totalCount
+                nodes {
+                  id status conclusion createdAt updatedAt
+                  checkRuns(last: 5, filterBy: {checkType: ALL}) {
+                    totalCount
+                    nodes { id status conclusion startedAt completedAt }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

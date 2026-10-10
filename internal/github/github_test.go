@@ -28,6 +28,9 @@ type forge struct {
 }
 
 func (f *forge) run(_ context.Context, _ string, args ...string) ([]byte, error) {
+	if slices.Contains(args, "query="+historyQuery) {
+		return []byte(pageOf(false)), nil
+	}
 	f.calls = append(f.calls, args)
 	if args[0] == "repo" {
 		return []byte(f.view), nil
@@ -56,6 +59,9 @@ func pr(id string, number int, updated time.Time, oids ...string) map[string]any
 }
 
 func pageOf(next bool, nodes ...map[string]any) string {
+	if nodes == nil {
+		nodes = []map[string]any{}
+	}
 	b, _ := json.Marshal(map[string]any{"data": map[string]any{"repository": map[string]any{"pullRequests": map[string]any{
 		"pageInfo": map[string]any{"hasNextPage": next, "endCursor": fmt.Sprintf("cursor-%d", len(nodes))},
 		"nodes":    nodes,

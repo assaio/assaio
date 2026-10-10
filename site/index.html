@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>assaio — Estimated AI coding costs and output by project</title>
-<meta name="description" content="assaio reads local AI coding session logs to report estimated cost and output by project. This open-source CLI analyzes your logs offline.">
+<title>assaio — AI adoption, estimated costs and local delivery evidence</title>
+<meta name="description" content="For engineering teams: observe AI usage breadth, compare estimated coding-tool costs and inspect bounded local PR, review and CI evidence with an offline-first CLI.">
 <link rel="canonical" href="https://assaio.dev/">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -12,22 +12,22 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="assaio">
 <meta property="og:url" content="https://assaio.dev/">
-<meta property="og:title" content="assaio — Estimated AI coding costs and output by project">
-<meta property="og:description" content="assaio reads local AI coding session logs to report estimated cost and output by project. This open-source CLI analyzes your logs offline.">
+<meta property="og:title" content="assaio — AI adoption, estimated costs and local delivery evidence">
+<meta property="og:description" content="For engineering teams: observe AI usage breadth, compare estimated coding-tool costs and inspect bounded local PR, review and CI evidence with an offline-first CLI.">
 <meta property="og:image" content="https://assaio.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="assaio logo, cost and output headline, subtitle, install commands and tool names">
+<meta property="og:image:alt" content="assaio logo, AI adoption, costs and delivery evidence headline, subtitle, install commands and tool names">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="assaio — Estimated AI coding costs and output by project">
-<meta name="twitter:description" content="assaio reads local AI coding session logs to report estimated cost and output by project. This open-source CLI analyzes your logs offline.">
+<meta name="twitter:title" content="assaio — AI adoption, estimated costs and local delivery evidence">
+<meta name="twitter:description" content="For engineering teams: observe AI usage breadth, compare estimated coding-tool costs and inspect bounded local PR, review and CI evidence with an offline-first CLI.">
 <meta name="twitter:image" content="https://assaio.dev/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M9 22 16 10l7 12' stroke='%23ffffff' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
 {"@type":"Organization","@id":"https://assaio.dev/#org","name":"assaio","url":"https://assaio.dev/","sameAs":["https://github.com/assaio/assaio"]},
 {"@type":"WebSite","@id":"https://assaio.dev/#site","name":"assaio","url":"https://assaio.dev/","publisher":{"@id":"https://assaio.dev/#org"}},
-{"@type":"SoftwareSourceCode","name":"assaio","alternateName":"assaio-agent","description":"assaio reads local AI coding session logs to report estimated cost and output by project. This open-source CLI analyzes your logs offline.","url":"https://assaio.dev/","codeRepository":"https://github.com/assaio/assaio","license":"https://www.apache.org/licenses/LICENSE-2.0","programmingLanguage":"Go","runtimePlatform":["macOS","Linux","Windows"],"author":{"@id":"https://assaio.dev/#org"}}
+{"@type":"SoftwareSourceCode","name":"assaio","alternateName":"assaio-agent","description":"For engineering teams: observe AI usage breadth, compare estimated coding-tool costs and inspect bounded local PR, review and CI evidence with an offline-first CLI.","url":"https://assaio.dev/","codeRepository":"https://github.com/assaio/assaio","license":"https://www.apache.org/licenses/LICENSE-2.0","programmingLanguage":"Go","runtimePlatform":["macOS","Linux","Windows"],"author":{"@id":"https://assaio.dev/#org"}}
 ]}
 </script>
 <style>
@@ -274,9 +274,9 @@ footer{border-top:1px solid var(--line); padding:3rem 0 3.5rem; background:var(-
 <section class="hero">
   <div class="wrap">
     <div>
-      <p class="eyebrow">Open-source, offline analysis</p>
-      <h1>See what your AI coding tools cost and produce</h1>
-      <p class="lede">assaio is an open-source CLI for logs from Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Cline, and Antigravity CLI. It reports per-project activity, output, and directional local outcomes offline. Every figure states its basis; Antigravity contributes activity only because its logs lack tokens and project data.</p>
+      <p class="eyebrow">For platform and engineering teams</p>
+      <h1>See AI adoption, costs and delivery evidence</h1>
+      <p class="lede">See observed sessions, active days and tool/project breadth. Compare API-equivalent cost estimates and inspect bounded local PR, review and CI evidence. assaio is an open-source CLI for logs from Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Cline, and Antigravity CLI. Local reports run offline; optional GitHub evidence uses your own <code>gh</code>. Antigravity contributes activity only because its logs lack tokens and project data.</p>
       <div class="install">
         <p class="label">Install assaio</p>
         <div class="term">
@@ -323,21 +323,22 @@ footer{border-top:1px solid var(--line); padding:3rem 0 3.5rem; background:var(-
 
 <section class="s" id="questions">
   <div class="wrap">
-    <div class="head"><p class="eyebrow">Beyond token counts</p><h2>Questions your logs can answer</h2><p>assaio reports output and directional local outcomes. It reads diffs and file bodies for counts only, stores neither, extracts no prompts or responses, and never stores a full path.</p></div>
+    <div class="head"><p class="eyebrow">Adoption, estimates and local evidence</p><h2>Choose what to investigate next</h2><p>Start with observed usage across tools and projects, compare estimated costs, then inspect local delivery evidence. Adoption is usage breadth in available logs, not a percentage of every employee. Optional self-hosted team aggregation covers usage and remains an MVP. PR evidence stays on the invoking clone. assaio reads diffs and file bodies for counts only, stores neither, extracts no prompts or responses, and never stores a full path.</p></div>
     <div class="grid">
-      <article class="card"><h3>Which projects turn tokens into code?</h3><p>Effectiveness shows AI-written lines against estimated cost, per project. Claude Code and Codex CLI provide finer-grained line counts; Copilot CLI provides changed lines per session.</p><div class="meta"><span class="layer">output</span><code>effectiveness</code></div></article>
+      <article class="card"><h3>Where are estimated costs and recorded edits concentrated?</h3><p>Effectiveness shows AI-written lines against estimated cost, per project. These are output counts, not productivity or ROI. Claude Code and Codex CLI provide finer-grained line counts; Copilot CLI provides changed lines per session.</p><div class="meta"><span class="layer">output</span><code>effectiveness</code></div></article>
       <article class="card"><h3>How much work uses premium models instead of cheaper ones?</h3><p>Model fit shows premium versus cheaper model share. <code>reprice</code> changes only price arithmetic for recorded turns; it cannot predict another model's output.</p><div class="meta"><span class="layer">activity</span><code>model-fit</code><code>model-right-sizing</code></div></article>
       <article class="card"><h3>Does a flat plan fit your usage?</h3><p>Subscription fit projects your observed API-equivalent estimate to a calendar month and compares it with the plan price you configure. It cannot read plan consumption.</p><div class="meta"><span class="layer">activity</span><code>subscription-fit</code></div></article>
       <article class="card"><h3>Where does your context window go?</h3><p>Context health shows cache reuse, session depth, and compaction. These describe activity; they do not measure lasting code or impact.</p><div class="meta"><span class="layer">activity</span><code>cache-hygiene</code><code>context</code></div></article>
       <article class="card"><h3>Where does your AI work get revised or stuck?</h3><p>Rework, edit loops, failed tool calls, and declined proposals reveal patterns in your logs. A pattern is a prompt to inspect, not a fault finding.</p><div class="meta"><span class="layer">output</span><code>rework</code><span class="layer">activity</span><code>edit-loops</code><code>friction</code></div></article>
-      <article class="card"><h3>Does code from recent commits last?</h3><p>Survival checks which code from recent commits remains in HEAD without attributing lines to individual AI sessions. Session-to-commit matches are candidates, not proof. Bug impact and quality are not measured yet.</p><div class="meta"><span class="layer">outcome · directional</span><code>survival</code><span class="layer">attribution</span><code>evidence</code></div></article>
+      <article class="card"><h3>What local delivery evidence can you inspect?</h3><p>Evidence reports session-to-commit candidates. Optional <code>--github</code> adds bounded PR and review snapshots, latest-head checks and separate historical suites/runs on currently listed commits. These describe PRs, not AI session outcomes. Survival separately checks which recent commit changes remain in HEAD without assigning lines to sessions. Bug impact and quality are not measured yet.</p><div class="meta"><span class="layer">outcome · directional</span><code>survival</code><span class="layer">attribution</span><code>evidence</code></div></article>
     </div>
     <aside class="notyet" aria-labelledby="notyet-h">
-      <h3 id="notyet-h">Not measured yet</h3>
+      <h3 id="notyet-h">Limits of the evidence</h3>
       <ul>
         <li><b>Attributable survival</b> — whether code linked to an AI session lived on in main after review, rewrites and reverts.</li>
         <li><b>Bug impact</b> — whether it caused bugs, only ever against age-matched human code.</li>
         <li><b>Quality</b> — maintainability, alongside DORA- and DX-style signals.</li>
+        <li><b>Full PR histories</b> — exact review rounds, comparable pipeline CI rates, authoritative squash-versus-rebase methods and trustworthy PR revert relations remain unavailable.</li>
       </ul>
     </aside>
   </div>
@@ -349,7 +350,7 @@ footer{border-top:1px solid var(--line); padding:3rem 0 3.5rem; background:var(-
     <ol class="steps">
       <li><h3>Install the binary</h3><p>Install the single static Go binary with <code>brew install assaio/tap/assaio-agent</code> or <code>go install github.com/assaio/assaio/cmd/assaio-agent@latest</code>.</p><div class="term"><code>brew install assaio/tap/assaio-agent</code></div></li>
       <li><h3>Run <code>assaio-agent init</code></h3><p><code>assaio-agent init</code> lists detected log sources and runnable configured parser plugins, asks for confirmation, then imports and writes an offline report; a configured plugin is your own program and may use the network.</p><div class="term"><code>assaio-agent init</code></div></li>
-      <li><h3>Read your reports</h3><p><code>report</code> prints tokens and estimated cost by project/model/tool/day. <code>analyze</code> states what grounds each directional read and withholds unsupported grades. <code>dashboard</code> writes one self-contained offline HTML file.</p><div class="term"><code>assaio-agent analyze</code></div></li>
+      <li><h3>Read your reports</h3><p><code>report</code> prints tokens and estimated cost by project/model/tool/day. <code>analyze</code> shows observed adoption and other directional reads, with their basis. <code>dashboard</code> writes one self-contained offline HTML file. Run <code>evidence --repo .</code> for local commit candidates; add <code>--github</code> explicitly for bounded delivery observations through your own <code>gh</code>.</p><div class="term"><code>assaio-agent analyze</code></div></li>
     </ol>
   </div>
 </section>
@@ -363,10 +364,10 @@ footer{border-top:1px solid var(--line); padding:3rem 0 3.5rem; background:var(-
         <tbody>
           <tr><th scope="row">Tools covered</th><td class="us" data-label="assaio"><span data-claim="sources.count">Six</span> sources; five costed, Antigravity CLI activity only.</td><td data-label="ccusage">18 local agent sources documented.</td></tr>
           <tr><th scope="row">Tokens and cost</th><td class="us" data-label="assaio">Vendored LiteLLM public pay-as-you-go estimates, not charges paid; omitted long-context premiums understate long sessions.</td><td data-label="ccusage">Token usage and estimated cost, with model breakdowns and JSON output.</td></tr>
-          <tr><th scope="row">Project reporting and analysis</th><td class="us" data-label="assaio">Per-project output and cost measures, rework and context reports, plus a directional check of which recent commit changes remain in HEAD.</td><td data-label="ccusage">Project grouping and filtering for daily reports.</td></tr>
+          <tr><th scope="row">Project reporting and analysis</th><td class="us" data-label="assaio">Observed usage breadth, per-project output and estimated costs, rework and context reports, plus separate local commit and bounded PR/review/CI evidence.</td><td data-label="ccusage">Project grouping and filtering for daily reports.</td></tr>
           <tr><th scope="row">Plan and quota use</th><td class="us" data-label="assaio">Local logs cannot show it; subscription fit compares a plan to API-equivalent estimates.</td><td data-label="ccusage">Active five-hour blocks with warnings against a token threshold you set.</td></tr>
           <tr><th scope="row">History</th><td class="us" data-label="assaio">Stored readings last as long as you keep the store.</td><td data-label="ccusage">Daily, weekly, monthly, and session reports from available local data.</td></tr>
-          <tr><th scope="row">Teams and people</th><td class="us" data-label="assaio">Self-hosted server: pseudonymous member engagement; output and spend remain team totals.</td><td data-label="ccusage">Shared team configuration and exportable JSON reports.</td></tr>
+          <tr><th scope="row">Teams and people</th><td class="us" data-label="assaio">Optional self-hosted usage MVP: pseudonymous engagement; output and estimated costs remain team totals. Local PR evidence is absent from sync and the server.</td><td data-label="ccusage">Shared team configuration and exportable JSON reports.</td></tr>
         </tbody>
       </table>
     </div>
@@ -432,8 +433,8 @@ footer{border-top:1px solid var(--line); padding:3rem 0 3.5rem; background:var(-
           <dt><code data-claim="command.check">check</code></dt><dd>Exit non-zero when usage exceeds a budget or a rule plugin raises an error (CI/pre-push gate)</dd>
         </dl></div>
       <div class="group"><h3>Outcome evidence</h3><dl>
-          <dt><code data-claim="command.survival">survival</code></dt><dd>Directional AI-code survival: how much of a repo's recent commits still live in HEAD, beside your AI usage</dd>
-          <dt><code data-claim="command.evidence">evidence</code></dt><dd>Session evidence and optional GitHub PR, review and latest-head check states for named PRs, without attributing PR outcomes to AI sessions</dd>
+          <dt><code data-claim="command.survival">survival</code></dt><dd>Check which recent commit changes remain in HEAD, beside AI usage, without assigning lines to AI sessions</dd>
+          <dt><code data-claim="command.evidence">evidence</code></dt><dd>Local session-to-commit candidates and optional bounded GitHub PR, review, latest-head check and historical suite/run observations for named PRs, without causal session outcomes</dd>
           <dt><code data-claim="command.mark">mark</code> <code data-claim="flag.mark.suggest">--suggest</code></dt><dd>Label a session with what kind of work it was, how it ended, and how hard it was</dd>
         </dl></div>
       <div class="group"><h3>Team</h3><dl>
@@ -469,12 +470,12 @@ footer{border-top:1px solid var(--line); padding:3rem 0 3.5rem; background:var(-
   <div class="wrap">
     <div class="head"><h2>Frequently asked questions</h2></div>
     <div class="faq">
-      <details><summary>What does assaio measure?</summary><p>assaio measures activity, such as sessions and tool mix; output, such as line changes and rework; and directional local outcome checks. <code>survival</code> measures how much code changed by recent commits remains in HEAD. Bug impact, quality, and attributable survival after review are not shipped.</p></details>
-      <details><summary>How is assaio different from ccusage?</summary><p>ccusage documents 18 local agent sources, more than assaio's <span data-claim="sources.count">six</span>. assaio documents output measures and directional local outcome checks per project, a store you keep, and a self-hosted team server.</p></details>
-      <details><summary>Does assaio send my data anywhere?</summary><p>Local analysis runs offline with no account, telemetry, or upload. <code>sync</code> sends usage to your team server; <code>serve</code> runs that server. Separately, <code>evidence --github</code> asks GitHub for a repository's pull requests through your own <code>gh</code>. A plugin you configure is your own program; its network use depends on its code.</p></details>
+      <details><summary>What does assaio measure?</summary><p>For platform and engineering teams, assaio reports observed adoption through sessions, active days and tool/project breadth; API-equivalent cost estimates; and local delivery evidence. Adoption is not an employee-wide percentage. Output includes recorded line changes and rework. Optional <code>evidence --github</code> adds bounded PR, review and CI observations. <code>survival</code> checks recent commit changes remaining in HEAD without assigning lines to AI sessions. Causal productivity, ROI, bug impact, quality and attributable survival after review are not shipped.</p></details>
+      <details><summary>How is assaio different from ccusage?</summary><p>ccusage documents 18 local agent sources, more than assaio's <span data-claim="sources.count">six</span>. Choose assaio for observed usage breadth, estimated costs and output by project, plus separate bounded local delivery evidence. You keep the store. Optional self-hosted team aggregation covers usage and remains an MVP; it does not receive PR evidence.</p></details>
+      <details><summary>Does assaio send my data anywhere?</summary><p>Local analysis runs offline with no account, telemetry, or upload. <code>sync</code> sends usage to your team server; <code>serve</code> runs that server. Only when you run <code>evidence --github</code>, your own <code>gh</code> makes two fixed repository reads for bounded PR, review and CI observations. Requests send no session or store data. PR evidence stays in memory for that command, outside sync, the store, dashboards and plugins; you can save its explicit output. A plugin you configure is your own program; its network use depends on its code.</p></details>
       <details><summary>How accurate are the cost figures?</summary><p>Costs are estimates at public pay-as-you-go prices from a vendored LiteLLM table, not the amount you pay. When LiteLLM stops listing a model, assaio keeps the last price LiteLLM published for it; the vendor may no longer offer that rate, and <code>doctor</code> counts such models. Long-context premiums are not modeled, so very long sessions are underestimated. A model missing from the price table shows <code>—</code>, never $0, and is excluded from totals. <code>reconcile</code> compares a downloaded billing export offline and labels the remainder unexplained.</p></details>
       <details><summary>Does assaio rank or monitor individual developers?</summary><p>assaio builds no member leaderboard and refuses <code>--by member</code> in every format. Sync v2 sends the team server a stable member digest made with a client-held key, along with project, subpath, session ID and usage data. The digest may be linked with other data. Below five distinct synced members in the selected window, the dashboard hides per-member rows and shows aggregate session bands; output and cost remain team totals. <code>report --identify</code> deliberately exports the member identifiers stored in the team database. A sync v2 identifier is a keyed digest; a legacy store may hold a raw name.</p></details>
-      <details><summary>Can assaio tell me whether AI-written code lasts?</summary><p>Only directionally. <code>survival</code> checks how much code changed by recent commits remains in HEAD, without attributing lines to individual AI sessions. <code>evidence</code> reports session-to-commit candidates as matched, ambiguous, or unmatched, with coverage, method, and confidence. A match does not establish that a session caused a commit. Impact is not shipped.</p></details>
+      <details><summary>What can local delivery evidence tell me?</summary><p><code>evidence</code> reports session-to-commit candidates as matched, ambiguous, or unmatched, with coverage, method and confidence. Optional <code>--github</code> adds snapshots for PRs named by candidates or alternatives: review states, latest-head checks and bounded historical suites/runs on currently listed commits. Missing and truncated layers are explicit. Complete usable reviews can support distinct reviewed-revision counts. A request-change snapshot share uses the entire named merged PR population, including alternatives, and is withheld unless every PR has a nonempty complete usable review population. Exact review rounds and comparable pipeline CI rates are withheld; repair cycles and PR revert relations are not derived. Multiple merge parents prove a merge; one parent cannot distinguish squash from rebase. None establishes an AI session outcome. <code>survival</code> separately checks recent commit changes remaining in HEAD without assigning lines to sessions.</p></details>
       <details><summary>Which AI coding tools does assaio support?</summary><p>assaio reads Claude Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Cline, and Antigravity CLI. Five share one cost basis; Antigravity CLI contributes activity only because its logs have no token counter. Out-of-tree plugins in any language can add sources.</p></details>
       <details><summary>Is assaio free?</summary><p>Yes. assaio is open source under Apache-2.0. It runs as one static binary and needs no account for local analysis.</p></details>
     </div>
@@ -487,7 +488,7 @@ footer{border-top:1px solid var(--line); padding:3rem 0 3.5rem; background:var(-
     <div class="foot">
       <div class="about">
         <a class="brand" href="https://assaio.dev/"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M9 22 16 10l7 12" stroke="var(--on-accent)" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>assaio</a>
-        <p>Estimated cost and output of your AI coding tools, per project.</p>
+        <p>Observed AI adoption, estimated coding-tool costs and bounded local delivery evidence for engineering teams.</p>
       </div>
       <div><h2>Product</h2><ul>
         <li><a href="https://assaio.dev/docs">Docs</a></li>

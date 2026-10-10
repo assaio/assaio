@@ -9,7 +9,7 @@ import (
 
 // payloads is every concrete payload this build defines. The registry and this list must
 // agree: a type nothing can fill is a name pretending to be a capability.
-var payloads = []Payload{Commit{}, PullRequest{}, PullRequestCommit{}, Review{}, Check{}}
+var payloads = []Payload{Commit{}, PullRequest{}, PullRequestCommit{}, Review{}, Check{}, CheckSuite{}}
 
 func TestEveryRegisteredTypeHasAPayload(t *testing.T) {
 	have := map[string]bool{}
@@ -49,11 +49,25 @@ var stringFields = map[string]string{
 	"PullRequest.State":        "closed vocabulary",
 	"PullRequest.MergeCommit":  "a commit hash, validated as hex",
 	"PullRequest.CheckState":   "closed vocabulary",
+	"PullRequest.HistoryState": "closed vocabulary",
 	"PullRequestCommit.Commit": "a commit hash, validated as hex",
 	"Review.State":             "closed vocabulary",
+	"Review.Commit":            "a commit hash, validated as hex",
 	"Check.Kind":               "closed vocabulary",
 	"Check.State":              "closed vocabulary",
 	"Check.Conclusion":         "closed vocabulary",
+	"Check.Commit":             "a commit hash, validated as hex",
+	"Check.Suite":              "a bounded opaque forge id, validated without free text",
+	"CheckSuite.Commit":        "a commit hash, validated as hex",
+	"CheckSuite.State":         "closed vocabulary",
+	"CheckSuite.Conclusion":    "closed vocabulary",
+}
+
+// Nullable counts preserve an unavailable source connection without opening a content field.
+var nullableCounts = map[string]reflect.Type{
+	"PullRequest.MergeParents": reflect.TypeOf(int64(0)),
+	"PullRequestCommit.Suites": reflect.TypeOf(Population{}),
+	"CheckSuite.Runs":          reflect.TypeOf(Population{}),
 }
 
 func TestContractCarriesNoFreeText(t *testing.T) {
@@ -85,6 +99,12 @@ func walkStringFields(t *testing.T, typ reflect.Type, path string) {
 		case reflect.Int, reflect.Int64, reflect.Bool, reflect.Interface:
 			// A number or a two-value flag cannot carry content; the payload interface is
 			// walked as each concrete type above.
+		case reflect.Pointer:
+			if allowed, ok := nullableCounts[name]; !ok || f.Type.Elem() != allowed {
+				t.Errorf("%s is not an allowlisted nullable count", name)
+			} else if allowed.Kind() == reflect.Struct {
+				walkStringFields(t, allowed, name)
+			}
 		default:
 			t.Errorf("%s is a %s -- a map, slice or pointer is room for content the "+
 				"contract promises it cannot hold", name, f.Type.Kind())

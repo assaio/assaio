@@ -108,3 +108,11 @@ Rejected alternatives:
   to it, and its response parser still has a native fuzz target.
 - The conformance corpus (ADR 0010) gains pull requests in its fixtures and one change-level
   expectation.
+
+## Continuation (2026-10-09)
+[ADR 0024](0024-bounded-github-history.md) adds an independent bounded suite/run history read,
+actual reviewed hashes and submission times, merge-parent counts and explicit nullable coverage
+and population fields. It supersedes the single-query description and history/topology deferrals
+only for that slice. Exact rounds, comparable pipeline CI rates, authoritative squash-versus-rebase
+methods and PR revert relations remain deferred. Candidate selection and `session-commit/v3`
+rules are unchanged.

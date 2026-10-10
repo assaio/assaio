@@ -23,3 +23,12 @@ The walk still re-reads from the top until it reaches the first pass’s newest 
 ADR 0022’s statements that reviews and checks remain B229 work and that unmatched pull requests are not counted are superseded to the extent above. Its session-commit/v3 rules remain in force.
 
 ADR 0007 and ADR 0020 still govern these observations: correlation runs locally only on explicit `--github`, with no store, sync, dashboard, share or plugin surface and no free forge text or person field in an event or document. Check suites, merge method, revert relation and derived rates remain outside this slice.
+
+## Continuation (2026-10-09)
+[ADR 0024](0024-bounded-github-history.md) supersedes those deferrals for bounded historical
+suite/run observations, eligible distinct reviewed-revision counts, a request-change snapshot
+share with a full named merged PR denominator, and multi-parent merge identification. The history
+read is independent of the base read, with separate bounds and layer coverage. Exact rounds,
+comparable CI histories and rates, authoritative one-parent merge methods and PR revert links
+remain deferred. These are local PR observations; attribution selection and the content/person
+exclusions are unchanged.

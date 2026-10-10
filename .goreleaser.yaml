@@ -89,7 +89,7 @@ brews:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: "https://github.com/assaio/assaio"
-    description: "Offline usage, cost, and code-activity analytics for AI coding tools."
+    description: "AI adoption, estimated costs, and local delivery evidence from coding-tool logs."
     license: "Apache-2.0"
     install: |
       bin.install "assaio-agent"

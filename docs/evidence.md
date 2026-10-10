@@ -1,4 +1,4 @@
-# Local session-to-commit evidence
+# Local session-to-commit and delivery evidence
 
 `assaio-agent evidence` is the first small Evidence Graph interface. It compares local-store
 sessions with commits reachable from `HEAD` in one local repository. With `--github`, it also
@@ -105,13 +105,67 @@ alternative names it. It counts all PRs read, those named by a candidate or alte
 without such a name; an unnamed PR is not evidence of no AI work. The state is what the forge
 reported when read: the pull request's state, never a session's.
 
-GitHub evidence reads at most the last 100 reviews per PR and at most the last 100 contexts in
-the latest head's check rollup. Connection totals and listed counts flag incomplete review or
-check coverage; these limits do not cover every review or historical check. A null rollup means
-unavailable, not zero checks. Only named PRs receive state, review and check detail. Those states
-describe the PR, so they cannot establish what an AI session caused. No review rounds, CI repair
-cycles or rate is derived from them. [ADR 0023](adr/0023-github-review-and-head-check-observations.md)
-records the observation and coverage rules.
+### Two independent bounded reads
+
+The base repository walk reads 50 PRs per page, at most 20 pages, plus a top re-read of at most
+20 pages. It includes at most the last 100 reviews per PR and last 100 contexts in the latest
+head's check rollup. A separate fixed historical walk reads 5 PRs per page, at most 20 pages,
+plus its own top re-read of at most 20 pages. It covers the first 100 currently listed commits,
+last 10 check suites per commit and last 5 check runs per suite with check type ALL. Each API
+call is limited to 60 seconds and 8 MiB; a source error fails the document, rather than producing
+a partial resource-limit result.
+
+Both walks follow PR `updatedAt` under `--since` and share one invocation `ObservedAt`.
+Each independently reports its PR read count and read-back window. The repository's source total counts all its PRs, not just the window
+or the PRs read. Historical coverage is independent: a PR in the base read can be outside the
+history read. Historical data joins only by PR node id and number, matching commit totals and identical
+returned first-100 commit SHA sets with no duplicate SHAs in either prefix. Both returned lists
+may be truncated; matching prefixes do not imply complete PR commit history. A mismatched prefix
+or total withholds the join; it does not become empty history.
+
+Only PRs named by a candidate or alternative receive details. Connection totals and listed counts
+accompany reviews, current-head contexts, historical commits, suites and runs at their respective
+layers. `listed < total` means incomplete. Null connections, counts or nodes mean unavailable;
+an explicit empty connection with total zero is known empty. Current-head contexts and historical
+suites/runs stay separate and are never added into one check count. History covers currently
+listed commits, not force-pushed-away commits or a whole PR pipeline lifetime.
+
+Source timestamps remain distinguishable from an observation's occurrence time. A fallback can
+place an event when a source timestamp is absent; it cannot supply an actual review submission
+time or prove a historical run sequence. Read time is a snapshot time, not a review or CI event
+time. [ADR 0023](adr/0023-github-review-and-head-check-observations.md) and
+[ADR 0024](adr/0024-bounded-github-history.md) record these rules.
+
+### Reviewed revisions and snapshot shares
+
+Review states are a current snapshot, not a state-transition history. A distinct
+`changes_requested` reviewed-revision count counts commit hashes only when the review connection
+is complete and usable: its observation count agrees, ids are present and unique, actual
+submitted times and reviewed hashes are present, and there are no dismissed, pending or unusable
+states. Missing submission time cannot be repaired with `updatedAt` or ingest time. Exact
+requested-changes rounds are always withheld; different reviewed hashes do not define rounds.
+
+The request-change snapshot share has the entire named merged PR population as its denominator,
+including PRs named only by alternatives. Its numerator is PRs in that population with an observed
+`changes_requested` review. It is shown only when every PR has a nonempty usable submitted-review
+population. Ineligible PRs do not shrink the denominator. No named merged PRs, unavailable or
+incomplete reviews, count mismatches, missing or duplicate ids, dismissed/pending/unusable states,
+missing actual submission times or hashes, and no submitted reviews are explicit gap reasons.
+Reviews submitted after merge still belong to the current snapshot, so this share is not a
+pre-merge review rate or a session outcome.
+
+### CI and merge limits
+
+Raw suite/run observations show what the bounded source returned, with coverage at each layer.
+A comparable PR pipeline CI ratio is always withheld: current listed-commit history does not
+establish comparable workflow lifetimes, repair cycles or whole-history rates.
+
+For a merged PR, more than one merge-commit parent proves a merge. One parent cannot distinguish
+squash from rebase. An unmerged PR, absent merge hash, unavailable parent count or unusable parent
+count withholds the method with a reason. No hypothetical `mergeMethod` source field is assumed.
+Trustworthy content-free PR revert relations still need an authoritative source and conformance
+corpus. Existing local git revert indications do not establish PR reversion. None of these
+observations establishes what an AI session caused.
 
 The document is a snapshot. Pull-request states move, force-pushes change commit lists, and git
 expires reflog entries that no ref reaches after 30 days by default, so an older session's
@@ -141,5 +195,7 @@ distinguish overlapping users; the conformance corpus requires that case to stay
 has no member, person, score, or rank field and is not intended for performance evaluation.
 
 A `matched` label is an attribution observation. It does not prove an AI session caused a commit or
-show AI impact. Pull request, review and latest-head-check observations are read only with
-`--github`. Attributable survival and other outcome correlation are not part of this command.
+show AI impact. Pull request, review, latest-head-check and bounded historical suite/run
+observations are read only with `--github`. They stay local and ephemeral, outside sync, the
+store, dashboards and plugins. Attributable survival and causal outcome correlation are not part
+of this command.

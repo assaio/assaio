@@ -30,7 +30,10 @@ func renderChanges(w io.Writer, c *Changes, since time.Time) error {
 		c.PullRequestsNamed, c.PullRequestsUnmatched, c.CommitListsCut, c.SessionsInOneChange, c.SessionsAcrossChanges,
 		c.ListedMadeHere, c.ListedNotInReflog, c.ListedNotLocal, c.ListedUnreadable, c.ListedBeforeWindow,
 		c.ListedMadeHere, AlgorithmChanges)
-	return err
+	if err != nil {
+		return err
+	}
+	return renderDeliveryCoverage(w, c, since)
 }
 
 // changeLinks is the tail of a candidate line: the pull requests the forge says hold the commit and
@@ -59,7 +62,8 @@ func renderLinked(w io.Writer, c *Changes) error {
 		"(the pull request's outcome, not a session's):\n", c.Source, c.ObservedAt.Format(time.RFC3339)); err != nil {
 		return err
 	}
-	for _, pr := range c.Linked {
+	for i := range c.Linked {
+		pr := &c.Linked[i]
 		merged := ""
 		if !pr.MergedAt.IsZero() {
 			merged = " " + pr.MergedAt.Format(time.RFC3339)
@@ -71,8 +75,11 @@ func renderLinked(w io.Writer, c *Changes) error {
 			readCount(pr.Reviews), stateCounts(pr.Reviews), checkRollup(pr.HeadChecks), readCount(pr.HeadChecks), stateCounts(pr.HeadChecks)); err != nil {
 			return err
 		}
+		if err := renderPRHistory(w, pr); err != nil {
+			return err
+		}
 	}
-	return nil
+	return renderDeliveryRates(w, c)
 }
 
 func renderOutcomeScope(w io.Writer, withChanges bool) error {
@@ -81,8 +88,9 @@ func renderOutcomeScope(w io.Writer, withChanges bool) error {
 			"  Pull request, review and head-check observations are read only with --github; downstream outcomes are not part of this command.")
 		return err
 	}
-	_, err := fmt.Fprintln(w, `  PR state, reviews and latest-head checks are observations of pull requests; they do not establish outcomes caused by a session.
-  A merged pull request says the change landed, not that this session's lines are in it.`)
+	_, err := fmt.Fprintln(w, `  PR state, reviews, latest-head checks and bounded historical suites/runs describe pull requests, not outcomes caused by a session.
+  A merged pull request says the change landed, not that this session's lines are in it.
+  Review shares describe the current snapshot; exact rounds and comparable PR pipeline CI rates are withheld.`)
 	return err
 }
 

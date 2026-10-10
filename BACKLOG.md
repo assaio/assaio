@@ -347,11 +347,12 @@ does not ship.
   migration, a size bound and a cleanup path, so none is worth guessing at. Path-level storage
   stays out entirely until something needs it: `B91` never records a path, so there is no
   opt-in to design yet. See [ADR 0009](docs/adr/0009-local-git-evidence-collector.md).
-- [ ] **B231 · extend GitHub PR evidence** — M · both — the bounded B229 slice observes review
-  states and the current head's check-run/status-context states, with total and listed counts;
-  it does not derive a session outcome. Add requested-changes rounds, check suites and
-  historical run sequences, merge method, and detectable revert relations. Require a
-  comparable PR population before deriving rates.
+- [ ] **B232 · establish remaining PR outcome sources and corpus** — M · both — B231's
+  bounded observation slice ships in v0.38, without causal session outcomes. Establish
+  authoritative review-state transitions and round boundaries; comparable PR workflow-run
+  lifetimes including force-pushed-away commits; authoritative squash-versus-rebase methods;
+  and trustworthy content-free revert relations with a conformance corpus. Require explicit
+  source coverage and comparable populations before deriving further rates.
 - [ ] **B230 · attribution by this clone's configured git identity** — M · both — git can match
   the configured author identity and return only hashes, which would tell a teammate's commits from
   the user's where time alone cannot. It is the first use of identity in attribution, so it needs its

@@ -19,6 +19,7 @@ const (
 	GrainChange = "change"
 	GrainReview = "review"
 	GrainCheck  = "check"
+	GrainSuite  = "suite"
 )
 
 // The privacy classes. They say what a payload *is*; what may be sent where is ADR 0020's
@@ -55,7 +56,7 @@ const (
 // what was expected. They stay unexported: what a consumer needs is the signal catalog
 // (B90), not four accessors nothing calls yet.
 var (
-	grains      = []string{GrainCommit, GrainChange, GrainReview, GrainCheck}
+	grains      = []string{GrainCommit, GrainChange, GrainReview, GrainCheck, GrainSuite}
 	privacies   = []string{LocalOnly, Pseudonymous, PublicMetadata}
 	provenances = []string{Parsed, Derived, Manual}
 	timeSources = []string{TimeStated, TimeFileMtime, TimeIngestTime}

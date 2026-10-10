@@ -21,10 +21,15 @@ const ReasonListedUnreadable = "listed-commit-not-readable-here"
 // everything session-commit/v3 reads beyond the commits.
 type PullRequests struct {
 	// Requests are scm.pull_request.observed events, Listings scm.pull_request.commit.observed.
-	Requests []event.Event
-	Listings []event.Event
-	Reviews  []event.Event
-	Checks   []event.Event
+	Requests         []event.Event
+	Listings         []event.Event
+	Reviews          []event.Event
+	Checks           []event.Event
+	Suites           []event.Event
+	HistoricalChecks []event.Event
+	RepositoryTotal  *int64
+	HistoryRead      int
+	HistoryBackTo    time.Time
 	// Lines maps a merge commit to the first-parent line from it, as far as its pull request's
 	// commit count reaches: where a rebase merge laid the commits it replayed.
 	Lines map[string][]string

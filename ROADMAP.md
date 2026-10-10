@@ -112,9 +112,14 @@ Build the differentiating outcome path before expanding the UI or connector coun
   the team server's re-push and retention rules.
 - Content-free commit and pull-request observations shipped in v0.36.0 through the user's own
   `gh` (ADR 0022). v0.37.0 adds B229's bounded review states and current-head
-  check-run/status-context observations, with total and listed counts (ADR 0023). B231 retains
-  rounds, suites and historical runs, merge method, revert relations and derived rates; an
-  importable contract for other forges remains open.
+  check-run/status-context observations, with total and listed counts (ADR 0023). v0.38.0 adds
+  B231's independent bounded suite/run history, eligible reviewed-revision counts, a request-change
+  snapshot share with a full named merged PR denominator, and multi-parent merge identification
+  (ADR 0024). B232 retains authoritative review transitions/round boundaries, comparable workflow
+  lifetimes including force-pushed-away commits, authoritative squash-versus-rebase methods and
+  trustworthy content-free revert relations with a corpus. Comparable PR pipeline CI rates remain
+  withheld. These observations stay local, outside sync and dashboards; an importable contract
+  for other forges remains open.
 - Extend the shipped local session→commit slice — already graded by the attribution corpus and
   already reporting coverage, competing candidates and abstention — to shipped changes.
 - Report coverage and competing candidates for every additional join.
@@ -233,7 +238,7 @@ The release decision should use these gates, not feature count:
 | --- | --- | --- |
 | Local usage and cost | pilot-ready, pre-1.0 | external captures confirm source shapes and first-run activation repeats |
 | Local output diagnostics | directional and useful | outcome language never leaks into output-only metrics |
-| Evidence graph | local session→commit candidates and pull-request naming; no persisted graph or outcome joins | PR/review/CI/merge joins and unmatched populations pass their conformance corpora |
+| Evidence graph | local session→commit candidates and bounded PR/review/head-check/history observations, explicit coverage and eligible snapshot counts; no persisted graph or server delivery analytics | remaining review-round, comparable workflow-lifetime, authoritative merge-method and revert sources and populations pass their conformance corpora |
 | Recommendations | proposed-only | interventions can be accepted, measured and closed |
 | Public analytical export | aggregated `report` and `analyze` rows and `evidence` results; no versioned snapshot of the stored records | an out-of-tree consumer reproduces totals from a versioned snapshot and repository identity cannot merge silently |
 | Team server | MVP | milestone 4 security, recovery and scale gates pass |

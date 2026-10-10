@@ -23,8 +23,9 @@ Where everything lives, in one place.
   flag, config key and protocol field this build has, from its own registries. `make docs`
   rewrites it and `make test` fails when it and the binary disagree, which is also what keeps
   [assaio.dev/docs/reference](https://assaio.dev/docs/reference) from falling behind.
-- [`evidence.md`](evidence.md) — the local session→commit Evidence Graph slice: methods,
-  confidence, ambiguity, population coverage, privacy boundary and what remains future scope.
+- [`evidence.md`](evidence.md) — local session→commit candidates and optional bounded PR,
+  review and CI observations: methods, confidence, ambiguity, coverage, population eligibility,
+  privacy boundaries and withheld conclusions.
 - [`automation.md`](automation.md) — running assaio from cron, launchd, CI, or a status line.
 - [`reconcile.md`](reconcile.md) — checking the `$` estimate against a vendor's own
   billing or usage export, offline: how columns bind, how to read the unexplained delta,
@@ -147,3 +148,6 @@ all in the shipping PR.
 - [ADR 0023](adr/0023-github-review-and-head-check-observations.md) — **bounded review and
   current-head check observations** from the same explicit `gh` read include total and listed
   counts, and remain facts about pull requests rather than session outcomes.
+- [ADR 0024](adr/0024-bounded-github-history.md) — **independent bounded GitHub history** keeps
+  suite/run coverage, nullable populations and justified snapshot counts explicit, while
+  withholding exact rounds, comparable pipeline CI rates and unsupported merge/revert claims.

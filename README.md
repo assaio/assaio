@@ -1,13 +1,15 @@
 <div align="center">
 
-# assaio: offline AI coding usage and cost analysis
+# assaio: AI adoption, estimated costs and local delivery evidence
 
-**Compare AI coding cost, token usage and code-producing activity from local logs.**
+**See how AI coding tools are used, compare estimated costs and inspect local delivery evidence.**
 
 assaio is an open-source, offline-first Go CLI (`assaio-agent`) with embedded SQLite for Claude
-Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Cline and Antigravity CLI. It reports available
-cost, usage and activity evidence without collecting prompts, responses or code. It measures systems
-and never ranks people.
+Code, Codex CLI, Gemini CLI, GitHub Copilot CLI, Cline and Antigravity CLI. Platform and engineering
+teams can inspect observed usage breadth, API-equivalent cost estimates and bounded local PR,
+review and CI observations. Antigravity contributes activity only, excluded from token and cost
+figures. assaio collects no prompts, responses or code and never ranks people. Optional self-hosted
+team mode pools usage; delivery evidence remains on the invoking clone.
 
 [![CI](https://github.com/assaio/assaio/actions/workflows/ci.yml/badge.svg)](https://github.com/assaio/assaio/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/assaio/assaio)](https://goreportcard.com/report/github.com/assaio/assaio)
@@ -25,16 +27,19 @@ and never ranks people.
 Use vendor dashboards for plan limits and vendor administration. `assaio` gives a local view across
 vendors for these questions:
 
-- What did Claude Code, Codex, Gemini CLI, Copilot CLI and Cline cost on the same basis?
-- Which repositories turn that spend into accepted edits, and where is there friction?
+- Which tools and projects appear in observed sessions, and on how many active days?
+- What are the API-equivalent cost estimates for Claude Code, Codex, Gemini CLI, Copilot CLI and Cline?
+- Where do logs record edits, rework or failed tool calls?
+- What PR, review and CI evidence is available around candidate commits in this clone?
 - How complete is each figure, and which source could not supply it?
-- Did a change survive review and CI, beyond producing more lines?
-- Can the result be reproduced without uploading prompts, code or conversations?
 
-`assaio` answers the first three questions. The local `evidence` command finds content-free
-session→commit candidates and reports confidence, ambiguity, abstention and population coverage.
-Review, CI, merge and durable-outcome correlation are not shipped. See the [roadmap](ROADMAP.md) for
-the research and product choices behind this focus.
+Adoption describes observed sessions, active days and tool/project breadth, not the percentage of
+all employees using AI. The local `evidence` command reports session→commit candidates with
+confidence, ambiguity, abstention and population coverage. Optional `--github` adds bounded PR,
+review, latest-head check and historical suite/run observations through your own `gh`. They are
+facts about PRs, not proof of AI productivity or session outcomes. Exact review rounds, comparable
+PR pipeline CI rates, authoritative squash-versus-rebase methods and PR revert relations remain
+outside the shipped scope. See the [roadmap](ROADMAP.md).
 
 <p align="center">
   <img src="docs/assets/report-by-project.svg" alt="assaio AI coding effectiveness report by project" width="720">
@@ -42,11 +47,12 @@ the research and product choices behind this focus.
 
 ## Who assaio is for
 
-`assaio` is for individual developers, platform teams and engineering-enablement groups that:
+`assaio` is for platform teams, engineering-enablement groups and individual developers that:
 
-- use more than one coding assistant
-- need a local, inspectable baseline before giving a server repository access
-- want cost and output evidence with clear sources and handling of missing data
+- need to understand observed AI usage across tools and projects
+- want estimated costs on a common basis, with unpriced usage visible
+- need local PR, review and CI evidence before choosing what to investigate
+- want an inspectable baseline with clear sources and missing-data handling
 - want to test an improvement without making telemetry an employee leaderboard
 
 `assaio` is not a fit for live quota bars, prompt replay, a general LLM observability backend or a
@@ -97,14 +103,15 @@ The usual loop is short:
 ```console
 $ assaio-agent dashboard --since 30d --output assay.html
 $ assaio-agent evidence --repo . --since 30d
+$ assaio-agent evidence --repo . --since 30d --github
 $ assaio-agent digest --weekly --dry-run
 $ assaio-agent doctor --strict
 ```
 
 - `dashboard` creates a self-contained offline HTML report.
 - `evidence` compares local sessions with local commit observations without storing an edge;
-  `--github` reads repository pull requests through your own `gh` and shows limited review and
-  latest-head check states for named pull requests.
+  optional `--github` uses your own `gh` to read bounded PR, review, latest-head check and separate
+  historical suite/run observations. Only PRs named by candidates or alternatives get details.
 - `digest` reports what changed since the previous run and whether the comparison is sound.
 - `doctor` reports source coverage, format drift, store health and unpriced usage.
 
@@ -116,10 +123,11 @@ reference](https://assaio.dev/docs/reference) is authoritative; the README omits
 
 | Layer | Available now | Claim |
 | --- | --- | --- |
-| Activity | sessions, turns, tool calls, model and entrypoint mix | an observed action happened |
+| Activity / adoption | observed sessions, active days, tool/project breadth, turns and model mix | usage was observed in the available logs |
 | Output | accepted edits, AI line activity, rework and rejection where recorded | an artifact was produced |
-| Outcome | directional local `survival` check only | a defined test was met |
-| Impact | not shipped | a delivery, quality or business result changed |
+| Local delivery evidence | session→commit candidates; optional bounded PR, review and CI observations | a candidate relation or PR state was observed, without causal attribution |
+| Outcome | directional local `survival` check | recent commit changes remain in `HEAD`, without assigning lines to AI sessions |
+| Impact | not shipped | no causal delivery, quality or business result is established |
 
 Every metric includes source coverage, sample size, freshness and parser version. If a source lacks
 a field, `assaio` excludes it from the denominator rather than counting it as zero. For an exec
@@ -138,9 +146,14 @@ to see what your data supports. [FEATURES.md](FEATURES.md) lists shipped feature
 `evidence` observes attribution; it is not an outcome metric. It joins a repository's commits
 only with sessions whose rows resolved to that repository, uses bounded time proximity, labels
 results `matched`, `ambiguous` or `unmatched`, and shows competing commits. A match does not
-show that the session caused the commit. With `--github` it reads the repository's pull requests
-through your own `gh` and shows limited PR, review and latest-head check states for named PRs.
-These states describe PR outcomes rather than AI session outcomes. New content-free observations
+show that the session caused the commit. With `--github`, independent bounded repository reads
+add PR and review snapshots, latest-head checks and historical suites/runs on currently listed
+commits. Details appear only for PRs named by candidates or alternatives. Counts expose missing
+and truncated layers; null means unavailable, while an explicit empty connection means known
+empty. Reviewed-revision counts require complete usable review populations. A request-change snapshot
+share uses the entire named merged PR population, including alternatives, as its denominator
+and is withheld unless every PR has a nonempty complete usable review population. Exact rounds and comparable PR pipeline CI rates are withheld. Merge topology
+can prove a multi-parent merge, but one parent cannot distinguish squash from rebase. Observations
 stay local and in memory for one command; offline evidence stays unchanged. See
 [how to read the result](docs/evidence.md).
 
@@ -193,7 +206,8 @@ writer needs a distinct bearer token. Existing central stores require an offline
 backup; see the [team-server guide](docs/extending/team-server.md). Team mode is a tested MVP, not
 a production-ready service.
 
-It has authentication, request bounds and an aggregated dashboard. It still needs RBAC, token
+It has authentication, request bounds and an aggregated usage dashboard for observed adoption
+and estimated costs. PR/review/CI evidence is absent from sync and the server. It still needs RBAC, token
 rotation, resumable sync, retention controls, a backup/restore drill and a measured operating
 envelope. The [roadmap](ROADMAP.md) lists these gates.
 
@@ -220,8 +234,9 @@ vulnerability scanning and a published correction record.
 
 It remains pre-1.0 because:
 
-1. GitHub evidence includes limited review and latest-head check states for named PRs, without
-   deriving review rounds, CI repair cycles or causal AI outcomes;
+1. GitHub delivery evidence is bounded and local: exact review rounds, comparable PR pipeline CI
+   histories and rates, authoritative squash-versus-rebase methods and trustworthy PR revert
+   relations still need more source evidence and conformance cases; causal AI outcomes are not derived;
 2. the contracts and calibration have not been tested across several external teams and release
    cycles.
 

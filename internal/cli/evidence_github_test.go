@@ -62,13 +62,15 @@ func fakeGh(t *testing.T, now time.Time, merge string, listed ...string) {
 		commits = append(commits, map[string]any{"commit": map[string]any{"oid": oid}})
 	}
 	page, err := json.Marshal(map[string]any{"data": map[string]any{"repository": map[string]any{"pullRequests": map[string]any{
-		"pageInfo": map[string]any{"hasNextPage": false, "endCursor": "c"},
+		"totalCount": 9,
+		"pageInfo":   map[string]any{"hasNextPage": false, "endCursor": "c"},
 		"nodes": []map[string]any{{
 			"id": "PR_kwDOtest7", "number": 7, "state": "MERGED", "updatedAt": now.Add(-4 * time.Minute),
 			"mergedAt": now.Add(-5 * time.Minute), "mergeCommit": map[string]any{"oid": merge},
 			"commits": map[string]any{"totalCount": len(listed), "nodes": commits},
 			"reviews": map[string]any{"totalCount": 1, "nodes": []map[string]any{{
 				"id": "PRR_7", "state": "CHANGES_REQUESTED", "submittedAt": now.Add(-10 * time.Minute),
+				"commit": map[string]any{"oid": listed[0]},
 			}}},
 			"statusCheckRollup": map[string]any{"state": "FAILURE", "contexts": map[string]any{
 				"totalCount": 1, "nodes": []map[string]any{{
@@ -80,10 +82,35 @@ func fakeGh(t *testing.T, now time.Time, merge string, listed ...string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	historicalCommits := []map[string]any{}
+	for _, hash := range listed {
+		historicalCommits = append(historicalCommits, map[string]any{"commit": map[string]any{
+			"oid": hash, "checkSuites": map[string]any{"totalCount": 1, "nodes": []map[string]any{{
+				"id": "CS_" + hash, "status": "COMPLETED", "conclusion": "SUCCESS",
+				"checkRuns": map[string]any{"totalCount": 1, "nodes": []map[string]any{{
+					"id": "CR_" + hash, "status": "COMPLETED", "conclusion": "SUCCESS", "completedAt": now.Add(-6 * time.Minute),
+				}}},
+			}}},
+		}})
+	}
+	history, err := json.Marshal(map[string]any{"data": map[string]any{"repository": map[string]any{"pullRequests": map[string]any{
+		"totalCount": 9, "pageInfo": map[string]any{"hasNextPage": false}, "nodes": []map[string]any{{
+			"id": "PR_kwDOtest7", "number": 7, "updatedAt": now.Add(-4 * time.Minute),
+			"history": map[string]any{"totalCount": len(listed), "nodes": historicalCommits},
+		}},
+	}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	previous := ghRunner
 	ghRunner = func(_ context.Context, _ string, args ...string) ([]byte, error) {
 		if args[0] == "repo" {
 			return []byte(`{"nameWithOwner":"acme/target","url":"https://github.com/acme/target","isFork":false}`), nil
+		}
+		for _, arg := range args {
+			if strings.Contains(arg, "history: commits(first: 100)") {
+				return history, nil
+			}
 		}
 		return page, nil
 	}
@@ -126,6 +153,14 @@ func TestEvidenceWithGitHubLinksTheBranchCommitASquashHid(t *testing.T) {
 		doc.Changes.Linked[0].HeadChecks == nil || doc.Changes.Linked[0].HeadChecks.State != "failure" ||
 		doc.Changes.Linked[0].HeadChecks.States[0].State != "run:failure" {
 		t.Fatalf("pull request review and head checks were not shown with the named change: %+v", doc.Changes.Linked)
+	}
+	pr := &doc.Changes.Linked[0]
+	if doc.Changes.RepositoryTotal == nil || *doc.Changes.RepositoryTotal != 9 || doc.Changes.HistoryRead != 1 ||
+		pr.HistoricalChecks == nil || pr.HistoricalChecks.ReadState != "read" || len(pr.HistoricalChecks.ByCommit) != 1 ||
+		len(pr.HistoricalChecks.ByCommit[0].CheckObservations) != 1 || pr.RequestedChangesRevisions.Value == nil ||
+		*pr.RequestedChangesRevisions.Value != 1 || len(doc.Changes.Rates) != 2 || doc.Changes.Rates[0].Value == nil ||
+		*doc.Changes.Rates[0].Value != 1 || doc.Changes.Rates[1].Value != nil {
+		t.Fatalf("historical populations and withheld rates were not wired: %+v", doc.Changes)
 	}
 	byID := map[string]attribution.Result{}
 	for _, r := range doc.Results {
