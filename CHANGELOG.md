@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-10-10
+
 ### Breaking
 
 - Raise the minimum Go version from 1.25 to 1.26.
@@ -1975,7 +1977,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.37.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.38.0...HEAD
+[0.38.0]: https://github.com/assaio/assaio/releases/tag/v0.38.0
 [0.37.0]: https://github.com/assaio/assaio/releases/tag/v0.37.0
 [0.36.0]: https://github.com/assaio/assaio/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/assaio/assaio/compare/v0.34.0...v0.35.0
