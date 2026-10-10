@@ -19,13 +19,17 @@ import (
 func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "assaio-agent",
-		Short: "Offline reports, diagnostics, and dashboards for local AI-coding session logs",
+		Short: "AI adoption, estimated costs, and local delivery evidence for engineering teams",
 		Long: `assaio-agent reads the local session logs of AI coding tools (` + strings.Join(parser.Tools(), ", ") + `),
-stores normalized usage in an embedded SQLite database, and turns it into token/cost
-reports, effectiveness and analyze diagnostics, and a self-contained HTML dashboard. Local
-analysis runs offline: no telemetry or network calls, and prompt content is never extracted.
-The optional team server (serve/sync) is self-hosted and opt-in. evidence --github asks GitHub
-for a repository's pull requests through your own gh only when you run it.`,
+stores normalized usage in embedded SQLite, and reports observed sessions, active days,
+tool/project breadth, API-equivalent estimated costs, and recorded output. Antigravity supplies
+activity only and is excluded from token/cost figures. Reports and diagnostics include a
+self-contained HTML dashboard. Local analysis runs offline with no telemetry; prompt and
+response content is never extracted. The optional self-hosted team usage MVP (serve/sync)
+is opt-in. evidence --github explicitly uses your own gh for bounded PR, review, latest-head
+check, and separate historical suite/run observations. Delivery evidence stays local and
+in memory for one command, outside sync and dashboards. It does not establish causal AI
+session outcomes, productivity, or employee-wide adoption percentages.`,
 		Example: `  assaio-agent demo            # the full reports on bundled sample data
   assaio-agent backfill        # import all historical local logs
   assaio-agent report --since 7d

@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>Local session-to-commit evidence — assaio</title>
+<title>Local session-to-commit and delivery evidence — assaio</title>
 <meta name="description" content="assaio-agent evidence is the first small Evidence Graph interface.">
 <link rel="canonical" href="https://assaio.dev/docs/evidence">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://assaio.dev/docs/evidence">
-<meta property="og:title" content="Local session-to-commit evidence — assaio">
+<meta property="og:title" content="Local session-to-commit and delivery evidence — assaio">
 <meta property="og:description" content="assaio-agent evidence is the first small Evidence Graph interface.">
 <meta property="og:image" content="https://assaio.dev/og.png">
 <meta property="og:image:width" content="1200">
@@ -18,7 +18,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://assaio.dev/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M9 22 16 10l7 12' stroke='%23ffffff' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"assaio","item":"https://assaio.dev/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://assaio.dev/docs"},{"@type":"ListItem","position":3,"name":"Local session-to-commit evidence","item":"https://assaio.dev/docs/evidence"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"assaio","item":"https://assaio.dev/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://assaio.dev/docs"},{"@type":"ListItem","position":3,"name":"Local session-to-commit and delivery evidence","item":"https://assaio.dev/docs/evidence"}]}</script>
 <style>:root{
   --bg:#ffffff; --surface:#f5f7f8; --line:#e2e6e9; --line-strong:#cdd3d8;
   --fg:#0f1417; --dim:#4f5a64; --faint:#66717c;
@@ -175,7 +175,7 @@ ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
     <a class="menu" href="#docs-nav">Menu</a>
   </nav>
 </header>
-<div class="layout with-toc"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">assaio documentation</a></li></ul><p class="sidehead">Understand the figures</p><ul><li><a class="on" href="https://assaio.dev/docs/evidence">Local session-to-commit evidence</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li></ul><p class="sidehead">Run it for a team</p><ul><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li></ul><p class="sidehead">Extend assaio</p><ul><li><a href="https://assaio.dev/docs/extending">Extending assaio</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li></ul><p class="sidehead">Use an example</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><nav class="toc" aria-label="On this page"><p class="sidehead">On this page</p><ul><li><a href="#what-one-result-means">What one result means</a></li><li><a href="#methods-and-confidence">Methods and confidence</a></li><li><a href="#with---github">With --github</a></li><li><a href="#privacy-and-limits">Privacy and limits</a></li></ul></nav><main class="doc"><h1 id="local-session-to-commit-evidence">Local session-to-commit evidence</h1>
+<div class="layout with-toc"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">assaio documentation</a></li></ul><p class="sidehead">Understand the figures</p><ul><li><a class="on" href="https://assaio.dev/docs/evidence">Local session-to-commit and delivery evidence</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li></ul><p class="sidehead">Run it for a team</p><ul><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li></ul><p class="sidehead">Extend assaio</p><ul><li><a href="https://assaio.dev/docs/extending">Extending assaio</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li></ul><p class="sidehead">Use an example</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><nav class="toc" aria-label="On this page"><p class="sidehead">On this page</p><ul><li><a href="#what-one-result-means">What one result means</a></li><li><a href="#methods-and-confidence">Methods and confidence</a></li><li><a href="#with---github">With --github</a></li><li><a href="#privacy-and-limits">Privacy and limits</a></li></ul></nav><main class="doc"><h1 id="local-session-to-commit-and-delivery-evidence">Local session-to-commit and delivery evidence</h1>
 <p><code>assaio-agent evidence</code> is the first small Evidence Graph interface. It compares local-store
 sessions with commits reachable from <code>HEAD</code> in one local repository. With <code>--github</code>, it also
 considers listed pull request commits made in this clone:</p>
@@ -302,13 +302,57 @@ requests named by a candidate or alternative, with each one's state and whether 
 alternative names it. It counts all PRs read, those named by a candidate or alternative, and those
 without such a name; an unnamed PR is not evidence of no AI work. The state is what the forge
 reported when read: the pull request's state, never a session's.</p>
-<p>GitHub evidence reads at most the last 100 reviews per PR and at most the last 100 contexts in
-the latest head's check rollup. Connection totals and listed counts flag incomplete review or
-check coverage; these limits do not cover every review or historical check. A null rollup means
-unavailable, not zero checks. Only named PRs receive state, review and check detail. Those states
-describe the PR, so they cannot establish what an AI session caused. No review rounds, CI repair
-cycles or rate is derived from them. <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0023-github-review-and-head-check-observations.md">ADR 0023</a>
-records the observation and coverage rules.</p>
+<h3 id="two-independent-bounded-reads">Two independent bounded reads</h3>
+<p>The base repository walk reads 50 PRs per page, at most 20 pages, plus a top re-read of at most
+20 pages. It includes at most the last 100 reviews per PR and last 100 contexts in the latest
+head's check rollup. A separate fixed historical walk reads 5 PRs per page, at most 20 pages,
+plus its own top re-read of at most 20 pages. It covers the first 100 currently listed commits,
+last 10 check suites per commit and last 5 check runs per suite with check type ALL. Each API
+call is limited to 60 seconds and 8 MiB; a source error fails the document, rather than producing
+a partial resource-limit result.</p>
+<p>Both walks follow PR <code>updatedAt</code> under <code>--since</code> and share one invocation <code>ObservedAt</code>.
+Each independently reports its PR read count and read-back window. The repository's source total counts all its PRs, not just the window
+or the PRs read. Historical coverage is independent: a PR in the base read can be outside the
+history read. Historical data joins only by PR node id and number, matching commit totals and identical
+returned first-100 commit SHA sets with no duplicate SHAs in either prefix. Both returned lists
+may be truncated; matching prefixes do not imply complete PR commit history. A mismatched prefix
+or total withholds the join; it does not become empty history.</p>
+<p>Only PRs named by a candidate or alternative receive details. Connection totals and listed counts
+accompany reviews, current-head contexts, historical commits, suites and runs at their respective
+layers. <code>listed &lt; total</code> means incomplete. Null connections, counts or nodes mean unavailable;
+an explicit empty connection with total zero is known empty. Current-head contexts and historical
+suites/runs stay separate and are never added into one check count. History covers currently
+listed commits, not force-pushed-away commits or a whole PR pipeline lifetime.</p>
+<p>Source timestamps remain distinguishable from an observation's occurrence time. A fallback can
+place an event when a source timestamp is absent; it cannot supply an actual review submission
+time or prove a historical run sequence. Read time is a snapshot time, not a review or CI event
+time. <a href="https://github.com/assaio/assaio/blob/main/docs/adr/0023-github-review-and-head-check-observations.md">ADR 0023</a> and
+<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0024-bounded-github-history.md">ADR 0024</a> record these rules.</p>
+<h3 id="reviewed-revisions-and-snapshot-shares">Reviewed revisions and snapshot shares</h3>
+<p>Review states are a current snapshot, not a state-transition history. A distinct
+<code>changes_requested</code> reviewed-revision count counts commit hashes only when the review connection
+is complete and usable: its observation count agrees, ids are present and unique, actual
+submitted times and reviewed hashes are present, and there are no dismissed, pending or unusable
+states. Missing submission time cannot be repaired with <code>updatedAt</code> or ingest time. Exact
+requested-changes rounds are always withheld; different reviewed hashes do not define rounds.</p>
+<p>The request-change snapshot share has the entire named merged PR population as its denominator,
+including PRs named only by alternatives. Its numerator is PRs in that population with an observed
+<code>changes_requested</code> review. It is shown only when every PR has a nonempty usable submitted-review
+population. Ineligible PRs do not shrink the denominator. No named merged PRs, unavailable or
+incomplete reviews, count mismatches, missing or duplicate ids, dismissed/pending/unusable states,
+missing actual submission times or hashes, and no submitted reviews are explicit gap reasons.
+Reviews submitted after merge still belong to the current snapshot, so this share is not a
+pre-merge review rate or a session outcome.</p>
+<h3 id="ci-and-merge-limits">CI and merge limits</h3>
+<p>Raw suite/run observations show what the bounded source returned, with coverage at each layer.
+A comparable PR pipeline CI ratio is always withheld: current listed-commit history does not
+establish comparable workflow lifetimes, repair cycles or whole-history rates.</p>
+<p>For a merged PR, more than one merge-commit parent proves a merge. One parent cannot distinguish
+squash from rebase. An unmerged PR, absent merge hash, unavailable parent count or unusable parent
+count withholds the method with a reason. No hypothetical <code>mergeMethod</code> source field is assumed.
+Trustworthy content-free PR revert relations still need an authoritative source and conformance
+corpus. Existing local git revert indications do not establish PR reversion. None of these
+observations establishes what an AI session caused.</p>
 <p>The document is a snapshot. Pull-request states move, force-pushes change commit lists, and git
 expires reflog entries that no ref reaches after 30 days by default, so an older session's
 candidates can disappear on a later run. The command fails, rather than printing a document, when <code>gh</code> fails, when the forge reports an
@@ -333,8 +377,10 @@ rather than another repository's name. Commit observations lack authors, so iden
 distinguish overlapping users; the conformance corpus requires that case to stay ambiguous. Output
 has no member, person, score, or rank field and is not intended for performance evaluation.</p>
 <p>A <code>matched</code> label is an attribution observation. It does not prove an AI session caused a commit or
-show AI impact. Pull request, review and latest-head-check observations are read only with
-<code>--github</code>. Attributable survival and other outcome correlation are not part of this command.</p>
+show AI impact. Pull request, review, latest-head-check and bounded historical suite/run
+observations are read only with <code>--github</code>. They stay local and ephemeral, outside sync, the
+store, dashboards and plugins. Attributable survival and causal outcome correlation are not part
+of this command.</p>
 <nav class="pager" aria-label="Previous and next"><a class="prev" href="https://assaio.dev/docs"><span class="dir">Previous</span> assaio documentation</a><a class="next" href="https://assaio.dev/docs/reconcile"><span class="dir">Next</span> Reconciling against the vendor&#39;s own numbers</a></nav></main>
 </div>
 <footer>

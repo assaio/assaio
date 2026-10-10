@@ -19,13 +19,16 @@ var allowed = []string{
 	"id", "number", "state", "updatedAt", "mergedAt", "mergeCommit", "oid", "commits", "totalCount", "commit",
 	"reviews", "last", "submittedAt", "statusCheckRollup", "contexts", "__typename", "on", "CheckRun", "StatusContext",
 	"status", "conclusion", "startedAt", "completedAt", "createdAt",
+	"parents", "history", "checkSuites", "checkRuns",
 }
 
 func TestTheQueryAsksForAllowlistedFieldsOnly(t *testing.T) {
-	selection := regexp.MustCompile(`\([^)]*\)`).ReplaceAllString(pullRequestQuery, "")
-	for _, name := range regexp.MustCompile(`[A-Za-z_]+`).FindAllString(selection, -1) {
-		if !slices.Contains(allowed, name) {
-			t.Errorf("the query names %q, which is not on the allowlist", name)
+	for _, query := range []string{pullRequestQuery, historyQuery} {
+		selection := regexp.MustCompile(`\([^)]*\)`).ReplaceAllString(query, "")
+		for _, name := range regexp.MustCompile(`[A-Za-z_]+`).FindAllString(selection, -1) {
+			if !slices.Contains(allowed, name) {
+				t.Errorf("the query names %q, which is not on the allowlist", name)
+			}
 		}
 	}
 }
@@ -76,6 +79,12 @@ func TestAPageTheForgeFaultedIsNoPage(t *testing.T) {
 		"an error beside data":    `{"data":{"repository":{"pullRequests":{"nodes":[]}}},"errors":[{"message":"timeout"}]}`,
 		"no such repository":      `{"data":{"repository":null}}`,
 		"no data":                 `{}`,
+		"no pull requests":        `{"data":{"repository":{}}}`,
+		"null pull requests":      `{"data":{"repository":{"pullRequests":null}}}`,
+		"null nodes":              `{"data":{"repository":{"pullRequests":{"totalCount":9,"pageInfo":{"hasNextPage":false},"nodes":null}}}}`,
+		"missing nodes":           `{"data":{"repository":{"pullRequests":{"totalCount":9,"pageInfo":{"hasNextPage":false}}}}}`,
+		"missing page info":       `{"data":{"repository":{"pullRequests":{"totalCount":0,"nodes":[]}}}}`,
+		"missing next page":       `{"data":{"repository":{"pullRequests":{"totalCount":0,"pageInfo":{},"nodes":[]}}}}`,
 		"not json":                `<html>`,
 		"cut off by the size cap": `{"data":{"repository":{"pullRequests":{"nodes":[{"id":"PR_1"`,
 	} {
@@ -85,12 +94,27 @@ func TestAPageTheForgeFaultedIsNoPage(t *testing.T) {
 	}
 }
 
+func TestASourceStatedEmptyPageIsValid(t *testing.T) {
+	p, err := parsePage([]byte(`{"data":{"repository":{"pullRequests":{"totalCount":0,"pageInfo":{"hasNextPage":false},"nodes":[]}}}}`))
+	if err != nil || p.Nodes == nil || len(p.Nodes) != 0 || p.TotalCount == nil || *p.TotalCount != 0 || p.HasNextPage {
+		t.Fatalf("stated empty page = %+v, %v", p, err)
+	}
+}
+
 func FuzzParse(f *testing.F) {
 	body, err := os.ReadFile("testdata/page.json")
 	if err != nil {
 		f.Fatal(err)
 	}
 	f.Add(body)
+	for _, name := range []string{"assaio-base", "assaio-history", "cli-base", "resource-limit"} {
+		//nolint:gosec // only these fixed capture names reach the reader
+		body, err := os.ReadFile("testdata/" + name + ".json")
+		if err != nil {
+			f.Fatal(err)
+		}
+		f.Add(body)
+	}
 	f.Add([]byte(`{"errors":[{"message":"x"}]}`))
 	f.Fuzz(func(t *testing.T, b []byte) {
 		p, err := parsePage(b)
@@ -109,6 +133,12 @@ func FuzzParse(f *testing.F) {
 			}
 			all = append(all, reviews...)
 			all = append(all, checks...)
+			suites, historical, err := historyObservations(&p.Nodes[i], event.Source{Name: sourceName}, "p", time.Unix(1, 0))
+			if err != nil {
+				continue
+			}
+			all = append(all, suites...)
+			all = append(all, historical...)
 			for j := range all {
 				if all[j].Validate() == nil && strings.ContainsAny(all[j].ID, " \n\t/") {
 					t.Fatalf("an id with free text passed: %q", all[j].ID)

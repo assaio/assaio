@@ -53,7 +53,7 @@ worth knowing on the writing side.
 
 **They cannot reach:** code execution — the parsers decode JSON and count, and nothing in a
 log is ever evaluated, expanded, or executed. Nor can they make the core exfiltrate content:
-local analysis has no network path, and the requests `evidence --github` makes carry a fixed query, a repository name and a page cursor — nothing read from a log, prompt text and model output are not extracted, and
+local analysis has no network path, and the requests `evidence --github` makes use two fixed repository queries with a repository name and page cursor — nothing read from a log, prompt text and model output are not extracted, and
 recorded diff or file-body content is decoded only long enough to derive line and rework
 counts. Content and paths used in memory are discarded (`usage.Record.Cwd` is `json:"-"` and
 is not a column).
@@ -120,14 +120,20 @@ though assaio fetches no identity.
 
 **The rule** ([ADR 0020](adr/0020-correlation-privacy.md)): commit observations and every
 session→delivery edge are `local-only`. They are computed and printed on your machine and never
-stored, synced, exported, rendered on a dashboard or a `share` artifact, or sent to a plugin.
-`evidence` has no `--db`.
+stored by assaio, synced, rendered on a dashboard or a `share` artifact, or sent to a plugin.
+A caller can save the explicit `evidence` output. `evidence` has no `--db`.
 
 **A connector** runs only on an explicit per-invocation flag, through your own client, which holds
 the credentials. Its request names a repository and a page cursor and nothing derived from the store
 — never the commits your AI sessions touched — and asks only for allowlisted fields. Today that is
-`evidence --github`, which runs `gh` ([ADR 0022](adr/0022-pull-requests-through-gh.md)). Its query
-runs as you and can appear in your organization's API audit log, which shows how often it runs.
+`evidence --github`, which runs `gh` ([ADR 0022](adr/0022-pull-requests-through-gh.md),
+[ADR 0024](adr/0024-bounded-github-history.md)). Two fixed independent walks read bounded PR,
+review/head-check and historical suite/run fields: content-free ids, hashes, closed states,
+source times and counts, without person, name, body, output or branch fields. The base walk has
+at most 20 pages of 50 PRs and the historical walk at most 20 pages of 5 PRs; each can additionally
+re-read at most 20 pages from the top. Every call is bounded to 60 seconds and 8 MiB, and a source
+error fails the document. The queries run as you and can appear in your organization's API audit
+log, which shows how often they run.
 
 **Residual:** a pull-request number or commit hash printed locally identifies work to anyone who
 can read the repository; on a repository owned by a user, the repository path contains that
@@ -345,8 +351,9 @@ That grep finds code that opens a socket itself, not programs assaio runs. The b
 missing object from the remote with your credentials; every git call runs with
 `GIT_NO_LAZY_FETCH=1`, so that read fails instead (git 2.44 and later honor it; an older git may
 still fetch). Of the programs assaio runs for its own commands, `gh` is the one meant to reach a
-network: it sends the fixed pull-request query to GitHub as you
-([ADR 0020](adr/0020-correlation-privacy.md), [ADR 0022](adr/0022-pull-requests-through-gh.md)).
+network: it sends the two fixed repository queries to GitHub as you
+([ADR 0020](adr/0020-correlation-privacy.md), [ADR 0022](adr/0022-pull-requests-through-gh.md),
+[ADR 0024](adr/0024-bounded-github-history.md)).
 
 ### What crosses the machine boundary, and under whose control
 
@@ -358,7 +365,7 @@ network: it sends the fixed pull-request query to GitHub as you
 | rule plugin | declared in config | a local subprocess you chose | verdicts only, `Bars` stripped | structural |
 | `share` | you run it | a file you then post | figures quoted from `analyze`, tools, models, counts | structural; no name can be rendered |
 | `dashboard` | you run it | a file you then share | verdicts, figures, a project drill-down | project names pseudonymized by default; `--no-anonymize` opts out |
-| `evidence --github` | you run it | GitHub (or your Enterprise host), through your own `gh`, as you | one fixed query: the repository's owner and name and a page cursor | nothing from the store is sent; the answer is printed locally and never stored |
+| `evidence --github` | you run it | GitHub (or your Enterprise host), through your own `gh`, as you | two fixed repository queries: the repository's owner and name and a page cursor | nothing from the store is sent; bounded PR/review/check/suite/run observations are printed locally and never stored or synced; the caller can save explicit output |
 
 Two rows deserve emphasis because they are easy to read the other way round:
 

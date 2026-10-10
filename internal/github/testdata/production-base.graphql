@@ -1,0 +1,25 @@
+query($owner: String!, $name: String!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(first: 50, after: $cursor, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      totalCount
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id number state updatedAt mergedAt
+        mergeCommit { oid parents(first: 2) { totalCount } }
+        commits(first: 100) { totalCount nodes { commit { oid } } }
+        reviews(last: 100) { totalCount nodes { id state submittedAt updatedAt commit { oid } } }
+        statusCheckRollup {
+          state
+          contexts(last: 100) {
+            totalCount
+            nodes {
+              __typename
+              ... on CheckRun { id status conclusion startedAt completedAt }
+              ... on StatusContext { id state createdAt updatedAt }
+            }
+          }
+        }
+      }
+    }
+  }
+}

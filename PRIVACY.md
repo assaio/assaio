@@ -238,20 +238,34 @@ names never enter its result.
 ### `evidence --github`
 
 Only with `--github`, `evidence` runs your own GitHub CLI (`gh`) in the repository. `gh repo view`
-names the repository and its host; then one fixed GraphQL query asks for pull requests ordered by
-last update, newest first. It reads each PR's id, number, state, update and merge times, merge
-commit, and first 100 listed commit hashes with their total. Per PR, it reads at most the last 100
-reviews' opaque ids, states and submitted or updated times, plus the latest head's check rollup
-and at most the last 100 check-run or commit-status contexts' opaque ids, closed states or
-conclusions and times. It reads no reviewer, author, title, comment, check or workflow name,
-branch or output. The request names the repository and a page cursor, never a commit, session or
-anything from the store. `gh` holds your credentials; assaio reads, passes and stores no token.
-assaio then asks local git which listed commits a `HEAD` reflog of this clone records as made here.
+names the repository and its host. Two fixed GraphQL queries walk PRs independently, ordered by
+last update, newest first. The base walk reads 50 PRs per page for at most 20 pages; the historical
+walk reads 5 PRs per page for at most 20 pages. Each walk can additionally re-read at most 20 pages
+from the top. `--since` bounds the update-time walk, not every event's occurrence time. Each API
+call has a 60-second timeout and an 8 MiB response cap. Source errors fail the document; no
+resource-limit partial result is accepted.
+
+The base read includes each PR's id, number, state, update and merge times, merge commit hash and
+parent count, and first 100 listed commit hashes with their total. It reads at most the last 100
+reviews' opaque ids, closed states, reviewed commit hashes and submitted or updated times.
+Actual submission times are retained separately from an observation's occurrence-time fallback.
+It also reads the latest head's check rollup and at most the last 100 check-run or commit-status
+contexts' opaque ids, closed states or conclusions and times, with total and listed counts.
+
+The separate historical read covers the first 100 currently listed commits, the last 10 check
+suites per commit and the last 5 check runs per suite with check type ALL. It reads content-free
+identifiers, commit hashes, closed status/conclusion fields, source timestamps and connection
+counts. Both walks share one invocation `ObservedAt`; their read-back windows and PR counts remain separate. Null connections,
+counts or nodes mean unavailable; an explicit empty connection with total zero means known empty.
+
+Neither query reads reviewer, author, title, body, comment, check or workflow name, branch or
+output. Requests name the repository and a page cursor, never a commit, session or anything from
+the store. `gh` holds your credentials; assaio reads, passes and stores no token. assaio then asks
+local git which listed commits a `HEAD` reflog of this clone records as made here.
 Connector observations and links stay in memory for one command: they are never persisted to the
-store, synced or sent to a plugin. A caller can save the explicit `evidence` output. The
-repository's owner and name appear only in a note on standard error, never in that output. The
-query runs as you, so it can appear
-in your organization's API audit log.
+store, synced, rendered on a dashboard or sent to a plugin. A caller can save the explicit
+`evidence` output. The repository's owner and name appear only in a note on standard error, never
+in that output. The queries run as you, so they can appear in your organization's API audit log.
 
 ## What it never retains
 

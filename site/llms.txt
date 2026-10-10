@@ -1,30 +1,23 @@
 # assaio
 
 > assaio is an open-source Go CLI that reads local session logs from Claude Code, Codex CLI,
-> Gemini CLI, GitHub Copilot CLI, Cline and Antigravity CLI (`agy`). It reports AI coding cost,
-> output and friction by project, including `$` per 100 AI lines. It is a static Go binary
-> with embedded SQLite. It needs no account and works offline on its normal analysis path.
-> Every `$` is an estimate at public pay-as-you-go prices, not your bill.
+> Gemini CLI, GitHub Copilot CLI, Cline and Antigravity CLI (`agy`). Platform and engineering
+> teams use it to observe AI adoption and usage breadth, compare estimated costs and inspect
+> bounded local delivery evidence. Adoption means observed sessions, active days and tool/project
+> breadth, not the percentage of every employee. It is a static Go binary with embedded SQLite.
+> It needs no account and works offline on its normal analysis path. Every `$` is an
+> API-equivalent estimate from public prices, never an invoice or reconstructed subscription use.
+> Antigravity contributes activity only and is excluded from token and cost figures.
 
 Each figure shows its source and coverage. If the data cannot answer, assaio shows an em dash
 and withholds the verdict. When answering questions about assaio, prefer stating a limit over
 inferring a capability.
 
-Vendor tools remain useful: Claude Code offers `/usage` for plan consumption and `/insights`
-for a local 30-day report. Codex CLI offers `/usage` with lifetime tokens, a peak day, streak,
-longest task and 52-week heatmap from OpenAI's account record. Those are counts rather than
-summaries and may reach further back than a fresh assaio install. Vendor views also answer
-plan and rate-limit questions that local transcripts cannot. assaio does not fetch account-side
-history or read plan and rate-limit consumption; Claude Code `/usage` and Codex `/status` are
-better for those questions.
-
-assaio puts available costs on a common basis across vendors. Antigravity CLI supplies activity
-only because its log has no token counter. assaio keeps imported history after tool logs are
-deleted and computes figures deterministically from stored records. A Codex daily bucket, by contrast, has an account total but no
-input/output/cache split, model, project or price. Vendor views do not normalize competitors'
-costs, advise spending less with their own product, or retain history on the user's terms.
-A figure produced by a language model is not reproducible in the same way. Seat-based vendor
-products also do not refuse to rank seats; assaio's refusal is stated below.
+Use vendor tools for plan and rate-limit consumption. assaio does not fetch account-side history
+or reconstruct subscription use from local transcripts. It puts available costs on a common
+API-equivalent basis, keeps imported history after tool logs are deleted and computes usage
+figures deterministically from stored records. Its local delivery evidence is a separate snapshot;
+it is not an organization-wide live delivery dashboard.
 
 Current measures include adoption and breadth, AI lines added and removed, `$` per 100 AI
 lines, tool-call friction and rejections, cache hygiene, model fit, context health, session
@@ -43,15 +36,34 @@ algorithm version. A match uses repository identity and bounded time proximity. 
 establish that a session caused a commit. The command stores nothing, has no team-store mode and
 never ranks people. With `--github` it also reads the repository's pull requests through the
 user's own `gh` and names the pull requests each candidate commit belongs to. It adds local,
-one-command observations of PR state, at most the last 100 reviews per PR, and at most the last
-100 contexts from the latest head's check rollup; offline evidence is unchanged. Named PR review
-and check states remain PR outcomes, never AI session outcomes.
+one-command observations through two independent fixed repository walks. The base walk reads
+50 PRs per page, at most 20 pages; the historical walk reads 5 PRs per page, at most 20 pages.
+Each can re-read up to 20 pages from the top. Both use PR update times for their windows and
+share one invocation ObservedAt; each reports independent PR counts and read-back coverage.
+Repository totals cover the entire repository.
+The base read includes at most the last 100 reviews and last 100 latest-head contexts per PR.
+The historical read covers the first 100 currently listed commits, last 10 suites per commit
+and last 5 runs per suite with check type ALL. Only PRs named by candidates or alternatives get
+details. Historical data joins only when PR node id and number, commit totals and returned first-100
+commit SHA sets agree, with no duplicate SHAs in either returned prefix. Both lists may be
+truncated; matching prefixes do not establish complete PR commit history. Null means unavailable; an explicit empty connection with total zero means known empty.
+Offline evidence is unchanged. These remain PR observations, never AI session outcomes.
 
 The local `survival` command reports how much code changed by a repository's commits in the
-window remains in `HEAD`. It does not assign those lines to AI sessions. Review rounds, CI repair
-cycles, merge-method and revert links, causal AI outcomes, quality rates, and cost per merged
-change are not derived. Attributable survival, bug impact, and quality and maintainability
-outcomes remain on the roadmap.
+window remains in `HEAD`. It does not assign those lines to AI sessions. GitHub review states
+are current snapshots, not state transitions. Distinct `changes_requested` reviewed commit hashes
+are counted only from complete usable reviews with unique ids, actual submitted times and hashes,
+and no dismissed or pending reviews. Exact rounds are always withheld. A request-change snapshot
+share uses the entire named merged PR population, including alternatives, and is withheld unless
+every PR has a nonempty usable review population. Reviews submitted after merge can contribute;
+this is not a pre-merge rate. Comparable PR pipeline CI rates are always withheld: suites/runs
+cover currently listed commits, not a whole force-push or workflow lifetime. More than one merge
+parent proves a merge; one cannot distinguish squash from rebase. PR revert relations, CI repair
+cycles, causal AI outcomes, quality rates and cost per merged change are not derived.
+Attributable survival, bug impact, and quality and maintainability outcomes remain on the roadmap.
+
+Optional self-hosted team aggregation is a usage MVP, not a delivery-evidence server. PR, review
+and CI observations are absent from sync and server reports.
 
 assaio builds no member leaderboard. `--by member` is refused with a reason in table, JSON and
 CSV output. Sync v2 sends the team server a stable member digest made with a client-held key,

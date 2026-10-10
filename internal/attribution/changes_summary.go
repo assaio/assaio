@@ -22,6 +22,9 @@ type Changes struct {
 	PullRequestsRead      int         `json:"pullRequestsRead"`
 	PullRequestsNamed     int         `json:"pullRequestsNamed"`
 	PullRequestsUnmatched int         `json:"pullRequestsUnmatched"`
+	RepositoryTotal       *int64      `json:"repositoryTotal"`
+	HistoryRead           int         `json:"historyRead"`
+	HistoryBackTo         time.Time   `json:"historyBackTo,omitzero"`
 	CommitListsCut        int         `json:"commitListsCut"`
 	// ListedMadeHere are the listed commits made here that session-commit/v2 does not see: they enlarge
 	// the candidate set, so coverage is comparable only with another session-commit/v3 document.
@@ -35,17 +38,43 @@ type Changes struct {
 	SessionsInOneChange   int                 `json:"sessionsInOneChange"`
 	SessionsAcrossChanges int                 `json:"sessionsAcrossChanges"`
 	Linked                []LinkedPullRequest `json:"linked"`
+	Rates                 []PRRate            `json:"rates"`
 }
 
 // LinkedPullRequest is a pull request's state as the forge reported it at Changes.ObservedAt, and
 // whether a candidate names it or only an alternative does.
 type LinkedPullRequest struct {
-	Number     int64           `json:"number"`
-	State      string          `json:"state"`
-	MergedAt   time.Time       `json:"mergedAt,omitzero"`
-	NamedBy    string          `json:"namedBy"`
-	Reviews    *ObservedStates `json:"reviews"`
-	HeadChecks *ObservedStates `json:"headChecks"`
+	Number                    int64               `json:"number"`
+	State                     string              `json:"state"`
+	MergedAt                  time.Time           `json:"mergedAt,omitzero"`
+	NamedBy                   string              `json:"namedBy"`
+	Reviews                   *ObservedStates     `json:"reviews"`
+	HeadChecks                *ObservedStates     `json:"headChecks"`
+	ReviewObservations        []ReviewObservation `json:"reviewObservations"`
+	RequestedChangesRevisions *DerivedCount       `json:"requestedChangesRevisions"`
+	ReviewRounds              *DerivedCount       `json:"reviewRounds"`
+	MergeMethod               *ObservedMethod     `json:"mergeMethod"`
+	HistoricalChecks          *PRCheckHistory     `json:"historicalChecks"`
+}
+
+// DerivedCount distinguishes a known zero from an unsupported count. Confidence applies only
+// to the declared observation population, never to a session's contribution.
+type DerivedCount struct {
+	Layer      layer.Layer `json:"layer"`
+	Value      *int        `json:"value"`
+	Provenance string      `json:"provenance"`
+	Confidence string      `json:"confidence"`
+	Reason     string      `json:"reason,omitempty"`
+}
+
+// ObservedMethod identifies only merge topology that the source parent count establishes.
+type ObservedMethod struct {
+	Layer      layer.Layer  `json:"layer"`
+	Value      *string      `json:"value"`
+	Source     event.Source `json:"source"`
+	Provenance string       `json:"provenance"`
+	Confidence string       `json:"confidence"`
+	Reason     string       `json:"reason,omitempty"`
 }
 
 // ObservedStates reports a bounded forge connection. Total and Listed show how much of that
@@ -73,12 +102,15 @@ const (
 func ChangesOf(prs *PullRequests, results []Result, source string) *Changes {
 	c := &Changes{
 		Source: source, ObservedAt: prs.ObservedAt, ReadBackTo: prs.ReadBackTo, StateLayer: layer.Outcome,
+		RepositoryTotal: prs.RepositoryTotal, HistoryRead: prs.HistoryRead, HistoryBackTo: prs.HistoryBackTo,
 		PullRequestsRead: len(prs.Requests), ListedMadeHere: prs.MadeHere, ListedNotInReflog: len(prs.NotInReflog),
 		ListedNotLocal: len(prs.NotLocal), ListedUnreadable: len(prs.Unreadable), ListedBeforeWindow: len(prs.BeforeWindow),
 		Linked: []LinkedPullRequest{},
 	}
 	named := namedBy(results)
 	delivery := deliveryByPR(prs)
+	reviews := reviewsByPR(prs)
+	history := historyByPR(prs)
 	for i := range prs.Requests {
 		pr, ok := prs.Requests[i].Payload.(event.PullRequest)
 		if !ok {
@@ -93,11 +125,19 @@ func ChangesOf(prs *PullRequests, results []Result, source string) *Changes {
 			if states := delivery[pr.Number]; states != nil {
 				linked.Reviews, linked.HeadChecks = states.reviews, states.checks
 			}
+			if pr.ReviewsAvailable {
+				linked.ReviewObservations = reviews[pr.Number]
+			}
+			linked.RequestedChangesRevisions = requestedChangesRevisions(&pr, linked.ReviewObservations)
+			linked.ReviewRounds = withheldCount("review-states-do-not-define-round-boundaries")
+			linked.MergeMethod = mergeMethod(&pr, prs.Requests[i].Source)
+			linked.HistoricalChecks = history[pr.Number]
 			c.Linked = append(c.Linked, linked)
 		}
 	}
 	c.PullRequestsUnmatched = c.PullRequestsRead - c.PullRequestsNamed
 	slices.SortFunc(c.Linked, func(a, b LinkedPullRequest) int { return int(a.Number - b.Number) })
+	c.Rates = deliveryRates(c.Linked)
 	for i := range results {
 		switch {
 		case results[i].Change != 0:

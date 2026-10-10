@@ -2,10 +2,13 @@
 
 *Part of [Extending assaio](../extending.md).*
 
-`assaio-agent serve` runs a self-hosted team server. Teammates use `assaio-agent sync` to push local
-usage. At `GET /`, the server returns an aggregated Assay dashboard, pseudonymized by default,
-for the whole team (`internal/server`). This is an MVP with no TLS or user roles. Put it behind a
-TLS reverse proxy on a trusted network.
+`assaio-agent serve` runs an optional self-hosted aggregate usage MVP. Teammates use
+`assaio-agent sync` to push local usage for observed adoption and API-equivalent cost estimates.
+Adoption covers synced sessions, active days and tool/project breadth, not every employee.
+At `GET /`, the server returns an aggregated Assay dashboard, pseudonymized by default, for the
+synced team usage (`internal/server`). Local PR, review and CI evidence stays on the invoking
+clone and is absent from sync and the server. This is an MVP with no TLS or user roles. Put it
+behind a TLS reverse proxy on a trusted network.
 
 **Every route except `/healthz` requires the bearer token, including the dashboard** (since v0.24;
 it was previously open despite showing the whole team's usage). `/healthz` reads nothing and stays

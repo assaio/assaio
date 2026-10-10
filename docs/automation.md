@@ -27,6 +27,24 @@ digest. Managed cloud is on the roadmap; today you run the company server with `
   hand-resolved conflict counts as neither added nor surviving. In a merge-heavy repo, expect a
   large merge line and read the rate as covering ordinary commits only.
 
+## Optional periodic local delivery evidence
+
+For a periodic snapshot, run `evidence --github` in the clone whose local sessions you want to
+inspect. Your own `gh` holds the credentials and makes the explicit network reads. The following
+isolated example imports logs and reads evidence using one temporary data directory; it does not
+refresh your normal store:
+
+```sh
+assaio_example_store=$(mktemp -d)
+XDG_DATA_HOME="$assaio_example_store" assaio-agent backfill
+XDG_DATA_HOME="$assaio_example_store" assaio-agent evidence --repo . --since 30d --github
+```
+
+The result is a bounded observation snapshot, not a complete PR history or a causal session
+outcome. Observations remain in memory for the command; saving stdout creates a caller-controlled
+file. Delivery evidence is absent from sync and the team server. Repeated reads can change as PRs,
+listed commits and reflogs change. Remove the temporary data directory when finished.
+
 ## Option A — scheduled refresh + push (recommended)
 
 A timer refreshes the store and pushes it to the company server every 30 minutes. Create a shell

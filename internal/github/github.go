@@ -1,8 +1,8 @@
 // Package github reads a repository's pull requests through the user's own gh and turns them into
 // canonical observations (ADR 0007, ADR 0022): which pull requests exist, their state and merge
 // commit, which commits each lists, and bounded review and latest-head-check observations.
-// It asks one fixed question naming a repository and a
-// window, never a commit or a session, and fails rather than return part of an answer.
+// Its fixed queries name a repository and a window, never a commit or a session, and
+// fail rather than return part of an answer.
 package github
 
 import (
@@ -53,7 +53,8 @@ func Resolve(ctx context.Context, run Runner, root string) (Repository, error) {
 type walk struct {
 	nodes map[string]node
 	// backTo is the update time the read reached: since, unless the page bound stopped it first.
-	backTo time.Time
+	backTo          time.Time
+	repositoryTotal *int64
 }
 
 // read walks the pull requests newest update first until one was last updated before since, then
@@ -62,17 +63,22 @@ type walk struct {
 // forge's own clock, so a local clock that runs ahead cannot end the re-read early. The re-read's
 // copy of a pull request replaces the first.
 func read(ctx context.Context, run Runner, root string, repo Repository, since time.Time) (walk, error) {
+	return readQuery(ctx, run, root, repo, since, pullRequestQuery)
+}
+
+func readQuery(ctx context.Context, run Runner, root string, repo Repository, since time.Time, query string) (walk, error) {
 	w := walk{nodes: map[string]node{}, backTo: since}
 	var newest time.Time
 	cursor := ""
 	for n := range maxPages {
-		p, err := fetch(ctx, run, root, repo, cursor)
+		p, err := fetch(ctx, run, root, repo, cursor, query)
 		if err != nil {
 			return walk{}, err
 		}
 		if n == 0 && len(p.Nodes) > 0 {
 			newest = p.Nodes[0].UpdatedAt
 		}
+		w.repositoryTotal = p.TotalCount
 		done := w.keep(p.Nodes, func(nd *node) bool { return nd.UpdatedAt.Before(since) })
 		if done || !p.HasNextPage {
 			break
@@ -88,10 +94,11 @@ func read(ctx context.Context, run Runner, root string, repo Repository, since t
 	cursor = ""
 	complete := false
 	for range maxPages {
-		p, err := fetch(ctx, run, root, repo, cursor)
+		p, err := fetch(ctx, run, root, repo, cursor, query)
 		if err != nil {
 			return walk{}, err
 		}
+		w.repositoryTotal = p.TotalCount
 		if w.keep(p.Nodes, func(nd *node) bool { return !nd.UpdatedAt.After(newest) }) || !p.HasNextPage {
 			complete = true
 			break
@@ -115,10 +122,10 @@ func (w *walk) keep(nodes []node, stop func(*node) bool) bool {
 	return false
 }
 
-func fetch(ctx context.Context, run Runner, root string, repo Repository, cursor string) (page, error) {
+func fetch(ctx context.Context, run Runner, root string, repo Repository, cursor, query string) (page, error) {
 	args := []string{
 		"api", "graphql", "--hostname", repo.Host,
-		"-f", "query=" + pullRequestQuery, "-f", "owner=" + repo.Owner, "-f", "name=" + repo.Name,
+		"-f", "query=" + query, "-f", "owner=" + repo.Owner, "-f", "name=" + repo.Name,
 	}
 	if cursor != "" {
 		args = append(args, "-f", "cursor="+cursor)

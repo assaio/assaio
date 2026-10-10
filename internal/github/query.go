@@ -9,20 +9,20 @@ import (
 	"time"
 )
 
-// pullRequestQuery is the only question assaio asks the forge: for one repository, its pull
+// pullRequestQuery asks the forge for one repository's pull
 // requests newest update first, each with the fields below and nothing else. It names no title,
 // body, branch, label, author, reviewer, comment, check name or check output; a test holds it to
-// that list. The
-// cursor is left out on the first page, where GraphQL reads it as null.
+// that list. The cursor is left out on the first page, where GraphQL reads it as null.
 const pullRequestQuery = `query($owner: String!, $name: String!, $cursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequests(first: 50, after: $cursor, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      totalCount
       pageInfo { hasNextPage endCursor }
       nodes {
         id number state updatedAt mergedAt
-        mergeCommit { oid }
+        mergeCommit { oid parents(first: 2) { totalCount } }
         commits(first: 100) { totalCount nodes { commit { oid } } }
-        reviews(last: 100) { totalCount nodes { id state submittedAt updatedAt } }
+        reviews(last: 100) { totalCount nodes { id state submittedAt updatedAt commit { oid } } }
         statusCheckRollup {
           state
           contexts(last: 100) {
@@ -47,10 +47,13 @@ type node struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 	MergedAt    time.Time `json:"mergedAt"`
 	MergeCommit *struct {
-		OID string `json:"oid"`
+		OID     string `json:"oid"`
+		Parents *struct {
+			TotalCount *int64 `json:"totalCount"`
+		} `json:"parents"`
 	} `json:"mergeCommit"`
 	Commits struct {
-		TotalCount int64 `json:"totalCount"`
+		TotalCount *int64 `json:"totalCount"`
 		Nodes      []struct {
 			Commit struct {
 				OID string `json:"oid"`
@@ -58,18 +61,21 @@ type node struct {
 		} `json:"nodes"`
 	} `json:"commits"`
 	Reviews *struct {
-		TotalCount int64 `json:"totalCount"`
+		TotalCount *int64 `json:"totalCount"`
 		Nodes      []struct {
 			ID          string    `json:"id"`
 			State       string    `json:"state"`
 			SubmittedAt time.Time `json:"submittedAt"`
 			UpdatedAt   time.Time `json:"updatedAt"`
+			Commit      *struct {
+				OID string `json:"oid"`
+			} `json:"commit"`
 		} `json:"nodes"`
 	} `json:"reviews"`
 	StatusCheckRollup *struct {
 		State    string `json:"state"`
-		Contexts struct {
-			TotalCount int64 `json:"totalCount"`
+		Contexts *struct {
+			TotalCount *int64 `json:"totalCount"`
 			Nodes      []struct {
 				Type        string    `json:"__typename"`
 				ID          string    `json:"id"`
@@ -83,20 +89,24 @@ type node struct {
 			} `json:"nodes"`
 		} `json:"contexts"`
 	} `json:"statusCheckRollup"`
+	History      *historyConnection `json:"history"`
+	HistoryState string             `json:"-"`
 }
 
 type page struct {
 	Nodes       []node
 	HasNextPage bool
 	EndCursor   string
+	TotalCount  *int64
 }
 
 type response struct {
 	Data *struct {
 		Repository *struct {
 			PullRequests struct {
-				PageInfo struct {
-					HasNextPage bool   `json:"hasNextPage"`
+				TotalCount *int64 `json:"totalCount"`
+				PageInfo   *struct {
+					HasNextPage *bool  `json:"hasNextPage"`
 					EndCursor   string `json:"endCursor"`
 				} `json:"pageInfo"`
 				Nodes []node `json:"nodes"`
@@ -129,5 +139,11 @@ func parsePage(body []byte) (page, error) {
 		return page{}, errors.New("the forge found no such repository")
 	}
 	prs := r.Data.Repository.PullRequests
-	return page{Nodes: prs.Nodes, HasNextPage: prs.PageInfo.HasNextPage, EndCursor: prs.PageInfo.EndCursor}, nil
+	if prs.Nodes == nil || prs.PageInfo == nil || prs.PageInfo.HasNextPage == nil {
+		return page{}, errors.New("the forge returned an invalid repository pull-request population")
+	}
+	if prs.TotalCount != nil && (*prs.TotalCount < 0 || int64(len(prs.Nodes)) > *prs.TotalCount) {
+		return page{}, errors.New("the forge returned an invalid repository pull-request population")
+	}
+	return page{Nodes: prs.Nodes, HasNextPage: *prs.PageInfo.HasNextPage, EndCursor: prs.PageInfo.EndCursor, TotalCount: prs.TotalCount}, nil
 }

@@ -135,11 +135,16 @@ func TestTheChangesBlockCountsEveryAbsence(t *testing.T) {
 	}
 	gotLinked := got.Linked
 	got.Linked = nil
+	got.Rates = nil
 	if !reflect.DeepEqual(*got, want) {
 		t.Fatalf("changes = %+v, want %+v", *got, want)
 	}
 	want1 := LinkedPullRequest{Number: 1, State: event.ChangeMerged, MergedAt: epoch.Add(2 * hour), NamedBy: namedByCandidate}
 	want3 := LinkedPullRequest{Number: 3, State: event.ChangeClosed, NamedBy: namedByCandidate}
+	for i := range gotLinked {
+		gotLinked[i].ReviewObservations, gotLinked[i].RequestedChangesRevisions, gotLinked[i].ReviewRounds = nil, nil, nil
+		gotLinked[i].MergeMethod, gotLinked[i].HistoricalChecks = nil, nil
+	}
 	if !reflect.DeepEqual(gotLinked, []LinkedPullRequest{want1, want3}) {
 		t.Fatalf("linked = %+v, want #1 merged and #3 closed, by number, and #2 not listed", gotLinked)
 	}

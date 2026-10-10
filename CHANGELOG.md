@@ -37,8 +37,15 @@ Discussion.
 
 - Raise the minimum Go version from 1.25 to 1.26.
 
+### Added
+
+- B231 bounded local GitHub suite/run history, eligible reviewed-revision counts, request-change snapshot share and multi-parent merge evidence, with layer coverage.
+- B232 retains exact review rounds, comparable workflow lifetimes/CI rates, authoritative squash-versus-rebase methods and trustworthy content-free PR revert relations.
+
 ### Changed
 
+- Public copy now leads with observed AI adoption, estimated costs and local delivery evidence, separate from the self-hosted usage MVP.
+- Refresh LiteLLM prices (2026-10-09): `together_ai/Qwen/Qwen3.7-Max` input `1.5e-6` → `2.5e-6`, output `4.5e-6` → `7.5e-6`, cache `0.3e-6` → `0.5e-6`.
 - Update koanf/v2 v2.3.6 → v2.3.7, x/text v0.41.0 → v0.42.0 and SQLite v1.59.0 → v1.60.1, with indirect x/sys and libc updates.
 - Update full SHA pins for CodeQL actions v4.38.1 → v4.38.2 and Syft download action v0.24.2 → v0.24.3.
 

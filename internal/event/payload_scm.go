@@ -25,7 +25,9 @@ type PullRequest struct {
 	MergedAt time.Time `json:"mergedAt"`
 	// MergeCommit is the commit the forge wrote when it merged: the squash, the merge commit, or
 	// the last commit a rebase merge replayed. Empty until the pull request is merged.
-	MergeCommit string `json:"mergeCommit,omitempty"`
+	MergeCommit  string `json:"mergeCommit,omitempty"`
+	MergeParents *int64 `json:"mergeParents,omitempty"`
+	HistoryState string `json:"historyState,omitempty"`
 	// Commits is how many commits the forge counts in the pull request and Listed how many of them
 	// the read returned; Listed below Commits means the list was cut.
 	Commits int64 `json:"commits"`
@@ -44,8 +46,9 @@ type PullRequest struct {
 // PullRequestCommit says that a pull request lists a commit. It is an observation of its own
 // because a payload holds no list, and one commit can be listed by several pull requests.
 type PullRequestCommit struct {
-	Number int64  `json:"number"`
-	Commit string `json:"commit"`
+	Number int64       `json:"number"`
+	Commit string      `json:"commit"`
+	Suites *Population `json:"suites,omitempty"`
 }
 
 func (PullRequest) eventType() string       { return TypePullRequest }
@@ -93,6 +96,12 @@ func (p PullRequest) validate() error {
 	if p.MergeCommit != "" && !isObjectID(p.MergeCommit) {
 		return errors.New("merge commit is not a commit hash")
 	}
+	if p.MergeParents != nil && (p.MergeCommit == "" || *p.MergeParents < 0) {
+		return errors.New("merge parent count has no usable merge commit")
+	}
+	if p.HistoryState != "" && !valid([]string{"read", "outside-history-read", "commit-list-changed", "unavailable"}, p.HistoryState) {
+		return errors.New("unknown history read state")
+	}
 	return nil
 }
 
@@ -102,6 +111,9 @@ func (p PullRequestCommit) validate() error {
 	}
 	if !isObjectID(p.Commit) {
 		return errors.New("listed commit is not a commit hash")
+	}
+	if p.Suites != nil {
+		return p.Suites.validate()
 	}
 	return nil
 }

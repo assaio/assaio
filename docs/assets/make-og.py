@@ -26,8 +26,8 @@ MENLO = "/System/Library/Fonts/Menlo.ttc"
 HELV = "/System/Library/Fonts/HelveticaNeue.ttc"
 MARGIN = 84  # keeps every glyph inside the area a feed thumbnail crops to
 
-HEADLINE = ["See what your AI coding", "tools cost and produce"]
-SUB = "Offline, per-project estimates from local logs, not bills"
+HEADLINE = ["See AI adoption, costs", "and delivery evidence"]
+SUB = "Estimated costs and bounded delivery evidence from local data"
 TOOLS = "Claude Code · Codex CLI · Gemini CLI · GitHub Copilot CLI · Cline · Antigravity CLI"
 
 
