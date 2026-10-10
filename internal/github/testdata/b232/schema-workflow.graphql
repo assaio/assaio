@@ -1,0 +1,4 @@
+query {
+  workflow: __type(name: "WorkflowRun") { fields { name } }
+  suite: __type(name: "CheckSuite") { fields { name } }
+}

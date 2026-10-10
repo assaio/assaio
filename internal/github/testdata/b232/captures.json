@@ -1,0 +1,228 @@
+{
+  "format": 1,
+  "captures": [
+    {
+      "file": "production-dismissals.json",
+      "query": "production-dismissals.graphql",
+      "transport": "gh api graphql",
+      "sha256": "243243a2eca278d19d0ab2c99190e2fa7b6965358fd810ebc18981a0c1f29e52",
+      "bytes": 1634,
+      "capturedFileModifiedAt": "2026-10-10T21:30:50.599282+00:00",
+      "scope": {
+        "repositories": [
+          "github/docs",
+          "microsoft/vscode",
+          "cli/cli"
+        ],
+        "selection": "four individually named public pull requests",
+        "limit": 100
+      },
+      "captureTimes": {
+        "startedAt": "2026-10-10 21:30:48 UTC",
+        "completedAt": "2026-10-10 21:30:50 UTC",
+        "operation": "gh api graphql",
+        "request": "production-dismissals.graphql",
+        "response": "production-dismissals.json",
+        "projection": "last100 review-dismissal source fields only"
+      }
+    },
+    {
+      "file": "github-docs-dismissal-truncation.json",
+      "query": "dismissal-truncation.graphql",
+      "transport": "gh api graphql",
+      "sha256": "95a4d8b788ed1c606da0c5d0ed6d85a4d7bcbfe2527e4b6e984ce42742129535",
+      "bytes": 555,
+      "capturedFileModifiedAt": "2026-10-10T21:24:41.553747+00:00",
+      "scope": {
+        "repository": "github/docs",
+        "number": 46200,
+        "limits": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "file": "assaio-timeline-page1.json",
+      "query": "pr-timeline.graphql",
+      "transport": "gh api graphql",
+      "sha256": "f7d7c818bbf09b6e02dd77dbdbc4800a6e0c85c4cc8c314bcc66fd7c28d0b41a",
+      "bytes": 13660,
+      "capturedFileModifiedAt": "2026-10-10T21:15:05.618858+00:00",
+      "scope": {
+        "repository": "assaio/assaio",
+        "pullRequests": 10,
+        "timeline": 100,
+        "reviews": 50,
+        "commits": 10
+      }
+    },
+    {
+      "file": "cli-timeline-page1.json",
+      "query": "pr-timeline.graphql",
+      "transport": "gh api graphql",
+      "sha256": "48306851220eefdaa5cd09f5e9d65f85a60565b53e2cb92a3cd7fc1669d5dc1d",
+      "bytes": 27039,
+      "capturedFileModifiedAt": "2026-10-10T21:15:06.631288+00:00",
+      "scope": {
+        "repository": "cli/cli",
+        "pullRequests": 10,
+        "timeline": 100,
+        "reviews": 50,
+        "commits": 10
+      }
+    },
+    {
+      "file": "cli-dismissal-root-page1.json",
+      "query": "dismissal-sample.graphql",
+      "transport": "gh api graphql",
+      "sha256": "1a9775b9e177562997c9d2b10212f836e690c8bbfcc2a1d251563f2dac63e7e8",
+      "bytes": 7078,
+      "capturedFileModifiedAt": "2026-10-10T21:21:22.286835+00:00",
+      "scope": {
+        "repository": "cli/cli",
+        "pullRequests": 30,
+        "dismissals": 100
+      }
+    },
+    {
+      "file": "cli-dismissal-merged-root-page1.json",
+      "query": "dismissal-merged-sample.graphql",
+      "transport": "gh api graphql",
+      "sha256": "bf821755be5d529d09c98f7b42cf200c9878a5989c391470ecb4f193f47bcb1c",
+      "bytes": 7121,
+      "capturedFileModifiedAt": "2026-10-10T21:21:59.842023+00:00",
+      "scope": {
+        "repository": "cli/cli",
+        "pullRequests": 30,
+        "state": "MERGED",
+        "dismissals": 100
+      }
+    },
+    {
+      "file": "github-docs-dismissal-counts.json",
+      "query": "dismissal-counts.graphql",
+      "transport": "gh api graphql",
+      "sha256": "78a1a178fffca5e13c4adbef2aae334f12693e077946eb467e13d541a9423398",
+      "bytes": 10143,
+      "capturedFileModifiedAt": "2026-10-10T21:22:41.239957+00:00",
+      "scope": {
+        "repository": "github/docs",
+        "pullRequests": 30,
+        "state": "MERGED",
+        "dismissalLimits": [
+          1,
+          100
+        ]
+      }
+    },
+    {
+      "file": "vscode-dismissal-counts.json",
+      "query": "dismissal-counts.graphql",
+      "transport": "gh api graphql",
+      "sha256": "31078e860011c45be24883a2310c19350714e278acb47906612685b3690a5133",
+      "bytes": 10733,
+      "capturedFileModifiedAt": "2026-10-10T21:22:41.283988+00:00",
+      "scope": {
+        "repository": "microsoft/vscode",
+        "pullRequests": 30,
+        "state": "MERGED",
+        "dismissalLimits": [
+          1,
+          100
+        ]
+      }
+    },
+    {
+      "file": "schema-pr-response.json",
+      "query": "schema-pr.graphql",
+      "transport": "gh api graphql",
+      "sha256": "882568b0d9b1dc2816894c16e2079addc1f084a5aaed65fe7a83783a20338977",
+      "bytes": 5812,
+      "capturedFileModifiedAt": "2026-10-10T21:14:25.164429+00:00",
+      "scope": {
+        "schemaTypes": [
+          "PullRequest",
+          "MergedEvent"
+        ]
+      }
+    },
+    {
+      "file": "schema-transitions-response.json",
+      "query": "schema-transitions.graphql",
+      "transport": "gh api graphql",
+      "sha256": "5028caeaa66d5f726869c8c992d4c9040b7c5faa09da1a86d65a325d9fcf4a90",
+      "bytes": 471,
+      "capturedFileModifiedAt": "2026-10-10T21:14:19.016126+00:00",
+      "scope": {
+        "schemaTypes": [
+          "ReviewDismissedEvent",
+          "HeadRefForcePushedEvent"
+        ]
+      }
+    },
+    {
+      "file": "schema-workflow-response.json",
+      "query": "schema-workflow.graphql",
+      "transport": "gh api graphql",
+      "sha256": "5ae5e66923252eaa2e3103e27f6ad0a538f8908ebb911c9adbdfae31707f8528",
+      "bytes": 721,
+      "capturedFileModifiedAt": "2026-10-10T21:14:24.250875+00:00",
+      "scope": {
+        "schemaTypes": [
+          "WorkflowRun",
+          "CheckSuite"
+        ]
+      }
+    }
+  ],
+  "queries": [
+    {
+      "file": "dismissal-counts.graphql",
+      "sha256": "31ac482782ba9e58f2d9adb470ae032ee84281a588968bfa790f3fa842b100e1"
+    },
+    {
+      "file": "dismissal-merged-sample.graphql",
+      "sha256": "55d70fad42764fd589a7dfaa6ebfffc470f2348dd6ab4dd9f45f980ee6531c08"
+    },
+    {
+      "file": "dismissal-sample.graphql",
+      "sha256": "0ac2f02d173c32f708fbe98efd6326111869d6a81f555c1cc495f597f44115de"
+    },
+    {
+      "file": "dismissal-truncation.graphql",
+      "sha256": "7c49b171dad483983565a54599a6c7a39950cfeff2dc2bf520f58df14694598a"
+    },
+    {
+      "file": "pr-timeline.graphql",
+      "sha256": "af8ae0c9ea5504505fed436bdeef72cf837d841a0222961670fa8440720882f1"
+    },
+    {
+      "file": "production-dismissals.graphql",
+      "sha256": "ad6f93fd2d5ce8dc76d3f894e98996876349b0bc3bb5b2d61bff9af202da0d60"
+    },
+    {
+      "file": "schema-pr.graphql",
+      "sha256": "794b2e4a0dbd98457c309434cd0544b2116468bed8e8ce2e05b488487dc7ae1f"
+    },
+    {
+      "file": "schema-transitions.graphql",
+      "sha256": "6ed4dab7a35b06f518477992436012718d615437b0095812a332e27b7cf87097"
+    },
+    {
+      "file": "schema-workflow.graphql",
+      "sha256": "65b763fda50ecf5070da2f1889fe4ec8c16909212c90021243dd777d6e003856"
+    }
+  ],
+  "contentFieldsRequested": [],
+  "personFieldsRequested": [],
+  "sourceTimes": "payload timestamps are source-stated; file-modified times only record local capture completion",
+  "uncapturedCases": [
+    "changes_requested dismissal",
+    "null dismissal review",
+    "more than100 dismissal events",
+    "vanished-commit workflow lifetimes",
+    "authoritative applied one-parent merge method",
+    "historical revert relationship"
+  ]
+}

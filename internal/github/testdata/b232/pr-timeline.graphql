@@ -1,0 +1,34 @@
+query($owner: String!, $name: String!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(first: 10, after: $cursor, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      totalCount
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id number state createdAt updatedAt mergedAt
+        headRefOid
+        mergeCommit { oid parents(first: 2) { totalCount } }
+        autoMergeRequest { mergeMethod }
+        commits(first: 10) { totalCount pageInfo { hasNextPage endCursor } nodes { commit { oid } } }
+        reviews(first: 50) { totalCount pageInfo { hasNextPage endCursor } nodes { id state submittedAt updatedAt commit { oid } } }
+        timelineItems(last: 100, itemTypes: [PULL_REQUEST_REVIEW, REVIEW_DISMISSED_EVENT, REVIEW_REQUESTED_EVENT, REVIEW_REQUEST_REMOVED_EVENT, HEAD_REF_FORCE_PUSHED_EVENT, MERGED_EVENT, AUTO_MERGE_ENABLED_EVENT, AUTO_REBASE_ENABLED_EVENT, AUTO_SQUASH_ENABLED_EVENT, AUTO_MERGE_DISABLED_EVENT, CROSS_REFERENCED_EVENT]) {
+          totalCount
+          pageInfo { hasPreviousPage startCursor }
+          nodes {
+            __typename
+            ... on PullRequestReview { id state submittedAt commit { oid } }
+            ... on ReviewDismissedEvent { id createdAt previousReviewState review { id state submittedAt commit { oid } } pullRequestCommit { commit { oid } } }
+            ... on ReviewRequestedEvent { id createdAt }
+            ... on ReviewRequestRemovedEvent { id createdAt }
+            ... on HeadRefForcePushedEvent { id createdAt beforeCommit { oid } afterCommit { oid } }
+            ... on MergedEvent { id createdAt commit { oid } }
+            ... on AutoMergeEnabledEvent { id createdAt }
+            ... on AutoRebaseEnabledEvent { id createdAt }
+            ... on AutoSquashEnabledEvent { id createdAt }
+            ... on AutoMergeDisabledEvent { id createdAt }
+            ... on CrossReferencedEvent { id createdAt isCrossRepository source { __typename ... on PullRequest { id number state mergedAt } ... on Issue { id number state } } }
+          }
+        }
+      }
+    }
+  }
+}

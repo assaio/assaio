@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>GitHub source feasibility and bounded review dismissals — assaio</title>
+<meta name="description" content="assaio-agent evidence --github adds raw review-dismissal observations to local delivery evidence.">
+<link rel="canonical" href="https://assaio.dev/docs/github-source-feasibility">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://assaio.dev/docs/github-source-feasibility">
+<meta property="og:title" content="GitHub source feasibility and bounded review dismissals — assaio">
+<meta property="og:description" content="assaio-agent evidence --github adds raw review-dismissal observations to local delivery evidence.">
+<meta property="og:image" content="https://assaio.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="assaio logo, cost and output headline, subtitle, install commands and tool names">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://assaio.dev/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f766e'/%3E%3Cpath d='M9 22 16 10l7 12' stroke='%23ffffff' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"assaio","item":"https://assaio.dev/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://assaio.dev/docs"},{"@type":"ListItem","position":3,"name":"GitHub source feasibility and bounded review dismissals","item":"https://assaio.dev/docs/github-source-feasibility"}]}</script>
+<style>:root{
+  --bg:#ffffff; --surface:#f5f7f8; --line:#e2e6e9; --line-strong:#cdd3d8;
+  --fg:#0f1417; --dim:#4f5a64; --faint:#66717c;
+  --signal:#0f766e; --signal-strong:#0b5f58; --signal-soft:#e7f4f2;
+  --cell:#f5f7f8; --rule:#e2e6e9; --rule-soft:#edf0f2;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --gut:clamp(1rem,4vw,2.5rem);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0c1013; --surface:#11171b; --line:#232e35; --line-strong:#33424c;
+    --fg:#edf1f3; --dim:#a3aeb7; --faint:#8b97a1;
+    --signal:#2dd4bf; --signal-strong:#5eead4; --signal-soft:#0e2826;
+    --cell:#11171b; --rule:#232e35; --rule-soft:#1a2328;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-behavior:smooth; color-scheme:light dark}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans);
+  font-size:clamp(1rem,.96rem + .2vw,1.0625rem); line-height:1.65; -webkit-font-smoothing:antialiased}
+a{color:var(--signal); text-underline-offset:.2em}
+a:hover{color:var(--signal-strong)}
+:focus-visible{outline:2px solid var(--signal); outline-offset:3px; border-radius:4px}
+.wrap{max-width:84rem; margin:0 auto; padding:0 var(--gut)}
+.top{display:flex; align-items:center; justify-content:space-between; gap:.5rem 1.5rem; flex-wrap:wrap;
+  min-height:3.75rem; border-bottom:1px solid var(--line)}
+.brand{display:inline-flex; align-items:center; gap:.55rem; min-height:44px; font-weight:700; font-size:1.1rem;
+  letter-spacing:-.02em; text-decoration:none; color:var(--fg)}
+.brand svg{width:26px; height:26px; flex:none}
+.topnav{display:flex; flex-wrap:wrap; gap:0 .25rem; font-size:.95rem}
+.topnav a{display:inline-flex; align-items:center; min-height:44px; padding:0 .7rem; border-radius:8px;
+  text-decoration:none; color:var(--dim); font-weight:500}
+.topnav a:hover{color:var(--fg); background:var(--surface)}
+.topnav a.menu{display:none}
+footer{padding:2.5rem 0 3.5rem; margin-top:3rem; border-top:1px solid var(--line); color:var(--faint); font-size:.88rem}
+footer p{max-width:56rem; margin:0}
+.layout{display:grid; grid-template-columns:16rem minmax(0,1fr); gap:3rem; align-items:start}
+.side{position:sticky; top:0; padding:2rem 0; max-height:100vh; overflow-y:auto}
+@media (max-width:60rem){
+  .layout{grid-template-columns:minmax(0,1fr); gap:0}
+  .side{position:static; order:2; max-height:none; padding:1.5rem 0 0; border-top:1px solid var(--line)}
+  .topnav a.menu{display:inline-flex}
+}
+@media (max-width:34rem){.topnav a.opt{display:none} .topnav a{padding:0 .5rem}}
+.sidehead{margin:1.5rem 0 .4rem; font:700 .72rem/1 var(--sans); letter-spacing:.08em;
+  text-transform:uppercase; color:var(--faint)}
+.sidehead:first-child{margin-top:0}
+.side ul{list-style:none; margin:0; padding:0}
+.side a{display:flex; align-items:center; min-height:40px; text-decoration:none; color:var(--dim);
+  font-size:.93rem; line-height:1.35; padding:.35rem .75rem; border-radius:8px}
+.side a:hover{color:var(--fg); background:var(--surface)}
+.side a.on{color:var(--signal); background:var(--signal-soft); font-weight:600}
+.doc{padding:2rem 0 1rem; max-width:48rem; min-width:0}
+.doc h1{font-size:clamp(1.8rem,1.3rem + 2vw,2.5rem); line-height:1.1; letter-spacing:-.03em; margin:0 0 1rem}
+.doc h2{font-size:clamp(1.3rem,1.15rem + .6vw,1.55rem); letter-spacing:-.015em; line-height:1.25;
+  margin:2.75rem 0 .75rem; padding-top:1.5rem; border-top:1px solid var(--line)}
+.doc h3{font-size:1.12rem; letter-spacing:-.01em; margin:2rem 0 .5rem}
+.doc h4{font-size:1rem; margin:1.5rem 0 .4rem; color:var(--dim)}
+.doc h2 a,.doc h3 a,.doc h4 a{text-decoration:none; color:inherit}
+.doc p,.doc li{max-width:42rem}
+.doc p{margin:0 0 1rem}
+.doc .lede{color:var(--dim); font-size:1.08rem}
+.doc ul,.doc ol{margin:0 0 1rem; padding-left:1.35rem}
+.doc li{margin:0 0 .45rem}
+.doc li>ul,.doc li>ol{margin-top:.45rem}
+.doc blockquote{margin:0 0 1rem; padding:.2rem 0 .2rem 1rem; border-left:3px solid var(--signal);
+  color:var(--dim)}
+.doc hr{border:0; border-top:1px solid var(--line); margin:2.5rem 0}
+.doc strong{font-weight:650}
+.doc img{max-width:100%}
+code{font-family:var(--mono); font-size:.875em}
+:not(pre)>code{background:var(--cell); border:1px solid var(--line); border-radius:5px;
+  padding:.08em .35em; overflow-wrap:anywhere}
+pre{background:#0e1316; color:#e6ecef; border:1px solid #222c32; border-radius:10px;
+  padding:1rem 1.1rem; overflow-x:auto; margin:0 0 1.25rem; line-height:1.55}
+pre code{background:none; border:0; padding:0; font-size:.84rem; color:inherit}
+.scroll{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 0 1.25rem}
+table{border-collapse:collapse; width:100%; font-size:.9rem}
+.doc table{display:block; overflow-x:auto; margin:0 0 1.25rem}
+th,td{text-align:left; vertical-align:top; padding:.6rem .8rem .6rem 0; border-bottom:1px solid var(--line)}
+th{font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); font-weight:650; white-space:nowrap}
+td.m{white-space:nowrap; color:var(--signal); font-family:var(--mono); font-size:.84rem}
+td.dim{color:var(--dim)}
+section{scroll-margin-top:1rem}
+section h2{font-size:clamp(1.3rem,1.15rem + .6vw,1.55rem); margin:2.75rem 0 .35rem; padding-top:1.5rem;
+  border-top:1px solid var(--line); letter-spacing:-.015em}
+.note{color:var(--dim); font-size:.93rem; max-width:48rem; margin:0 0 1.25rem}
+h3.sub{font-size:1rem; margin:1.75rem 0 .5rem; font-weight:650}
+ul.gaps{margin:.15rem 0 0; padding-left:1.1rem; color:var(--dim)}
+.cmd{padding:1rem 0; border-bottom:1px solid var(--line)}
+.cmd h3{font-family:var(--mono); font-size:.9rem; margin:0 0 .25rem; color:var(--signal); font-weight:600}
+.cmd p{margin:0; color:var(--dim); font-size:.93rem; max-width:44rem}
+.cmd table{margin-top:.6rem}
+.toc{min-width:0; font-size:.9rem}
+.toc ul{list-style:none; margin:0; padding:0}
+.toc a{display:flex; align-items:center; min-height:44px; padding:.35rem .75rem; border-radius:8px;
+  text-decoration:none; color:var(--dim); line-height:1.35; overflow-wrap:anywhere}
+.toc a:hover{color:var(--fg); background:var(--surface)}
+@media (width < 75rem){
+  .toc{margin-top:2rem; padding:.75rem .5rem .5rem; border:1px solid var(--line); border-radius:10px}
+  .toc .sidehead{margin-left:.75rem}
+}
+@media (width > 60rem){
+  .with-toc{row-gap:0}
+  .with-toc .side{grid-column:1; grid-row:1 / span 2}
+  .with-toc .toc{grid-column:2; grid-row:1}
+  .with-toc .doc{grid-column:2; grid-row:2}
+}
+@media (width >= 75rem){
+  .with-toc{grid-template-columns:16rem minmax(0,1fr) 13rem}
+  .with-toc .side,.with-toc .doc{grid-row:1}
+  .with-toc .toc{grid-column:3; grid-row:1; position:sticky; top:0; max-height:100vh; overflow-y:auto; padding:2rem 0}
+}
+.pager{display:flex; flex-wrap:wrap; justify-content:space-between; gap:1rem; margin:3rem 0 0;
+  padding-top:1.5rem; border-top:1px solid var(--line)}
+.pager a{display:flex; flex-direction:column; justify-content:center; flex:0 1 20rem; min-width:0; min-height:44px;
+  padding:.6rem .9rem; border:1px solid var(--line); border-radius:10px; text-decoration:none;
+  color:var(--fg); font-weight:600; line-height:1.35; overflow-wrap:anywhere}
+.pager a:hover{border-color:var(--signal); color:var(--fg)}
+.pager a.next{margin-left:auto; text-align:right}
+.pager .dir{font:700 .72rem/1.4 var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+.landing{display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr)); gap:0 1.25rem;
+  align-content:start}
+.landing>*{grid-column:1 / -1}
+.landing>h1+p{color:var(--dim); font-size:1.08rem}
+.landing>.path{grid-column:auto; margin:0 0 1.25rem; padding:1.25rem 1.25rem .75rem; border:1px solid var(--line);
+  border-radius:12px; background:var(--surface); min-width:0}
+.path h2{margin:0 0 .5rem; padding:0; border:0; font-size:1.2rem}
+.path p{color:var(--dim); font-size:.95rem}
+.path ul{list-style:none; padding:0; margin:0}
+.path li{margin:0}
+.path a{display:flex; align-items:center; min-height:44px; padding:.35rem 0; line-height:1.35;
+  text-decoration:none; overflow-wrap:anywhere}
+.path a:hover{text-decoration:underline}
+@media print{
+  .side,.toc,.pager,.topnav{display:none}
+  .layout{display:block}
+  .landing{display:block}
+  .landing>.path{break-inside:avoid}
+}
+</style>
+</head>
+<body><div class="wrap">
+<header class="top">
+  <a class="brand" href="https://assaio.dev/"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--signal)"/><path d="M9 22 16 10l7 12" stroke="var(--bg)" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>assaio</a>
+  <nav class="topnav">
+    <a class="opt" href="https://assaio.dev/">Overview</a>
+    <a href="https://assaio.dev/docs">Docs</a>
+    <a href="https://assaio.dev/docs/reference">Reference</a>
+    <a href="https://github.com/assaio/assaio">GitHub</a>
+    <a class="opt" href="https://github.com/assaio/assaio/releases">Releases</a>
+    <a class="menu" href="#docs-nav">Menu</a>
+  </nav>
+</header>
+<div class="layout with-toc"><aside class="side" id="docs-nav"><nav aria-label="Documentation"><p class="sidehead">Start here</p><ul><li><a href="https://assaio.dev/docs">assaio documentation</a></li></ul><p class="sidehead">Understand the figures</p><ul><li><a href="https://assaio.dev/docs/evidence">Local session-to-commit and delivery evidence</a></li><li><a class="on" href="https://assaio.dev/docs/github-source-feasibility">GitHub source feasibility and bounded review dismissals</a></li><li><a href="https://assaio.dev/docs/reconcile">Reconciling against the vendor&#39;s own numbers</a></li><li><a href="https://assaio.dev/docs/format-resilience">Format resilience — detecting and reacting to vendor log-format drift</a></li><li><a href="https://assaio.dev/docs/source-fields">What each source&#39;s log carries, and what assaio reads</a></li></ul><p class="sidehead">Run it for a team</p><ul><li><a href="https://assaio.dev/docs/team-server">The team server</a></li><li><a href="https://assaio.dev/docs/automation">Automating assaio — hooks, scheduled sync, and survival</a></li></ul><p class="sidehead">Extend assaio</p><ul><li><a href="https://assaio.dev/docs/extending">Extending assaio</a></li><li><a href="https://assaio.dev/docs/metric-validator">Adding a metric validator</a></li><li><a href="https://assaio.dev/docs/metric-validator-example">Worked example: Weekend Usage</a></li><li><a href="https://assaio.dev/docs/metric-plugin">Write a metric plugin (any language)</a></li><li><a href="https://assaio.dev/docs/rule-plugin">Write a rule plugin (any language)</a></li><li><a href="https://assaio.dev/docs/parser-plugin">Reading a source assaio does not ship</a></li><li><a href="https://assaio.dev/docs/data-source">Add a data source</a></li><li><a href="https://assaio.dev/docs/query-your-data">Query your own data</a></li><li><a href="https://assaio.dev/docs/compatibility">Compatibility</a></li></ul><p class="sidehead">Use an example</p><ul><li><a href="https://assaio.dev/docs/recipes/label-rules">Label rules you can paste in</a></li><li><a href="https://assaio.dev/docs/recipes/ci-gates">Gating CI on what a window cost</a></li><li><a href="https://assaio.dev/docs/recipes/rule-plugins">Rule plugins you can run today</a></li><li><a href="https://assaio.dev/docs/recipes/automation">Running it without being asked</a></li><li><a href="https://assaio.dev/docs/recipes/extensions">Extensions, written out in full</a></li></ul><p class="sidehead">Reference</p><ul><li><a href="https://assaio.dev/docs/reference">Every signal, source and setting</a></li></ul></nav></aside><nav class="toc" aria-label="On this page"><p class="sidehead">On this page</p><ul><li><a href="#currently-shipped-reads">Currently shipped reads</a></li><li><a href="#four-track-feasibility-matrix">Four-track feasibility matrix</a></li><li><a href="#finite-real-evidence">Finite real evidence</a></li><li><a href="#remaining-b232-gates">Remaining B232 gates</a></li></ul></nav><main class="doc"><h1 id="github-source-feasibility-and-bounded-review-dismissals">GitHub source feasibility and bounded review dismissals</h1>
+<p><code>assaio-agent evidence --github</code> adds raw review-dismissal observations to local delivery evidence.
+They describe a source-stated PR outcome, never an AI session result. Exact review rounds,
+comparable workflow lifetimes and CI rates, authoritative one-parent merge methods and explicit
+PR revert relations remain deferred under B232.</p>
+<p>This guide records a finite source study captured on 2026-10-10. Field availability, observed
+cases and comparable measurement populations are separate questions. A schema capture answers
+only the first.</p>
+<h2 id="currently-shipped-reads">Currently shipped reads</h2>
+<p>Two fixed GraphQL repository walks run through the user's own <code>gh</code>, ordered by PR <code>updatedAt</code>,
+newest first. <code>--since</code> bounds that update-time walk, not every event's occurrence time. The base
+walk reads 50 PRs per page, at most 20 pages, plus a top reread of at most 20 pages. The independent
+history walk reads 5 PRs per page with the same page and reread caps. Both share one invocation
+<code>observedAt</code>, while retaining separate PR counts and read-back windows. Repository totals cover
+all repository PRs, rather than the selected window. Each API call has a 60-second timeout and an
+8 MiB response cap. Source errors fail the document.</p>
+<table>
+<thead>
+<tr>
+<th>Read</th>
+<th>Exact selected fields and bounds</th>
+<th>Meaning and population</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base PR and commits</td>
+<td>PR <code>id</code>, <code>number</code>, <code>state</code>, <code>updatedAt</code>, <code>mergedAt</code>; <code>mergeCommit { oid parents(first: 2) { totalCount } }</code>; <code>commits(first: 100) { totalCount nodes { commit { oid } } }</code></td>
+<td>Current PR snapshot and first 100 currently listed commits; parent count is topology.</td>
+</tr>
+<tr>
+<td>Current reviews</td>
+<td><code>reviews(last: 100) { totalCount nodes { id state submittedAt updatedAt commit { oid } } }</code></td>
+<td>Current review states, with actual submission time kept separate from occurrence-time fallbacks.</td>
+</tr>
+<tr>
+<td>Raw dismissals</td>
+<td><code>timelineItems(last: 100, itemTypes: [REVIEW_DISMISSED_EVENT])</code>, aliased as <code>reviewDismissals</code>; <code>totalCount</code>, <code>filteredCount</code>, <code>pageCount</code>, <code>pageInfo { hasPreviousPage }</code>; nodes contain only <code>__typename</code>, <code>id</code>, <code>createdAt</code>, <code>previousReviewState</code>, nullable <code>review { id submittedAt commit { oid } }</code></td>
+<td>Last 100 selected dismissal events per PR. Actual event <code>createdAt</code> is required; there is no fallback.</td>
+</tr>
+<tr>
+<td>Latest-head checks</td>
+<td><code>statusCheckRollup.state</code>; <code>contexts(last: 100) { totalCount nodes { __typename } }</code>, with CheckRun <code>id</code>, <code>status</code>, <code>conclusion</code>, <code>startedAt</code>, <code>completedAt</code>, or StatusContext <code>id</code>, <code>state</code>, <code>createdAt</code>, <code>updatedAt</code></td>
+<td>Current-head contexts; separate from historical suites and runs.</td>
+</tr>
+<tr>
+<td>Independent history</td>
+<td>PR <code>id</code>, <code>number</code>, <code>updatedAt</code>; first 100 listed commits with <code>oid</code>; last 10 <code>checkSuites</code> per commit with <code>totalCount</code>, <code>id</code>, <code>status</code>, <code>conclusion</code>, <code>createdAt</code>, <code>updatedAt</code>; last 5 <code>checkRuns</code> per suite with <code>checkType: ALL</code>, <code>totalCount</code>, <code>id</code>, <code>status</code>, <code>conclusion</code>, <code>startedAt</code>, <code>completedAt</code></td>
+<td>Bounded history on currently listed commits, with total/listed coverage at each layer. It does not recover lost commits or complete workflow lifetimes.</td>
+</tr>
+</tbody>
+</table>
+<p>Only PRs named by candidates or alternatives receive details. Historical data joins by PR node id
+and number only when commit totals and returned first-100 SHA sets agree, without duplicate SHAs
+in either prefix. Matching truncated prefixes do not establish complete history; a mismatch
+withholds the join.</p>
+<p>Dismissal coverage preserves five distinct facts:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>totalCount</code></td>
+<td>All PR timeline events, including kinds outside the dismissal filter.</td>
+</tr>
+<tr>
+<td><code>filteredCount</code></td>
+<td>All selected review-dismissal events in that timeline.</td>
+</tr>
+<tr>
+<td><code>pageCount</code></td>
+<td>The source-reported count in the returned selected slice.</td>
+</tr>
+<tr>
+<td><code>listed</code></td>
+<td>Actual retained dismissal nodes.</td>
+</tr>
+<tr>
+<td><code>hasPreviousPage</code></td>
+<td>Source-stated truncation of the selected dismissal population.</td>
+</tr>
+</tbody>
+</table>
+<p>For the production <code>last: 100</code> read, usable coverage requires consistent nonnegative counts,
+<code>listed = pageCount = min(filteredCount, 100)</code> and
+<code>hasPreviousPage = (filteredCount &gt; pageCount)</code>. Missing coverage remains null/unavailable;
+independently validated raw events may still appear. An explicit usable connection with
+<code>filteredCount = 0</code>, an empty slice and no previous page establishes selected absence for that
+PR at capture time, even when <code>totalCount</code> is positive.</p>
+<p>A dismissal carries its opaque event id, PR number, source-stated previous review state and
+actual dismissal time. A null <code>review</code> leaves review id, reviewed commit hash and submission time
+absent. The envelope retains <code>gh</code> source, parsed provenance, local-only privacy and the shared
+invocation observation time. The event belongs to the PR outcome layer. Its previous state does
+not restore a current review snapshot or enter a new count-derived metric or rate.</p>
+<p>No author, actor, reviewer, dismissal message, title, body, content or person field is selected.
+Requests send repository identity and cursors, never session or store data. Observations remain
+in memory for one command, outside the store, sync, dashboards, share and plugins. See
+<a href="https://github.com/assaio/assaio/blob/main/PRIVACY.md">PRIVACY.md</a>, <a href="https://assaio.dev/docs/evidence">the evidence guide</a> and
+<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0025-bounded-review-dismissals.md">ADR 0025</a>.</p>
+<h2 id="four-track-feasibility-matrix">Four-track feasibility matrix</h2>
+<p>The endpoints and projections below are investigative candidates unless explicitly identified
+as shipped above. They do not add requests to <code>evidence --github</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Track</th>
+<th>Investigated source and exact projection</th>
+<th>Meaning, privacy and population limits</th>
+<th>Missing evidence and decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Review transitions / rounds</td>
+<td>GraphQL <code>ReviewDismissedEvent</code>: production fields listed above. <code>pr-timeline.graphql</code> also selected <code>review.state</code> and <code>pullRequestCommit { commit { oid } }</code>; review/request/removal events selected their ids and times.</td>
+<td>A dismissal proves one source-stated transition. Request/removal events describe requests, without collecting the requested person. Production uses only the narrower dismissal projection and its own coverage.</td>
+<td>Three real approved→dismissed cases exist. No real changes_requested dismissal, nullable-review case or population over 100 dismissals was captured. Complete state transitions and authoritative round boundaries remain missing; exact rounds stay withheld.</td>
+</tr>
+<tr>
+<td>Comparable CI/workflow lifetime</td>
+<td>GraphQL <code>HeadRefForcePushedEvent { id createdAt beforeCommit { oid } afterCommit { oid } }</code>. Schema inspection established <code>CheckSuite.workflowRun</code> and WorkflowRun field availability, including <code>id</code>, <code>createdAt</code>, <code>updatedAt</code>, <code>event</code>, <code>runAttempt</code>, <code>runNumber</code>, <code>checkSuite</code>. REST candidates are repository workflow-run listing, individual-run and run-attempt reads.</td>
+<td>Force-push endpoints identify two head commits, not every removed commit or its checks. A suite/run association does not establish a complete comparable PR lifecycle. Schema queries read field names, without workflow names, branch values, titles, actors or output. No real REST workflow-lifetime projection was captured.</td>
+<td>Lost/force-pushed commits, attempts, deletion, synthetic merge commits and reliable PR association need a complete source/population contract and real cases. No vanished-commit workflow-lifetime proof exists; comparable CI rates remain withheld.</td>
+</tr>
+<tr>
+<td>Authoritative merge method</td>
+<td><code>pr-timeline.graphql</code> selected <code>mergeCommit { oid parents(first: 2) { totalCount } }</code>, <code>MergedEvent { id createdAt commit { oid } }</code>, <code>autoMergeRequest { mergeMethod }</code>, and auto-merge/rebase/squash enabled or disabled event ids and times.</td>
+<td>More than one merge parent proves a merge. One parent cannot identify squash versus rebase. <code>MergedEvent.commit</code> identifies the landing commit; its parents are topology. <code>autoMergeRequest.mergeMethod</code> and enabled event kinds express intent, not authoritative execution. No actor or branch field is selected.</td>
+<td>An authoritative read-side applied-method source and real distinguishable one-parent counterexamples remain missing. Do not infer execution from topology, configured intent or commit subjects.</td>
+</tr>
+<tr>
+<td>Content-free revert relation</td>
+<td><code>pr-timeline.graphql</code> selected <code>CrossReferencedEvent { id createdAt isCrossRepository source { __typename } }</code>, with source PR <code>id</code>, <code>number</code>, <code>state</code>, <code>mergedAt</code>, or Issue <code>id</code>, <code>number</code>, <code>state</code>. <code>revertPullRequest</code> was examined as a mutation candidate, never executed.</td>
+<td>A cross-reference is a general reference, not proof of reversion. The mutation expresses write intent; its result cannot supply an existing reliable read-side PR revert population. No title, body or subject heuristic is admissible.</td>
+<td>An explicit content-free original/revert relation, a defined read population and real positive, negative and unknown cases remain missing. There is no actual revert receipt in this study.</td>
+</tr>
+</tbody>
+</table>
+<p>GitHub documents the dismissal and connection fields in
+<a href="https://docs.github.com/en/graphql/reference/pulls#reviewdismissedevent">ReviewDismissedEvent</a>
+and <a href="https://docs.github.com/en/graphql/reference/pulls#pullrequesttimelineitemsconnection">PullRequestTimelineItemsConnection</a>.
+The force-push source is
+<a href="https://docs.github.com/en/graphql/reference/pulls#headrefforcepushedevent">HeadRefForcePushedEvent</a>;
+workflow-run and attempt read candidates are documented in
+<a href="https://docs.github.com/en/rest/actions/workflow-runs">REST workflow runs</a>.
+<a href="https://docs.github.com/en/graphql/reference/objects#checksuite">CheckSuite</a> and
+<a href="https://docs.github.com/en/graphql/reference/objects#workflowrun">WorkflowRun</a> document the schema
+associations, without establishing comparable PR lifetimes.
+<a href="https://docs.github.com/en/graphql/reference/pulls#mergedevent">MergedEvent</a> and
+<a href="https://docs.github.com/en/graphql/reference/pulls#automergerequest">AutoMergeRequest</a> support the
+landing-commit and requested-method distinction.
+<a href="https://docs.github.com/en/graphql/reference/objects#crossreferencedevent">CrossReferencedEvent</a>
+describes references; <a href="https://docs.github.com/en/graphql/reference/mutations#revertpullrequest">revertPullRequest</a>
+is a mutation, not a read-side revert relation.</p>
+<h2 id="finite-real-evidence">Finite real evidence</h2>
+<p>The production-shaped dismissal capture ran from <code>2026-10-10T21:30:48Z</code> to
+<code>2026-10-10T21:30:50Z</code>. Its query uses <code>last: 100</code>, the discriminator and exactly the shipped
+allowlist. Reproduction starts with the committed
+<a href="https://github.com/assaio/assaio/blob/main/internal/github/testdata/b232/production-dismissals.graphql">query</a> and
+<a href="https://github.com/assaio/assaio/blob/main/internal/github/testdata/b232/production-dismissals.json">response</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Captured PR</th>
+<th>Actual dismissal time</th>
+<th>Previous state</th>
+<th>total / filtered / page / listed / previous page</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>github/docs #46200</td>
+<td>2026-10-06T17:06:15Z</td>
+<td>APPROVED</td>
+<td>23 / 1 / 1 / 1 / false</td>
+</tr>
+<tr>
+<td>microsoft/vscode #339957</td>
+<td>2026-10-06T00:59:25Z</td>
+<td>APPROVED</td>
+<td>24 / 1 / 1 / 1 / false</td>
+</tr>
+<tr>
+<td>microsoft/vscode #340803</td>
+<td>2026-10-09T21:42:28Z</td>
+<td>APPROVED</td>
+<td>22 / 1 / 1 / 1 / false</td>
+</tr>
+<tr>
+<td>cli/cli #14640</td>
+<td>No selected event</td>
+<td>—</td>
+<td>25 / 0 / 0 / 0 / false</td>
+</tr>
+</tbody>
+</table>
+<p>All three positives include review id, actual submission time and reviewed commit hash. These
+cases establish approved→dismissed observations, not every possible previous state or join shape.</p>
+<p>The study's newest-by-update 30 CLI PRs of all states and separate newest-by-update 30 merged CLI
+PRs each had zero selected dismissal events while other timeline events were present
+(<code>cli-dismissal-root-page1.json</code>, <code>cli-dismissal-merged-root-page1.json</code>). The samples overlap and
+are not 60 distinct PRs. Their source totals were 4,703 all PRs and 3,267 merged PRs. The separate
+30-merged-PR count captures found one selected dismissal in github/docs and two in
+microsoft/vscode (<code>github-docs-dismissal-counts.json</code>, <code>vscode-dismissal-counts.json</code>), with source
+merged-PR totals of 15,616 and 55,268. These are finite observed populations; none establishes API
+incapability or absence throughout a repository or GitHub.</p>
+<p>For github/docs #46200, <code>dismissal-truncation.graphql</code> and
+<code>github-docs-dismissal-truncation.json</code> compare investigative <code>last: 0</code> and <code>last: 1</code> reads.
+The zero slice reports total 23, filtered 1, page 0 and previous page true; the one slice retains
+the event and reports previous page false. This demonstrates count distinctions and source-stated
+truncation. <code>last: 0</code> is never the production query and does not prove a real population exceeding
+100 dismissals.</p>
+<p>The initial <code>pr-timeline.graphql</code> investigation read 10 PRs per repository. In assaio/assaio,
+source total 106, it returned 11 force-push events, 9 merged events, 5 cross-references, 5 review
+requests and no dismissals (<code>assaio-timeline-page1.json</code>). In cli/cli, source total 4,703, it
+returned 13 review nodes, 25 review requests, 11 removals, 19 cross-references and no dismissals
+(<code>cli-timeline-page1.json</code>). Its first-10 commits, first-50 reviews and last-100 mixed timeline
+slice are investigation bounds, not the production read contract.</p>
+<p><code>schema-pr-response.json</code>, <code>schema-transitions-response.json</code> and <code>schema-workflow-response.json</code>
+record schema availability. They neither recover missing histories nor establish semantic
+comparability. Synthetic conformance cases remain separate from real source captures and cannot
+close any of the real-corpus gaps above. No feature test or release-gate execution is asserted by
+this source study.</p>
+<h2 id="remaining-b232-gates">Remaining B232 gates</h2>
+<p>B232 remains open. Review rounds require authoritative transitions and round boundaries, explicit
+coverage and real cases including changes_requested dismissals, null joins and selected
+truncation beyond 100. Comparable workflow lifetimes require a source that covers lost and
+force-pushed commits, attempts and relevant PR associations, with comparable populations and real
+positive, negative and unknown cases. One-parent merge methods require an authoritative applied
+method source and distinguishable real squash/rebase cases. Revert relations require an explicit
+content-free read-side relation and real original/revert, negative and unknown cases.</p>
+<p>Current review snapshot calculations, offline <code>session-commit/v2</code> and GitHub <code>session-commit/v3</code>
+matching remain unchanged. The addition is reversible by reverting one feature PR; it needs no
+store migration. Published tags remain immutable. See
+<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0024-bounded-github-history.md">ADR 0024</a> and
+<a href="https://github.com/assaio/assaio/blob/main/docs/adr/0025-bounded-review-dismissals.md">ADR 0025</a>.</p>
+<nav class="pager" aria-label="Previous and next"><a class="prev" href="https://assaio.dev/docs/evidence"><span class="dir">Previous</span> Local session-to-commit and delivery evidence</a><a class="next" href="https://assaio.dev/docs/reconcile"><span class="dir">Next</span> Reconciling against the vendor&#39;s own numbers</a></nav></main>
+</div>
+<footer>
+<p>Generated from the repository: every page here is rendered from the Markdown it is written in,
+or from the binary's own registries, and a check fails the build when the two disagree. This page
+names no release — which version is current is stated once, on the
+<a href="https://github.com/assaio/assaio/releases">releases page</a>, where it cannot fall behind.
+It loads nothing: no fonts, no analytics, no third-party requests.</p>
+</footer>
+</div></body></html>

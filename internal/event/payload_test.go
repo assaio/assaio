@@ -9,7 +9,7 @@ import (
 
 // payloads is every concrete payload this build defines. The registry and this list must
 // agree: a type nothing can fill is a name pretending to be a capability.
-var payloads = []Payload{Commit{}, PullRequest{}, PullRequestCommit{}, Review{}, Check{}, CheckSuite{}}
+var payloads = []Payload{Commit{}, PullRequest{}, PullRequestCommit{}, Review{}, ReviewDismissal{}, Check{}, CheckSuite{}}
 
 func TestEveryRegisteredTypeHasAPayload(t *testing.T) {
 	have := map[string]bool{}
@@ -46,28 +46,32 @@ var stringFields = map[string]string{
 	"Event.Subject.Session": "the session id the tool assigned",
 	"Event.Subject.Member":  "a pseudonymous member id set by the server",
 
-	"PullRequest.State":        "closed vocabulary",
-	"PullRequest.MergeCommit":  "a commit hash, validated as hex",
-	"PullRequest.CheckState":   "closed vocabulary",
-	"PullRequest.HistoryState": "closed vocabulary",
-	"PullRequestCommit.Commit": "a commit hash, validated as hex",
-	"Review.State":             "closed vocabulary",
-	"Review.Commit":            "a commit hash, validated as hex",
-	"Check.Kind":               "closed vocabulary",
-	"Check.State":              "closed vocabulary",
-	"Check.Conclusion":         "closed vocabulary",
-	"Check.Commit":             "a commit hash, validated as hex",
-	"Check.Suite":              "a bounded opaque forge id, validated without free text",
-	"CheckSuite.Commit":        "a commit hash, validated as hex",
-	"CheckSuite.State":         "closed vocabulary",
-	"CheckSuite.Conclusion":    "closed vocabulary",
+	"PullRequest.State":             "closed vocabulary",
+	"PullRequest.MergeCommit":       "a commit hash, validated as hex",
+	"PullRequest.CheckState":        "closed vocabulary",
+	"PullRequest.HistoryState":      "closed vocabulary",
+	"PullRequestCommit.Commit":      "a commit hash, validated as hex",
+	"Review.State":                  "closed vocabulary",
+	"Review.Commit":                 "a commit hash, validated as hex",
+	"ReviewDismissal.PreviousState": "closed review-state vocabulary",
+	"ReviewDismissal.ReviewID":      "a bounded opaque forge id, validated without free text",
+	"ReviewDismissal.Commit":        "a commit hash, validated as hex",
+	"Check.Kind":                    "closed vocabulary",
+	"Check.State":                   "closed vocabulary",
+	"Check.Conclusion":              "closed vocabulary",
+	"Check.Commit":                  "a commit hash, validated as hex",
+	"Check.Suite":                   "a bounded opaque forge id, validated without free text",
+	"CheckSuite.Commit":             "a commit hash, validated as hex",
+	"CheckSuite.State":              "closed vocabulary",
+	"CheckSuite.Conclusion":         "closed vocabulary",
 }
 
 // Nullable counts preserve an unavailable source connection without opening a content field.
 var nullableCounts = map[string]reflect.Type{
-	"PullRequest.MergeParents": reflect.TypeOf(int64(0)),
-	"PullRequestCommit.Suites": reflect.TypeOf(Population{}),
-	"CheckSuite.Runs":          reflect.TypeOf(Population{}),
+	"PullRequest.MergeParents":     reflect.TypeOf(int64(0)),
+	"PullRequest.ReviewDismissals": reflect.TypeOf(TimelinePopulation{}),
+	"PullRequestCommit.Suites":     reflect.TypeOf(Population{}),
+	"CheckSuite.Runs":              reflect.TypeOf(Population{}),
 }
 
 func TestContractCarriesNoFreeText(t *testing.T) {

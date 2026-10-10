@@ -16,11 +16,12 @@ const (
 	TypePullRequest       = "scm.pull_request.observed"
 	TypePullRequestCommit = "scm.pull_request.commit.observed"
 	TypeReview            = "scm.review.observed"
+	TypeReviewDismissal   = "scm.review.dismissed"
 	TypeCheck             = "ci.check.observed"
 	TypeCheckSuite        = "ci.suite.observed"
 )
 
-var types = []string{TypeCommit, TypePullRequest, TypePullRequestCommit, TypeReview, TypeCheck, TypeCheckSuite}
+var types = []string{TypeCommit, TypePullRequest, TypePullRequestCommit, TypeReview, TypeReviewDismissal, TypeCheck, TypeCheckSuite}
 
 // known reports whether t is an observation this build produces.
 func known(t string) bool { return valid(types, t) }

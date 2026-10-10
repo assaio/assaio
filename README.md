@@ -36,8 +36,10 @@ vendors for these questions:
 Adoption describes observed sessions, active days and tool/project breadth, not the percentage of
 all employees using AI. The local `evidence` command reports session→commit candidates with
 confidence, ambiguity, abstention and population coverage. Optional `--github` adds bounded PR,
-review, latest-head check and historical suite/run observations through your own `gh`. They are
-facts about PRs, not proof of AI productivity or session outcomes. Exact review rounds, comparable
+review snapshots, raw review dismissals, latest-head checks and historical suite/run observations
+through your own `gh`. Dismissals retain actual event times, nullable review joins and separate
+source coverage; they leave current snapshots and matching unchanged. These are facts about PRs,
+not proof of AI productivity or session outcomes. See the [source study](docs/github-source-feasibility.md). Exact review rounds, comparable
 PR pipeline CI rates, authoritative squash-versus-rebase methods and PR revert relations remain
 outside the shipped scope. See the [roadmap](ROADMAP.md).
 

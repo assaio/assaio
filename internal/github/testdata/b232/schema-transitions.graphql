@@ -1,0 +1,4 @@
+query {
+  dismissed: __type(name: "ReviewDismissedEvent") { fields { name } }
+  forcePush: __type(name: "HeadRefForcePushedEvent") { fields { name } }
+}

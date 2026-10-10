@@ -72,6 +72,14 @@ func fakeGh(t *testing.T, now time.Time, merge string, listed ...string) {
 				"id": "PRR_7", "state": "CHANGES_REQUESTED", "submittedAt": now.Add(-10 * time.Minute),
 				"commit": map[string]any{"oid": listed[0]},
 			}}},
+			"reviewDismissals": map[string]any{
+				"totalCount": 12, "filteredCount": 1, "pageCount": 1,
+				"pageInfo": map[string]any{"hasPreviousPage": false},
+				"nodes": []map[string]any{{
+					"__typename": "ReviewDismissedEvent", "id": "RDE_7", "createdAt": now.Add(-8 * time.Minute), "previousReviewState": "APPROVED",
+					"review": map[string]any{"id": "PRR_previous", "submittedAt": now.Add(-12 * time.Minute), "commit": map[string]any{"oid": listed[0]}},
+				}},
+			},
 			"statusCheckRollup": map[string]any{"state": "FAILURE", "contexts": map[string]any{
 				"totalCount": 1, "nodes": []map[string]any{{
 					"__typename": "CheckRun", "id": "CR_7", "status": "COMPLETED", "conclusion": "FAILURE", "completedAt": now.Add(-6 * time.Minute),
@@ -155,6 +163,11 @@ func TestEvidenceWithGitHubLinksTheBranchCommitASquashHid(t *testing.T) {
 		t.Fatalf("pull request review and head checks were not shown with the named change: %+v", doc.Changes.Linked)
 	}
 	pr := &doc.Changes.Linked[0]
+	if d := pr.ReviewDismissals; d == nil || d.ReadState != "read" || d.Coverage == nil ||
+		d.Coverage.TotalCount != 12 || d.Coverage.FilteredCount != 1 || len(d.Observations) != 1 ||
+		d.Observations[0].ID != "RDE_7" || d.Observations[0].Payload.PreviousState != "approved" {
+		t.Fatalf("raw review dismissals were not wired: %+v", d)
+	}
 	if doc.Changes.RepositoryTotal == nil || *doc.Changes.RepositoryTotal != 9 || doc.Changes.HistoryRead != 1 ||
 		pr.HistoricalChecks == nil || pr.HistoricalChecks.ReadState != "read" || len(pr.HistoricalChecks.ByCommit) != 1 ||
 		len(pr.HistoricalChecks.ByCommit[0].CheckObservations) != 1 || pr.RequestedChangesRevisions.Value == nil ||

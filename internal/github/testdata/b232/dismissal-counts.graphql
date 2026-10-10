@@ -1,0 +1,19 @@
+query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(first: 30, states: [MERGED], orderBy: {field: UPDATED_AT, direction: DESC}) {
+      totalCount
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id number state updatedAt
+        one: timelineItems(last: 1, itemTypes: [REVIEW_DISMISSED_EVENT]) {
+          totalCount filteredCount pageCount pageInfo { hasPreviousPage }
+          nodes { ... on ReviewDismissedEvent { id createdAt previousReviewState review { id state submittedAt commit { oid } } } }
+        }
+        hundred: timelineItems(last: 100, itemTypes: [REVIEW_DISMISSED_EVENT]) {
+          totalCount filteredCount pageCount pageInfo { hasPreviousPage }
+          nodes { ... on ReviewDismissedEvent { id createdAt previousReviewState review { id state submittedAt commit { oid } } } }
+        }
+      }
+    }
+  }
+}

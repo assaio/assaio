@@ -21,6 +21,29 @@ compatibility test, and a written deprecation path; after it, a breaking change 
 | The team sync protocol | [extending/team-server.md](extending/team-server.md) |
 | Machine-readable output — `analyze --format json`, `report --format json\|csv`, `evidence --format json`, `docs export` | `docs/reference.json`, [evidence.md](evidence.md) |
 
+## Additive GitHub evidence fields
+
+`evidence --github --format json` adds observation type `scm.review.dismissed` and nullable PR
+`reviewDismissals` coverage. The event uses the existing envelope for its opaque id, source,
+provenance, privacy, occurrence time and invocation `observedAt`.
+
+| Addition | Machine-readable fields and meaning |
+| --- | --- |
+| `ReviewDismissal` payload | Required `number` (PR number), `previousState` (source-stated closed review state), `dismissedAt` (actual event time); optional `reviewId`, `commit` (reviewed hash), `submittedAt` (actual review submission time). A null source review leaves all three optional fields absent. |
+| Nullable `reviewDismissals` / `TimelinePopulation` | `totalCount` (all timeline events), `filteredCount` (selected dismissals), `pageCount` (source-reported returned slice count), `listed` (actual retained nodes), `hasPreviousPage` (source-stated selected truncation). Missing coverage is null/unavailable; independently validated raw events may still appear. |
+
+The source selects only `__typename`, `id`, `createdAt`, `previousReviewState` and nullable
+`review { id submittedAt commit { oid } }` for each dismissal. Actual event time is required,
+with no fallback. The last-100 slice remains bounded. Consumers must accept the additional event
+type and optional coverage while preserving absent values as unknown.
+
+These additions do not change offline `session-commit/v2`, GitHub `session-commit/v3`, matching,
+current review snapshot metrics or existing field meanings; the GitHub algorithm version is not
+bumped. No store/schema migration, sync, dashboard, share or plugin contract is added. This is an
+additive output extension, without an actual breaking change requiring a Breaking entry. See
+[ADR 0025](adr/0025-bounded-review-dismissals.md) and
+[the source/count guide](github-source-feasibility.md).
+
 ## Not frozen, and guaranteed instead
 
 **The SQLite schema is an implementation detail.** It is not a public API and will not be frozen at

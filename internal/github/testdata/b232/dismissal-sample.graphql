@@ -1,0 +1,19 @@
+query($owner: String!, $name: String!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(first: 30, after: $cursor, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      totalCount
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id number state updatedAt
+        dismissals: timelineItems(last: 100, itemTypes: [REVIEW_DISMISSED_EVENT]) {
+          totalCount filteredCount pageCount
+          pageInfo { hasPreviousPage startCursor }
+          nodes {
+            __typename
+            ... on ReviewDismissedEvent { id createdAt previousReviewState review { id state submittedAt commit { oid } } pullRequestCommit { commit { oid } } }
+          }
+        }
+      }
+    }
+  }
+}

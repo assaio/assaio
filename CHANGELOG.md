@@ -33,6 +33,23 @@ Discussion.
 
 ## [Unreleased]
 
+### Added
+
+- B232: `evidence --github` adds raw `scm.review.dismissed` PR observations from the last 100 selected events,
+  with actual event times, nullable review joins and distinct timeline/filter/slice coverage;
+  current review snapshots and matching remain unchanged ([ADR 0025](docs/adr/0025-bounded-review-dismissals.md)).
+- [GitHub source study](docs/github-source-feasibility.md) records finite real captures and B232's open gates:
+  exact review rounds, complete comparable workflow lifetimes/CI rates, authoritative one-parent
+  merge methods and explicit content-free PR revert relations remain deferred; no new derived metric.
+
+### Changed
+
+- Pricing snapshot 2026-10-10: retained ledger adds 3 models (`amazon.nova-premier-v1:0`,
+  `gpt-rosalind-discovery`, `twelvelabs.pegasus-1-5-v1:0`), reprices 4 and deletes 0.
+- Repriced retained models: `amazon.titan-text-express-v1`, `amazon.titan-text-lite-v1`,
+  `apac.amazon.nova-2-lite-v1:0`, `eu.amazon.nova-2-lite-v1:0`; costs remain API-equivalent
+  estimates, not billed spend. Upstream key churn is separate from retained-ledger changes.
+
 ## [0.38.0] - 2026-10-10
 
 ### Breaking
