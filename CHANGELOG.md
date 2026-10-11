@@ -33,6 +33,8 @@ Discussion.
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-11
+
 ### Added
 
 - B232: `evidence --github` adds raw `scm.review.dismissed` PR observations from the last 100 selected events,
@@ -1994,7 +1996,8 @@ Discussion.
 - Cost honesty throughout: every `$` disclosed as an estimate at public
   pay-as-you-go API prices; unpriced models render an honest blank, never a fake `$0`.
 
-[Unreleased]: https://github.com/assaio/assaio/compare/v0.38.0...HEAD
+[Unreleased]: https://github.com/assaio/assaio/compare/v0.39.0...HEAD
+[0.39.0]: https://github.com/assaio/assaio/releases/tag/v0.39.0
 [0.38.0]: https://github.com/assaio/assaio/releases/tag/v0.38.0
 [0.37.0]: https://github.com/assaio/assaio/releases/tag/v0.37.0
 [0.36.0]: https://github.com/assaio/assaio/compare/v0.35.0...v0.36.0
