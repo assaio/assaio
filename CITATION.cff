@@ -18,7 +18,7 @@ abstract: >-
 authors:
   - name: The assaio Authors
 license: Apache-2.0
-version: 0.38.0
+version: 0.39.0
 repository-code: https://github.com/assaio/assaio
 url: https://github.com/assaio/assaio
-date-released: 2026-10-10
+date-released: 2026-10-11
