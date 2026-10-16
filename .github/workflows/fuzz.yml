@@ -121,7 +121,7 @@ jobs:
             cp -R "$cache" fuzz-corpus/generated
           fi
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always() && github.event_name == 'schedule'
         with:
           name: fuzz-corpus-${{ matrix.target.slug }}
@@ -139,7 +139,7 @@ jobs:
 
       # The report job reads this artifact's existence as the verdict, so it is uploaded only
       # when a failing input exists.
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure() && github.event_name == 'schedule'
         with:
           name: fuzz-finding-${{ matrix.target.slug }}
